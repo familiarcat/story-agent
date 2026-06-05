@@ -1,5 +1,6 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { createClient as createRedisClient } from 'redis';
 import { toEmbedding, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION } from './embedding.js';
 import type {
   StoryRecord,
@@ -12,14 +13,58 @@ import type {
 } from './index.js';
 
 let _client: SupabaseClient | null = null;
+let _redisClient: any = null;
+let _redisInitAttempted = false;
+let _memorySyncTimer: NodeJS.Timeout | null = null;
+
+const REDIS_RECENT_LIST_MAX = parseInt(process.env.MEMORY_REDIS_RECENT_MAX ?? '200', 10);
+const REDIS_SYNC_BATCH_SIZE = parseInt(process.env.MEMORY_SYNC_BATCH_SIZE ?? '50', 10);
+const REDIS_SYNC_INTERVAL_MS = parseInt(process.env.MEMORY_SYNC_INTERVAL_MS ?? '5000', 10);
+const REDIS_RECENT_ALL_KEY = 'sa:memory:recent:all';
+const REDIS_SYNC_QUEUE_KEY = 'sa:memory:sync_queue';
+
+type ObservationMemoryPayload = {
+  id: string;
+  story_id: string;
+  source: ObservationMemoryRecord['source'];
+  transcript_hash: string;
+  transcript_text: string;
+  transcript: ObservationDebateResult;
+  mission_ref: string | null;
+  tags: string[];
+  memory_embedding: string;
+  created_at: string;
+};
 
 function db(): SupabaseClient {
   if (_client) return _client;
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_KEY;
   if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment.');
-  _client = createClient(url, key);
+  _client = createSupabaseClient(url, key);
   return _client;
+}
+
+async function redis(): Promise<any> {
+  if (_redisClient?.isOpen) return _redisClient;
+  if (_redisInitAttempted) return null;
+
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) return null;
+
+  _redisInitAttempted = true;
+  try {
+    const client = createRedisClient({ url: redisUrl });
+    client.on('error', () => {
+      // Keep Redis optional; fall back to Supabase-only mode on runtime issues.
+    });
+    await client.connect();
+    _redisClient = client;
+    return _redisClient;
+  } catch {
+    _redisClient = null;
+    return null;
+  }
 }
 
 function throwOnError<T>(result: { data: T | null; error: unknown }): T {
@@ -47,6 +92,126 @@ function mapObservationMemory(row: Record<string, unknown>): ObservationMemoryRe
     embedding: parseVector(row.memory_embedding),
     createdAt: row.created_at as string,
   };
+}
+
+function mapObservationMemoryPayload(row: ObservationMemoryPayload): ObservationMemoryRecord {
+  return {
+    id: row.id,
+    storyId: row.story_id,
+    source: row.source,
+    transcriptHash: row.transcript_hash,
+    transcriptText: row.transcript_text,
+    transcript: row.transcript,
+    missionReference: row.mission_ref,
+    tags: row.tags,
+    embedding: parseVector(row.memory_embedding),
+    createdAt: row.created_at,
+  };
+}
+
+function getStoryRecentKey(storyId: string): string {
+  return `sa:memory:recent:story:${storyId}`;
+}
+
+async function cacheAndQueueObservationMemory(payload: ObservationMemoryPayload): Promise<boolean> {
+  const client = await redis();
+  if (!client) return false;
+
+  const serialized = JSON.stringify(payload);
+  const storyKey = getStoryRecentKey(payload.story_id);
+
+  await client
+    .multi()
+    .lPush(REDIS_RECENT_ALL_KEY, serialized)
+    .lTrim(REDIS_RECENT_ALL_KEY, 0, REDIS_RECENT_LIST_MAX - 1)
+    .lPush(storyKey, serialized)
+    .lTrim(storyKey, 0, REDIS_RECENT_LIST_MAX - 1)
+    .lPush(REDIS_SYNC_QUEUE_KEY, serialized)
+    .exec();
+
+  return true;
+}
+
+async function getCachedObservationMemories(limit: number, storyId?: string): Promise<ObservationMemoryRecord[]> {
+  const client = await redis();
+  if (!client) return [];
+
+  const key = storyId ? getStoryRecentKey(storyId) : REDIS_RECENT_ALL_KEY;
+  const rows = await client.lRange(key, 0, Math.max(0, limit - 1));
+
+  const parsed = rows
+    .map((row: string) => {
+      try {
+        return mapObservationMemoryPayload(JSON.parse(row) as ObservationMemoryPayload);
+      } catch {
+        return null;
+      }
+    })
+    .filter((row: ObservationMemoryRecord | null): row is ObservationMemoryRecord => row !== null);
+
+  return parsed;
+}
+
+export async function flushObservationMemoryQueue(batchSize = REDIS_SYNC_BATCH_SIZE): Promise<{
+  synced: number;
+  remaining: number;
+}> {
+  const client = await redis();
+  if (!client) return { synced: 0, remaining: 0 };
+
+  const queueItems = await client.lRange(REDIS_SYNC_QUEUE_KEY, 0, Math.max(0, batchSize - 1));
+  if (queueItems.length === 0) {
+    return { synced: 0, remaining: 0 };
+  }
+
+  const payloads = queueItems
+    .map((item: string) => {
+      try {
+        return JSON.parse(item) as ObservationMemoryPayload;
+      } catch {
+        return null;
+      }
+    })
+    .filter((payload: ObservationMemoryPayload | null): payload is ObservationMemoryPayload => payload !== null);
+
+  if (payloads.length === 0) {
+    await client.lTrim(REDIS_SYNC_QUEUE_KEY, queueItems.length, -1);
+    const remaining = await client.lLen(REDIS_SYNC_QUEUE_KEY);
+    return { synced: 0, remaining };
+  }
+
+  throwOnError(
+    await db().from('sa_observation_memories').upsert(payloads, {
+      onConflict: 'transcript_hash',
+    })
+  );
+
+  await client.lTrim(REDIS_SYNC_QUEUE_KEY, queueItems.length, -1);
+  const remaining = await client.lLen(REDIS_SYNC_QUEUE_KEY);
+  return { synced: payloads.length, remaining };
+}
+
+export function startObservationMemorySyncWorker(options?: {
+  intervalMs?: number;
+  batchSize?: number;
+}): void {
+  if (_memorySyncTimer) return;
+
+  const intervalMs = options?.intervalMs ?? REDIS_SYNC_INTERVAL_MS;
+  const batchSize = options?.batchSize ?? REDIS_SYNC_BATCH_SIZE;
+
+  _memorySyncTimer = setInterval(() => {
+    void flushObservationMemoryQueue(batchSize).catch(() => {
+      // Queue remains intact on errors; retries happen on next interval.
+    });
+  }, intervalMs);
+}
+
+export function stopObservationMemorySyncWorker(): void {
+  if (_memorySyncTimer) {
+    clearInterval(_memorySyncTimer);
+    _memorySyncTimer = null;
+  }
 }
 
 // ── Stories ──────────────────────────────────────────────────────────────────
@@ -213,7 +378,7 @@ export async function storeObservationMemory(input: {
   const transcriptHash = hashText(`${input.storyId}:${transcriptText}`);
   const embedding = toEmbedding(transcriptText);
 
-  const payload = {
+  const payload: ObservationMemoryPayload = {
     id: randomUUID(),
     story_id: input.storyId,
     source: input.source,
@@ -226,6 +391,18 @@ export async function storeObservationMemory(input: {
     created_at: new Date().toISOString(),
   };
 
+  // Redis-first: fast local/session memory plus queued durable sync.
+  try {
+    startObservationMemorySyncWorker();
+    const queued = await cacheAndQueueObservationMemory(payload);
+    if (queued) {
+      void flushObservationMemoryQueue();
+      return mapObservationMemoryPayload(payload);
+    }
+  } catch {
+    // Fall through to direct Supabase persistence.
+  }
+
   const rows = throwOnError(await db().from('sa_observation_memories').upsert(payload, {
     onConflict: 'transcript_hash',
   }).select('*').limit(1));
@@ -235,12 +412,20 @@ export async function storeObservationMemory(input: {
 }
 
 export async function getRecentObservationMemories(limit = 8, storyId?: string): Promise<ObservationMemoryRecord[]> {
+  const cached = await getCachedObservationMemories(limit, storyId);
+  if (cached.length >= limit) {
+    return cached.slice(0, limit);
+  }
+
   let query = db().from('sa_observation_memories').select('*').order('created_at', { ascending: false }).limit(limit);
   if (storyId) {
     query = query.eq('story_id', storyId);
   }
   const rows = throwOnError(await query);
-  return (rows ?? []).map(row => mapObservationMemory(row as Record<string, unknown>));
+
+  const merged = [...cached, ...(rows ?? []).map(row => mapObservationMemory(row as Record<string, unknown>))];
+  const deduped = Array.from(new Map(merged.map(memory => [memory.transcriptHash, memory])).values());
+  return deduped.slice(0, limit);
 }
 
 export async function getRelevantObservationMemories(input: {
