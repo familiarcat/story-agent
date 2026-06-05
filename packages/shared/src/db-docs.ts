@@ -4,43 +4,7 @@
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { createHash } from 'crypto';
-
-const EMBEDDING_DIMENSION = 64;
-
-function toEmbedding(text: string, dimension = EMBEDDING_DIMENSION): number[] {
-  const vector: number[] = [];
-  for (let i = 0; i < dimension; i++) {
-    const digest = createHash('sha256').update(`${i}:${text}`).digest();
-    vector.push((digest[0] / 127.5) - 1);
-  }
-  return vector;
-}
-
-function parseVector(value: unknown): number[] {
-  if (Array.isArray(value)) {
-    return value.map(v => Number(v)).filter(v => Number.isFinite(v));
-  }
-  if (typeof value !== 'string') return [];
-  const trimmed = value.trim();
-  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return [];
-  return trimmed.slice(1, -1).split(',').map(part => Number(part.trim())).filter(v => Number.isFinite(v));
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  const n = Math.min(a.length, b.length);
-  if (n === 0) return 0;
-  let dot = 0;
-  let magA = 0;
-  let magB = 0;
-  for (let i = 0; i < n; i++) {
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
-  }
-  if (magA === 0 || magB === 0) return 0;
-  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
-}
+import { toEmbedding, parseVector, cosineSimilarity } from './embedding.js';
 
 export interface DocKnowledgeChunk {
   id: string;

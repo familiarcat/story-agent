@@ -56,7 +56,7 @@ export function substitutePromptVariables(template: string, variables: PromptVar
   // Handle variable substitution {{variable}}
   for (const [key, value] of Object.entries(variables)) {
     const regex = new RegExp(`{{${key}}}`, 'g');
-    result = result.replace(regex, String(value || ''));
+    result = result.replace(regex, value !== undefined && value !== null ? String(value) : '');
   }
 
   return result;

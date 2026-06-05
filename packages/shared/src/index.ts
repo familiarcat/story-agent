@@ -416,3 +416,5 @@ export {
   getRoleGuidance,
   searchDocs,
 } from './db-docs.js';
+
+export { toEmbedding, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION } from './embedding.js';

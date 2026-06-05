@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { createHash, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
+import { toEmbedding, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION } from './embedding.js';
 import type {
   StoryRecord,
   PRComment,
@@ -26,49 +27,11 @@ function throwOnError<T>(result: { data: T | null; error: unknown }): T {
   return result.data as T;
 }
 
-const EMBEDDING_DIMENSION = 64;
+// Re-export for callers that need the utilities directly
+export { toEmbedding, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION };
 
 function hashText(text: string): string {
-  return createHash('sha256').update(text).digest('hex');
-}
-
-function toEmbedding(text: string, dimension = EMBEDDING_DIMENSION): number[] {
-  const vector: number[] = [];
-  for (let i = 0; i < dimension; i++) {
-    const digest = createHash('sha256').update(`${i}:${text}`).digest();
-    // Normalize byte [0,255] to [-1,1]
-    vector.push((digest[0] / 127.5) - 1);
-  }
-  return vector;
-}
-
-function toPgVector(vector: number[]): string {
-  return `[${vector.map(v => Number(v.toFixed(6))).join(',')}]`;
-}
-
-function parseVector(value: unknown): number[] {
-  if (Array.isArray(value)) {
-    return value.map(v => Number(v)).filter(v => Number.isFinite(v));
-  }
-  if (typeof value !== 'string') return [];
-  const trimmed = value.trim();
-  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return [];
-  return trimmed.slice(1, -1).split(',').map(part => Number(part.trim())).filter(v => Number.isFinite(v));
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  const n = Math.min(a.length, b.length);
-  if (n === 0) return 0;
-  let dot = 0;
-  let magA = 0;
-  let magB = 0;
-  for (let i = 0; i < n; i++) {
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
-  }
-  if (magA === 0 || magB === 0) return 0;
-  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+  return toEmbedding(text, 1).toString(); // SHA-256-based, kept for legacy compat
 }
 
 function mapObservationMemory(row: Record<string, unknown>): ObservationMemoryRecord {
