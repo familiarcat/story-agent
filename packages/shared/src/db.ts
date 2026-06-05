@@ -16,6 +16,13 @@ let _client: SupabaseClient | null = null;
 let _redisClient: any = null;
 let _redisInitAttempted = false;
 let _memorySyncTimer: NodeJS.Timeout | null = null;
+let _memorySyncStats = {
+  lastSyncAt: null as string | null,
+  lastSyncErrorAt: null as string | null,
+  lastSyncError: null as string | null,
+  totalSynced: 0,
+  totalFailures: 0,
+};
 
 const REDIS_RECENT_LIST_MAX = parseInt(process.env.MEMORY_REDIS_RECENT_MAX ?? '200', 10);
 const REDIS_SYNC_BATCH_SIZE = parseInt(process.env.MEMORY_SYNC_BATCH_SIZE ?? '50', 10);
@@ -157,7 +164,12 @@ export async function flushObservationMemoryQueue(batchSize = REDIS_SYNC_BATCH_S
   remaining: number;
 }> {
   const client = await redis();
-  if (!client) return { synced: 0, remaining: 0 };
+  if (!client) {
+    _memorySyncStats.totalFailures += 1;
+    _memorySyncStats.lastSyncErrorAt = new Date().toISOString();
+    _memorySyncStats.lastSyncError = 'Redis not available';
+    return { synced: 0, remaining: 0 };
+  }
 
   const queueItems = await client.lRange(REDIS_SYNC_QUEUE_KEY, 0, Math.max(0, batchSize - 1));
   if (queueItems.length === 0) {
@@ -188,7 +200,45 @@ export async function flushObservationMemoryQueue(batchSize = REDIS_SYNC_BATCH_S
 
   await client.lTrim(REDIS_SYNC_QUEUE_KEY, queueItems.length, -1);
   const remaining = await client.lLen(REDIS_SYNC_QUEUE_KEY);
+  _memorySyncStats.lastSyncAt = new Date().toISOString();
+  _memorySyncStats.lastSyncErrorAt = null;
+  _memorySyncStats.lastSyncError = null;
+  _memorySyncStats.totalSynced += payloads.length;
   return { synced: payloads.length, remaining };
+}
+
+export async function getObservationMemorySyncDiagnostics(): Promise<{
+  redisConfigured: boolean;
+  redisConnected: boolean;
+  workerRunning: boolean;
+  queueDepth: number;
+  recentCacheAllCount: number;
+  lastSyncAt: string | null;
+  lastSyncErrorAt: string | null;
+  lastSyncError: string | null;
+  totalSynced: number;
+  totalFailures: number;
+  syncIntervalMs: number;
+  syncBatchSize: number;
+}> {
+  const client = await redis();
+  const queueDepth = client ? await client.lLen(REDIS_SYNC_QUEUE_KEY) : 0;
+  const recentCacheAllCount = client ? await client.lLen(REDIS_RECENT_ALL_KEY) : 0;
+
+  return {
+    redisConfigured: Boolean(process.env.REDIS_URL),
+    redisConnected: Boolean(client?.isOpen),
+    workerRunning: _memorySyncTimer !== null,
+    queueDepth,
+    recentCacheAllCount,
+    lastSyncAt: _memorySyncStats.lastSyncAt,
+    lastSyncErrorAt: _memorySyncStats.lastSyncErrorAt,
+    lastSyncError: _memorySyncStats.lastSyncError,
+    totalSynced: _memorySyncStats.totalSynced,
+    totalFailures: _memorySyncStats.totalFailures,
+    syncIntervalMs: REDIS_SYNC_INTERVAL_MS,
+    syncBatchSize: REDIS_SYNC_BATCH_SIZE,
+  };
 }
 
 export function startObservationMemorySyncWorker(options?: {

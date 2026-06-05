@@ -9,6 +9,47 @@ import { promptArchive, getPromptEngineStats, exportPromptArchive } from '../lib
  */
 export function registerCrewMemoryTools(server: McpServer) {
   server.tool(
+    'memory_sync_diagnostics',
+    'Show Redis-to-Supabase memory sync health: queue depth, worker status, last sync success/failure, and throughput counters.',
+    {},
+    async () => {
+      const dbModule = await import('@story-agent/shared/db');
+      const diagnosticsFn = (dbModule as any).getObservationMemorySyncDiagnostics as
+        | (() => Promise<unknown>)
+        | undefined;
+
+      if (!diagnosticsFn) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  error: 'getObservationMemorySyncDiagnostics is not available from shared/db',
+                  hint: 'Build @story-agent/shared to refresh package exports.',
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      const diagnostics = await diagnosticsFn();
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(diagnostics, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
     'summarize_crew_memory_trends',
     'Query and analyze crew observation lounge debate memories to identify patterns, recurring risks, and consensus trends across missions. Helps the crew learn collectively from prior debates.',
     {
