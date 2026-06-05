@@ -3,12 +3,18 @@ import { registerParticipant } from './participant';
 import { StorySidebarProvider } from './sidebar';
 import { StoryExecutionPanel } from './panels/StoryExecutionPanel';
 import { CrewCopilotProvider } from './providers/CrewCopilotProvider';
+import { AhaProjectStructureProvider } from './providers/AhaProjectStructureProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
   // ── Tree Data Providers ──────────────────────────────────────────────────
   const crewCopilotProvider = new CrewCopilotProvider();
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('storyAgent.crewCopilot', crewCopilotProvider)
+  );
+
+  const projectStructureProvider = new AhaProjectStructureProvider();
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('storyAgent.projectStructure', projectStructureProvider)
   );
 
   // ── Sidebar webview ──────────────────────────────────────────────────────
@@ -89,6 +95,23 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('storyAgent.refreshCrew', async () => {
       crewCopilotProvider.refresh();
       vscode.window.showInformationMessage('Crew status refreshed');
+    }),
+
+    vscode.commands.registerCommand('story-agent.refreshProjectStructure', async () => {
+      projectStructureProvider.refresh();
+      vscode.window.showInformationMessage('Project structure refreshed');
+    }),
+
+    vscode.commands.registerCommand('story-agent.openAhaProject', (url: string) => {
+      vscode.env.openExternal(vscode.Uri.parse(url));
+    }),
+
+    vscode.commands.registerCommand('story-agent.openAhaSprint', (url: string) => {
+      vscode.env.openExternal(vscode.Uri.parse(url));
+    }),
+
+    vscode.commands.registerCommand('story-agent.openAhaStory', (url: string) => {
+      vscode.env.openExternal(vscode.Uri.parse(url));
     }),
 
     vscode.commands.registerCommand(

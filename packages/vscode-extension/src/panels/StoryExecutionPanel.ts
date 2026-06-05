@@ -3,7 +3,32 @@
  */
 
 import * as vscode from 'vscode';
-import type { CrewExecutionState } from '@story-agent/shared';
+
+// Local type definition (mirrors @story-agent/shared)
+interface CrewExecution {
+  crewId: string;
+  crewName: string;
+  status: 'pending' | 'executing' | 'complete' | 'error' | 'vetoed';
+  findings?: string;
+  recommendations?: string[];
+  confidence?: number;
+  isVeto?: boolean;
+  costUsd?: number;
+}
+
+interface CrewExecutionState {
+  storyRef: string;
+  status: 'pending' | 'in-progress' | 'complete' | 'blocked';
+  phase: string;
+  nextStep: string;
+  crewExecutions: CrewExecution[];
+  blockers?: string[];
+  cost?: number;
+  totalCostUsd?: number;
+  totalExecutionTimeMs?: number;
+  broadcastCount?: number;
+  estimatedCompletionTime?: string;
+}
 
 export class StoryExecutionPanel {
   private panel: vscode.WebviewPanel;
@@ -106,42 +131,45 @@ export class StoryExecutionPanel {
   private renderState(state: CrewExecutionState): string {
     const crewHtml = state.crewExecutions
       .map(
-        execution => `
-      <div class="crew-member ${execution.status}">
+        (execution: unknown) => {
+          const exec = execution as any;
+          return `
+      <div class="crew-member ${exec.status}">
         <div class="crew-header">
-          <span class="crew-name">${execution.crewName}</span>
-          <span class="crew-status">${this.getStatusBadge(execution.status)}</span>
+          <span class="crew-name">${exec.crewName}</span>
+          <span class="crew-status">${this.getStatusBadge(exec.status)}</span>
         </div>
         ${
-          execution.findings
+          exec.findings
             ? `
         <div class="crew-findings">
-          <p class="findings-text">${execution.findings}</p>
+          <p class="findings-text">${exec.findings}</p>
           ${
-            execution.recommendations && execution.recommendations.length > 0
+            exec.recommendations && exec.recommendations.length > 0
               ? `
             <div class="recommendations">
               <strong>Recommendations:</strong>
               <ul>
-                ${execution.recommendations.map(r => `<li>${r}</li>`).join('')}
+                ${(exec.recommendations as string[]).map((r: string) => `<li>${r}</li>`).join('')}
               </ul>
             </div>
           `
               : ''
           }
           ${
-            execution.confidence !== undefined
-              ? `<div class="confidence">Confidence: ${execution.confidence}%</div>`
+            exec.confidence !== undefined
+              ? `<div class="confidence">Confidence: ${exec.confidence}%</div>`
               : ''
           }
-          ${execution.isVeto ? '<div class="veto">🛑 SECURITY VETO</div>' : ''}
-          ${execution.costUsd !== undefined ? `<div class="cost">💰 $${execution.costUsd.toFixed(4)}</div>` : ''}
+          ${exec.isVeto ? '<div class="veto">🛑 SECURITY VETO</div>' : ''}
+          ${exec.costUsd !== undefined ? `<div class="cost">💰 $${exec.costUsd.toFixed(4)}</div>` : ''}
         </div>
       `
             : ''
         }
       </div>
-    `
+    `;
+        }
       )
       .join('');
 
@@ -302,7 +330,7 @@ export class StoryExecutionPanel {
 
         <div class="progress-bar">
           <div class="progress-fill" style="width: ${
-            ((state.crewExecutions.filter(c => c.status === 'complete').length /
+            ((state.crewExecutions.filter((c: any) => c.status === 'complete').length /
               state.crewExecutions.length) *
               100) |
             0
@@ -320,7 +348,7 @@ export class StoryExecutionPanel {
           <div class="blockers">
             <strong>🛑 Blockers:</strong>
             <ul>
-              ${state.blockers.map(b => `<li>${b}</li>`).join('')}
+              ${state.blockers.map((b: string) => `<li>${b}</li>`).join('')}
             </ul>
           </div>
         `
@@ -328,9 +356,9 @@ export class StoryExecutionPanel {
         }
 
         <div class="footer">
-          <span>💰 Total: $${state.totalCostUsd.toFixed(4)}</span>
-          <span>⏱️ Time: ${Math.round(state.totalExecutionTimeMs / 1000)}s</span>
-          <span>🔄 Updates: ${state.broadcastCount}</span>
+          <span>💰 Total: $${(state.totalCostUsd ?? 0).toFixed(4)}</span>
+          <span>⏱️ Time: ${Math.round((state.totalExecutionTimeMs ?? 0) / 1000)}s</span>
+          <span>🔄 Updates: ${state.broadcastCount ?? 0}</span>
         </div>
       </body>
       </html>
@@ -364,7 +392,7 @@ export class StoryExecutionPanel {
     `;
   }
 
-  private getStatusBadge(status: string): string => {
+  private getStatusBadge(status: string): string {
     const badges: Record<string, string> = {
       pending: '⏳ Pending',
       executing: '🔄 Executing',
@@ -373,7 +401,7 @@ export class StoryExecutionPanel {
       error: '⚠️ Error',
     };
     return badges[status] || status;
-  };
+  }
 
   private cleanup(): void {
     if (this.ws) {

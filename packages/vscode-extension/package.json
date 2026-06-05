@@ -50,6 +50,26 @@
         "command": "story-agent.openSidebar",
         "title": "Story Agent: Show Sidebar",
         "icon": "$(beaker)"
+      },
+      {
+        "command": "story-agent.refreshProjectStructure",
+        "title": "Story Agent: Refresh Project Structure",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "story-agent.openAhaProject",
+        "title": "Open Aha Project",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "story-agent.openAhaSprint",
+        "title": "Open Sprint",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "story-agent.openAhaStory",
+        "title": "Open Story",
+        "icon": "$(link-external)"
       }
     ],
     "viewsContainers": {
@@ -67,6 +87,13 @@
           "type": "webview",
           "id": "story-agent.sidebar",
           "name": "Story Agent"
+        }
+      ],
+      "explorer": [
+        {
+          "id": "storyAgent.projectStructure",
+          "name": "Aha Project Structure",
+          "when": "workspaceFolder"
         }
       ]
     },
