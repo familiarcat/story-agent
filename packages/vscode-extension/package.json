@@ -1,0 +1,120 @@
+{
+  "name": "story-agent-vscode",
+  "displayName": "Story Agent",
+  "description": "Agentic story delivery — Aha integration, observation lounge wizard, and story lifecycle management inside VS Code",
+  "version": "1.0.0",
+  "publisher": "story-agent",
+  "private": true,
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": ["AI", "Other"],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "story-agent.agent",
+        "fullName": "Story Agent",
+        "name": "story-agent",
+        "description": "Agentic story delivery — prepare Aha stories, track PRs, and manage the delivery lifecycle",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "prepare",
+            "description": "Load an Aha story and generate an execution brief for human review (Observation Lounge)"
+          },
+          {
+            "name": "status",
+            "description": "Check current status of a tracked story"
+          },
+          {
+            "name": "dashboard",
+            "description": "Open the Story Agent web dashboard"
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "story-agent.openDashboard",
+        "title": "Story Agent: Open Dashboard",
+        "icon": "$(browser)"
+      },
+      {
+        "command": "story-agent.openObservationLounge",
+        "title": "Story Agent: Open Observation Lounge",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "story-agent.openSidebar",
+        "title": "Story Agent: Show Sidebar",
+        "icon": "$(beaker)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "story-agent-sidebar",
+          "title": "Story Agent",
+          "icon": "$(beaker)"
+        }
+      ]
+    },
+    "views": {
+      "story-agent-sidebar": [
+        {
+          "type": "webview",
+          "id": "story-agent.sidebar",
+          "name": "Story Agent"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Story Agent",
+      "properties": {
+        "storyAgent.ahaDomain": {
+          "type": "string",
+          "default": "",
+          "description": "Aha domain (e.g. yourcompany.aha.io). Overridden by AHA_DOMAIN env var."
+        },
+        "storyAgent.ahaApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Aha API key. Overridden by AHA_API_KEY env var. Prefer storing in environment."
+        },
+        "storyAgent.dashboardUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Base URL of the Story Agent Next.js dashboard."
+        },
+        "storyAgent.agileProvider": {
+          "type": "string",
+          "default": "aha",
+          "enum": ["aha", "jira", "linear", "github-projects", "azure-devops"],
+          "enumDescriptions": [
+            "Aha! — requires AHA_DOMAIN and AHA_API_KEY",
+            "Jira Cloud — requires JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN",
+            "Linear — requires LINEAR_API_KEY (stub — not yet implemented)",
+            "GitHub Projects v2 — requires GITHUB_TOKEN and GITHUB_ORG (stub)",
+            "Azure DevOps — requires AZURE_DEVOPS_ORG and AZURE_DEVOPS_TOKEN (stub)"
+          ],
+          "description": "Agile project management provider to use for story intake."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "dev": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "typecheck": "tsc --noEmit",
+    "package": "pnpm run build && vsce package --no-dependencies --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/vscode": "^1.99.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.2"
+  }
+}

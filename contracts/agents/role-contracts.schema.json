@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://story-agent.local/schemas/role-contracts.schema.json",
+  "title": "Agent Role Contract",
+  "type": "object",
+  "required": [
+    "roleId",
+    "displayName",
+    "allowedTools",
+    "requiredInputs",
+    "requiredOutputs",
+    "decisionRights",
+    "escalationRules",
+    "memoryScopes",
+    "qualityGates"
+  ],
+  "properties": {
+    "roleId": {
+      "type": "string",
+      "enum": [
+        "captain_picard",
+        "commander_data",
+        "commander_riker",
+        "geordi_la_forge",
+        "lt_worf",
+        "counselor_troi",
+        "quark"
+      ]
+    },
+    "displayName": { "type": "string" },
+    "allowedTools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "requiredInputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "requiredOutputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "decisionRights": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "escalationRules": {
+      "type": "object",
+      "required": ["triggers", "target", "maxArbitrationRounds"],
+      "properties": {
+        "triggers": { "type": "array", "items": { "type": "string" } },
+        "target": { "type": "string" },
+        "maxArbitrationRounds": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "memoryScopes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["global", "project", "sprint", "story", "role", "ephemeral"]
+      }
+    },
+    "qualityGates": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

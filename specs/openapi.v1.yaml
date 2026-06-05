@@ -1,0 +1,415 @@
+openapi: 3.1.0
+info:
+  title: Story Agent Unified API
+  version: 1.0.0
+  description: Canonical control plane API for merged ai-enterprise-os + story-agent platform.
+servers:
+  - url: http://localhost:3000
+paths:
+  /v1/projects:
+    get:
+      summary: List projects
+      responses:
+        '200':
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+    post:
+      summary: Create project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+
+  /v1/projects/{projectId}/repositories/bind:
+    post:
+      summary: Bind Git repository to project
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BindRepositoryRequest'
+      responses:
+        '200':
+          description: Repository binding
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RepositoryBinding'
+
+  /v1/projects/{projectId}/sprints:
+    get:
+      summary: List project sprints
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Sprints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sprint'
+    post:
+      summary: Create sprint
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSprintRequest'
+      responses:
+        '201':
+          description: Sprint created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sprint'
+
+  /v1/stories/import:
+    post:
+      summary: Import story from Aha and create tracking record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportStoryRequest'
+      responses:
+        '200':
+          description: Imported story
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+
+  /v1/stories/{storyId}:
+    get:
+      summary: Get story details
+      parameters:
+        - $ref: '#/components/parameters/StoryId'
+      responses:
+        '200':
+          description: Story
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+    patch:
+      summary: Update story status/notes
+      parameters:
+        - $ref: '#/components/parameters/StoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStoryRequest'
+      responses:
+        '200':
+          description: Updated story
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Story'
+
+  /v1/stories/{storyId}/missions:
+    post:
+      summary: Start mission run for story
+      parameters:
+        - $ref: '#/components/parameters/StoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMissionRunRequest'
+      responses:
+        '202':
+          description: Mission started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MissionRun'
+
+  /v1/stories/{storyId}/branches/create:
+    post:
+      summary: Create story branch using branch policy
+      parameters:
+        - $ref: '#/components/parameters/StoryId'
+      responses:
+        '200':
+          description: Branch created/resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResult'
+
+  /v1/stories/{storyId}/pull-requests/open:
+    post:
+      summary: Open pull request
+      parameters:
+        - $ref: '#/components/parameters/StoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenPullRequestRequest'
+      responses:
+        '200':
+          description: Pull request opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestCycle'
+
+  /v1/stories/{storyId}/pull-requests/sync-comments:
+    post:
+      summary: Sync PR comments and review state
+      parameters:
+        - $ref: '#/components/parameters/StoryId'
+      responses:
+        '200':
+          description: Synced comments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestCycle'
+
+  /v1/stories/{storyId}/conflicts:
+    get:
+      summary: List conflicts for a story
+      parameters:
+        - $ref: '#/components/parameters/StoryId'
+      responses:
+        '200':
+          description: Conflicts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConflictCase'
+
+  /v1/conflicts/{conflictId}/resolve:
+    post:
+      summary: Resolve conflict by arbiter/admiral decision
+      parameters:
+        - name: conflictId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveConflictRequest'
+      responses:
+        '200':
+          description: Conflict resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictCase'
+
+  /v1/observations/stream:
+    get:
+      summary: Stream observation lounge events
+      responses:
+        '200':
+          description: SSE stream of ObservationEvent
+
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string }
+    StoryId:
+      name: storyId
+      in: path
+      required: true
+      schema: { type: string }
+
+  schemas:
+    Project:
+      type: object
+      required: [projectId, name, platformMode, defaultBranchPolicy, createdAt]
+      properties:
+        projectId: { type: string }
+        name: { type: string }
+        platformMode: { type: string, enum: [merged-os, delivery-focused, mission-focused] }
+        defaultBranchPolicy: { type: string, enum: [prefer-dev-fallback-main, main-only] }
+        createdAt: { type: string, format: date-time }
+
+    CreateProjectRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        platformMode: { type: string, default: merged-os }
+
+    RepositoryBinding:
+      type: object
+      required: [repoFullName, provider, defaultBranchResolved, linkedAt]
+      properties:
+        repoFullName: { type: string }
+        provider: { type: string, enum: [github] }
+        defaultBranchResolved: { type: string }
+        localPath: { type: string, nullable: true }
+        linkedAt: { type: string, format: date-time }
+
+    BindRepositoryRequest:
+      type: object
+      required: [repoFullName]
+      properties:
+        repoFullName: { type: string }
+        provider: { type: string, default: github }
+
+    Sprint:
+      type: object
+      required: [sprintId, projectId, name, status]
+      properties:
+        sprintId: { type: string }
+        projectId: { type: string }
+        name: { type: string }
+        objective: { type: string, nullable: true }
+        startDate: { type: string, format: date, nullable: true }
+        endDate: { type: string, format: date, nullable: true }
+        status: { type: string, enum: [planned, active, completed, canceled] }
+        capacityPoints: { type: integer, nullable: true }
+
+    CreateSprintRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        objective: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+
+    Story:
+      type: object
+      required: [storyId, title, status, phase]
+      properties:
+        storyId: { type: string }
+        externalRef: { type: string, nullable: true }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        acceptanceCriteria: { type: string, nullable: true }
+        status: { type: string, enum: [pending, discovery, implementing, pr_open, pr_revision, pr_approved, merged, blocked] }
+        phase: { type: string, enum: [intake, planning, implementation, pr-open, pr-revision, approved, merged, blocked] }
+        linkedSprintId: { type: string, nullable: true }
+
+    ImportStoryRequest:
+      type: object
+      required: [referenceNum, repoFullName]
+      properties:
+        referenceNum: { type: string, example: LADV-2627 }
+        repoFullName: { type: string, example: bayer-int/product-profile-ui }
+
+    UpdateStoryRequest:
+      type: object
+      properties:
+        status: { type: string }
+        notes: { type: string }
+
+    CreateMissionRunRequest:
+      type: object
+      required: [missionType]
+      properties:
+        missionType: { type: string, enum: [planning, implementation, revision, validation] }
+        participatingAgents:
+          type: array
+          items: { type: string }
+
+    MissionRun:
+      type: object
+      required: [missionRunId, storyId, missionType, status]
+      properties:
+        missionRunId: { type: string }
+        storyId: { type: string }
+        missionType: { type: string }
+        participatingAgents:
+          type: array
+          items: { type: string }
+        status: { type: string, enum: [queued, running, completed, failed, blocked] }
+        costUsd: { type: number }
+        tokenUsage: { type: integer }
+
+    BranchResult:
+      type: object
+      properties:
+        branch: { type: string }
+        baseBranch: { type: string }
+        existed: { type: boolean }
+
+    OpenPullRequestRequest:
+      type: object
+      required: [title, body]
+      properties:
+        title: { type: string }
+        body: { type: string }
+
+    PullRequestCycle:
+      type: object
+      required: [cycleId, storyId, prNumber, cycleStatus]
+      properties:
+        cycleId: { type: string }
+        storyId: { type: string }
+        prNumber: { type: integer }
+        commentsSynced: { type: integer }
+        unresolvedCount: { type: integer }
+        filesChanged:
+          type: array
+          items: { type: string }
+        testEvidence: { type: string }
+        cycleStatus: { type: string, enum: [open, revision, approved, merged, closed] }
+        updatedAt: { type: string, format: date-time }
+
+    ConflictCase:
+      type: object
+      required: [conflictId, storyId, conflictType, severity, status]
+      properties:
+        conflictId: { type: string }
+        storyId: { type: string }
+        missionRunId: { type: string }
+        conflictType: { type: string, enum: [architectural, security, delivery, cost-performance, ux-language] }
+        severity: { type: string, enum: [low, medium, high, critical] }
+        status: { type: string, enum: [detected, arbitration, escalated, resolved, abandoned] }
+        escalationRequired: { type: boolean }
+        resolvedBy: { type: string, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+
+    ResolveConflictRequest:
+      type: object
+      required: [selectedOption, rationale]
+      properties:
+        selectedOption: { type: string }
+        rationale: { type: string }
+        policyOverride: { type: boolean, default: false }
+        followUpTasks:
+          type: array
+          items: { type: string }

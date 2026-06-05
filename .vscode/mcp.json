@@ -1,0 +1,17 @@
+{
+  "servers": {
+    "story-agent": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/packages/mcp-server/dist/index.js"],
+      "env": {
+        "AHA_DOMAIN": "${env:AHA_DOMAIN}",
+        "AHA_API_KEY": "${env:AHA_API_KEY}",
+        "GITHUB_TOKEN": "${env:GITHUB_TOKEN}",
+        "GITHUB_DEFAULT_ORG": "${env:GITHUB_DEFAULT_ORG}",
+        "SUPABASE_URL": "${env:SUPABASE_URL}",
+        "SUPABASE_KEY": "${env:SUPABASE_KEY}"
+      }
+    }
+  }
+}

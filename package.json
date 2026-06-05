@@ -1,0 +1,29 @@
+{
+  "name": "story-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agentic story delivery system — MCP server + Next.js dashboard",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently --names MCP,UI --colors magenta,blue \"pnpm --filter @story-agent/mcp-server dev\" \"pnpm --filter @story-agent/ui dev\"",
+    "build": "pnpm --filter @story-agent/shared build && pnpm --filter @story-agent/mcp-server build && pnpm --filter @story-agent/ui build && pnpm --filter story-agent-vscode build",
+    "start": "concurrently --names MCP,UI --colors magenta,blue \"pnpm --filter @story-agent/mcp-server start\" \"pnpm --filter @story-agent/ui start\"",
+    "mcp": "pnpm --filter @story-agent/mcp-server dev",
+    "ui": "pnpm --filter @story-agent/ui dev",
+    "typecheck": "pnpm --filter @story-agent/shared build && pnpm --filter @story-agent/mcp-server typecheck && pnpm --filter @story-agent/ui typecheck && pnpm --filter story-agent-vscode typecheck",
+    "lint": "pnpm --filter @story-agent/mcp-server lint --if-present && pnpm --filter @story-agent/ui lint --if-present",
+    "test": "pnpm --filter @story-agent/mcp-server test --if-present && pnpm --filter @story-agent/ui test --if-present",
+    "check": "pnpm run typecheck && pnpm run build",
+    "ext:package": "pnpm --filter story-agent-vscode package",
+    "ext:install-local": "code --install-extension packages/vscode-extension/story-agent-vscode-1.0.0.vsix --force",
+    "web:build-local": "pnpm --filter @story-agent/ui build",
+    "web:start-local": "cd packages/ui && node_modules/.bin/next start -p 3000",
+    "publish:local": "pnpm run web:build-local && pnpm run ext:package"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2"
+  }
+}

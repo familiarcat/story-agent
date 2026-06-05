@@ -1,0 +1,298 @@
+import * as vscode from 'vscode';
+
+export class StorySidebarProvider implements vscode.WebviewViewProvider {
+  private _view?: vscode.WebviewView;
+
+  constructor(private readonly _context: vscode.ExtensionContext) {}
+
+  /** Called from commands to pre-fill the prepare form */
+  focusPrepareForm(referenceNum?: string, repoFullName?: string): void {
+    this._view?.show(true);
+    if (referenceNum ?? repoFullName) {
+      this._view?.webview.postMessage({
+        command: 'prefill',
+        referenceNum: referenceNum ?? '',
+        repoFullName: repoFullName ?? '',
+      });
+    }
+  }
+
+  resolveWebviewView(
+    webviewView: vscode.WebviewView,
+    _ctx: vscode.WebviewViewResolveContext,
+    _token: vscode.CancellationToken
+  ): void {
+    this._view = webviewView;
+
+    webviewView.webview.options = {
+      enableScripts: true,
+    };
+
+    webviewView.webview.html = this._buildHtml();
+
+    webviewView.webview.onDidReceiveMessage((msg: Record<string, string>) => {
+      switch (msg.command) {
+        case 'openDashboard':
+          vscode.env.openExternal(
+            vscode.Uri.parse(this._dashboardUrl())
+          );
+          break;
+        case 'openObservationLounge':
+          vscode.env.openExternal(
+            vscode.Uri.parse(`${this._dashboardUrl()}/observation-lounge`)
+          );
+          break;
+        case 'launchInChat': {
+          const parts = ['/prepare', msg.referenceNum, msg.repoFullName]
+            .filter(Boolean)
+            .join(' ');
+          vscode.commands.executeCommand('workbench.action.chat.open', {
+            query: `@story-agent ${parts}`,
+          });
+          break;
+        }
+        case 'copyText':
+          vscode.env.clipboard.writeText(msg.text ?? '');
+          vscode.window.showInformationMessage('Copied to clipboard!');
+          break;
+        case 'openSettings':
+          vscode.commands.executeCommand(
+            'workbench.action.openSettings',
+            'storyAgent'
+          );
+          break;
+      }
+    });
+  }
+
+  private _dashboardUrl(): string {
+    return (
+      vscode.workspace
+        .getConfiguration('storyAgent')
+        .get<string>('dashboardUrl') ?? 'http://localhost:3000'
+    );
+  }
+
+  private _buildHtml(): string {
+    return /* html */ `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Story Agent</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: var(--vscode-font-family);
+      font-size: 12px;
+      color: var(--vscode-foreground);
+      background: transparent;
+      margin: 0;
+      padding: 10px 8px;
+    }
+
+    h3 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-descriptionForeground));
+      margin: 0 0 6px;
+    }
+
+    .section { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+      margin-bottom: 3px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 4px 6px;
+      background: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border: 1px solid var(--vscode-input-border, transparent);
+      border-radius: 2px;
+      font-size: 12px;
+      font-family: var(--vscode-editor-font-family);
+      margin-bottom: 4px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--vscode-focusBorder);
+    }
+
+    input::placeholder { color: var(--vscode-input-placeholderForeground); }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 4px 8px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      border: none;
+      border-radius: 2px;
+      font-size: 12px;
+      font-family: var(--vscode-font-family);
+      text-align: left;
+    }
+
+    .btn-primary {
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+    }
+    .btn-primary:hover { background: var(--vscode-button-hoverBackground); }
+    .btn-primary:active { opacity: 0.85; }
+
+    .btn-secondary {
+      background: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+    }
+    .btn-secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--vscode-panel-border);
+      margin: 10px 0;
+    }
+
+    .tip {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+      margin-top: 2px;
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: var(--vscode-editor-font-family);
+      font-size: 11px;
+      background: var(--vscode-textCodeBlock-background);
+      padding: 1px 3px;
+      border-radius: 2px;
+    }
+
+    .error {
+      color: var(--vscode-errorForeground);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Observation Lounge wizard ─────────────────────────────────── -->
+  <div class="section">
+    <h3>Observation Lounge</h3>
+    <label for="refNum">Story Mission Input</label>
+    <input id="refNum" type="text" placeholder="e.g. STORY-123 or full Aha URL" />
+    <label for="repoName">Repository</label>
+    <input id="repoName" type="text" placeholder="e.g. bayer-int/product-profile-ui" />
+    <label for="branch">Target Branch</label>
+    <input id="branch" type="text" placeholder="dev" value="dev" />
+    <button class="btn btn-primary" onclick="launchInChat()">
+      ✦ Prepare Execution Brief in Chat
+    </button>
+    <div id="err" class="error" style="display:none;"></div>
+    <p class="tip">Opens <code>@story-agent /prepare</code> in Copilot chat with your inputs.</p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── Web UI links ───────────────────────────────────────────────── -->
+  <div class="section">
+    <h3>Web Dashboard</h3>
+    <button class="btn btn-secondary" onclick="openDashboard()">
+      ⊞ Open Dashboard (localhost:3000)
+    </button>
+    <button class="btn btn-secondary" onclick="openObservationLounge()">
+      ◎ Open Observation Lounge UI
+    </button>
+    <p class="tip">Requires <code>pnpm ui</code> to be running locally.</p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── Chat quick-start ───────────────────────────────────────────── -->
+  <div class="section">
+    <h3>Chat Commands</h3>
+    <p class="tip">Use <code>@story-agent</code> in Copilot chat:</p>
+    <p class="tip"><code>/prepare STORY-####</code> — build execution brief (or pass Aha URL)</p>
+    <p class="tip"><code>/status STORY-####</code> — check story status</p>
+    <p class="tip"><code>/dashboard</code> — quick-open web UI</p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── Settings ──────────────────────────────────────────────────── -->
+  <div class="section">
+    <button class="btn btn-secondary" onclick="openSettings()">
+      ⚙ Story Agent Settings
+    </button>
+    <p class="tip">Configure <code>AHA_DOMAIN</code>, <code>ahaApiKey</code>, and dashboard URL.</p>
+  </div>
+
+  <script>
+    // eslint-disable-next-line no-undef
+    const vscode = acquireVsCodeApi();
+
+    function launchInChat() {
+      const refNum = document.getElementById('refNum').value.trim();
+      const repoName = document.getElementById('repoName').value.trim();
+      const err = document.getElementById('err');
+
+      if (!refNum) {
+        err.textContent = 'Please enter a story reference number.';
+        err.style.display = 'block';
+        document.getElementById('refNum').focus();
+        return;
+      }
+      err.style.display = 'none';
+
+      vscode.postMessage({
+        command: 'launchInChat',
+        referenceNum: refNum,
+        repoFullName: repoName,
+      });
+    }
+
+    function openDashboard() {
+      vscode.postMessage({ command: 'openDashboard' });
+    }
+
+    function openObservationLounge() {
+      vscode.postMessage({ command: 'openObservationLounge' });
+    }
+
+    function openSettings() {
+      vscode.postMessage({ command: 'openSettings' });
+    }
+
+    // Pre-fill form fields when triggered from a command
+    window.addEventListener('message', (event) => {
+      const msg = event.data;
+      if (msg.command === 'prefill') {
+        if (msg.referenceNum) document.getElementById('refNum').value = msg.referenceNum;
+        if (msg.repoFullName) document.getElementById('repoName').value = msg.repoFullName;
+      }
+    });
+
+    // Allow Enter key on inputs to launch
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (
+        document.activeElement?.id === 'refNum' ||
+        document.activeElement?.id === 'repoName' ||
+        document.activeElement?.id === 'branch'
+      )) {
+        launchInChat();
+      }
+    });
+  </script>
+</body>
+</html>`;
+  }
+}

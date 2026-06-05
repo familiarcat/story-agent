@@ -1,0 +1,107 @@
+[
+  {
+    "roleId": "captain_picard",
+    "displayName": "Sovereign Orchestrator",
+    "allowedTools": ["run_factory_mission_proxy", "run_crew_agent_proxy", "list_active_stories", "get_story_status", "resolve_repository"],
+    "requiredInputs": ["story_context", "sprint_context", "risk_profile"],
+    "requiredOutputs": ["mission_plan", "role_assignments", "gating_plan"],
+    "decisionRights": ["route_mission", "initiate_arbitration", "escalate_to_admiral"],
+    "escalationRules": {
+      "triggers": ["unresolved_conflict", "policy_veto", "budget_violation"],
+      "target": "admiral",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["project", "sprint", "story", "ephemeral"],
+    "qualityGates": ["consensus_or_escalation", "mission_traceability"]
+  },
+  {
+    "roleId": "commander_data",
+    "displayName": "Architecture Officer",
+    "allowedTools": ["search_code", "create_adr", "run_crew_agent_proxy"],
+    "requiredInputs": ["architecture_context", "story_constraints", "existing_decisions"],
+    "requiredOutputs": ["architecture_decision", "impact_map", "constraints"],
+    "decisionRights": ["architecture_signoff"],
+    "escalationRules": {
+      "triggers": ["architecture_conflict", "schema_breaking_change"],
+      "target": "captain_picard",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["project", "story", "role"],
+    "qualityGates": ["ddd_boundary_integrity", "backward_compatibility"]
+  },
+  {
+    "roleId": "commander_riker",
+    "displayName": "Implementation Lead",
+    "allowedTools": ["create_story_branch", "deliver_mission_output", "open_pull_request", "sync_pr_comments"],
+    "requiredInputs": ["approved_architecture", "acceptance_criteria"],
+    "requiredOutputs": ["implementation_plan", "patches", "test_plan"],
+    "decisionRights": ["execution_sequencing"],
+    "escalationRules": {
+      "triggers": ["implementation_blocker", "test_failure_cluster"],
+      "target": "captain_picard",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["story", "ephemeral"],
+    "qualityGates": ["tests_green", "scope_discipline"]
+  },
+  {
+    "roleId": "geordi_la_forge",
+    "displayName": "Reliability Engineer",
+    "allowedTools": ["health_check_proxy", "run_crew_agent_proxy"],
+    "requiredInputs": ["runtime_context", "ci_context", "dependency_graph"],
+    "requiredOutputs": ["reliability_report", "infra_changes", "performance_risks"],
+    "decisionRights": ["reliability_gate"],
+    "escalationRules": {
+      "triggers": ["infra_instability", "deployment_blocker"],
+      "target": "commander_riker",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["project", "story", "ephemeral"],
+    "qualityGates": ["build_integrity", "dependency_safety"]
+  },
+  {
+    "roleId": "lt_worf",
+    "displayName": "Security and Policy Officer",
+    "allowedTools": ["run_crew_agent_proxy", "sync_pr_comments", "get_story_status"],
+    "requiredInputs": ["diff", "dependency_report", "policy_config"],
+    "requiredOutputs": ["security_verdict", "required_remediations"],
+    "decisionRights": ["blocking_veto"],
+    "escalationRules": {
+      "triggers": ["critical_security_finding"],
+      "target": "admiral",
+      "maxArbitrationRounds": 0
+    },
+    "memoryScopes": ["project", "story", "role"],
+    "qualityGates": ["security_pass", "policy_compliance"]
+  },
+  {
+    "roleId": "counselor_troi",
+    "displayName": "UX and Stakeholder Clarity Officer",
+    "allowedTools": ["run_crew_agent_proxy", "post_pr_comment"],
+    "requiredInputs": ["ui_copy", "review_context", "stakeholder_feedback"],
+    "requiredOutputs": ["ux_recommendation", "communication_guidance"],
+    "decisionRights": ["ux_clarity_recommendation"],
+    "escalationRules": {
+      "triggers": ["stakeholder_language_conflict"],
+      "target": "captain_picard",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["story", "role", "ephemeral"],
+    "qualityGates": ["user_clarity", "review_comprehension"]
+  },
+  {
+    "roleId": "quark",
+    "displayName": "Cost Optimization Officer",
+    "allowedTools": ["run_crew_agent_proxy", "get_story_status"],
+    "requiredInputs": ["token_usage", "latency_data", "complexity_score"],
+    "requiredOutputs": ["routing_recommendation", "budget_alerts"],
+    "decisionRights": ["model_routing_recommendation"],
+    "escalationRules": {
+      "triggers": ["budget_breach_risk"],
+      "target": "captain_picard",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["project", "sprint", "story"],
+    "qualityGates": ["cost_efficiency", "throughput_target"]
+  }
+]
