@@ -43,15 +43,17 @@ interface PromptVariables {
 export function substitutePromptVariables(template: string, variables: PromptVariables): string {
   let result = template;
 
-  // Handle conditional blocks {{#variable}}...{{/variable}}
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`{{#${key}}}([^]*?){{/${key}}}`, 'g');
-    if (value) {
-      result = result.replace(regex, '$1');
-    } else {
-      result = result.replace(regex, '');
+  // First, remove all conditional blocks for undefined/missing variables
+  // Find all {{#key}}...{{/key}} patterns and check if the key is provided
+  const conditionalRegex = /{{#(\w+)}}([^]*?){{\/\1}}/g;
+  result = result.replace(conditionalRegex, (match, key, content) => {
+    const value = variables[key];
+    // Include content only if the variable exists and is truthy
+    if (value !== undefined && value !== null && value !== false && value !== '' && value !== 0) {
+      return content;
     }
-  }
+    return '';
+  });
 
   // Handle variable substitution {{variable}}
   for (const [key, value] of Object.entries(variables)) {

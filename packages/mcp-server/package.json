@@ -11,6 +11,8 @@
     "dev": "tsc && node --watch dist/index.js",
     "start": "node dist/index.js",
     "test": "vitest run",
+    "test:unit": "RUN_MODE=unit vitest run",
+    "test:integration": "RUN_MODE=integration TEST_ENV=local vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
