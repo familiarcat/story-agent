@@ -22,6 +22,9 @@ The Story Agent has achieved **production-ready status** with ongoing active dev
 - ✅ Real-time crew state management (`crew-autonomy-manager.ts`, `crew-state-broadcaster.ts`)
 - ✅ Agile provider abstraction (Aha, Jira, Stub via `providers/` directory)
 - ✅ Sprint planning UI (`/sprint/` route)
+- ✅ **3-layer testing infrastructure** (108 tests: unit + integration with mocks + CI/CD ready)
+- ✅ **Aha project structure inspection** (roadmap & hierarchy endpoints)
+- ✅ **VSCode extension tree view** (project structure in IDE sidebar)
 
 **Git Repository:** `/Users/brady.georgen.ext/Documents/workspace/story-agent`
 
@@ -54,6 +57,7 @@ story-agent/
 │   │   │   ├── prompt-engine.ts           # Unified LLM call orchestrator
 │   │   │   ├── prompt-archiver.ts         # Archive + cost tracking
 │   │   │   ├── websocket-server.ts        # ⭐ WS server for real-time UI
+│   │   │   ├── aha.ts                     # Aha API client (story CRUD + roadmap + hierarchy)
 │   │   │   └── github.ts                  # GitHub API wrapper
 │   │   ├── src/providers/               # ⭐ Agile provider abstraction
 │   │   │   ├── AhaProvider.ts             # Aha! REST API client
@@ -68,6 +72,10 @@ story-agent/
 │   │   │   ├── story-tools.ts             # Story CRUD tools
 │   │   │   ├── repo-tools.ts              # Repo access tools
 │   │   │   └── delivery-tools.ts          # Delivery state tools
+│   │   ├── test/
+│   │   │   ├── setup.ts                   # ⭐ Mock utilities (Supabase, OpenRouter, fetch)
+│   │   │   └── *.integration.test.ts      # ⭐ Integration tests (9 suites, 58 tests)
+│   │   ├── vitest.config.ts               # ⭐ Vitest config with RUN_MODE filtering
 │   │   ├── PROMPT_ENGINEERING.md          # Full system documentation
 │   │   └── src/index.ts                   # MCP server entry point
 │   ├── ui/                      # Next.js 15 dashboard
@@ -77,22 +85,47 @@ story-agent/
 │   │   │   ├── observation-lounge/ # Crew debate viewer
 │   │   │   ├── sprint/          # ⭐ Sprint planning view
 │   │   │   └── api/
-│   │   │       ├── aha/         # Aha proxy routes (projects, stories, sprints)
-│   │   │       ├── crew/        # ⭐ Crew decisions + insights routes
-│   │   │       ├── events/      # ⭐ SSE real-time event stream
+│   │   │       ├── aha/
+│   │   │       │   ├── projects/route.ts       # List Aha projects
+│   │   │       │   ├── stories/route.ts        # List stories for project
+│   │   │       │   ├── story/route.ts          # Get single story
+│   │   │       │   ├── sprints/route.ts        # List sprints
+│   │   │       │   ├── sprint-stories/route.ts # Stories in sprint
+│   │   │       │   ├── roadmap/route.ts        # ⭐ Complete roadmap (releases + stories)
+│   │   │       │   ├── hierarchy/route.ts      # ⭐ Full hierarchy with stats
+│   │   │       │   └── observation-lounge/route.ts # Fetch story for execution brief
+│   │   │       ├── crew/        # Crew decisions + insights routes
+│   │   │       ├── events/      # SSE real-time event stream
 │   │   │       ├── stories/     # Story import & listing
 │   │   │       └── projects/    # Project listing
-│   │   └── src/lib/
-│   │       ├── crew.ts          # 11-member crew definitions
-│   │       ├── aha.ts           # Aha API client
-│   │       ├── agile.ts         # Story/sprint utilities
-│   │       └── db.ts            # Supabase client (UI side)
+│   │   ├── test/
+│   │   │   └── setup.ts                   # ⭐ Mock utilities for UI tests
+│   │   ├── src/lib/
+│   │   │   ├── crew.ts          # 11-member crew definitions
+│   │   │   ├── aha.ts           # Aha API client (mirrors MCP server)
+│   │   │   ├── agile.ts         # Story/sprint utilities
+│   │   │   └── db.ts            # Supabase client (UI side)
+│   │   └── vitest.config.ts     # ⭐ Vitest config for UI tests
 │   ├── shared/                  # Shared TypeScript types
+│   │   ├── test/
+│   │   │   ├── setup.ts                   # ⭐ Mock utilities (Supabase, OpenRouter, fetch)
+│   │   │   └── db.integration.test.ts     # ⭐ Integration tests (8 tests)
 │   │   └── src/
 │   │       ├── index.ts         # CrewRole, CrewAuthority, interfaces
 │   │       ├── db.ts            # Supabase client + observation memory helpers
 │   │       └── db-docs.ts       # ⭐ Doc vector retrieval helpers
 │   └── vscode-extension/        # VS Code extension with chat support
+│       ├── src/
+│       │   ├── aha.ts           # Aha API client (project, sprint, story types)
+│       │   ├── extension.ts      # Extension activation + command registration
+│       │   ├── participant.ts    # Chat participant
+│       │   ├── sidebar.ts        # Sidebar provider
+│       │   ├── providers/
+│       │   │   └── AhaProjectStructureProvider.ts  # ⭐ Tree view for project hierarchy
+│       │   └── panels/
+│       │       └── StoryExecutionPanel.ts          # WebView for crew execution
+│       ├── tsconfig.json         # TypeScript config (moduleResolution: node)
+│       └── package.json          # Extension manifest + commands + tree view config
 ├── docs/                        # ⭐ Phased knowledge corpus
 │   ├── knowledge/               # Long-form documentation (16 docs)
 │   │   └── AUTONOMOUS_CREW_ARCHITECTURE.md  # Crew system reference
@@ -107,6 +140,7 @@ story-agent/
 │   └── 20260605_docs_knowledge_vectors.sql # ⭐ sa_docs_knowledge_vectors
 ├── contracts/agents/            # Agent role contracts (JSON schema)
 ├── .vscode/mcp.json             # VS Code Copilot MCP server registration
+├── TESTING.md                   # ⭐ Complete testing guide (unit + integration + CI/CD)
 ├── README.md                    # Project overview
 ├── pnpm-workspace.yaml          # Monorepo configuration
 └── pnpm-lock.yaml               # Lock file
@@ -229,7 +263,184 @@ Archival & Storage Layer
 
 ---
 
-## Build Structure
+## Three-Layer Testing Infrastructure (NEW) ✅
+
+A complete test suite ensuring reliable cross-platform execution from development through CI/CD.
+
+### Layer 1: Unit Tests (50 tests, < 5 seconds)
+- Pure logic testing with no external dependencies
+- Test files: `**/*.test.ts` (run via `RUN_MODE=unit`)
+- Examples: Variable substitution, type validation, formatting
+- Environment: `TEST_ENV=unit` disables all mocks
+
+### Layer 2: Integration Tests with Mocks (58 tests, < 15 seconds)
+- Fast local development with full API mocking
+- Test files: `**/*.integration.test.ts` (run via `RUN_MODE=integration`)
+- Mocked services: Supabase, OpenRouter, Aha API, GitHub API
+- Environment: `TEST_ENV=local` activates in-memory mocks
+- Mock infrastructure:
+  - `createMockSupabaseClient()` - In-memory query builder
+  - `createMockOpenRouterClient()` - Deterministic crew responses
+  - `createMockFetch()` - URL-based route mocking for all APIs
+- Covers: Database operations, API integration, error handling
+
+### Layer 3: CI/CD Integration Tests (Same 58 tests with real services)
+- Real service calls in CI/CD pipeline
+- Environment: `TEST_ENV=integration` (default)
+- Services required: Supabase, OpenRouter, Aha API, GitHub
+- Configuration: All via environment variables
+- Usage: `pnpm run test:ci` in GitHub Actions
+
+### Test Commands
+
+```bash
+# Run unit tests only (< 5 seconds)
+npm run test:unit
+
+# Run integration tests with mocks (< 15 seconds, instant feedback)
+npm run test:integration
+
+# Run all tests (108 total)
+npm run test
+
+# Run tests for CI/CD (real services)
+npm run test:ci
+```
+
+### Mock Setup (packages/*/test/setup.ts)
+
+Each package has its own `test/setup.ts`:
+- Shared mocks (Supabase, OpenRouter, fetch)
+- Package-specific test fixtures
+- 180+ lines for comprehensive coverage
+- Reusable across all test suites
+
+### Test Statistics
+
+- **Total Tests:** 108 (50 unit + 58 integration)
+- **Test Files:** 3 packages × 3+ suites each
+- **Coverage:** Database, APIs, providers, prompt engine, docs
+- **Time:** < 15 seconds with mocks, variable with real services
+- **CI/CD Ready:** All tests pass with `TEST_ENV=integration`
+
+### Testing Documentation
+
+See [TESTING.md](./TESTING.md) for:
+- Complete testing guide (250+ lines)
+- Setup instructions
+- Mock patterns and best practices
+- Running tests locally vs CI/CD
+- Troubleshooting
+
+---
+
+## Aha Project Structure Inspection (NEW) ✅
+
+Complete project roadmap and hierarchy visibility from Aha product management.
+
+### What's New: Roadmap & Hierarchy Endpoints
+
+**In MCP Server (packages/mcp-server/src/lib/aha.ts):**
+- `getProjectRoadmap(projectId)` - All releases + unreleased stories
+- `getProjectHierarchy(projectId)` - Complete structure with statistics
+
+**In Next.js UI (packages/ui/src/lib/aha.ts):**
+- `getProjectRoadmap(projectId)` - Mirrors MCP server
+- `getProjectHierarchy(projectId)` - Mirrors MCP server
+
+**In VSCode Extension (packages/vscode-extension/src/aha.ts):**
+- `listAhaProjects()` - Fetch all Aha projects (NEW)
+- `getProjectHierarchy(projectId)` - Complete hierarchy (NEW)
+
+### New API Routes (Next.js UI)
+
+```
+GET /api/aha/roadmap?projectId=X
+  Returns: { project, releases with stories, unreleasedStories }
+
+GET /api/aha/hierarchy?projectId=X
+  Returns: { project, stats, releases with storiesByStatus, unreleasedStories, statusesUsed }
+```
+
+### VSCode Extension: Aha Project Structure Tree View ⭐
+
+A complete project hierarchy visualization in the IDE sidebar:
+
+**Features:**
+- **Explorer Sidebar:** "Aha Project Structure" view
+- **Expandable Tree:**
+  - Projects (icon: $(project))
+  - Releases/Sprints with progress % (icon: $(rocket))
+  - Stories grouped by workflow status (In Progress, Done, etc.)
+  - Backlog/unreleased items (icon: $(inbox))
+  - Individual stories (icon: $(list-ordered))
+
+**Interaction:**
+- Click story to open in Aha browser
+- Expand release to see all stories
+- Expand status group to see individual items
+- Command palette: `story-agent.refreshProjectStructure`
+
+**Implementation:**
+- Component: `AhaProjectStructureProvider` (350+ lines)
+- Lazy-loads data on expansion
+- Tree item types: ProjectTreeItem, ReleaseTreeItem, StatusGroupTreeItem, StoryTreeItem, BacklogGroupTreeItem
+- Commands: refreshProjectStructure, openAhaProject, openAhaSprint, openAhaStory
+
+### Data Structure: Project Hierarchy Response
+
+```typescript
+{
+  project: { id, name, referencePrefix, url }
+  stats: { 
+    totalStories, 
+    totalStoryPoints, 
+    completedStories, 
+    completedStoryPoints, 
+    percentComplete 
+  }
+  releases: [{
+    id, name, startDate, endDate, url,
+    totalStoryPoints, doneStoryPoints, remainingStoryPoints,
+    featureCount, doneCount,
+    storiesByStatus: {
+      "In Progress": [{referenceNum, name, storyPoints, url}],
+      "Done": [...],
+      ...
+    }
+  }]
+  unreleasedStories: [{referenceNum, name, description, url}]
+  statusesUsed: ["In Progress", "Done", ...]
+}
+```
+
+### Capabilities
+
+✅ **Inspect Complete Project Structure**
+- Single API call returns everything
+- All releases with story assignments
+- Every story visible by release and status
+- Backlog items clearly marked
+
+✅ **Visual Progress Tracking**
+- Story point totals per release
+- % complete calculations
+- Story counts by status
+- At-a-glance project health
+
+✅ **Direct Navigation**
+- Open projects in Aha
+- Open sprints in Aha
+- Open stories in Aha
+- One-click from IDE to browser
+
+✅ **Multiple Access Points**
+- Next.js Dashboard: Full hierarchy display (future)
+- VSCode Extension: Tree view in sidebar (current)
+- API Routes: Programmatic access (current)
+- MCP Server: Available to crew agents (current)
+
+---
 
 ### Monorepo (pnpm workspaces)
 
@@ -361,29 +572,58 @@ Fully autonomous story delivery: From Aha story description → complete, tested
 - Prompt engine functional with archival on every call
 - 5 prompt analytics MCP tools registered
 
-✅ **Knowledge & Docs System (Added)**
+✅ **Knowledge & Docs System**
 - `docs/` hierarchy: `knowledge/`, `phases/`, `vector/`
 - 17 docs indexed in `doc_corpus_manifest.jsonl` (incl. crew architecture)
 - `db-docs.ts`: 4 vector retrieval functions with phase/tag/semantic filtering
 - 4 doc MCP tools: `get_doc_guidance`, `get_role_guidance`, `search_docs`, `list_doc_phases`
 - `docs/phases/PHASED_EXECUTION.md`: guided Phase 0-4 reading path
 
-✅ **Realtime & Streaming (Added)**
+✅ **Realtime & Streaming**
 - `crew-autonomy-manager.ts`: autonomous mission lifecycle management
 - `crew-state-broadcaster.ts`: real-time state event streaming
 - `crew-communication.ts`: inter-crew messaging protocol
 - `websocket-server.ts`: WebSocket server for live UI updates
 - `/api/events/` SSE endpoint for real-time crew state in UI
 
-✅ **Agile Provider Abstraction (Added)**
+✅ **Agile Provider Abstraction**
 - `providers/` directory with `AhaProvider`, `JiraProvider`, `StubProviders`
 - Provider factory in `index.ts` (switches on env var)
 - All story tools use `getAgileProvider()` rather than direct Aha calls
 
-✅ **Sprint Planning (Added)**
+✅ **Sprint Planning**
 - `/sprint/` UI route for sprint tracking
 - `/api/aha/sprints/` and `/api/aha/sprint-stories/` API routes
 - `/api/crew/decisions` and `/api/crew/insights` for crew analytics
+
+✅ **THREE-LAYER TESTING INFRASTRUCTURE (NEW)**
+- 108 tests passing: 50 unit + 58 integration with mocks
+- Vitest 4.1.8 with ESM module support
+- RUN_MODE environment variable for dynamic test filtering
+- Mock infrastructure for Supabase, OpenRouter, Aha API, GitHub API
+- `packages/shared/test/setup.ts` (180+ lines of mocks)
+- `packages/mcp-server/test/setup.ts` (140+ lines)
+- Integration test suites: db.integration.test.ts, prompt-engine.integration.test.ts, providers.integration.test.ts
+- npm scripts: `test:unit`, `test:integration`, `test:ci`, `test`
+- TESTING.md documentation (250+ lines)
+
+✅ **AHA PROJECT STRUCTURE INSPECTION (NEW)**
+- `getProjectRoadmap(projectId)` in MCP server and UI
+- `getProjectHierarchy(projectId)` in MCP server and UI with complete statistics
+- `/api/aha/roadmap?projectId=X` endpoint
+- `/api/aha/hierarchy?projectId=X` endpoint
+- Returns complete project structure: releases, stories by status, backlog, progress %
+- Available to crew agents for architectural analysis
+
+✅ **VSCODE EXTENSION PROJECT STRUCTURE TREE VIEW (NEW)**
+- `AhaProjectStructureProvider` (350+ lines) - complete tree data provider
+- Explorer sidebar: "Aha Project Structure" view
+- Hierarchical display: Projects → Releases → Status Groups → Stories
+- One-click navigation to open projects/sprints/stories in Aha
+- Commands: refreshProjectStructure, openAhaProject, openAhaSprint, openAhaStory
+- Lazy-loaded hierarchy on expansion
+- Story point progress % for releases
+- Backlog section for unreleased items
 
 ⚠️ **Known Pre-existing Build Warnings**
 - `crew-autonomy-manager.ts`: Timer type compatibility (Node.js version)
@@ -398,6 +638,9 @@ Fully autonomous story delivery: From Aha story description → complete, tested
 1. **For new features:** Check `packages/mcp-server/PROMPT_ENGINEERING.md` for archival & cost tracking capabilities
 2. **For crew modifications:** Update `packages/mcp-server/src/lib/crew.ts` and `packages/mcp-server/src/lib/crew-agents.ts`
 3. **For prompt updates:** Edit templates in `packages/mcp-server/src/lib/prompt-templates.ts` (no code changes needed)
+4. **For testing:** Run `pnpm test` locally with mocks before pushing. See [TESTING.md](./TESTING.md) for setup
+5. **For Aha integration:** Use `getProjectHierarchy(projectId)` to get complete roadmap data (MCP server, UI, or extension)
+6. **For VSCode extension:** Access project structure via sidebar tree view or programmatically via `/api/aha/hierarchy` endpoint
 4. **For auditing:** Use MCP tools: `crew_story_prompt_audit`, `crew_efficiency_analysis`
 5. **For doc retrieval:** Use MCP tools: `get_doc_guidance`, `get_role_guidance`, `search_docs`
 6. **For adding new providers:** Add to `packages/mcp-server/src/providers/` following `AhaProvider.ts` pattern
