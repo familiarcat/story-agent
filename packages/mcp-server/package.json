@@ -18,6 +18,7 @@
     "dotenv": "^16.4.7",
     "node-fetch": "^3.3.2",
     "openai": "^4.67.1",
+    "ws": "^8.16.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

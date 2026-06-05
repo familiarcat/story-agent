@@ -1,0 +1,17 @@
+{"id":"doc-start-here","path":"docs/knowledge/START_HERE.md","phase":"phase0","title":"Start Here","tags":["entry","navigation","roles"]}
+{"id":"doc-visual-overview","path":"docs/knowledge/VISUAL_OVERVIEW.md","phase":"phase0","title":"Visual Overview","tags":["overview","diagram","system"]}
+{"id":"doc-documentation-index","path":"docs/knowledge/DOCUMENTATION_INDEX.md","phase":"phase0","title":"Documentation Index","tags":["index","navigation"]}
+{"id":"doc-accomplishment-summary","path":"docs/knowledge/ACCOMPLISHMENT_SUMMARY.md","phase":"phase1","title":"Accomplishment Summary","tags":["value","summary","business"]}
+{"id":"doc-autonomous-complete","path":"docs/knowledge/AUTONOMOUS_CREW_COMPLETE.md","phase":"phase1","title":"Autonomous Crew Complete","tags":["crew","overview"]}
+{"id":"doc-autonomous-readme","path":"docs/knowledge/AUTONOMOUS_CREW_README.md","phase":"phase1","title":"Autonomous Crew README","tags":["crew","readme"]}
+{"id":"doc-autonomous-crew-arch","path":"docs/knowledge/AUTONOMOUS_CREW_ARCHITECTURE.md","phase":"phase2","title":"Autonomous Crew Architecture","tags":["crew","architecture","implementation","reference"]}
+{"id":"doc-architecture-diagrams","path":"docs/knowledge/ARCHITECTURE_DIAGRAMS.md","phase":"phase2","title":"Architecture Diagrams","tags":["architecture","mermaid","reference"]}
+{"id":"doc-ui-architecture","path":"docs/knowledge/UI_ARCHITECTURE.md","phase":"phase2","title":"UI Architecture","tags":["ui","architecture","spec"]}
+{"id":"doc-dual-role-ui","path":"docs/knowledge/DUAL_ROLE_UI_COMPLETE.md","phase":"phase2","title":"Dual Role UI Complete","tags":["ui","pm","developer"]}
+{"id":"doc-autonomous-integration","path":"docs/knowledge/AUTONOMOUS_CREW_INTEGRATION.md","phase":"phase2","title":"Autonomous Crew Integration","tags":["crew","workflow","integration"]}
+{"id":"doc-ui-integration-guide","path":"docs/knowledge/UI_INTEGRATION_GUIDE.md","phase":"phase3","title":"UI Integration Guide","tags":["ui","implementation","guide"]}
+{"id":"doc-integration-guide","path":"docs/knowledge/INTEGRATION_GUIDE.md","phase":"phase3","title":"Integration Guide","tags":["integration","guide"]}
+{"id":"doc-ui-implementation-summary","path":"docs/knowledge/UI_IMPLEMENTATION_SUMMARY.md","phase":"phase3","title":"UI Implementation Summary","tags":["ui","summary","implementation"]}
+{"id":"doc-implementation-roadmap","path":"docs/knowledge/IMPLEMENTATION_ROADMAP.md","phase":"phase3","title":"Implementation Roadmap","tags":["roadmap","timeline","execution"]}
+{"id":"doc-session-complete","path":"docs/knowledge/SESSION_COMPLETE.md","phase":"phase4","title":"Session Complete","tags":["session","closure","handoff"]}
+{"id":"doc-file-manifest","path":"docs/knowledge/FILE_MANIFEST.md","phase":"phase4","title":"File Manifest","tags":["manifest","inventory"]}

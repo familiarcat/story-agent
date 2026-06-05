@@ -314,3 +314,105 @@ export interface CrewMissionPlan {
   findings: CrewFinding[];
   recommendedExecutionOrder: string[];
 }
+
+// ── Real-Time Crew State for UI ────────────────────────────────────────────────
+
+export type CrewMemberStatus = 'pending' | 'executing' | 'complete' | 'vetoed' | 'error';
+
+export type ExecutionPhase = 'not_started' | 'phase_1_execution' | 'phase_2_revision' | 'complete';
+
+export interface CrewMemberExecution {
+  crewId: string;
+  crewName: string;
+  specialty: string;
+  status: CrewMemberStatus;
+  findings?: string;
+  recommendations?: string[];
+  confidence?: number;
+  isVeto?: boolean;
+  costUsd?: number;
+  executedAt?: string;
+  durationMs?: number;
+}
+
+/**
+ * Real-time execution state for a story.
+ * Updated incrementally as crew members complete findings.
+ * Broadcast to UI clients via WebSocket.
+ */
+export interface CrewExecutionState {
+  id: string;
+  storyRef: string;
+  phase: ExecutionPhase;
+  status: 'pending' | 'in_progress' | 'blocked' | 'complete';
+  
+  // Crew progress tracking
+  crewExecutions: CrewMemberExecution[];
+  activeCrewMembers: string[]; // crewIds currently executing
+  activeSinceMs: number;       // milliseconds since phase start
+  
+  // Aggregated metrics
+  nextStep: string;            // Human-readable description of what's happening
+  blockers?: string[];         // Any vetos or errors blocking progress
+  totalCostUsd: number;
+  totalExecutionTimeMs: number;
+  
+  // Metadata
+  createdAt: string;
+  updatedAt: string;
+  broadcastCount: number;      // How many times this state was broadcast to UI
+}
+
+/**
+ * Project-level view of all stories and their crew execution states.
+ */
+export interface ProjectExecutionState {
+  projectId: string;
+  projectName: string;
+  stories: Array<{
+    ref: string;
+    title: string;
+    status: CrewExecutionState;
+  }>;
+  crewAssignments: Partial<Record<CrewRole, string[]>>; // crew → story refs
+  totalCostUsd: number;
+  activeStoriesCount: number;
+  completedStoriesCount: number;
+}
+
+/**
+ * WebSocket message types for real-time communication.
+ */
+export type WebSocketMessageType =
+  | 'subscribe'
+  | 'unsubscribe'
+  | 'state:initial'
+  | 'state:updated'
+  | 'crew:finding'
+  | 'crew:veto'
+  | 'error'
+  | 'ping'
+  | 'pong';
+
+export interface WebSocketMessage<T = unknown> {
+  type: WebSocketMessageType;
+  storyRef?: string;
+  projectId?: string;
+  payload?: T;
+  timestamp?: string;
+  error?: string;
+}
+
+// ── Documentation Corpus (Vector Store) ──────────────────────────────────────
+
+export type {
+  DocKnowledgeChunk,
+  DocRetrievalOptions,
+} from './db-docs.js';
+
+export {
+  retrieveDocKnowledge,
+  listDocPhases,
+  getRoleGuidance,
+  searchDocs,
+} from './db-docs.js';

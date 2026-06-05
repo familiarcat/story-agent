@@ -1,8 +1,16 @@
 import * as vscode from 'vscode';
 import { registerParticipant } from './participant';
 import { StorySidebarProvider } from './sidebar';
+import { StoryExecutionPanel } from './panels/StoryExecutionPanel';
+import { CrewCopilotProvider } from './providers/CrewCopilotProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
+  // ── Tree Data Providers ──────────────────────────────────────────────────
+  const crewCopilotProvider = new CrewCopilotProvider();
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('storyAgent.crewCopilot', crewCopilotProvider)
+  );
+
   // ── Sidebar webview ──────────────────────────────────────────────────────
   const sidebarProvider = new StorySidebarProvider(context);
   context.subscriptions.push(
@@ -35,6 +43,52 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.commands.executeCommand(
         'workbench.view.extension.story-agent-sidebar'
       );
+    }),
+
+    // New crew-related commands
+    vscode.commands.registerCommand(
+      'storyAgent.executeStory',
+      async (storyRef: string) => {
+        if (!storyRef) {
+          const input = await vscode.window.showInputBox({
+            prompt: 'Enter story reference (e.g., STORY-123)',
+            placeHolder: 'STORY-123',
+          });
+          if (!input) return;
+          storyRef = input;
+        }
+
+        try {
+          new StoryExecutionPanel(context, storyRef);
+          vscode.window.showInformationMessage(`Opened execution panel for ${storyRef}`);
+        } catch (err) {
+          vscode.window.showErrorMessage(`Failed to open execution panel: ${err}`);
+        }
+      }
+    ),
+
+    vscode.commands.registerCommand('storyAgent.viewCrewMember', async (crewId: string) => {
+      const crewNames: Record<string, string> = {
+        captain: 'Captain Picard',
+        architect: 'Lt. Commander Data',
+        developer: 'Cmdr. Riker',
+        infrastructure: 'Lt. Geordi La Forge',
+        devops: "Chief O'Brien",
+        security: 'Lt. Worf',
+        qa: 'Lt. Yar',
+        analyst: 'Counselor Troi',
+        health: 'Dr. Crusher',
+        communications: 'Lt. Uhura',
+        finance: 'Quark',
+      };
+
+      vscode.window.showInformationMessage(`Viewing: ${crewNames[crewId] || crewId}`);
+      // TODO: Show crew member details panel
+    }),
+
+    vscode.commands.registerCommand('storyAgent.refreshCrew', async () => {
+      crewCopilotProvider.refresh();
+      vscode.window.showInformationMessage('Crew status refreshed');
     }),
 
     vscode.commands.registerCommand(

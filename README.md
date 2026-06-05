@@ -7,6 +7,10 @@ Point at an Aha story → branch gets created → code gets implemented → PR o
 
 ```
 story-agent/
+├── docs/
+│   ├── knowledge/      Long-form generated docs (architecture, UI, roadmap, summaries)
+│   ├── phases/         Phase-by-phase execution reading path
+│   └── vector/         Vector indexing metadata and ingestion notes
 ├── packages/
 │   ├── mcp-server/     MCP stdio server — tools for Aha, GitHub, delivery state
 │   ├── ui/             Next.js 15 dashboard — story tracker + PR comment viewer
@@ -85,6 +89,12 @@ Dashboard: http://localhost:3000
 - `contracts/agents/role-contracts.schema.json`
 - `contracts/agents/contracts.v1.json`
 - `planning/sprints-1-3-jira-import.csv`
+
+## Documentation Navigation
+
+- `START_HERE.md` - root pointer to the docs hub
+- `docs/phases/PHASED_EXECUTION.md` - phased execution path
+- `docs/knowledge/START_HERE.md` - role-based deep-dive guide
 
 ## Two-Phase Workflow
 
