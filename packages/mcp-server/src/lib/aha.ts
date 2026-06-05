@@ -161,3 +161,111 @@ function mapRelease(r: Record<string, unknown>): AhaSprint {
     featureCount: (r.num_features as number | undefined) ?? 0,
   };
 }
+
+/**
+ * Get complete roadmap for a project: all releases with their assigned stories and status.
+ * This provides a high-level view of what's planned and in progress.
+ */
+export async function getProjectRoadmap(projectId: string): Promise<{
+  project: AhaProject;
+  releases: Array<AhaSprint & { stories: AhaSprintStory[] }>;
+  unreleasedStories: AhaStory[];
+}> {
+  // Fetch project details
+  const projectData = await ahaFetch(`products/${projectId}`);
+  const project: AhaProject = {
+    id: (projectData.product as Record<string, unknown>)?.id as string,
+    name: (projectData.product as Record<string, unknown>)?.name as string,
+    referencePrefix: ((projectData.product as Record<string, unknown>)?.reference_prefix as string | undefined) ?? null,
+    url: (projectData.product as Record<string, unknown>)?.url as string,
+  };
+
+  // Fetch all releases
+  const releases = await listAhaSprints(projectId);
+
+  // For each release, fetch its stories
+  const releasesWithStories = await Promise.all(
+    releases.map(async (release) => {
+      const stories = await getAhaSprintStories(release.id);
+      return { ...release, stories };
+    })
+  );
+
+  // Fetch all project stories to find unreleased ones
+  const allStories = await listAhaStoriesForProject(projectId);
+  const releasedStoryIds = new Set(
+    releasesWithStories.flatMap((r) => r.stories.map((s) => s.referenceNum))
+  );
+  const unreleasedStories = allStories.filter((s) => !releasedStoryIds.has(s.referenceNum));
+
+  return {
+    project,
+    releases: releasesWithStories,
+    unreleasedStories,
+  };
+}
+
+/**
+ * Get the complete project hierarchy: all structural data including epics, releases, and stories.
+ * This is the most comprehensive view of a project structure.
+ */
+export async function getProjectHierarchy(projectId: string): Promise<{
+  project: AhaProject;
+  stats: {
+    totalStories: number;
+    totalStoryPoints: number;
+    plannedPoints: number;
+    completedPoints: number;
+    releaseCount: number;
+  };
+  releases: Array<{
+    release: AhaSprint;
+    storiesByStatus: Record<string, AhaSprintStory[]>;
+  }>;
+  unreleasedStories: AhaStory[];
+  statusesUsed: string[];
+}> {
+  const roadmap = await getProjectRoadmap(projectId);
+
+  // Organize stories by workflow status
+  const releasesWithGroupedStories = roadmap.releases.map((release) => {
+    const storiesByStatus: Record<string, AhaSprintStory[]> = {};
+    for (const story of release.stories) {
+      if (!storiesByStatus[story.workflowStatus]) {
+        storiesByStatus[story.workflowStatus] = [];
+      }
+      storiesByStatus[story.workflowStatus].push(story);
+    }
+    return {
+      release,
+      storiesByStatus,
+    };
+  });
+
+  // Collect all unique statuses
+  const statusesUsed = new Set<string>();
+  for (const rel of releasesWithGroupedStories) {
+    Object.keys(rel.storiesByStatus).forEach((s) => statusesUsed.add(s));
+  }
+  for (const story of roadmap.unreleasedStories) {
+    statusesUsed.add(story.workflowStatus);
+  }
+
+  // Calculate stats
+  const totalStoryPoints = roadmap.releases.reduce((sum, r) => sum + r.totalStoryPoints, 0);
+  const completedPoints = roadmap.releases.reduce((sum, r) => sum + r.doneStoryPoints, 0);
+
+  return {
+    project: roadmap.project,
+    stats: {
+      totalStories: roadmap.releases.reduce((sum, r) => sum + r.featureCount, 0) + roadmap.unreleasedStories.length,
+      totalStoryPoints,
+      plannedPoints: roadmap.releases.reduce((sum, r) => sum + r.totalStoryPoints, 0),
+      completedPoints,
+      releaseCount: roadmap.releases.length,
+    },
+    releases: releasesWithGroupedStories,
+    unreleasedStories: roadmap.unreleasedStories,
+    statusesUsed: Array.from(statusesUsed).sort(),
+  };
+}

@@ -16,12 +16,74 @@ function PhaseBadge({ phase }: { phase: 1 | 2 }) {
   );
 }
 
+const DEMO_STORIES: StoryRecord[] = [
+  {
+    storyId: 'STORY-001',
+    storyTitle: 'Implement user authentication',
+    storyUrl: 'https://aha.io/stories/STORY-001',
+    repoFullName: 'example/repo-auth',
+    branch: 'STORY-001',
+    prNumber: 42,
+    prUrl: 'https://github.com/example/repo-auth/pull/42',
+    phase: 1,
+    status: 'pr_open',
+    updatedAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    storyId: 'STORY-002',
+    storyTitle: 'Add dashboard widgets',
+    storyUrl: 'https://aha.io/stories/STORY-002',
+    repoFullName: 'example/repo-ui',
+    branch: 'STORY-002',
+    prNumber: 38,
+    prUrl: 'https://github.com/example/repo-ui/pull/38',
+    phase: 2,
+    status: 'pr_revision',
+    updatedAt: new Date(Date.now() - 7200000).toISOString(),
+  },
+  {
+    storyId: 'STORY-003',
+    storyTitle: 'Migrate to PostgreSQL',
+    storyUrl: 'https://aha.io/stories/STORY-003',
+    repoFullName: 'example/backend',
+    branch: 'STORY-003',
+    prNumber: null,
+    prUrl: null,
+    phase: 1,
+    status: 'implementing',
+    updatedAt: new Date(Date.now() - 14400000).toISOString(),
+  },
+];
+
 export default async function Dashboard() {
-  const stories = await listStories();
+  let stories: StoryRecord[] = [];
+  let isDemo = false;
+  
+  try {
+    stories = await listStories();
+  } catch (error) {
+    // If database is unavailable, use demo data
+    console.warn('Database unavailable, using demo data:', error);
+    stories = DEMO_STORIES;
+    isDemo = true;
+  }
   const byStatus = (s: StoryRecord['status']) => stories.filter(x => x.status === s).length;
 
   return (
     <div>
+      {isDemo && (
+        <div style={{
+          backgroundColor: '#fef3c7',
+          border: '1px solid #f59e0b',
+          borderRadius: '0.5rem',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          color: '#92400e',
+          fontSize: '0.875rem',
+        }}>
+          ℹ️ <strong>Demo Mode:</strong> Supabase credentials not configured. Showing sample data. Set SUPABASE_URL and SUPABASE_KEY to connect to real database.
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Story Dashboard</h1>
         <a href="/story/new" className="btn btn-primary">+ New Story</a>
