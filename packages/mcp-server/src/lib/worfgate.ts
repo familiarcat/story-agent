@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 type WorfGateTarget = 'github' | 'aha' | 'openrouter' | 'supabase' | 'other';
 
 export interface WorfGateDecision {
@@ -5,6 +7,20 @@ export interface WorfGateDecision {
   reasons: string[];
   detectedMarkers: string[];
 }
+
+export interface WorfGateAuditEntry {
+  timestamp: string;
+  operation: string;
+  target: WorfGateTarget;
+  repoFullName: string | null;
+  allowed: boolean;
+  reasons: string[];
+  detectedMarkers: string[];
+  payloadHash: string;
+}
+
+const WORFGATE_AUDIT_MAX = parseInt(process.env.WORFGATE_AUDIT_MAX ?? '500', 10);
+const worfGateAuditLog: WorfGateAuditEntry[] = [];
 
 const DEFAULT_CONTROLLED_MARKERS = [
   'bayer',
@@ -56,6 +72,31 @@ function isGithubOrgAllowed(repoFullName?: string): boolean {
   return allowed.includes(owner.toLowerCase());
 }
 
+function payloadHash(text: string): string {
+  return createHash('sha256').update(text).digest('hex');
+}
+
+function addWorfGateAuditEntry(entry: WorfGateAuditEntry): void {
+  worfGateAuditLog.unshift(entry);
+  if (worfGateAuditLog.length > WORFGATE_AUDIT_MAX) {
+    worfGateAuditLog.splice(WORFGATE_AUDIT_MAX);
+  }
+}
+
+export function getWorfGateAuditLog(options?: {
+  limit?: number;
+  blockedOnly?: boolean;
+}): WorfGateAuditEntry[] {
+  const blockedOnly = options?.blockedOnly ?? false;
+  const limit = options?.limit ?? 50;
+
+  const filtered = blockedOnly
+    ? worfGateAuditLog.filter(entry => !entry.allowed)
+    : worfGateAuditLog;
+
+  return filtered.slice(0, limit);
+}
+
 export function evaluateWorfGateOutbound(input: {
   target: WorfGateTarget;
   payloadText: string;
@@ -100,6 +141,18 @@ export function enforceWorfGateOutbound(input: {
   operation: string;
 }): void {
   const decision = evaluateWorfGateOutbound(input);
+  const auditEntry: WorfGateAuditEntry = {
+    timestamp: new Date().toISOString(),
+    operation: input.operation,
+    target: input.target,
+    repoFullName: input.repoFullName ?? null,
+    allowed: decision.allowed,
+    reasons: decision.reasons,
+    detectedMarkers: decision.detectedMarkers,
+    payloadHash: payloadHash(input.payloadText),
+  };
+  addWorfGateAuditEntry(auditEntry);
+
   if (decision.allowed) {
     if (decision.detectedMarkers.length > 0) {
       process.stderr.write(

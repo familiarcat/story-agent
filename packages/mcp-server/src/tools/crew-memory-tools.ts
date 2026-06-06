@@ -2,12 +2,71 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getRecentObservationMemories } from '@story-agent/shared/db';
 import { promptArchive, getPromptEngineStats, exportPromptArchive } from '../lib/prompt-archiver.js';
+import { getWorfGateAuditLog } from '../lib/worfgate.js';
 
 /**
  * Crew memory analysis tools for querying and summarizing observation lounge debate patterns.
  * Enables the crew to learn collectively from past missions and identify trends.
  */
 export function registerCrewMemoryTools(server: McpServer) {
+  server.tool(
+    'worfgate_audit_log',
+    'Get WorfGate outbound security audit entries (allow/block decisions) with reason codes and payload hashes.',
+    {
+      limit: z.number().optional().default(50).describe('Maximum number of audit entries to return'),
+      blockedOnly: z.boolean().optional().default(false).describe('Return only blocked operations'),
+    },
+    async ({ limit, blockedOnly }) => {
+      const entries = getWorfGateAuditLog({ limit, blockedOnly });
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                totalReturned: entries.length,
+                blockedOnly,
+                entries,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    'worfgate_policy_status',
+    'Show active WorfGate policy settings controlling controlled-data protection and allowed egress targets.',
+    {},
+    async () => {
+      const status = {
+        enforce: (process.env.WORFGATE_ENFORCE ?? 'true').toLowerCase() === 'true',
+        allowControlled: (process.env.WORFGATE_ALLOW_CONTROLLED ?? 'false').toLowerCase() === 'true',
+        allowedGithubOrgs: (process.env.WORFGATE_ALLOWED_GITHUB_ORGS ?? '')
+          .split(',')
+          .map(v => v.trim())
+          .filter(Boolean),
+        controlledMarkersOverride: (process.env.WORFGATE_CONTROLLED_MARKERS ?? '')
+          .split(',')
+          .map(v => v.trim())
+          .filter(Boolean),
+        auditMax: Number.parseInt(process.env.WORFGATE_AUDIT_MAX ?? '500', 10),
+      };
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(status, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
   server.tool(
     'memory_sync_diagnostics',
     'Show Redis-to-Supabase memory sync health: queue depth, worker status, last sync success/failure, and throughput counters.',
