@@ -7,8 +7,8 @@ This document describes the local, integration, and CI/CD testing approach for s
 We use a **three-layer testing approach**:
 
 1. **Unit Tests** — Pure functions, no I/O, fast (< 1s), 100% deterministic
-2. **Integration Tests (Local)** — Mocked services (Supabase, OpenRouter, HTTP), fast, no external deps
-3. **Integration Tests (CI/CD)** — Real services (Supabase in AWS, OpenRouter API, real provider APIs), slow, external deps
+2. **Integration Tests (Local)** — Mocked services (Supabase, approved LLM, HTTP), fast, no external deps
+3. **Integration Tests (CI/CD)** — Real services (Supabase in AWS, Bayer-approved LLM API, real provider APIs), slow, external deps
 
 ### Design Philosophy
 
@@ -68,7 +68,7 @@ pnpm run test:ci
 
 **Note**: This requires live credentials:
 - `SUPABASE_URL`, `SUPABASE_KEY` (AWS Supabase project)
-- `OPENROUTER_API_KEY` (LLM API)
+- `CREW_LLM_PROVIDER`, `CREW_LLM_APPROVED_URL`, `CREW_LLM_APPROVED_KEY` (or `GITHUB_TOKEN` for copilot provider)
 - `AHA_API_KEY`, `AHA_DOMAIN` (or other provider creds)
 
 ---
@@ -95,7 +95,7 @@ describe('My Function', () => {
 ### Integration Tests (With Mocks)
 
 - `packages/shared/src/db.integration.test.ts` — Database CRUD ops (mocked Supabase)
-- `packages/mcp-server/src/lib/prompt-engine.integration.test.ts` — LLM calls (mocked OpenRouter)
+- `packages/mcp-server/src/lib/prompt-engine.integration.test.ts` — LLM calls (mocked approved provider)
 - `packages/mcp-server/src/providers/providers.integration.test.ts` — HTTP calls (mocked fetch)
 
 **Pattern**: `*.integration.test.ts`
@@ -129,7 +129,7 @@ All mocks live in `test/setup.ts` in each package:
 
 ```typescript
 createMockSupabaseClient()      // In-memory table storage, chainable query builder
-createMockOpenRouterClient()    // Deterministic LLM responses per crew member
+createMockApprovedLlmClient()   // Deterministic LLM responses per crew member
 createMockFetch()               // Mock HTTP responses for providers
 createMockPromptTemplate()      // Stub prompt templates
 testFixtures                    // Pre-populated story & memory objects
@@ -195,17 +195,17 @@ skipIfNotTesting('Database Integration Tests', () => {
 **File**: `packages/mcp-server/src/lib/prompt-engine.integration.test.ts`
 
 ```typescript
-import { createMockOpenRouterClient } from '../test/setup.js';
+import { createMockApprovedLlmClient } from '../test/setup.js';
 
 skipIfNotTesting('Prompt Engine Integration Tests', () => {
-  let mockOpenRouter;
+  let mockApprovedLlm;
 
   beforeEach(() => {
-    mockOpenRouter = createMockOpenRouterClient();
+    mockApprovedLlm = createMockApprovedLlmClient();
   });
 
   it('returns deterministic response for Captain Picard', async () => {
-    const response = await mockOpenRouter.chat.completions.create({
+    const response = await mockApprovedLlm.chat.completions.create({
       model: 'claude-3-opus',
       messages: [
         { role: 'system', content: 'You are Captain Picard.' },
@@ -369,7 +369,7 @@ skipIfNotTesting('My Test', () => { ... });
 ```bash
 # Check Supabase/LLM credentials if TEST_ENV=integration
 echo $SUPABASE_URL
-echo $OPENROUTER_API_KEY
+echo $CREW_LLM_PROVIDER $CREW_LLM_APPROVED_URL
 
 # Or use local mocks instead
 TEST_ENV=local pnpm run test:integration

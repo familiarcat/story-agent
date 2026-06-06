@@ -80,10 +80,10 @@ export function createMockSupabaseClient() {
 }
 
 /**
- * Mock OpenRouter/OpenAI client for testing.
+ * Mock approved OpenAI-compatible LLM client for testing.
  * Returns deterministic responses for crew member prompts.
  */
-export function createMockOpenRouterClient() {
+export function createMockApprovedLlmClient() {
   return {
     chat: {
       completions: {

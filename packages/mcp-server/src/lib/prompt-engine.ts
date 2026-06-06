@@ -25,9 +25,9 @@ import { promptArchive, calculateTokenCost, type PromptUsageRecord } from './pro
  */
 function getLlmProvider(): string {
   const provider = (process.env.CREW_LLM_PROVIDER ?? '').trim().toLowerCase();
-  if (!provider) return 'demo';
+  if (!provider) return 'approved';
   if (['demo', 'copilot', 'approved'].includes(provider)) return provider;
-  return 'demo';
+  return 'approved';
 }
 
 /**

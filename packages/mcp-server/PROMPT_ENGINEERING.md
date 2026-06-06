@@ -84,7 +84,7 @@ export async function executePromptEngineCall(
 1. Load prompt template by crew ID
 2. Validate required variables
 3. Substitute variables in user prompt
-4. Call LLM via OpenRouter with system + user prompt
+4. Call LLM via configured approved provider with system + user prompt
 5. Parse structured response (FINDINGS, RECOMMENDATIONS, CONFIDENCE)
 6. Calculate token cost
 7. **Archive usage record** with full metadata
@@ -413,7 +413,7 @@ Use this for:
 
 ❌ **Don't:**
 ```typescript
-const response = await openrouter.chat.completions.create({
+const response = await llmClient.chat.completions.create({
   messages: [{role: 'system', content: somePrompt}],
   ...
 });
@@ -506,7 +506,7 @@ export async function captainPicardAnalysis(context: CrewAgentContext) {
 - Loads `picard_strategic_command` template
 - Validates all required variables present
 - Substitutes `{{storyNum}}`, `{{storyName}}`, etc. into user prompt
-- Calls Claude 3 Opus via OpenRouter with system + user prompt
+- Calls configured Bayer-approved provider (or demo fallback) with system + user prompt
 - Parses response for FINDINGS, RECOMMENDATIONS, CONFIDENCE
 - Calculates cost ($0.0042 for 1500 prompt + 200 completion tokens)
 - **Records full usage record in archive**

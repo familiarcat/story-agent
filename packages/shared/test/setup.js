@@ -6,7 +6,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.testFixtures = exports.IS_INTEGRATION_TEST = exports.IS_LOCAL_TEST = exports.TEST_ENV = void 0;
 exports.createMockSupabaseClient = createMockSupabaseClient;
-exports.createMockOpenRouterClient = createMockOpenRouterClient;
+exports.createMockApprovedLlmClient = createMockApprovedLlmClient;
 exports.createMockFetch = createMockFetch;
 exports.resetMocks = resetMocks;
 const vitest_1 = require("vitest");
@@ -79,10 +79,10 @@ function createMockSupabaseClient() {
     };
 }
 /**
- * Mock OpenRouter/OpenAI client for testing.
+ * Mock approved OpenAI-compatible LLM client for testing.
  * Returns deterministic responses for crew member prompts.
  */
-function createMockOpenRouterClient() {
+function createMockApprovedLlmClient() {
     return {
         chat: {
             completions: {

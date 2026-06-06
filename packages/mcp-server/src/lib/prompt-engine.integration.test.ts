@@ -1,27 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createMockOpenRouterClient, IS_LOCAL_TEST } from '../../test/setup.js';
+import { createMockApprovedLlmClient, IS_LOCAL_TEST } from '../../test/setup.js';
 import { substitutePromptVariables } from '../lib/prompt-engine.js';
 
 /**
  * Integration tests for prompt engine with mocked LLM calls.
- * These test the full crew agent flow with mocked OpenRouter responses.
+ * These test the full crew agent flow with mocked approved-provider responses.
  * In local mode (TEST_ENV=local), uses deterministic mock responses.
- * In integration mode (TEST_ENV=integration), would call real OpenRouter API.
+ * In integration mode (TEST_ENV=integration), would call real approved LLM API.
  */
 
 const skipIfNotTesting = IS_LOCAL_TEST ? describe : describe.skip;
 
 skipIfNotTesting('Prompt Engine Integration Tests', () => {
-  let mockOpenRouter: any;
+  let mockApprovedLlm: any;
 
   beforeEach(() => {
-    mockOpenRouter = createMockOpenRouterClient();
+    mockApprovedLlm = createMockApprovedLlmClient();
     vi.stubGlobal('fetch', vi.fn());
   });
 
   describe('LLM call mocking', () => {
     it('returns deterministic response for captain picard', async () => {
-      const response = await mockOpenRouter.chat.completions.create({
+      const response = await mockApprovedLlm.chat.completions.create({
         model: 'claude-3-opus',
         messages: [
           { role: 'system', content: 'You are Captain Picard.' },
@@ -36,7 +36,7 @@ skipIfNotTesting('Prompt Engine Integration Tests', () => {
     });
 
     it('returns deterministic response for worf security', async () => {
-      const response = await mockOpenRouter.chat.completions.create({
+      const response = await mockApprovedLlm.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'You are Lt. Worf, Security Officer.' },
@@ -50,7 +50,7 @@ skipIfNotTesting('Prompt Engine Integration Tests', () => {
     });
 
     it('returns deterministic response for data architecture', async () => {
-      const response = await mockOpenRouter.chat.completions.create({
+      const response = await mockApprovedLlm.chat.completions.create({
         model: 'claude-3.5-sonnet',
         messages: [
           { role: 'system', content: 'You are Commander Data, Architect.' },
@@ -64,7 +64,7 @@ skipIfNotTesting('Prompt Engine Integration Tests', () => {
     });
 
     it('returns generic response for unknown crew member', async () => {
-      const response = await mockOpenRouter.chat.completions.create({
+      const response = await mockApprovedLlm.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'You are Unknown Crew.' },
@@ -80,7 +80,7 @@ skipIfNotTesting('Prompt Engine Integration Tests', () => {
 
   describe('Token counting', () => {
     it('tracks token usage from mock responses', async () => {
-      const response = await mockOpenRouter.chat.completions.create({
+      const response = await mockApprovedLlm.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: 'Test message' }],
       });
