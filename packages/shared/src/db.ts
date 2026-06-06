@@ -29,6 +29,20 @@ const REDIS_SYNC_BATCH_SIZE = parseInt(process.env.MEMORY_SYNC_BATCH_SIZE ?? '50
 const REDIS_SYNC_INTERVAL_MS = parseInt(process.env.MEMORY_SYNC_INTERVAL_MS ?? '5000', 10);
 const REDIS_RECENT_ALL_KEY = 'sa:memory:recent:all';
 const REDIS_SYNC_QUEUE_KEY = 'sa:memory:sync_queue';
+const REDACTED_VALUE = '[REDACTED_BY_WORFGATE]';
+
+const DEFAULT_CONTROLLED_MARKERS = [
+  'bayer',
+  'confidential',
+  'internal use only',
+  'regulated',
+  'customer data',
+  'patient',
+  'phi',
+  'pii',
+  'secret',
+  'proprietary',
+];
 
 type ObservationMemoryPayload = {
   id: string;
@@ -84,6 +98,90 @@ export { toEmbedding, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMEN
 
 function hashText(text: string): string {
   return toEmbedding(text, 1).toString(); // SHA-256-based, kept for legacy compat
+}
+
+function worfGateEnabled(): boolean {
+  return (process.env.WORFGATE_ENFORCE ?? 'true').toLowerCase() === 'true';
+}
+
+function parseCsv(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function getControlledMarkers(): string[] {
+  const custom = parseCsv(process.env.WORFGATE_CONTROLLED_MARKERS);
+  return custom.length > 0 ? custom : DEFAULT_CONTROLLED_MARKERS;
+}
+
+function redactStringWithMarkers(input: string, markers: string[]): { value: string; redacted: boolean } {
+  let output = input;
+  let redacted = false;
+  for (const marker of markers) {
+    if (!marker) continue;
+    const pattern = new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    if (pattern.test(output)) {
+      redacted = true;
+      output = output.replace(pattern, REDACTED_VALUE);
+    }
+  }
+  return { value: output, redacted };
+}
+
+function redactValueDeep(value: unknown, markers: string[]): { value: unknown; redacted: boolean } {
+  if (typeof value === 'string') {
+    return redactStringWithMarkers(value, markers);
+  }
+  if (Array.isArray(value)) {
+    let redacted = false;
+    const mapped = value.map(entry => {
+      const next = redactValueDeep(entry, markers);
+      redacted = redacted || next.redacted;
+      return next.value;
+    });
+    return { value: mapped, redacted };
+  }
+  if (value && typeof value === 'object') {
+    let redacted = false;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      const next = redactValueDeep(v, markers);
+      redacted = redacted || next.redacted;
+      out[k] = next.value;
+    }
+    return { value: out, redacted };
+  }
+  return { value, redacted: false };
+}
+
+function applyWorfGateMemoryRedaction(input: {
+  transcript: ObservationDebateResult;
+  tags?: string[];
+}): { transcript: ObservationDebateResult; tags: string[]; redacted: boolean } {
+  const tags = [...(input.tags ?? [])];
+  if (!worfGateEnabled()) {
+    return { transcript: input.transcript, tags, redacted: false };
+  }
+
+  const markers = getControlledMarkers();
+  const redacted = redactValueDeep(input.transcript, markers);
+  const wasRedacted = redacted.redacted;
+
+  if (wasRedacted) {
+    if (!tags.includes('worfgate_redacted')) {
+      tags.push('worfgate_redacted');
+    }
+    process.stderr.write('[WORFGATE] REDACT memory transcript prior to persistence\n');
+  }
+
+  return {
+    transcript: redacted.value as ObservationDebateResult,
+    tags,
+    redacted: wasRedacted,
+  };
 }
 
 function mapObservationMemory(row: Record<string, unknown>): ObservationMemoryRecord {
@@ -424,7 +522,12 @@ export async function storeObservationMemory(input: {
   missionReference?: string;
   tags?: string[];
 }): Promise<ObservationMemoryRecord> {
-  const transcriptText = JSON.stringify(input.transcript);
+  const worfGate = applyWorfGateMemoryRedaction({
+    transcript: input.transcript,
+    tags: input.tags,
+  });
+
+  const transcriptText = JSON.stringify(worfGate.transcript);
   const transcriptHash = hashText(`${input.storyId}:${transcriptText}`);
   const embedding = toEmbedding(transcriptText);
 
@@ -434,9 +537,9 @@ export async function storeObservationMemory(input: {
     source: input.source,
     transcript_hash: transcriptHash,
     transcript_text: transcriptText,
-    transcript: input.transcript,
+    transcript: worfGate.transcript,
     mission_ref: input.missionReference ?? input.missionPlan?.story.referenceNum ?? null,
-    tags: input.tags ?? [],
+    tags: worfGate.tags,
     memory_embedding: toPgVector(embedding),
     created_at: new Date().toISOString(),
   };

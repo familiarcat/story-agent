@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { resolveRepository, createBranch, branchExists, createPullRequest } from '../lib/github.js';
 import { upsertStory, getStory } from '@story-agent/shared/db';
+import { enforceWorfGateOutbound } from '../lib/worfgate.js';
 
 /**
  * deliver_mission_output — Phase 2 integration tool.
@@ -32,6 +33,23 @@ export function registerDeliveryTools(server: McpServer) {
       })).describe('Files to commit to the branch'),
     },
     async ({ storyId, storyTitle, storyUrl, repoFullName, prTitle, prBody, files }) => {
+      const outboundPayload = [
+        storyId,
+        storyTitle,
+        storyUrl,
+        repoFullName,
+        prTitle,
+        prBody,
+        ...files.map(f => `${f.path}\n${f.content}`),
+      ].join('\n\n');
+
+      enforceWorfGateOutbound({
+        target: 'github',
+        payloadText: outboundPayload,
+        repoFullName,
+        operation: 'deliver_mission_output',
+      });
+
       const repo = await resolveRepository(repoFullName);
       const branchName = storyId.toUpperCase();
 

@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getAgileProvider } from '../providers/index.js';
 import { executeAutonomousCrewMission } from '../lib/crew-coordinator.js';
 import { getRelevantObservationMemories, storeObservationMemory } from '@story-agent/shared/db';
+import { enforceWorfGateOutbound } from '../lib/worfgate.js';
 
 export function registerStoryTools(server: McpServer) {
   server.tool(
@@ -63,6 +64,12 @@ export function registerStoryTools(server: McpServer) {
       statusName: z.string().describe('Workflow status name as it appears in the provider (e.g. "In Progress", "Done", "Complete")'),
     },
     async ({ storyId, statusName }) => {
+      enforceWorfGateOutbound({
+        target: 'aha',
+        payloadText: `${storyId} ${statusName}`,
+        operation: 'update_aha_story_status',
+      });
+
       await getAgileProvider().updateStoryStatus(storyId, statusName);
       return {
         content: [{
@@ -82,7 +89,14 @@ export function registerStoryTools(server: McpServer) {
       prTitle: z.string().describe('PR title starting with the story ID, e.g. [STORY-123] ...'),
     },
     async ({ storyId, prUrl, prTitle }) => {
-      await getAgileProvider().addStoryComment(storyId, `Pull Request opened: [${prTitle}](${prUrl})`);
+      const commentBody = `Pull Request opened: [${prTitle}](${prUrl})`;
+      enforceWorfGateOutbound({
+        target: 'aha',
+        payloadText: `${storyId} ${commentBody}`,
+        operation: 'link_aha_story_to_pr',
+      });
+
+      await getAgileProvider().addStoryComment(storyId, commentBody);
       return {
         content: [{
           type: 'text',
