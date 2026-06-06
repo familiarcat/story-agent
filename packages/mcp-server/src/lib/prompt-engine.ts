@@ -173,17 +173,25 @@ export async function executePromptEngineCall(
       console.log(`[PROMPT_ENGINE] Using demo mode for ${crewId}`);
       responseText = generateDemoResponse(crewId);
     } else {
-      // Call external LLM
-      const response = await client.chat.completions.create({
-        model: template.model,
-        temperature: template.temperature,
-        max_tokens: template.maxTokens,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      });
-      responseText = response.choices[0]?.message?.content || '';
+      try {
+        // Call external LLM
+        const response = await client.chat.completions.create({
+          model: template.model,
+          temperature: template.temperature,
+          max_tokens: template.maxTokens,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        });
+        responseText = response.choices[0]?.message?.content || '';
+      } catch (providerError) {
+        const providerMessage = providerError instanceof Error ? providerError.message : String(providerError);
+        console.warn(
+          `[PROMPT_ENGINE] Provider call failed for ${crewId} via ${provider} (${providerMessage}). Falling back to demo mode.`
+        );
+        responseText = generateDemoResponse(crewId);
+      }
     }
 
     const durationMs = Date.now() - startTime;
