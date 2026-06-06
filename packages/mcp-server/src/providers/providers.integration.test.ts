@@ -107,7 +107,7 @@ skipIfNotTesting('Agile Provider Integration Tests', () => {
   describe('Mock fetch responses', () => {
     it('returns mock Aha story response', async () => {
       const response = await fetch('https://test.aha.io/api/v1/stories');
-      const data = await response.json();
+      const data = (await response.json()) as { stories: { reference_num: string }[] };
 
       expect(response.status).toBe(200);
       expect(data.stories).toBeDefined();
@@ -116,7 +116,7 @@ skipIfNotTesting('Agile Provider Integration Tests', () => {
 
     it('returns mock Jira issue response', async () => {
       const response = await fetch('https://test.atlassian.net/rest/api/3/search');
-      const data = await response.json();
+      const data = (await response.json()) as { issues: { key: string }[] };
 
       expect(response.status).toBe(200);
       expect(data.issues).toBeDefined();

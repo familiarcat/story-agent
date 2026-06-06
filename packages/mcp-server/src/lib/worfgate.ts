@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-type WorfGateTarget = 'github' | 'aha' | 'openrouter' | 'supabase' | 'other';
+type WorfGateTarget = 'github' | 'aha' | 'approved_llm' | 'supabase' | 'other';
 
 export interface WorfGateDecision {
   allowed: boolean;

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getStory } from '@/lib/agile';
 import { buildCrewMissionPlan, runObservationLoungeDebate } from '@/lib/crew';
 import { getRelevantObservationMemories, storeObservationMemory } from '@/lib/db';
-import type { AgileStory } from '@story-agent/shared';
+import type { AgileStory, CrewMissionPlan, ObservationDebateResult, ObservationMemoryRecord } from '@story-agent/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +96,77 @@ Follow the story-execution-master-template workflow.
 `;
 }
 
+export type ObservationLoungePayload = {
+  referenceNum: string;
+  story: AgileStory;
+  brief: string;
+  missionPlan: CrewMissionPlan;
+  debate: ObservationDebateResult;
+  sharedMemories: ObservationMemoryRecord[];
+};
+
+export async function prepareObservationLoungePayload(input: {
+  referenceNum: string;
+  repoFullName?: string;
+  targetBranch?: string;
+  techStack?: string;
+  testPolicy?: string;
+  reviewers?: string;
+  executionMode: 'autonomous' | 'guided';
+}): Promise<ObservationLoungePayload> {
+  const {
+    referenceNum,
+    repoFullName,
+    targetBranch,
+    techStack,
+    testPolicy,
+    reviewers,
+    executionMode,
+  } = input;
+
+  const story = await getStory(referenceNum);
+  const sharedMemories = await getRelevantObservationMemories({
+    queryText: `${story.referenceNum} ${story.name} ${story.description} ${story.acceptanceCriteria}`,
+    limit: 6,
+  });
+  const brief = buildObservationLoungeBrief(story, {
+    repoFullName,
+    targetBranch,
+    techStack,
+    testPolicy,
+    reviewers,
+  });
+
+  const missionPlan = buildCrewMissionPlan({
+    story,
+    repoFullName: repoFullName ?? '<your-repo>',
+    targetBranch: targetBranch ?? 'dev',
+    executionMode,
+    sharedMemories,
+    techStack,
+    testPolicy,
+    reviewers,
+  });
+  const debate = runObservationLoungeDebate(missionPlan);
+  await storeObservationMemory({
+    storyId: story.referenceNum,
+    source: 'ui',
+    transcript: debate,
+    missionPlan,
+    missionReference: story.referenceNum,
+    tags: ['observation-lounge', executionMode, 'ui-debate'],
+  });
+
+  return {
+    referenceNum: story.referenceNum,
+    story,
+    brief,
+    missionPlan,
+    debate,
+    sharedMemories,
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -111,40 +182,17 @@ export async function GET(request: Request) {
     const reviewers = searchParams.get('reviewers') ?? undefined;
     const executionMode = (searchParams.get('executionMode') === 'guided' ? 'guided' : 'autonomous') as 'autonomous' | 'guided';
 
-    const story = await getStory(referenceNum);
-    const sharedMemories = await getRelevantObservationMemories({
-      queryText: `${story.referenceNum} ${story.name} ${story.description} ${story.acceptanceCriteria}`,
-      limit: 6,
-    });
-    const brief = buildObservationLoungeBrief(story, {
+    const payload = await prepareObservationLoungePayload({
+      referenceNum,
       repoFullName,
       targetBranch,
       techStack,
       testPolicy,
       reviewers,
-    });
-
-    const missionPlan = buildCrewMissionPlan({
-      story,
-      repoFullName: repoFullName ?? '<your-repo>',
-      targetBranch: targetBranch ?? 'dev',
       executionMode,
-      sharedMemories,
-      techStack,
-      testPolicy,
-      reviewers,
-    });
-    const debate = runObservationLoungeDebate(missionPlan);
-    await storeObservationMemory({
-      storyId: story.referenceNum,
-      source: 'ui',
-      transcript: debate,
-      missionPlan,
-      missionReference: story.referenceNum,
-      tags: ['observation-lounge', executionMode, 'ui-debate'],
     });
 
-    return NextResponse.json({ referenceNum: story.referenceNum, story, brief, missionPlan, debate, sharedMemories });
+    return NextResponse.json(payload);
   } catch (error) {
     return NextResponse.json({
       error: 'Failed to prepare observation lounge brief',

@@ -3,12 +3,189 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getRecentObservationMemories } from '@story-agent/shared/db';
 import { promptArchive, getPromptEngineStats, exportPromptArchive } from '../lib/prompt-archiver.js';
 import { getWorfGateAuditLog } from '../lib/worfgate.js';
+import { getPromptEngineConnectivityDiagnostics } from '../lib/prompt-engine.js';
+import { getCrewRoster } from '../lib/crew.js';
+import { loadExternalCrewObservationMemories } from '../lib/local-crew-memory.js';
+import {
+  initialStructuredMemoryState,
+  mergeStructuredMemoryPatch,
+  buildStructuredMemoryPatchFromDebate,
+  summarizeStructuredMemory,
+} from '@story-agent/shared';
 
 /**
  * Crew memory analysis tools for querying and summarizing observation lounge debate patterns.
  * Enables the crew to learn collectively from past missions and identify trends.
  */
 export function registerCrewMemoryTools(server: McpServer) {
+  server.tool(
+    'crew_observation_lounge_status',
+    'Generate an Observation Lounge formatted crew roll-call using current project runtime status plus imported legacy crew memories from ai-enterprise-os when available.',
+    {
+      scenario: z.string().optional().default('MCP crew activation and cross-project memory readiness').describe('Scenario to frame crew status and memory recall'),
+      perCrewMemoryLimit: z.number().optional().default(3).describe('Maximum imported memory snippets to include per crew member'),
+    },
+    async ({ scenario, perCrewMemoryLimit }) => {
+      const roster = getCrewRoster();
+      const importedMemories = await loadExternalCrewObservationMemories(roster);
+      const llm = await getPromptEngineConnectivityDiagnostics();
+
+      let supabase: any = {
+        configured: false,
+        reachable: false,
+        classification: 'not_configured',
+        detail: 'Supabase diagnostics unavailable',
+      };
+      let currentProjectMemories: any[] = [];
+
+      try {
+        const dbModule = await import('@story-agent/shared/db');
+        const supabaseDiagnosticsFn = (dbModule as any).getSupabaseConnectivityDiagnostics as (() => Promise<unknown>) | undefined;
+        const recentMemoriesFn = (dbModule as any).getRecentObservationMemories as ((limit?: number, storyId?: string) => Promise<any[]>) | undefined;
+        if (supabaseDiagnosticsFn) {
+          supabase = await supabaseDiagnosticsFn();
+        }
+        if (recentMemoriesFn) {
+          currentProjectMemories = await recentMemoriesFn(12);
+        }
+      } catch (error) {
+        supabase = {
+          configured: false,
+          reachable: false,
+          classification: 'endpoint_unreachable',
+          detail: error instanceof Error ? error.message : String(error),
+        };
+      }
+
+      const rounds = [
+        {
+          title: 'Round 1 - Crew roll call and memory activation',
+          entries: roster.map(member => {
+            const crewMemories = importedMemories
+              .filter(memory => memory.crewId === member.id)
+              .slice(0, perCrewMemoryLimit);
+            const importedInsights = crewMemories.flatMap(memory => [
+              memory.transcript.consensusSummary,
+              ...memory.transcript.actionItems,
+            ]).filter(Boolean).slice(0, 3);
+
+            const status = llm.reachable && supabase.reachable
+              ? 'fully active'
+              : llm.reachable
+                ? 'active without durable memory sync'
+                : supabase.reachable
+                  ? 'memory-ready, awaiting approved LLM route'
+                  : 'offline fallback using imported legacy observations';
+
+            return {
+              speakerId: member.id,
+              position: 'support' as const,
+              statement: `${member.name} reporting as ${member.specialty}. Role authority: ${member.authority ?? 'standard'}. Current status: ${status}. Knowledge loaded from ${crewMemories.length} imported ai-enterprise-os memories and ${currentProjectMemories.length} current-project memories.` ,
+              evidence: [
+                `Responsibilities: ${member.responsibilities.slice(0, 2).join('; ')}`,
+                ...(importedInsights.length > 0 ? importedInsights : ['No imported legacy observations found for this crew member.']),
+              ].slice(0, 4),
+            };
+          }),
+        },
+        {
+          title: 'Round 2 - Operational constraints',
+          entries: [
+            {
+              speakerId: 'captain',
+              position: 'support' as const,
+              statement: `Mission framing for scenario '${scenario}' is ready. Imported cross-project memory corpus size: ${importedMemories.length}.`,
+              evidence: [
+                `LLM route: ${llm.classification}`,
+                `Supabase route: ${supabase.classification}`,
+              ],
+            },
+            {
+              speakerId: 'worf',
+              position: 'challenge' as const,
+              statement: 'Security posture requires approved provider routing and durable memory controls before declaring full autonomous activation.',
+              evidence: [
+                `LLM diagnostics: ${llm.detail}`,
+                `Supabase diagnostics: ${supabase.detail}`,
+              ],
+            },
+          ],
+        },
+      ];
+
+      const unresolvedRisks = [
+        ...(llm.reachable ? [] : [`LLM route blocked or unavailable: ${llm.classification}`]),
+        ...(supabase?.reachable ? [] : [`Supabase unavailable or degraded: ${supabase?.classification ?? 'unknown'}`]),
+      ];
+
+      const debate = {
+        rounds,
+        consensusSummary: unresolvedRisks.length === 0
+          ? 'Crew memory, runtime connectivity, and cross-project context are fully active for Observation Lounge operations.'
+          : 'Crew is partially activated using imported legacy memory and current project diagnostics; full autonomous operation still requires runtime endpoint remediation.',
+        unresolvedRisks,
+        finalDecision: unresolvedRisks.length === 0 ? 'approved' as const : 'revise' as const,
+        actionItems: [
+          ...(supabase?.reachable ? [] : ['Configure a reachable Supabase target or local fallback path for durable crew memory.']),
+          ...(llm.reachable ? [] : ['Configure an approved OpenAI-compatible LLM endpoint for crew execution.']),
+          'Restart MCP server to expose the latest runtime diagnostics and crew status tools.',
+        ],
+      };
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                scenario,
+                importedMemoryCount: importedMemories.length,
+                currentProjectMemoriesFound: currentProjectMemories.length,
+                llm,
+                supabase,
+                debate,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    'runtime_connectivity_diagnostics',
+    'Classify current LLM and Supabase runtime connectivity failures, including policy blocks, TLS trust issues, auth failures, and unreachable endpoints.',
+    {},
+    async () => {
+      const dbModule = await import('@story-agent/shared/db');
+      const supabaseDiagnosticsFn = (dbModule as any).getSupabaseConnectivityDiagnostics as
+        | (() => Promise<unknown>)
+        | undefined;
+
+      const llm = await getPromptEngineConnectivityDiagnostics();
+      const supabase = supabaseDiagnosticsFn
+        ? await supabaseDiagnosticsFn()
+        : {
+            configured: false,
+            reachable: false,
+            statusCode: null,
+            classification: 'not_configured',
+            detail: 'getSupabaseConnectivityDiagnostics is not available from shared/db',
+          };
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({ llm, supabase }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
   server.tool(
     'worfgate_audit_log',
     'Get WorfGate outbound security audit entries (allow/block decisions) with reason codes and payload hashes.',
@@ -272,11 +449,27 @@ export function registerCrewMemoryTools(server: McpServer) {
       limit: z.number().optional().default(5).describe('Maximum number of relevant memories to return'),
     },
     async ({ scenario, limit }) => {
-      const { getRelevantObservationMemories } = await import('@story-agent/shared/db');
-      const relevantMemories = await getRelevantObservationMemories({
-        queryText: scenario,
-        limit,
-      });
+      let relevantMemories: any[] = [];
+
+      try {
+        const { getRelevantObservationMemories } = await import('@story-agent/shared/db');
+        relevantMemories = await getRelevantObservationMemories({
+          queryText: scenario,
+          limit,
+        });
+      } catch {
+        const imported = await loadExternalCrewObservationMemories(getCrewRoster());
+        const scenarioTerms = scenario.toLowerCase().split(/\W+/).filter(Boolean);
+        relevantMemories = imported
+          .map(memory => {
+            const haystack = `${memory.transcriptText} ${memory.tags.join(' ')}`.toLowerCase();
+            const score = scenarioTerms.reduce((count, term) => count + (haystack.includes(term) ? 1 : 0), 0);
+            return { ...memory, similarity: score / Math.max(1, scenarioTerms.length) };
+          })
+          .filter(memory => (memory.similarity ?? 0) > 0)
+          .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
+          .slice(0, limit);
+      }
 
       const summary = {
         scenario,
@@ -308,6 +501,57 @@ export function registerCrewMemoryTools(server: McpServer) {
           type: 'text' as const,
           text: JSON.stringify(summary, null, 2),
         }],
+      };
+    }
+  );
+
+  server.tool(
+    'structured_memory_snapshot',
+    'Build a deterministic structured-memory snapshot from recent Observation Lounge debates using authority-based merge rules.',
+    {
+      limit: z.number().optional().default(20).describe('Maximum memories to process for snapshot generation'),
+      includeExternalLegacy: z.boolean().optional().default(true).describe('Include ai-enterprise-os imported observations when available'),
+    },
+    async ({ limit, includeExternalLegacy }) => {
+      const roster = getCrewRoster();
+      const memoryRows = await getRecentObservationMemories(limit);
+      const externalRows = includeExternalLegacy
+        ? await loadExternalCrewObservationMemories(roster)
+        : [];
+
+      const state = initialStructuredMemoryState();
+      const merged = [...memoryRows, ...externalRows]
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .reduce((acc, memory) => {
+          const patch = buildStructuredMemoryPatchFromDebate({
+            debate: memory.transcript,
+            source: memory.source === 'ui' ? 'user' : 'assistant',
+            owner: memory.source === 'ui' ? 'user' : 'assistant',
+          });
+          return mergeStructuredMemoryPatch(acc, patch);
+        }, state);
+
+      const summary = summarizeStructuredMemory(merged);
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                processed: {
+                  currentProjectMemories: memoryRows.length,
+                  externalLegacyMemories: externalRows.length,
+                  total: memoryRows.length + externalRows.length,
+                },
+                summary,
+                snapshot: merged,
+              },
+              null,
+              2
+            ),
+          },
+        ],
       };
     }
   );

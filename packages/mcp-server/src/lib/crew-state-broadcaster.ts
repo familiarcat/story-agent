@@ -228,7 +228,7 @@ export class CrewStateBroadcaster extends EventEmitter {
         if (queue.length > 0) {
           return { value: queue.shift()!, done: false };
         }
-        return { done: true };
+        return { value: undefined, done: true };
       },
       [Symbol.asyncIterator]() {
         return this;

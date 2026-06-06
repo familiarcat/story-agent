@@ -107,11 +107,12 @@ export function createMockOpenRouterClient() {
  * Mock fetch implementation for testing HTTP providers.
  * Routes requests to mock responses based on URL patterns.
  */
-export function createMockFetch() {
-  return vi.fn(async (url: string, options?: any) => {
+export function createMockFetch(): (url: string | URL | Request, options?: any) => Promise<Response> {
+  return vi.fn(async (url: string | URL | Request, options?: any) => {
+    const urlString = url instanceof URL ? url.toString() : String(url);
     // Aha API
-    if (url.includes('.aha.io/api/v1/')) {
-      if (url.includes('/stories')) {
+    if (urlString.includes('.aha.io/api/v1/')) {
+      if (urlString.includes('/stories')) {
         return new Response(
           JSON.stringify({
             stories: [
@@ -129,8 +130,8 @@ export function createMockFetch() {
     }
 
     // Jira API
-    if (url.includes('.atlassian.net/rest/api')) {
-      if (url.includes('/search')) {
+    if (urlString.includes('.atlassian.net/rest/api')) {
+      if (urlString.includes('/search')) {
         return new Response(
           JSON.stringify({
             issues: [

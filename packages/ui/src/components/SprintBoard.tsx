@@ -12,7 +12,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import type { Story, Sprint } from '@/lib/agile';
+import type { AgileSprint } from '@story-agent/shared';
 
 interface SprintBoardProps {
   projectId: string;
@@ -51,7 +51,7 @@ const statusLabels = {
 };
 
 export function SprintBoard({ projectId, sprintId }: SprintBoardProps) {
-  const [sprint, setSprint] = useState<Sprint | null>(null);
+  const [sprint, setSprint] = useState<AgileSprint | null>(null);
   const [stories, setStories] = useState<StoryCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sprintStats, setSprintStats] = useState({
@@ -108,7 +108,7 @@ export function SprintBoard({ projectId, sprintId }: SprintBoardProps) {
       { totalPoints: 0, completedPoints: 0, inProgressPoints: 0, blockedPoints: 0 }
     );
 
-    const daysRemaining = sprint
+    const daysRemaining = sprint?.endDate
       ? Math.ceil(
           (new Date(sprint.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
         )

@@ -256,7 +256,7 @@ Follow the story-execution-master-template workflow.
 
   server.tool(
     'launch_crew_mission',
-    'Launch the full crew-agent workflow for a story. Crew personas independently generate LLM-backed findings via OpenRouter and assignments, then produce an execution-ready autonomous plan.',
+    'Launch the full crew-agent workflow for a story. Crew personas independently generate findings via approved LLM provider and assignments, then produce an execution-ready autonomous plan.',
     {
       referenceNum: z.string().describe('Story/issue reference, e.g. STORY-123, PROJ-456, or full issue URL'),
       repoFullName: z.string().describe('Primary repository in owner/name format'),

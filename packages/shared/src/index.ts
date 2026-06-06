@@ -51,6 +51,45 @@ export interface Repository {
   url: string;
 }
 
+export type ClientComplianceMode =
+  | 'standard'
+  | 'regulated'
+  | 'air_gapped'
+  | 'customer_managed';
+
+export interface ClientSecurityProfile {
+  complianceMode: ClientComplianceMode;
+  approvedLlmProviders: string[];
+  approvedDataStores: string[];
+  outboundPolicyNotes: string[];
+  restrictedDomains?: string[];
+}
+
+export interface ClientRecord {
+  id: string;
+  name: string;
+  slug: string;
+  securityProfile: ClientSecurityProfile;
+  primaryContact?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface ProjectGoal {
+  id: string;
+  label: string;
+  target?: string | null;
+  status?: 'on_track' | 'at_risk' | 'off_track' | 'complete';
+}
+
+export interface ProjectMetric {
+  id: string;
+  label: string;
+  value: string;
+  trend?: 'up' | 'down' | 'flat';
+  source?: string | null;
+}
+
 export interface StoryRecord {
   id: string;
   storyId: string;          // Aha reference num e.g. STORY-123
@@ -67,6 +106,12 @@ export interface StoryRecord {
   createdAt: string;
   updatedAt: string;
   notes: string | null;
+  clientId?: string | null;
+  clientName?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
+  sprintId?: string | null;
+  sprintName?: string | null;
 }
 
 export interface PRComment {
@@ -99,6 +144,13 @@ export interface ProjectRecord {
   name: string;
   repoFullName: string;
   ahaProjectId: string | null;
+  clientId?: string | null;
+  clientName?: string | null;
+  description?: string | null;
+  goals?: ProjectGoal[];
+  metrics?: ProjectMetric[];
+  securityProfile?: ClientSecurityProfile | null;
+  sprintIds?: string[];
   createdAt: string;
 }
 
@@ -131,6 +183,9 @@ export interface SprintRecord {
   sprintName: string;
   ahaSprintId: string | null;
   ahaProjectId: string | null;
+  clientId?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
   startDate: string | null;
   endDate: string | null;
   lengthDays: number | null;
@@ -303,6 +358,78 @@ export interface ObservationMemoryRecord {
   createdAt: string;
 }
 
+// ── Structured Memory (Deterministic Merge) ─────────────────────────────────
+
+export type MemorySource = 'system' | 'user' | 'tool' | 'assistant';
+
+export interface MemoryFact {
+  key: string;
+  value: string;
+  source: MemorySource;
+  confidence: number;
+  evidence?: string;
+}
+
+export interface MemoryConstraint {
+  key: string;
+  rule: string;
+  naturalLanguage: string;
+  source: MemorySource;
+  confidence: number;
+  enforcement: 'hard' | 'soft';
+  evidence?: string;
+}
+
+export interface MemoryDecision {
+  id: string;
+  statement: string;
+  status: 'proposed' | 'accepted' | 'rejected' | 'superseded';
+  owner: 'user' | 'assistant';
+  source: MemorySource;
+  confidence: number;
+  evidence?: string;
+}
+
+export interface MemoryQuestion {
+  key: string;
+  question: string;
+  blocking: boolean;
+  resolved: boolean;
+  source: MemorySource;
+  confidence: number;
+  evidence?: string;
+}
+
+export interface StructuredMemoryState {
+  facts: Record<string, MemoryFact>;
+  constraints: Record<string, MemoryConstraint>;
+  decisions: MemoryDecision[];
+  openQuestions: Record<string, MemoryQuestion>;
+}
+
+// ── Stream Frame Protocol (JSONL/SSE) ───────────────────────────────────────
+
+export interface StreamFrameBase<TType extends string, TData> {
+  v: number;
+  type: TType;
+  data: TData;
+  ts: string;
+}
+
+export type StoryAgentFrame =
+  | StreamFrameBase<'request_ack', { content: string }>
+  | StreamFrameBase<'plan_summary', { content: string }>
+  | StreamFrameBase<'final_result', { content: string; tools_called?: string[] }>
+  | StreamFrameBase<'crew_finding', { crewId: string; summary: string; confidence: number }>
+  | StreamFrameBase<'interrupt', { value: unknown }>
+  | StreamFrameBase<'error', { message: string; source: string; type: string }>;
+
+export interface StreamInvokePayload {
+  prompt: string;
+  resume_value?: unknown;
+  last_timestamp?: string | null;
+}
+
 export interface CrewMissionPlan {
   story: AgileStory;
   executionMode: 'autonomous' | 'guided';
@@ -314,6 +441,18 @@ export interface CrewMissionPlan {
   findings: CrewFinding[];
   recommendedExecutionOrder: string[];
 }
+
+export type {
+  StructuredMemoryPatch,
+} from './structured-memory.js';
+
+export {
+  SOURCE_AUTHORITY,
+  initialStructuredMemoryState,
+  mergeStructuredMemoryPatch,
+  buildStructuredMemoryPatchFromDebate,
+  summarizeStructuredMemory,
+} from './structured-memory.js';
 
 // ── Real-Time Crew State for UI ────────────────────────────────────────────────
 

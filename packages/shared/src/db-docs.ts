@@ -27,14 +27,76 @@ export interface DocRetrievalOptions {
 }
 
 let _client: SupabaseClient | null = null;
+let _clientPromise: Promise<SupabaseClient> | null = null;
 
-function db(): SupabaseClient {
+type SupabaseMode = 'auto' | 'local' | 'live';
+
+type SupabaseCandidate = {
+  url: string;
+  key: string;
+};
+
+function getSupabaseMode(): SupabaseMode {
+  const mode = (process.env.SUPABASE_MODE ?? 'auto').trim().toLowerCase();
+  if (mode === 'local' || mode === 'live') return mode;
+  return 'auto';
+}
+
+function getCandidates(): SupabaseCandidate[] {
+  const primaryUrl = process.env.SUPABASE_URL?.trim() ?? '';
+  const primaryKey = process.env.SUPABASE_KEY?.trim() ?? '';
+  const fallbackUrl = (process.env.SUPABASE_FALLBACK_URL ?? process.env.SUPABASE_LIVE_URL ?? '').trim();
+  const fallbackKey = (
+    process.env.SUPABASE_FALLBACK_KEY ??
+    process.env.SUPABASE_LIVE_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    ''
+  ).trim();
+
+  const primary = primaryUrl && primaryKey ? [{ url: primaryUrl, key: primaryKey }] : [];
+  const fallback = fallbackUrl && fallbackKey ? [{ url: fallbackUrl, key: fallbackKey }] : [];
+
+  return getSupabaseMode() === 'live' ? [...fallback, ...primary] : [...primary, ...fallback];
+}
+
+async function isReachable(candidate: SupabaseCandidate): Promise<boolean> {
+  const endpoint = `${candidate.url.replace(/\/$/, '')}/rest/v1/`;
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        apikey: candidate.key,
+        Authorization: `Bearer ${candidate.key}`,
+        Accept: 'application/json',
+      },
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function db(): Promise<SupabaseClient> {
   if (_client) return _client;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
-  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment.');
-  _client = createClient(url, key);
-  return _client;
+  if (_clientPromise) return _clientPromise;
+
+  _clientPromise = (async () => {
+    const candidates = getCandidates();
+    if (candidates.length === 0) {
+      throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment.');
+    }
+
+    for (const candidate of candidates) {
+      if (await isReachable(candidate)) {
+        _client = createClient(candidate.url, candidate.key);
+        return _client;
+      }
+    }
+
+    _clientPromise = null;
+    throw new Error('No reachable Supabase endpoint for documentation retrieval.');
+  })();
+
+  return _clientPromise;
 }
 
 /**
@@ -43,7 +105,7 @@ function db(): SupabaseClient {
 export async function retrieveDocKnowledge(options: DocRetrievalOptions): Promise<DocKnowledgeChunk[]> {
   const { phase, tags = [], query, limit = 5 } = options;
 
-  let q = db().from('sa_docs_knowledge_vectors').select('*');
+  let q = (await db()).from('sa_docs_knowledge_vectors').select('*');
 
   if (phase) {
     q = q.eq('phase', phase);
@@ -87,7 +149,7 @@ export async function retrieveDocKnowledge(options: DocRetrievalOptions): Promis
  * List available doc phases (for UI phase selector).
  */
 export async function listDocPhases(): Promise<string[]> {
-  const { data, error } = await db()
+  const { data, error } = await (await db())
     .from('sa_docs_knowledge_vectors')
     .select('phase');
 

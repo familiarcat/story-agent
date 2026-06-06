@@ -132,7 +132,7 @@ export class CrewWebSocketServer {
 
     // Check if already subscribed
     const subs = this.clientSubscriptions.get(ws);
-    if (subs?.some(s => s.storyRef === storyRef)) {
+    if (subs && [...subs].some((s: ClientSubscription) => s.storyRef === storyRef)) {
       console.log(`[WS] ${clientId} already subscribed to ${storyRef}`);
       return;
     }

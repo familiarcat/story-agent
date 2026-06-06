@@ -13,9 +13,15 @@ import type {
 } from './index.js';
 
 let _client: SupabaseClient | null = null;
+let _clientPromise: Promise<SupabaseClient> | null = null;
 let _redisClient: any = null;
 let _redisInitAttempted = false;
 let _memorySyncTimer: NodeJS.Timeout | null = null;
+let _activeSupabaseConfig: {
+  source: 'primary' | 'fallback';
+  url: string;
+  mode: 'auto' | 'local' | 'live';
+} | null = null;
 let _memorySyncStats = {
   lastSyncAt: null as string | null,
   lastSyncErrorAt: null as string | null,
@@ -57,13 +63,150 @@ type ObservationMemoryPayload = {
   created_at: string;
 };
 
-function db(): SupabaseClient {
+type SupabaseMode = 'auto' | 'local' | 'live';
+
+type SupabaseCandidate = {
+  source: 'primary' | 'fallback';
+  url: string;
+  key: string;
+};
+
+function getSupabaseMode(): SupabaseMode {
+  const mode = (process.env.SUPABASE_MODE ?? 'auto').trim().toLowerCase();
+  if (mode === 'local' || mode === 'live') return mode;
+  return 'auto';
+}
+
+function getFallbackSupabaseUrl(): string {
+  return (process.env.SUPABASE_FALLBACK_URL ?? process.env.SUPABASE_LIVE_URL ?? '').trim();
+}
+
+function getFallbackSupabaseKey(): string {
+  return (
+    process.env.SUPABASE_FALLBACK_KEY ??
+    process.env.SUPABASE_LIVE_KEY ??
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    ''
+  ).trim();
+}
+
+function isLocalSupabaseUrl(url: string): boolean {
+  return /(^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?)/i.test(url);
+}
+
+function getSupabaseCandidates(): {
+  mode: SupabaseMode;
+  candidates: SupabaseCandidate[];
+} {
+  const mode = getSupabaseMode();
+  const primaryUrl = process.env.SUPABASE_URL?.trim() ?? '';
+  const primaryKey = process.env.SUPABASE_KEY?.trim() ?? '';
+  const fallbackUrl = getFallbackSupabaseUrl();
+  const fallbackKey = getFallbackSupabaseKey();
+
+  const primary = primaryUrl && primaryKey
+    ? [{ source: 'primary' as const, url: primaryUrl, key: primaryKey }]
+    : [];
+  const fallback = fallbackUrl && fallbackKey
+    ? [{ source: 'fallback' as const, url: fallbackUrl, key: fallbackKey }]
+    : [];
+
+  if (mode === 'live') {
+    return { mode, candidates: [...fallback, ...primary] };
+  }
+
+  return { mode, candidates: [...primary, ...fallback] };
+}
+
+async function probeSupabaseCandidate(candidate: SupabaseCandidate): Promise<{
+  reachable: boolean;
+  statusCode: number | null;
+  classification: 'ok' | 'auth_failed' | 'policy_blocked' | 'endpoint_unreachable' | 'tls_trust_failed' | 'unexpected_response';
+  detail: string;
+}> {
+  const endpoint = `${candidate.url.replace(/\/$/, '')}/rest/v1/`;
+
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        apikey: candidate.key,
+        Authorization: `Bearer ${candidate.key}`,
+        Accept: 'application/json',
+      },
+    });
+    const responseText = await response.text();
+
+    if (response.ok) {
+      return {
+        reachable: true,
+        statusCode: response.status,
+        classification: 'ok',
+        detail: responseText.slice(0, 500) || 'Supabase REST endpoint reachable.',
+      };
+    }
+
+    const lower = responseText.toLowerCase();
+    return {
+      reachable: false,
+      statusCode: response.status,
+      classification: response.status === 401
+        ? 'auth_failed'
+        : lower.includes('deny') || lower.includes('skyhigh')
+          ? 'policy_blocked'
+          : 'unexpected_response',
+      detail: responseText.slice(0, 500) || `HTTP ${response.status}`,
+    };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    const lower = detail.toLowerCase();
+    return {
+      reachable: false,
+      statusCode: null,
+      classification: lower.includes('certificate signed by unknown authority') || lower.includes('self-signed certificate')
+        ? 'tls_trust_failed'
+        : lower.includes('econnrefused') || lower.includes('enotfound') || lower.includes('fetch failed') || lower.includes('timed out')
+          ? 'endpoint_unreachable'
+          : 'unexpected_response',
+      detail,
+    };
+  }
+}
+
+async function db(): Promise<SupabaseClient> {
   if (_client) return _client;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
-  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment.');
-  _client = createSupabaseClient(url, key);
-  return _client;
+  if (_clientPromise) return _clientPromise;
+
+  _clientPromise = (async () => {
+    const { mode, candidates } = getSupabaseCandidates();
+    if (candidates.length === 0) {
+      throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment.');
+    }
+
+    const diagnostics: string[] = [];
+    for (const candidate of candidates) {
+      const probe = await probeSupabaseCandidate(candidate);
+      diagnostics.push(`${candidate.source}:${candidate.url} => ${probe.classification}${probe.statusCode ? `(${probe.statusCode})` : ''}`);
+
+      if (probe.reachable) {
+        _activeSupabaseConfig = {
+          source: candidate.source,
+          url: candidate.url,
+          mode,
+        };
+        _client = createSupabaseClient(candidate.url, candidate.key);
+        return _client;
+      }
+
+      if (mode === 'local' && !isLocalSupabaseUrl(candidate.url)) {
+        break;
+      }
+    }
+
+    _clientPromise = null;
+    throw new Error(`No reachable Supabase endpoint. ${diagnostics.join(' | ')}`);
+  })();
+
+  return _clientPromise;
 }
 
 async function redis(): Promise<any> {
@@ -291,7 +434,7 @@ export async function flushObservationMemoryQueue(batchSize = REDIS_SYNC_BATCH_S
   }
 
   throwOnError(
-    await db().from('sa_observation_memories').upsert(payloads, {
+    await (await db()).from('sa_observation_memories').upsert(payloads, {
       onConflict: 'transcript_hash',
     })
   );
@@ -339,6 +482,65 @@ export async function getObservationMemorySyncDiagnostics(): Promise<{
   };
 }
 
+export async function getSupabaseConnectivityDiagnostics(): Promise<{
+  mode: SupabaseMode;
+  activeUrl: string | null;
+  activeSource: 'primary' | 'fallback' | null;
+  url: string | null;
+  configured: boolean;
+  reachable: boolean;
+  statusCode: number | null;
+  classification: 'ok' | 'auth_failed' | 'policy_blocked' | 'endpoint_unreachable' | 'tls_trust_failed' | 'not_configured' | 'unexpected_response';
+  detail: string;
+  candidates: Array<{
+    source: 'primary' | 'fallback';
+    url: string;
+    reachable: boolean;
+    statusCode: number | null;
+    classification: 'ok' | 'auth_failed' | 'policy_blocked' | 'endpoint_unreachable' | 'tls_trust_failed' | 'unexpected_response';
+    detail: string;
+  }>;
+}> {
+  const { mode, candidates } = getSupabaseCandidates();
+
+  if (candidates.length === 0) {
+    return {
+      mode,
+      activeUrl: _activeSupabaseConfig?.url ?? null,
+      activeSource: _activeSupabaseConfig?.source ?? null,
+      url: null,
+      configured: false,
+      reachable: false,
+      statusCode: null,
+      classification: 'not_configured',
+      detail: 'SUPABASE_URL and SUPABASE_KEY must both be configured.',
+      candidates: [],
+    };
+  }
+
+  const candidateResults = await Promise.all(
+    candidates.map(async candidate => ({
+      source: candidate.source,
+      url: candidate.url,
+      ...(await probeSupabaseCandidate(candidate)),
+    }))
+  );
+  const selected = candidateResults.find(result => result.reachable) ?? candidateResults[0];
+
+  return {
+    mode,
+    activeUrl: _activeSupabaseConfig?.url ?? (selected?.reachable ? selected.url : null),
+    activeSource: _activeSupabaseConfig?.source ?? (selected?.reachable ? selected.source : null),
+    url: selected?.url ?? null,
+    configured: true,
+    reachable: selected?.reachable ?? false,
+    statusCode: selected?.statusCode ?? null,
+    classification: selected?.classification ?? 'unexpected_response',
+    detail: selected?.detail ?? 'No Supabase candidate could be evaluated.',
+    candidates: candidateResults,
+  };
+}
+
 export function startObservationMemorySyncWorker(options?: {
   intervalMs?: number;
   batchSize?: number;
@@ -368,7 +570,7 @@ export async function upsertStory(
   story: Omit<StoryRecord, 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string }
 ): Promise<void> {
   const now = new Date().toISOString();
-  throwOnError(await db().from('sa_stories').upsert({
+  throwOnError(await (await db()).from('sa_stories').upsert({
     id:             story.id,
     story_id:       story.storyId,
     story_title:    story.storyTitle,
@@ -388,12 +590,12 @@ export async function upsertStory(
 }
 
 export async function getStory(storyId: string): Promise<StoryRecord | null> {
-  const { data } = await db().from('sa_stories').select('*').eq('story_id', storyId).single();
+  const { data } = await (await db()).from('sa_stories').select('*').eq('story_id', storyId).single();
   return data ? mapStory(data) : null;
 }
 
 export async function listStories(): Promise<StoryRecord[]> {
-  const rows = throwOnError(await db().from('sa_stories').select('*').order('updated_at', { ascending: false }));
+  const rows = throwOnError(await (await db()).from('sa_stories').select('*').order('updated_at', { ascending: false }));
   return (rows ?? []).map(mapStory);
 }
 
@@ -421,7 +623,7 @@ function mapStory(row: Record<string, unknown>): StoryRecord {
 
 export async function upsertPRComments(comments: PRComment[]): Promise<void> {
   if (comments.length === 0) return;
-  throwOnError(await db().from('sa_pr_comments').upsert(
+  throwOnError(await (await db()).from('sa_pr_comments').upsert(
     comments.map(c => ({
       id:         c.id,
       story_id:   c.storyId,
@@ -440,7 +642,7 @@ export async function upsertPRComments(comments: PRComment[]): Promise<void> {
 
 export async function getCommentsForStory(storyId: string): Promise<PRComment[]> {
   const rows = throwOnError(
-    await db().from('sa_pr_comments').select('*').eq('story_id', storyId).order('created_at', { ascending: true })
+    await (await db()).from('sa_pr_comments').select('*').eq('story_id', storyId).order('created_at', { ascending: true })
   );
   return (rows ?? []).map(r => ({
     id:        r.id as string,
@@ -459,7 +661,7 @@ export async function getCommentsForStory(storyId: string): Promise<PRComment[]>
 // ── Revision Cycles ──────────────────────────────────────────────────────────
 
 export async function createRevisionCycle(cycle: Omit<RevisionCycle, 'createdAt'>): Promise<void> {
-  throwOnError(await db().from('sa_revision_cycles').insert({
+  throwOnError(await (await db()).from('sa_revision_cycles').insert({
     id:                   cycle.id,
     story_id:             cycle.storyId,
     cycle_number:         cycle.cycleNumber,
@@ -474,7 +676,7 @@ export async function createRevisionCycle(cycle: Omit<RevisionCycle, 'createdAt'
 
 export async function getRevisionCycles(storyId: string): Promise<RevisionCycle[]> {
   const rows = throwOnError(
-    await db().from('sa_revision_cycles').select('*').eq('story_id', storyId).order('cycle_number', { ascending: true })
+    await (await db()).from('sa_revision_cycles').select('*').eq('story_id', storyId).order('cycle_number', { ascending: true })
   );
   return (rows ?? []).map(r => ({
     id:                 r.id as string,
@@ -492,7 +694,7 @@ export async function getRevisionCycles(storyId: string): Promise<RevisionCycle[
 // ── Projects ──────────────────────────────────────────────────────────────────
 
 export async function upsertProject(project: ProjectRecord): Promise<void> {
-  throwOnError(await db().from('sa_projects').upsert({
+  throwOnError(await (await db()).from('sa_projects').upsert({
     id:              project.id,
     name:            project.name,
     repo_full_name:  project.repoFullName,
@@ -502,7 +704,7 @@ export async function upsertProject(project: ProjectRecord): Promise<void> {
 }
 
 export async function listProjects(): Promise<ProjectRecord[]> {
-  const rows = throwOnError(await db().from('sa_projects').select('*').order('name', { ascending: true }));
+  const rows = throwOnError(await (await db()).from('sa_projects').select('*').order('name', { ascending: true }));
   return (rows ?? []).map(r => ({
     id:            r.id as string,
     name:          r.name as string,
@@ -556,7 +758,7 @@ export async function storeObservationMemory(input: {
     // Fall through to direct Supabase persistence.
   }
 
-  const rows = throwOnError(await db().from('sa_observation_memories').upsert(payload, {
+  const rows = throwOnError(await (await db()).from('sa_observation_memories').upsert(payload, {
     onConflict: 'transcript_hash',
   }).select('*').limit(1));
 
@@ -570,7 +772,7 @@ export async function getRecentObservationMemories(limit = 8, storyId?: string):
     return cached.slice(0, limit);
   }
 
-  let query = db().from('sa_observation_memories').select('*').order('created_at', { ascending: false }).limit(limit);
+  let query = (await db()).from('sa_observation_memories').select('*').order('created_at', { ascending: false }).limit(limit);
   if (storyId) {
     query = query.eq('story_id', storyId);
   }

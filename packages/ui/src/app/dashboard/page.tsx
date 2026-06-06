@@ -4,6 +4,15 @@ import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
+type HierarchicalStoryRecord = StoryRecord & {
+  clientId?: string | null;
+  clientName?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
+  sprintId?: string | null;
+  sprintName?: string | null;
+};
+
 function StatusBadge({ status }: { status: StoryRecord['status'] }) {
   return <span className={`badge badge-${status}`}>{status.replace('_', ' ')}</span>;
 }
@@ -16,51 +25,149 @@ function PhaseBadge({ phase }: { phase: 1 | 2 }) {
   );
 }
 
-const DEMO_STORIES: StoryRecord[] = [
+const DEMO_STORIES: HierarchicalStoryRecord[] = [
   {
+    id: 'demo-story-1',
     storyId: 'STORY-001',
     storyTitle: 'Implement user authentication',
     storyUrl: 'https://aha.io/stories/STORY-001',
     repoFullName: 'example/repo-auth',
     branch: 'STORY-001',
+    baseBranch: 'main',
     prNumber: 42,
     prUrl: 'https://github.com/example/repo-auth/pull/42',
+    prStatus: 'open',
     phase: 1,
     status: 'pr_open',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 3600000).toISOString(),
+    notes: null,
+    clientId: 'client-demo-bayer',
+    clientName: 'Bayer',
+    projectId: 'project-trial-intake',
+    projectName: 'Trial Intake Automation',
+    sprintId: 'sprint-24',
+    sprintName: 'Sprint 24',
   },
   {
+    id: 'demo-story-2',
     storyId: 'STORY-002',
     storyTitle: 'Add dashboard widgets',
     storyUrl: 'https://aha.io/stories/STORY-002',
     repoFullName: 'example/repo-ui',
     branch: 'STORY-002',
+    baseBranch: 'main',
     prNumber: 38,
     prUrl: 'https://github.com/example/repo-ui/pull/38',
+    prStatus: 'changes_requested',
     phase: 2,
     status: 'pr_revision',
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
     updatedAt: new Date(Date.now() - 7200000).toISOString(),
+    notes: null,
+    clientId: 'client-demo-bayer',
+    clientName: 'Bayer',
+    projectId: 'project-trial-intake',
+    projectName: 'Trial Intake Automation',
+    sprintId: 'sprint-24',
+    sprintName: 'Sprint 24',
   },
   {
+    id: 'demo-story-3',
     storyId: 'STORY-003',
     storyTitle: 'Migrate to PostgreSQL',
     storyUrl: 'https://aha.io/stories/STORY-003',
     repoFullName: 'example/backend',
     branch: 'STORY-003',
+    baseBranch: 'dev',
     prNumber: null,
     prUrl: null,
+    prStatus: null,
     phase: 1,
     status: 'implementing',
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
     updatedAt: new Date(Date.now() - 14400000).toISOString(),
+    notes: null,
+    clientId: 'client-demo-acme',
+    clientName: 'Acme BioSystems',
+    projectId: 'project-lab-ops',
+    projectName: 'Lab Ops Platform',
+    sprintId: 'sprint-12',
+    sprintName: 'Sprint 12',
   },
 ];
 
+const CLIENT_SECURITY_PROFILES: Record<string, {
+  complianceMode: string;
+  llmRoute: string;
+  dataPlane: string;
+  notes: string;
+}> = {
+  Bayer: {
+    complianceMode: 'regulated',
+    llmRoute: 'approved internal endpoint required',
+    dataPlane: 'live Supabase fallback recommended',
+    notes: 'Corporate proxy and outbound controls require explicit provider compatibility.',
+  },
+  'Acme BioSystems': {
+    complianceMode: 'standard',
+    llmRoute: 'OpenAI-compatible endpoint',
+    dataPlane: 'shared cloud Supabase',
+    notes: 'Standard multi-tenant deployment with lighter outbound restrictions.',
+  },
+};
+
+type HierarchyNode = {
+  clientName: string;
+  projectName: string;
+  sprintName: string;
+  storyCount: number;
+  blockedCount: number;
+  activeCount: number;
+};
+
+function deriveHierarchy(stories: HierarchicalStoryRecord[]): HierarchyNode[] {
+  const groups = new Map<string, HierarchyNode>();
+
+  for (const story of stories) {
+    const clientName = story.clientName ?? inferClientName(story.repoFullName);
+    const projectName = story.projectName ?? inferProjectName(story.repoFullName);
+    const sprintName = story.sprintName ?? 'Unscheduled';
+    const key = `${clientName}::${projectName}::${sprintName}`;
+    const current = groups.get(key) ?? {
+      clientName,
+      projectName,
+      sprintName,
+      storyCount: 0,
+      blockedCount: 0,
+      activeCount: 0,
+    };
+
+    current.storyCount += 1;
+    if (story.status === 'blocked') current.blockedCount += 1;
+    if (story.status !== 'merged' && story.status !== 'pending') current.activeCount += 1;
+    groups.set(key, current);
+  }
+
+  return Array.from(groups.values()).sort((a, b) => a.clientName.localeCompare(b.clientName) || a.projectName.localeCompare(b.projectName));
+}
+
+function inferClientName(repoFullName: string): string {
+  const [owner] = repoFullName.split('/');
+  return owner ? owner.replace(/[-_]/g, ' ') : 'Unassigned Client';
+}
+
+function inferProjectName(repoFullName: string): string {
+  const [, repo] = repoFullName.split('/');
+  return repo ? repo.replace(/[-_]/g, ' ') : 'Unassigned Project';
+}
+
 export default async function Dashboard() {
-  let stories: StoryRecord[] = [];
+  let stories: HierarchicalStoryRecord[] = [];
   let isDemo = false;
   
   try {
-    stories = await listStories();
+    stories = await listStories() as HierarchicalStoryRecord[];
   } catch (error) {
     // If database is unavailable, use demo data
     console.warn('Database unavailable, using demo data:', error);
@@ -68,6 +175,7 @@ export default async function Dashboard() {
     isDemo = true;
   }
   const byStatus = (s: StoryRecord['status']) => stories.filter(x => x.status === s).length;
+  const hierarchy = deriveHierarchy(stories);
 
   return (
     <div>
@@ -81,12 +189,55 @@ export default async function Dashboard() {
           color: '#92400e',
           fontSize: '0.875rem',
         }}>
-          ℹ️ <strong>Demo Mode:</strong> Supabase credentials not configured. Showing sample data. Set SUPABASE_URL and SUPABASE_KEY to connect to real database.
+          ℹ️ <strong>Demo Mode:</strong> Showing client-aware sample data. Configure Supabase and client security metadata to connect live client → project → sprint → story tracking.
         </div>
       )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Story Dashboard</h1>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Delivery Command</h1>
+          <p style={{ marginTop: '0.25rem', color: '#6b7280', fontSize: '0.95rem' }}>
+            Client → Project → Sprint → Story visibility with security-aware delivery context.
+          </p>
+        </div>
         <a href="/story/new" className="btn btn-primary">+ New Story</a>
+      </div>
+
+      <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', marginBottom: '2rem' }}>
+        {hierarchy.map(node => {
+          const security = CLIENT_SECURITY_PROFILES[node.clientName] ?? {
+            complianceMode: 'standard',
+            llmRoute: 'default provider routing',
+            dataPlane: 'standard persistence path',
+            notes: 'Client-specific controls not yet configured.',
+          };
+
+          return (
+            <div key={`${node.clientName}-${node.projectName}-${node.sprintName}`} className="card" style={{ marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'start' }}>
+                <div>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#9a3412' }}>
+                    {node.clientName}
+                  </div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.25rem' }}>{node.projectName}</div>
+                  <div style={{ color: '#6b7280', fontSize: '0.9rem', marginTop: '0.25rem' }}>{node.sprintName}</div>
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1d4ed8' }}>
+                  {security.complianceMode}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', fontSize: '0.88rem' }}>
+                <span><strong>{node.storyCount}</strong> stories</span>
+                <span><strong>{node.activeCount}</strong> active</span>
+                <span><strong>{node.blockedCount}</strong> blocked</span>
+              </div>
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', display: 'grid', gap: '0.4rem', fontSize: '0.84rem', color: '#4b5563' }}>
+                <div><strong>LLM Route:</strong> {security.llmRoute}</div>
+                <div><strong>Data Plane:</strong> {security.dataPlane}</div>
+                <div><strong>Security Notes:</strong> {security.notes}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Summary pills */}
@@ -108,6 +259,9 @@ export default async function Dashboard() {
           <table>
             <thead>
               <tr>
+                <th>Client</th>
+                <th>Project</th>
+                <th>Sprint</th>
                 <th>Story ID</th>
                 <th>Title</th>
                 <th>Repository</th>
@@ -122,6 +276,9 @@ export default async function Dashboard() {
             <tbody>
               {stories.map(s => (
                 <tr key={s.storyId}>
+                  <td style={{ fontWeight: 600 }}>{s.clientName ?? inferClientName(s.repoFullName)}</td>
+                  <td>{s.projectName ?? inferProjectName(s.repoFullName)}</td>
+                  <td>{s.sprintName ?? 'Unscheduled'}</td>
                   <td>
                     <a href={s.storyUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
                       {s.storyId}

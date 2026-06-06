@@ -8,9 +8,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const decisionId = params.id;
     const body = await request.json();
     const approvedBy = body.approvedBy || 'user';

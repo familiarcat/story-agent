@@ -26,6 +26,7 @@
     "publish:local": "pnpm run web:build-local && pnpm run ext:package"
   },
   "devDependencies": {
+    "@types/ws": "^8.18.1",
     "concurrently": "^9.1.0",
     "typescript": "^5.7.2"
   }

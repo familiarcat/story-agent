@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { AhaSprint, AhaStory, CrewMissionPlan, ObservationDebateResult, ObservationMemoryRecord } from '@story-agent/shared';
+import { buildResumePayload, streamFrames } from '@/lib/stream-transport';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ export default function ObservationLoungePage() {
   const [mode, setMode] = useState<ExecutionMode>(null);
   const [kickoff, setKickoff] = useState('');
   const [copied, setCopied] = useState(false);
+  const [lastFrameTimestamp, setLastFrameTimestamp] = useState<string | null>(null);
 
   const set = (key: keyof WizardState, val: unknown) => setW(s => ({ ...s, [key]: val }));
 
@@ -148,22 +150,62 @@ export default function ObservationLoungePage() {
     if (!w.referenceNum.trim()) { setError('Story reference required (e.g. STORY-123 or Aha URL)'); return; }
     setLoading(true); setError(null);
     try {
-      const params = new URLSearchParams({ referenceNum: w.referenceNum.trim() });
-      const res = await fetch(`/api/aha/observation-lounge?${params}`);
-      const data = await res.json() as {
+      const params = new URLSearchParams({
+        referenceNum: w.referenceNum.trim(),
+        ...(w.repoFullName ? { repoFullName: w.repoFullName } : {}),
+        ...(w.targetBranch ? { targetBranch: w.targetBranch } : {}),
+        ...(w.techStack ? { techStack: w.techStack } : {}),
+        ...(w.testPolicy ? { testPolicy: w.testPolicy } : {}),
+        ...(w.reviewers ? { reviewers: w.reviewers } : {}),
+      });
+
+      let streamedData: {
         story: AhaStory;
         brief: string;
         missionPlan?: CrewMissionPlan;
         debate?: ObservationDebateResult;
         sharedMemories?: ObservationMemoryRecord[];
-        error?: string;
-      };
-      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-      setW(s => ({ ...s, story: data.story, brief: data.brief, missionPlan: data.missionPlan ?? null, debate: data.debate ?? null, sharedMemories: data.sharedMemories ?? [] }));
+      } | null = null;
+
+      for await (const frame of streamFrames({
+        url: `/api/aha/observation-lounge/stream?${params.toString()}`,
+        payload: buildResumePayload(w.referenceNum.trim(), undefined, lastFrameTimestamp),
+      })) {
+        setLastFrameTimestamp(frame.ts);
+        if (frame.type === 'final_result' && typeof frame.data.content === 'string') {
+          streamedData = JSON.parse(frame.data.content) as typeof streamedData;
+        }
+        if (frame.type === 'error') {
+          throw new Error(frame.data.message);
+        }
+      }
+
+      if (!streamedData) {
+        const res = await fetch(`/api/aha/observation-lounge?${params}`);
+        const fallbackData = await res.json() as {
+          story: AhaStory;
+          brief: string;
+          missionPlan?: CrewMissionPlan;
+          debate?: ObservationDebateResult;
+          sharedMemories?: ObservationMemoryRecord[];
+          error?: string;
+        };
+        if (!res.ok) throw new Error(fallbackData.error ?? `HTTP ${res.status}`);
+        streamedData = fallbackData;
+      }
+
+      setW(s => ({
+        ...s,
+        story: streamedData.story,
+        brief: streamedData.brief,
+        missionPlan: streamedData.missionPlan ?? null,
+        debate: streamedData.debate ?? null,
+        sharedMemories: streamedData.sharedMemories ?? [],
+      }));
       setStep(2);
     } catch (e) { setError(e instanceof Error ? e.message : 'Unknown error'); }
     finally { setLoading(false); }
-  }, [w.referenceNum]);
+  }, [lastFrameTimestamp, w.referenceNum, w.repoFullName, w.reviewers, w.targetBranch, w.techStack, w.testPolicy]);
 
   // Step 3 → 4: load sprints if project id available
   const loadSprints = useCallback(async () => {

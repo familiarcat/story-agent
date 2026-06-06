@@ -78,7 +78,7 @@ export class CrewAutonomyManager extends EventEmitter {
   private crewWorkload: Map<string, CrewWorkload> = new Map();
   private insights: CrewInsight[] = [];
   private decisions: CrewDecision[] = [];
-  private monitoringInterval: NodeJS.Timer | null = null;
+  private monitoringInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     super();
