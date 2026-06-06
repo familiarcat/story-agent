@@ -79,6 +79,7 @@ Dashboard: http://localhost:3000
 - `GET /api/aha/projects` - list Aha projects
 - `GET /api/aha/stories?projectId=...` - list Aha stories for a project
 - `GET /api/aha/story?referenceNum=LADV-####` - fetch one Aha story
+- `POST /api/chat/stream` - SSE/JSONL chat-compatible stream adapter (cs-p3-material-investigation-ui integration)
 - `POST /api/stories/import` - import an Aha story into tracker state
 - `GET /api/stories` - list tracked stories with open comment counts
 - `GET /api/projects` - list tracked repository/project records
