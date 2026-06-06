@@ -20,6 +20,56 @@ import type { PromptTemplate } from './prompt-templates.js';
 import { getPromptTemplate } from './prompt-templates.js';
 import { promptArchive, calculateTokenCost, type PromptUsageRecord } from './prompt-archiver.js';
 
+type CrewLlmModelProfile = 'quality' | 'balanced' | 'cost_optimized';
+
+function getCrewLlmModelProfile(): CrewLlmModelProfile {
+  const profile = (process.env.CREW_LLM_MODEL_PROFILE ?? 'cost_optimized').trim().toLowerCase();
+  if (profile === 'quality' || profile === 'balanced' || profile === 'cost_optimized') {
+    return profile;
+  }
+  return 'cost_optimized';
+}
+
+function getApprovedPrimaryModel(): string {
+  // Mirrors cs-p3-material-investigation global Anthropic default.
+  return (process.env.CREW_LLM_APPROVED_MODEL ?? 'global.anthropic.claude-sonnet-4-6').trim();
+}
+
+function getApprovedLowCostModel(): string {
+  return (process.env.CREW_LLM_APPROVED_MODEL_CHEAP ?? 'global.anthropic.claude-3-5-haiku').trim();
+}
+
+function getCopilotPrimaryModel(): string {
+  return (process.env.CREW_LLM_COPILOT_MODEL ?? 'gpt-4o-mini').trim();
+}
+
+function selectModelForCall(template: PromptTemplate): string {
+  const provider = getLlmProvider();
+  const profile = getCrewLlmModelProfile();
+
+  if (provider === 'approved') {
+    const primary = getApprovedPrimaryModel();
+    const lowCost = getApprovedLowCostModel();
+
+    if (profile === 'quality') {
+      return primary;
+    }
+
+    if (profile === 'balanced') {
+      return ['picard', 'data', 'riker', 'worf', 'crusher'].includes(template.crewId) ? primary : lowCost;
+    }
+
+    // cost_optimized (Quark policy): keep critical roles on primary, route the rest to low-cost model.
+    return ['picard', 'data', 'worf'].includes(template.crewId) ? primary : lowCost;
+  }
+
+  if (provider === 'copilot') {
+    return getCopilotPrimaryModel();
+  }
+
+  return template.model;
+}
+
 /**
  * Get current LLM provider mode from environment
  */
@@ -164,7 +214,8 @@ export async function executePromptEngineCall(
     // Use demo mode or configured LLM provider
     const client = getLlmClient();
     const provider = getLlmProvider();
-    console.log(`[PROMPT_ENGINE] Calling ${crewId} (${template.model}) via ${provider} for story ${storyRef}`);
+    const selectedModel = selectModelForCall(template);
+    console.log(`[PROMPT_ENGINE] Calling ${crewId} (${selectedModel}) via ${provider} for story ${storyRef}`);
 
     let responseText: string;
 
@@ -176,7 +227,7 @@ export async function executePromptEngineCall(
       try {
         // Call external LLM
         const response = await client.chat.completions.create({
-          model: template.model,
+          model: selectedModel,
           temperature: template.temperature,
           max_tokens: template.maxTokens,
           messages: [
@@ -202,14 +253,14 @@ export async function executePromptEngineCall(
     // Calculate cost (estimate for demo, use actual for external LLM)
     let inputTokens = Math.ceil(systemPrompt.length / 4 + userPrompt.length / 4);
     let outputTokens = Math.ceil(responseText.length / 4);
-    const costUSD = calculateTokenCost(template.model, inputTokens, outputTokens);
+    const costUSD = calculateTokenCost(selectedModel, inputTokens, outputTokens);
 
     // Record usage in archive
     const usageRecord: PromptUsageRecord = {
       id: '', // Set by archive
       crewId,
       templateId: template.id,
-      model: template.model,
+      model: selectedModel,
       storyRef,
       systemPrompt,
       userPrompt,
@@ -239,7 +290,7 @@ export async function executePromptEngineCall(
 
     // Log execution
     console.log(
-      `[PROMPT_ENGINE] ✓ ${crewId} | ${template.model.padEnd(18)} | tokens: ${inputTokens + outputTokens} | cost: $${costUSD.toFixed(4)} | ${durationMs}ms`
+      `[PROMPT_ENGINE] ✓ ${crewId} | ${selectedModel.padEnd(28)} | tokens: ${inputTokens + outputTokens} | cost: $${costUSD.toFixed(4)} | ${durationMs}ms`
     );
 
     return {
@@ -407,6 +458,7 @@ export function exportPromptArchive() {
  */
 export function getPromptEngineConnectivityDiagnostics() {
   const provider = getLlmProvider();
+  const profile = getCrewLlmModelProfile();
   const baseUrl = getLlmBaseUrl();
   const apiKey = getLlmApiKey();
   const hasCredentials = Boolean(apiKey && baseUrl);
@@ -427,10 +479,16 @@ export function getPromptEngineConnectivityDiagnostics() {
 
   return {
     provider,
+    modelProfile: profile,
     configured: hasCredentials || provider === 'demo',
     reachable: hasCredentials || provider === 'demo',
     baseUrl: baseUrl || '(none)',
     hasApiKey: Boolean(apiKey),
+    selectedModels: {
+      approvedPrimary: getApprovedPrimaryModel(),
+      approvedLowCost: getApprovedLowCostModel(),
+      copilotPrimary: getCopilotPrimaryModel(),
+    },
     classification,
     detail,
     timestamp: new Date().toISOString(),

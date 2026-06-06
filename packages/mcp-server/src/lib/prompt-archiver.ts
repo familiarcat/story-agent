@@ -219,6 +219,8 @@ export function calculateTokenCost(model: string, inputTokens: number, outputTok
     'claude-3-opus': { input: 0.000015, output: 0.000075 },
     'claude-3.5-sonnet': { input: 0.003, output: 0.015 },
     'claude-3-haiku': { input: 0.00025, output: 0.00125 },
+    'global.anthropic.claude-sonnet-4-6': { input: 0.003, output: 0.015 },
+    'global.anthropic.claude-3-5-haiku': { input: 0.00025, output: 0.00125 },
     'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
     'gpt-4o': { input: 0.005, output: 0.015 },
     'gemini-flash': { input: 0.0375, output: 0.15 }, // Per 1M tokens
