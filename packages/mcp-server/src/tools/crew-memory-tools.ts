@@ -68,6 +68,74 @@ export function registerCrewMemoryTools(server: McpServer) {
   );
 
   server.tool(
+    'worfgate_audit_summary',
+    'Summarize WorfGate allow/block activity over a lookback window with rollups by operation and target.',
+    {
+      lookbackHours: z.number().optional().default(24).describe('How many hours of audit data to summarize'),
+      limit: z.number().optional().default(500).describe('Maximum audit records to scan before summarizing'),
+    },
+    async ({ lookbackHours, limit }) => {
+      const entries = getWorfGateAuditLog({ limit, blockedOnly: false });
+      const cutoff = Date.now() - lookbackHours * 60 * 60 * 1000;
+      const scoped = entries.filter(entry => new Date(entry.timestamp).getTime() >= cutoff);
+
+      const byOperation = new Map<string, { total: number; blocked: number }>();
+      const byTarget = new Map<string, { total: number; blocked: number }>();
+      const markerCounts = new Map<string, number>();
+
+      for (const entry of scoped) {
+        const op = byOperation.get(entry.operation) ?? { total: 0, blocked: 0 };
+        op.total += 1;
+        if (!entry.allowed) op.blocked += 1;
+        byOperation.set(entry.operation, op);
+
+        const target = byTarget.get(entry.target) ?? { total: 0, blocked: 0 };
+        target.total += 1;
+        if (!entry.allowed) target.blocked += 1;
+        byTarget.set(entry.target, target);
+
+        for (const marker of entry.detectedMarkers) {
+          markerCounts.set(marker, (markerCounts.get(marker) ?? 0) + 1);
+        }
+      }
+
+      const total = scoped.length;
+      const blocked = scoped.filter(entry => !entry.allowed).length;
+      const allowed = total - blocked;
+
+      const topMarkers = Array.from(markerCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([marker, count]) => ({ marker, count }));
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                lookbackHours,
+                scannedEntries: scoped.length,
+                totals: {
+                  total,
+                  allowed,
+                  blocked,
+                  blockedRatePct: total > 0 ? Number(((blocked / total) * 100).toFixed(2)) : 0,
+                },
+                byOperation: Object.fromEntries(byOperation),
+                byTarget: Object.fromEntries(byTarget),
+                topDetectedMarkers: topMarkers,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
     'memory_sync_diagnostics',
     'Show Redis-to-Supabase memory sync health: queue depth, worker status, last sync success/failure, and throughput counters.',
     {},
