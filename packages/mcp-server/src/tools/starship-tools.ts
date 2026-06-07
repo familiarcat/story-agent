@@ -10,6 +10,7 @@
  * - list_tool_registry         — see all tools in the registry
  * - get_starship_status        — full starship health + skill summary
  * - run_mission_debrief        — trigger post-mission skill improvement cycle
+ * - run_observation_lounge     — convene the crew for self-reflective discussion
  */
 
 import { z } from 'zod';
@@ -38,6 +39,7 @@ import {
   type CrewId,
 } from '../lib/crew-personas.js';
 import { getPromptEngineConnectivityDiagnostics } from '../lib/prompt-engine.js';
+import { runObservationLoungeSession, formatLoungeSessionAsMarkdown, type ObservationLoungeSession } from '../lib/crew-lounge.js';
 
 export function registerStarshipTools(server: McpServer): void {
 
@@ -332,6 +334,33 @@ export function registerStarshipTools(server: McpServer): void {
 
       return {
         content: [{ type: 'text', text: JSON.stringify(output, null, 2) }],
+      };
+    }
+  );
+
+  // ── RUN OBSERVATION LOUNGE ────────────────────────────────────────────────
+
+  server.tool(
+    'run_observation_lounge',
+    'Convene the crew in the Observation Lounge for a self-referential discussion. Each crew member reflects on: (1) what they believe the overall project goal is, (2) their self-referential role in the team, and (3) what next steps they personally recommend after the crew deliberation. Returns each crew member\'s authentic statement plus Captain Picard\'s synthesis.',
+    {
+      crewIds: z.array(
+        z.enum(['picard', 'data', 'riker', 'geordi', 'obrien', 'worf', 'yar', 'troi', 'crusher', 'uhura', 'quark'])
+      ).optional().describe('Subset of crew to include. Defaults to all 11 members.'),
+      format: z.enum(['json', 'markdown']).optional().default('markdown').describe('Output format'),
+    },
+    async (args) => {
+      const session = await runObservationLoungeSession({
+        crewIds: args.crewIds as CrewId[] | undefined,
+        sessionLabel: 'MCP Tool Invocation',
+      });
+
+      const text = args.format === 'markdown'
+        ? formatLoungeSessionAsMarkdown(session)
+        : JSON.stringify(session, null, 2);
+
+      return {
+        content: [{ type: 'text', text }],
       };
     }
   );
