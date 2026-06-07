@@ -2,115 +2,82 @@
  * API Route: /api/crew/insights
  * 
  * Get crew insights filtered by role and story.
+ * Reads actual crew skill manifests and derives insights from crew specializations.
  * Supports: GET
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCrewRosterWithStats, getCrewSkillManifest, getCrewPersona } from '@story-agent/shared';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const storyRef = searchParams.get('storyRef');
     const role = searchParams.get('role') as 'developer' | 'project_manager' | undefined;
-    const projectId = searchParams.get('projectId');
 
-    // TODO: Query crew autonomy manager for insights
-    // import { crewAutonomyManager } from '@story-agent/mcp-server';
-    
-    // For now, return mock data
+    // Load real crew data from Supabase
+    const roster = await getCrewRosterWithStats();
     const insights = [];
 
-    if (role === 'developer' && storyRef) {
-      // Developer-focused insights
-      insights.push({
-        id: 'insight-1',
-        type: 'architecture_recommendation',
-        crewMember: 'Data',
-        targetRole: 'developer',
-        storyRef,
-        title: 'Architecture Review: Consider Singleton Pattern',
-        description:
-          'For the database connection management, a singleton pattern would improve resource efficiency.',
-        actionItems: [
-          'Review existing connection pooling',
-          'Implement singleton wrapper',
-          'Add unit tests',
-        ],
-        priority: 'medium',
-        confidence: 88,
-        timestamp: new Date().toISOString(),
-        requiresApproval: false,
-        autonomousAction: 'Post code review suggestion to PR',
-      });
+    // Build insights from crew specializations and improvements
+    for (const member of roster) {
+      const manifest = await getCrewSkillManifest(member.crewId);
+      const persona = await getCrewPersona(member.crewId);
 
-      insights.push({
-        id: 'insight-2',
-        type: 'security_issue',
-        crewMember: 'Worf',
-        targetRole: 'developer',
-        storyRef,
-        title: 'Security Check: SQL Injection Risk',
-        description:
-          'Detected potential SQL injection vulnerability in the user query handler. Recommend parameterized queries.',
-        actionItems: [
-          'Use prepared statements',
-          'Add input validation',
-          'Run security tests',
-        ],
-        priority: 'critical',
-        confidence: 95,
-        timestamp: new Date().toISOString(),
-        requiresApproval: false,
-        autonomousAction: 'Block PR merge until resolved',
+      if (!manifest || !persona) continue;
+
+      // Derive insights from accumulated improvements
+      const recentImprovements = manifest.selfImprovementNotes.slice(-3);
+
+      // Create insight for each recent improvement
+      recentImprovements.forEach((note, idx) => {
+        const insight: any = {
+          id: `insight-${member.crewId}-${idx}`,
+          type: member.crewId === 'worf' ? 'security_issue' : 
+                member.crewId === 'data' ? 'architecture_recommendation' :
+                member.crewId === 'yar' ? 'qa_requirement' :
+                'general_recommendation',
+          crewMember: persona.fullName,
+          crewId: member.crewId,
+          crewRole: member.role,
+          storyRef: storyRef || 'all',
+          title: `${persona.fullName}'s Learning: ${note.split(']')[0]}]`,
+          description: note,
+          actionItems: [],
+          priority: member.crewId === 'worf' ? 'critical' : 
+                   member.crewId === 'data' ? 'high' : 'medium',
+          confidence: 90 - (idx * 5), // Recent improvements more confident
+          timestamp: manifest.lastImprovedAt || new Date().toISOString(),
+          requiresApproval: member.crewId === 'worf',
+          autonomousAction: `Enforced via ${member.crewId}'s system prompt in next mission`,
+          skillVersion: manifest.version,
+        };
+
+        // Filter by role if specified
+        if (!role || 
+            (role === 'developer' && ['architecture', 'implementation', 'devops'].includes(member.role)) ||
+            (role === 'project_manager' && member.crewId === 'picard')) {
+          insights.push(insight);
+        }
       });
     }
 
-    if (role === 'project_manager') {
-      // Project manager focused insights
-      insights.push({
-        id: 'insight-3',
-        type: 'timeline_risk',
-        crewMember: 'Captain',
-        targetRole: 'project_manager',
-        storyRef: projectId || 'PROJECT',
-        title: 'Sprint Timeline at Risk',
-        description: '3 stories behind schedule. May impact sprint completion.',
-        actionItems: [
-          'Review resource allocation',
-          'Identify blockers',
-          'Consider scope reduction',
-        ],
-        priority: 'high',
-        confidence: 82,
-        timestamp: new Date().toISOString(),
-        requiresApproval: false,
-      });
-
-      insights.push({
-        id: 'insight-4',
-        type: 'budget_concern',
-        crewMember: 'Quark',
-        targetRole: 'project_manager',
-        storyRef: projectId || 'PROJECT',
-        title: 'LLM Usage Over Budget',
-        description: 'Current crew execution costs ($2,340) exceed monthly budget ($2,000).',
-        actionItems: [
-          'Review execution strategies',
-          'Optimize crew assignments',
-          'Negotiate increased budget',
-        ],
-        priority: 'high',
-        confidence: 100,
-        timestamp: new Date().toISOString(),
-        requiresApproval: false,
-      });
-    }
-
-    return NextResponse.json({ success: true, insights });
-  } catch (err) {
-    console.error('Error fetching insights:', err);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch insights' },
+      {
+        success: true,
+        insights: insights.sort((a, b) => b.confidence - a.confidence),
+        count: insights.length,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('[crew/insights] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        insights: [],
+      },
       { status: 500 }
     );
   }

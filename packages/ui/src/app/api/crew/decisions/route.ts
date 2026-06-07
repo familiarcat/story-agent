@@ -1,75 +1,81 @@
 /**
  * API Routes: /api/crew/decisions
  * 
- * GET: Fetch pending crew decisions
- * POST: Request autonomous decision from crew
+ * GET: Fetch crew decisions based on recent missions and consensus
+ * POST: Request autonomous decision from crew (not yet implemented)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCrewPersona, getRecentMissionDebriefs } from '@story-agent/shared';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const storyRef = searchParams.get('storyRef');
-    const projectId = searchParams.get('projectId');
     const status = searchParams.get('status'); // pending, approved, rejected
 
-    // TODO: Query crew autonomy manager for decisions
-    // import { crewAutonomyManager } from '@story-agent/mcp-server';
+    // Load real crew decisions from recent mission debriefs
+    const recentDebriefs = await getRecentMissionDebriefs(20);
+    const decisions: any[] = [];
 
-    // Mock data
-    const decisions = [
-      {
-        id: 'decision-1',
-        type: 'approve_implementation',
-        crewMember: 'Picard',
-        authority: 'individual',
-        storyRef: storyRef || 'STORY-123',
-        reasoning:
-          'All crew reviews complete. No blockers identified. Ready to proceed with PR merge.',
-        affectedTeams: ['development'],
-        approved: false,
-        timestamp: new Date().toISOString(),
-      },
-      {
-        id: 'decision-2',
-        type: 'accelerate_timeline',
-        crewMember: 'Geordi',
-        authority: 'consensus',
-        storyRef: projectId || 'STORY-456',
-        reasoning:
-          'Infrastructure optimizations completed early. Can reduce deployment time by 30%.',
-        affectedTeams: ['project_management'],
-        approved: false,
-        timestamp: new Date().toISOString(),
-      },
-    ];
+    // Build decisions from crew debriefs
+    for (const debrief of recentDebriefs) {
+      const persona = await getCrewPersona(debrief.crewId);
+      if (!persona) continue;
 
-    const filtered =
-      status === 'pending'
-        ? decisions.filter(d => !d.approved)
-        : decisions;
+      // Create decision for each approved improvement
+      debrief.approvedImprovements.forEach((improvement, idx) => {
+        decisions.push({
+          id: `decision-${debrief.missionId}-${debrief.crewId}-${idx}`,
+          type: debrief.crewId === 'worf' ? 'security_clearance' : 
+                debrief.crewId === 'data' ? 'architectural_approval' :
+                debrief.crewId === 'picard' ? 'executive_approval' :
+                'technical_decision',
+          crewMember: persona.fullName,
+          crewId: debrief.crewId,
+          authority: debrief.crewId === 'picard' ? 'executive' : 
+                    debrief.crewId === 'worf' ? 'security_veto' :
+                    debrief.crewId === 'data' ? 'architectural' : 'tactical',
+          missionId: debrief.missionId,
+          storyRef: storyRef || 'recent_mission',
+          reasoning: improvement,
+          affectedTeams: ['development', 'architecture'],
+          approved: debrief.worfReviewed && debrief.dataValidated,
+          requiresApproval: debrief.crewId === 'worf',
+          timestamp: debrief.appliedAt || debrief.createdAt,
+          skillVersion: `Applied to next mission cycle`,
+        });
+      });
+    }
 
-    return NextResponse.json({ success: true, decisions: filtered });
-  } catch (err) {
-    console.error('Error fetching decisions:', err);
+    // Filter by status if specified
+    let filtered = decisions;
+    if (status === 'approved') {
+      filtered = decisions.filter(d => d.approved);
+    } else if (status === 'pending') {
+      filtered = decisions.filter(d => !d.approved);
+    }
+
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch decisions' },
+      {
+        success: true,
+        decisions: filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+        count: filtered.length,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('[crew/decisions] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        decisions: [],
+      },
       { status: 500 }
     );
   }
 }
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { storyRef, decisionType, context } = body;
-
-    if (!storyRef || !decisionType) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
     }
 
     // TODO: Call crewAutonomyManager.requestAutonomousDecision()

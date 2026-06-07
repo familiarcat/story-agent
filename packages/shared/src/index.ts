@@ -559,3 +559,28 @@ export {
 } from './db-docs.js';
 
 export { toEmbedding, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION } from './embedding.js';
+
+// ── Crew Database Access Layer ──────────────────────────────────────────────
+
+export type {
+  CrewId,
+  SkillManifest,
+  CanonicalPersona,
+  ToolRecord,
+  MissionDebrief,
+} from './crew-db.js';
+
+export {
+  getCrewSkillManifest,
+  getAllCrewSkillManifests,
+  getCrewSkillManifestHistory,
+  getCrewPersona,
+  getAllCrewPersonas,
+  getToolRegistry,
+  getApprovedTools,
+  getWorfVetoedTools,
+  getMissionDebriefs,
+  getRecentMissionDebriefs,
+  getCrewRosterWithStats,
+  getStarshipStatus,
+} from './crew-db.js';
