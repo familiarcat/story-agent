@@ -108,8 +108,77 @@ export async function checkCrewMemberStatus(crewId: CrewId): Promise<CrewMemberS
   }
 }
 
-/**
- * Generate integrity report for all 11 crew members
+/** * Recover crew member's personal memories and accumulated learnings.
+ *
+ * When a crew member is reactivated, we check if they have previous skill manifests
+ * in the database. If found, we restore their self-improvement notes and learnings
+ * so they don't start from a blank slate.
+ *
+ * This implements the principle: "We don't want crew members to completely start
+ * from a blank slate if they have memories and actions that can be recalled."
+ */
+export async function recoverCrewMemberMemories(crewId: CrewId): Promise<{
+  hasMemories: boolean;
+  previousVersion?: string;
+  recoveredImprovementNotes?: string[];
+  lastImprovedAt?: string;
+  diagnostics: string[];
+}> {
+  const diagnostics: string[] = [];
+
+  try {
+    const db = await getDbClient();
+
+    // Query all previous skill manifests for this crew member, ordered by created_at descending
+    const { data: allVersions, error } = await db
+      .from('sa_crew_skills')
+      .select('version, self_improvement_notes, last_improved_at')
+      .eq('crew_id', crewId)
+      .order('created_at', { ascending: false })
+      .limit(10); // Get up to 10 previous versions
+
+    if (error) {
+      diagnostics.push(`Error querying memories: ${error.message}`);
+      return { hasMemories: false, diagnostics };
+    }
+
+    if (!allVersions || allVersions.length === 0) {
+      diagnostics.push('No previous memories found for this crew member');
+      return { hasMemories: false, diagnostics };
+    }
+
+    // Get the most recent version
+    const mostRecent = allVersions[0];
+    const recoveredNotes = (mostRecent.self_improvement_notes as string[]) ?? [];
+
+    if (recoveredNotes.length === 0) {
+      diagnostics.push(`Found skill history (v${mostRecent.version}) but no improvement notes to recover`);
+      return {
+        hasMemories: false,
+        previousVersion: mostRecent.version,
+        diagnostics,
+      };
+    }
+
+    diagnostics.push(
+      `Recovered ${recoveredNotes.length} improvement notes from v${mostRecent.version}`,
+      `Last improved: ${mostRecent.last_improved_at}`
+    );
+
+    return {
+      hasMemories: true,
+      previousVersion: mostRecent.version,
+      recoveredImprovementNotes: recoveredNotes,
+      lastImprovedAt: mostRecent.last_improved_at,
+      diagnostics,
+    };
+  } catch (error) {
+    diagnostics.push(`Exception during memory recovery: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return { hasMemories: false, diagnostics };
+  }
+}
+
+/** * Generate integrity report for all 11 crew members
  */
 export async function generateCrewIntegrityReport(): Promise<CrewIntegrityReport> {
   const timestamp = new Date().toISOString();
@@ -210,6 +279,27 @@ export async function initializeMissingCrewMember(crewId: CrewId): Promise<{
         const basePrompt = buildPersonaSystemPrompt(crewId);
         const now = new Date().toISOString();
 
+        // Attempt to recover crew member's previous memories and learnings
+        const memoryRecovery = await recoverCrewMemberMemories(crewId);
+        let improvementNotes: string[] = [];
+        let recoveryMessage = `[CREW_INTEGRITY] Initialized from crew integrity recovery`;
+
+        if (memoryRecovery.hasMemories && memoryRecovery.recoveredImprovementNotes) {
+          // Restore previous learnings
+          improvementNotes = [
+            `[CREW_INTEGRITY] Memories recovered from v${memoryRecovery.previousVersion}`,
+            `[CREW_INTEGRITY] Restoring ${memoryRecovery.recoveredImprovementNotes.length} previous learnings`,
+            ...memoryRecovery.recoveredImprovementNotes,
+          ];
+          recoveryMessage = `Crew member reactivated with restored memories from previous version`;
+          console.log(
+            `[crew-integrity] ${persona.fullName} reactivated with recovered memories (${memoryRecovery.recoveredImprovementNotes.length} learning notes)`
+          );
+        } else {
+          improvementNotes = [recoveryMessage];
+          console.log(`[crew-integrity] ${persona.fullName} initialized fresh (no previous memories found)`);
+        }
+
         const { error: insertError } = await db.from('sa_crew_skills').insert({
           crew_id: crewId,
           version: '1.0.0',
@@ -218,7 +308,7 @@ export async function initializeMissingCrewMember(crewId: CrewId): Promise<{
           domain_system_prompt: `[Domain specialization for ${persona.engineeringRole}]`,
           mission_context_template: '{{mission_ref}}: {{story_description}}',
           tool_usage_examples: [],
-          self_improvement_notes: [`[CREW_INTEGRITY] Initialized from crew integrity recovery`],
+          self_improvement_notes: improvementNotes,
           improvement_source: 'initial_seed',
           last_improved_at: now,
           created_at: now,

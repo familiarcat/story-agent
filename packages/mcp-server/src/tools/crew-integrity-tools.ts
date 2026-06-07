@@ -16,6 +16,7 @@ import {
   initializeMissingCrewMember,
   recoverAllMissingCrewMembers,
   getCrewIntegritySummary,
+  recoverCrewMemberMemories,
 } from '../lib/crew-integrity.js';
 
 export function registerCrewIntegrityTools(server: McpServer) {
@@ -144,6 +145,38 @@ export function registerCrewIntegrityTools(server: McpServer) {
           {
             type: 'text',
             text: summary,
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    'recover_crew_member_memories',
+    'Recover a crew member\'s personal memories and accumulated learnings. Checks if they have previous skill versions in the database and restores learning history. Use this to understand what a crew member has learned in previous missions.',
+    {
+      crewId: z
+        .enum(['picard', 'data', 'riker', 'geordi', 'obrien', 'worf', 'yar', 'troi', 'crusher', 'uhura', 'quark']),
+    },
+    async (args) => {
+      const recovery = await recoverCrewMemberMemories(args.crewId);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                crewId: args.crewId,
+                hasMemories: recovery.hasMemories,
+                previousVersion: recovery.previousVersion,
+                recoveredLearnings: recovery.recoveredImprovementNotes?.length ?? 0,
+                learnings: recovery.recoveredImprovementNotes ?? [],
+                lastImprovedAt: recovery.lastImprovedAt,
+                diagnostics: recovery.diagnostics,
+              },
+              null,
+              2
+            ),
           },
         ],
       };
