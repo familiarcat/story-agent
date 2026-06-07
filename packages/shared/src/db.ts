@@ -564,7 +564,15 @@ export function stopObservationMemorySyncWorker(): void {
   }
 }
 
-// ── Stories ──────────────────────────────────────────────────────────────────
+/**
+ * Get the initialized Supabase client.
+ * Handles candidate probing, fallback, and connection caching.
+ * Use this in packages that need direct table access (e.g. crew-skill-system, crew-tool-registry).
+ */
+export async function getDbClient(): Promise<SupabaseClient> {
+  return db();
+}
+
 
 export async function upsertStory(
   story: Omit<StoryRecord, 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string }

@@ -8,6 +8,7 @@ import { registerDeliveryTools } from './tools/delivery-tools.js';
 import { registerCrewMemoryTools } from './tools/crew-memory-tools.js';
 import { registerCrewMemberTools } from './tools/crew-member-tools.js';
 import { registerDocTools } from './tools/doc-tools-register.js';
+import { registerStarshipTools } from './tools/starship-tools.js';
 import { CrewWebSocketServer } from './lib/websocket-server.js';
 
 const server = new McpServer({
@@ -21,6 +22,7 @@ registerDeliveryTools(server);
 registerCrewMemoryTools(server);
 registerCrewMemberTools(server);
 registerDocTools(server);
+registerStarshipTools(server);
 
 async function main() {
   // Start MCP server on stdio

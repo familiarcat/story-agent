@@ -73,7 +73,7 @@ story-agent/
 │   │   │   ├── repo-tools.ts              # Repo access tools
 │   │   │   └── delivery-tools.ts          # Delivery state tools
 │   │   ├── test/
-│   │   │   ├── setup.ts                   # ⭐ Mock utilities (Supabase, OpenRouter, fetch)
+│   │   │   ├── setup.ts                   # ⭐ Mock utilities (Supabase, approved LLM, fetch)
 │   │   │   └── *.integration.test.ts      # ⭐ Integration tests (9 suites, 58 tests)
 │   │   ├── vitest.config.ts               # ⭐ Vitest config with RUN_MODE filtering
 │   │   ├── PROMPT_ENGINEERING.md          # Full system documentation
@@ -108,7 +108,7 @@ story-agent/
 │   │   └── vitest.config.ts     # ⭐ Vitest config for UI tests
 │   ├── shared/                  # Shared TypeScript types
 │   │   ├── test/
-│   │   │   ├── setup.ts                   # ⭐ Mock utilities (Supabase, OpenRouter, fetch)
+│   │   │   ├── setup.ts                   # ⭐ Mock utilities (Supabase, approved LLM, fetch)
 │   │   │   └── db.integration.test.ts     # ⭐ Integration tests (8 tests)
 │   │   └── src/
 │   │       ├── index.ts         # CrewRole, CrewAuthority, interfaces
@@ -276,18 +276,18 @@ A complete test suite ensuring reliable cross-platform execution from developmen
 ### Layer 2: Integration Tests with Mocks (58 tests, < 15 seconds)
 - Fast local development with full API mocking
 - Test files: `**/*.integration.test.ts` (run via `RUN_MODE=integration`)
-- Mocked services: Supabase, OpenRouter, Aha API, GitHub API
+- Mocked services: Supabase, approved LLM, Aha API, GitHub API
 - Environment: `TEST_ENV=local` activates in-memory mocks
 - Mock infrastructure:
   - `createMockSupabaseClient()` - In-memory query builder
-  - `createMockOpenRouterClient()` - Deterministic crew responses
+  - `createMockApprovedLlmClient()` - Deterministic crew responses
   - `createMockFetch()` - URL-based route mocking for all APIs
 - Covers: Database operations, API integration, error handling
 
 ### Layer 3: CI/CD Integration Tests (Same 58 tests with real services)
 - Real service calls in CI/CD pipeline
 - Environment: `TEST_ENV=integration` (default)
-- Services required: Supabase, OpenRouter, Aha API, GitHub
+- Services required: Supabase, Bayer-approved LLM provider, Aha API, GitHub
 - Configuration: All via environment variables
 - Usage: `pnpm run test:ci` in GitHub Actions
 
@@ -310,7 +310,7 @@ npm run test:ci
 ### Mock Setup (packages/*/test/setup.ts)
 
 Each package has its own `test/setup.ts`:
-- Shared mocks (Supabase, OpenRouter, fetch)
+- Shared mocks (Supabase, approved LLM, fetch)
 - Package-specific test fixtures
 - 180+ lines for comprehensive coverage
 - Reusable across all test suites
@@ -480,7 +480,9 @@ AHA_DOMAIN=
 AHA_API_KEY=
 GITHUB_TOKEN=
 GITHUB_DEFAULT_ORG=
-OPENROUTER_API_KEY=
+CREW_LLM_PROVIDER=approved
+CREW_LLM_APPROVED_URL=
+CREW_LLM_APPROVED_KEY=
 ```
 
 ---
@@ -600,7 +602,7 @@ Fully autonomous story delivery: From Aha story description → complete, tested
 - 108 tests passing: 50 unit + 58 integration with mocks
 - Vitest 4.1.8 with ESM module support
 - RUN_MODE environment variable for dynamic test filtering
-- Mock infrastructure for Supabase, OpenRouter, Aha API, GitHub API
+- Mock infrastructure for Supabase, approved LLM, Aha API, GitHub API
 - `packages/shared/test/setup.ts` (180+ lines of mocks)
 - `packages/mcp-server/test/setup.ts` (140+ lines)
 - Integration test suites: db.integration.test.ts, prompt-engine.integration.test.ts, providers.integration.test.ts
