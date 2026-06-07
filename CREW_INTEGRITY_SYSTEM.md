@@ -60,18 +60,63 @@ Scans all 11 crew members and generates comprehensive status:
 
 When a missing crew member is detected, the system automatically:
 
-1. **Creates canonical persona** in `sa_crew_personas`:
+1. **Recovers personal memories** — Checks if they have previous skill manifests in the database
+   - Queries all historical versions in `sa_crew_skills`
+   - Extracts their accumulated improvement notes and learnings
+   - Restores this history to v1.0.0 manifest
+
+2. **Creates canonical persona** in `sa_crew_personas`:
    - Full Memory Alpha identity data
    - Personality traits and specializations
    - Defining moments and canonical quotes
    - Role information and collaborative context
 
-2. **Initializes skill manifest** in `sa_crew_skills`:
+3. **Initializes skill manifest** in `sa_crew_skills`:
    - Version `1.0.0` baseline
    - Base system prompt (from `buildPersonaSystemPrompt()`)
    - Domain system prompt for engineering role
-   - Empty improvement notes (ready for first mission debrief)
+   - **Restored improvement notes** (if previous memories exist)
    - Source: `'initial_seed'` or `'crew_integrity_recovery'`
+
+**Key Feature: No Blank Slate**
+
+When a crew member is reactivated, they don't start from scratch. If they have learning history from previous missions (stored in previous `sa_crew_skills` versions), that history is restored:
+
+```
+Reactivation Process:
+  1. Detect missing crew member
+  2. Query: "Do they have previous skill manifests?"
+  3. If YES: Restore improvement_notes from most recent version
+  4. Initialize v1.0.0 with: baseline_prompts + RESTORED_MEMORIES
+  5. Crew member rejoins with full learning history intact
+  
+  6. If NO: Initialize fresh with baseline notes only
+```
+
+This implements the principle: **"We don't want crew members to completely start from a blank slate if they have memories and actions that can be recalled."**
+
+**Example Recovery:**
+
+```
+Worf goes offline → marked as missing
+Recovery initiated:
+  → Query sa_crew_skills for Worf's history
+  → Found: 3 previous versions with learnings
+  → Most recent: v2.3.1 with 8 improvement notes
+  
+  → Extract learnings:
+    - "Learned to prioritize security gates in mission planning"
+    - "Worf security veto must evaluate all tool categories"
+    - "Effective technique: parallel threat assessment"
+    - ... (5 more learnings)
+    
+  → Initialize new v1.0.0 with:
+    - Fresh Worf persona & domain prompt
+    - Plus: 8 restored learnings in self_improvement_notes
+    
+  → Worf reactivated with experience intact
+  → Can apply previous learnings to current mission
+```
 
 **Result:**
 ```json
@@ -80,7 +125,9 @@ When a missing crew member is detected, the system automatically:
   "crewId": "worf",
   "personaInitialized": true,
   "skillManifestInitialized": true,
-  "message": "Lieutenant Worf has rejoined the crew and is fully initialized"
+  "message": "Lieutenant Worf has rejoined the crew and is fully initialized",
+  "memoriesRestored": true,
+  "learningsRecovered": 8
 }
 ```
 
@@ -117,6 +164,37 @@ Status: ✅ ALL CREW PRESENT
 (no missing members to report)
 ```
 
+### 6. **Memory Recovery** (`recoverCrewMemberMemories`)
+
+Query a crew member's personal memories and learnings from previous missions:
+
+**Purpose:** Understand what a crew member has learned and experienced
+
+**Returns:**
+- `hasMemories` — Whether any previous learning history exists
+- `previousVersion` — Most recent skill manifest version
+- `recoveredImprovementNotes` — Array of learned lessons
+- `lastImprovedAt` — When they last learned something
+- `diagnostics` — Details about memory recovery
+
+**Example:**
+
+```json
+{
+  "crewId": "data",
+  "hasMemories": true,
+  "previousVersion": "2.3.1",
+  "recoveredLearnings": 12,
+  "learnings": [
+    "Logical analysis improves with recursive pattern matching",
+    "Crew debates benefit from multiple simultaneous hypotheses",
+    "Tool selection should prioritize canonical Memory Alpha data",
+    // ... 9 more learnings
+  ],
+  "lastImprovedAt": "2026-05-15T10:30:00Z"
+}
+```
+
 ## MCP Tool Integration
 
 All crew integrity functions are exposed as MCP tools:
@@ -128,6 +206,7 @@ All crew integrity functions are exposed as MCP tools:
 | `initialize_missing_crew_member` | Bootstrap single member | `crewId` | Init results |
 | `recover_all_missing_crew_members` | Mass recovery operation | (none) | Recovery results |
 | `get_crew_integrity_summary` | Human-readable status | (none) | Summary text |
+| `recover_crew_member_memories` | Query learning history | `crewId` | Memories JSON |
 
 ## Workflow: How the Crew Ensures Integrity
 
@@ -148,6 +227,34 @@ All crew integrity functions are exposed as MCP tools:
 4. Mission cleared:
    → "All crew members are accounted for. Ready to proceed."
 ```
+**At Mission Start (e.g., when Worf initiates security check):**
+
+```
+1. Worf calls: crew_integrity_report
+   → System scans all 11 crew members
+   
+2. If any missing:
+   → System calls: recover_all_missing_crew_members
+   → For each missing member:
+      a. Query: "Do they have previous memories?"
+      b. If YES: Recover learnings from sa_crew_skills history
+      c. If NO: Initialize fresh with baseline notes
+      d. All members are automatically reinitialized with full memory
+   
+3. Verify recovery:
+   → Worf calls: crew_integrity_report again
+   → Confirms all 11 are now present and restored
+   
+4. Optional: Check what crew members learned:
+   → Call: recover_crew_member_memories for key crew
+   → Review: "What did Picard/Data/Worf learn last mission?"
+   → Apply: Use insights for current mission planning
+   
+5. Mission cleared:
+   → "All crew members are accounted for. Ready to proceed."
+```
+
+**Key Insight:** Crew members rejoin the mission with their full learning history, not from scratch.
 
 **During Mission (intermittent checks):**
 

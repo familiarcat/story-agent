@@ -135,7 +135,6 @@ node packages/mcp-server/dist/index.js
 ```json
 {
   "crewId": "worf"
-}
 ```
 
 **Output:**
@@ -179,19 +178,8 @@ node packages/mcp-server/dist/index.js
 
 ---
 
-### 4. `recover_all_missing_crew_members`
-
-**Purpose:** All-hands operation to autonomously detect and recover ALL missing crew members.
-
-**Input:** (none)
-
 **Output:**
 ```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": {
         "success": true,
         "totalAttempted": 3,
         "successfulRecoveries": 3,
@@ -203,7 +191,6 @@ node packages/mcp-server/dist/index.js
           "presentCount": 11,
           "missingCount": 0,
           "crewStatuses": [...all 11 with status 'present'...],
-          "allCrewPresent": true,
           "recoveryActions": []
         },
         "allCrewNowPresent": true
@@ -293,7 +280,19 @@ Agent/User: "Ready to proceed. Call crew_integrity_report at mission end."
 Agent/User: crew_integrity_report
 → System: All 11 crew still present (success)
 
+When the MCP server starts, 6 new crew integrity tools are automatically registered and available:
 Agent/User: "Mission complete. Full crew accounted for."
+```bash
+# Start the MCP server
+node packages/mcp-server/dist/index.js
+```
+# The server now offers:
+# - check_crew_member_status
+# - crew_integrity_report
+# - initialize_missing_crew_member
+# - recover_all_missing_crew_members
+# - get_crew_integrity_summary
+# - recover_crew_member_memories  ← NEW: Access crew member's personal learning history
 ```
 
 ### Example 2: Recovery Scenario
