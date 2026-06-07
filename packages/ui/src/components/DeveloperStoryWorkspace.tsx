@@ -15,6 +15,7 @@
 import React, { useEffect, useState } from 'react';
 import { DeveloperAdvisor } from './DeveloperAdvisor';
 import type { CrewExecutionState } from '@story-agent/shared';
+import { buildClientScopeHeaders, readClientScopeState } from '@/lib/client-scope-store';
 
 interface DeveloperStoryProps {
   storyId: string;
@@ -54,10 +55,30 @@ export function DeveloperStoryWorkspace({
     const fetchStory = async () => {
       try {
         const res = await fetch(`/api/stories/${storyId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setStory(data.story);
+        if (!res.ok) {
+          return;
         }
+
+        const data = await res.json();
+        setStory(data.story);
+
+        const selectedScope = readClientScopeState();
+        const selectedClientId = selectedScope.clientId;
+        if (!selectedClientId) {
+          return;
+        }
+
+        // Controlled fields are loaded only after explicit client scope is present.
+        const controlledRes = await fetch(`/api/stories/${storyId}?includeControlled=true`, {
+          headers: buildClientScopeHeaders({ purpose: 'ui_story_detail', includeControlled: true }),
+        });
+
+        if (!controlledRes.ok) {
+          return;
+        }
+
+        const controlledData = await controlledRes.json();
+        setStory(controlledData.story);
       } catch (err) {
         console.error('Error fetching story:', err);
       }

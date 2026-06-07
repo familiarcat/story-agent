@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { AhaProject, AhaSprint, AhaSprintStory } from '@story-agent/shared';
+import { ClientScopeSelector } from '@/components/ClientScopeSelector';
 
 type SprintView = {
   sprint: AhaSprint;
@@ -95,6 +96,8 @@ export default function SprintPage() {
       <div style={{ marginBottom: '0.75rem' }}>
         <a href="/dashboard" style={{ color: '#6b7280', fontSize: '0.85rem' }}>← Dashboard</a>
       </div>
+
+      <ClientScopeSelector title="Client Scope For Sprint Planning" />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <div>

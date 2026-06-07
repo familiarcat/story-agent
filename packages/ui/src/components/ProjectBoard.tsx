@@ -6,7 +6,9 @@
 
 import { useEffect, useState } from 'react';
 import { StoryExecutionCard } from './StoryExecutionCard';
-import type { ProjectRecord, StoryRecord } from '@story-agent/shared';
+import type { StoryRecord } from '@story-agent/shared';
+import { ClientScopeSelector } from './ClientScopeSelector';
+import { buildClientScopeHeaders, readClientScopeState } from '@/lib/client-scope-store';
 
 interface ProjectBoardProps {
   projectId: string;
@@ -17,17 +19,27 @@ export function ProjectBoard({ projectId, projectName }: ProjectBoardProps) {
   const [stories, setStories] = useState<StoryRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [policyNote, setPolicyNote] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchStories() {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/stories?projectId=${projectId}`);
+        const scope = readClientScopeState();
+        const params = new URLSearchParams({ projectId });
+        if (scope.clientId) {
+          params.set('clientId', scope.clientId);
+        }
+
+        const response = await fetch(`/api/stories?${params.toString()}`, {
+          headers: buildClientScopeHeaders({ purpose: 'ui_population', includeControlled: false }),
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch stories: ${response.statusText}`);
         }
         const data = await response.json();
         setStories(data.stories || []);
+        setPolicyNote(data.policy?.reason ? `Policy: ${data.policy.reason}` : null);
         setError(null);
       } catch (err) {
         console.error('Error fetching stories:', err);
@@ -54,6 +66,7 @@ export function ProjectBoard({ projectId, projectName }: ProjectBoardProps) {
 
   return (
     <div className="p-8">
+      <ClientScopeSelector title="Client Scope For Project Stories" />
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{projectName}</h1>
         <div className="flex gap-6 text-sm">
@@ -67,6 +80,7 @@ export function ProjectBoard({ projectId, projectName }: ProjectBoardProps) {
             <strong>{completedStories}</strong> completed
           </div>
         </div>
+        {policyNote && <div className="text-xs text-amber-700 mt-3">{policyNote}</div>}
       </div>
 
       {error && (

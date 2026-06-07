@@ -162,6 +162,12 @@ function inferProjectName(repoFullName: string): string {
   return repo ? repo.replace(/[-_]/g, ' ') : 'Unassigned Project';
 }
 
+function inferClientId(story: HierarchicalStoryRecord): string {
+  if (story.clientId) return story.clientId.toLowerCase();
+  const [owner] = story.repoFullName.split('/');
+  return (owner ?? 'unassigned-client').toLowerCase();
+}
+
 export default async function Dashboard() {
   let stories: HierarchicalStoryRecord[] = [];
   let isDemo = false;
@@ -301,7 +307,7 @@ export default async function Dashboard() {
                     {new Date(s.updatedAt).toLocaleDateString()}
                   </td>
                   <td>
-                    <Link href={`/story/${s.storyId}`} style={{ fontSize: '0.85rem' }}>View →</Link>
+                    <Link href={`/story/${s.storyId}?clientId=${encodeURIComponent(inferClientId(s))}`} style={{ fontSize: '0.85rem' }}>View →</Link>
                   </td>
                 </tr>
               ))}

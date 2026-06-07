@@ -1,13 +1,44 @@
 import { getStory, getCommentsForStory, getRevisionCycles } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import {
+  buildClientAccessContext,
+  evaluateControlledDataAccess,
+  inferClientIdFromStory,
+} from '@story-agent/shared';
 
 export const dynamic = 'force-dynamic';
 
-export default async function StoryPage({ params }: { params: Promise<{ storyId: string }> }) {
+export default async function StoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ storyId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { storyId } = await params;
+  const query = await searchParams;
   const record = await getStory(decodeURIComponent(storyId));
   if (!record) notFound();
+
+  const selectedClientId = typeof query.clientId === 'string' ? query.clientId : null;
+  const selectedRole = typeof query.clientRole === 'string' ? query.clientRole : null;
+  const includeControlled = query.includeControlled === '1';
+
+  const decision = evaluateControlledDataAccess({
+    context: buildClientAccessContext({
+      selectedClientId,
+      clientRole: selectedRole,
+      purpose: 'ui_story_detail',
+      includeControlled,
+    }),
+    requestedClientId: inferClientIdFromStory(record),
+  });
+
+  const controlledVisible = decision.allowed;
+  const loadControlledHref = `/story/${encodeURIComponent(record.storyId)}?clientId=${encodeURIComponent(
+    inferClientIdFromStory(record) ?? ''
+  )}&clientRole=client_delivery&includeControlled=1`;
 
   const comments = await getCommentsForStory(record.storyId);
   const cycles = await getRevisionCycles(record.storyId);
@@ -25,18 +56,37 @@ export default async function StoryPage({ params }: { params: Promise<{ storyId:
         <span style={{ fontSize: '0.8rem', color: '#6b7280', marginLeft: 'auto' }}>Phase {record.phase}</span>
       </div>
 
+      {!controlledVisible && (
+        <div className="card" style={{ marginBottom: '1rem', borderColor: '#f59e0b', background: '#fffbeb' }}>
+          <strong style={{ color: '#92400e' }}>Controlled data is in advisory mode.</strong>
+          <div style={{ color: '#92400e', fontSize: '0.9rem', marginTop: '0.4rem' }}>
+            Select a matching client scope and role before loading regulated fields.
+            {' '}
+            <a href={loadControlledHref}>Load controlled context</a>
+          </div>
+        </div>
+      )}
+
       {/* Story metadata */}
       <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
-        <div><strong>Aha Story</strong><br /><a href={record.storyUrl} target="_blank" rel="noreferrer">{record.storyUrl}</a></div>
-        <div><strong>Repository</strong><br />{record.repoFullName}</div>
-        <div><strong>Branch</strong><br /><code>{record.branch}</code> from <code>{record.baseBranch}</code></div>
+        <div>
+          <strong>Aha Story</strong>
+          <br />
+          {controlledVisible ? (
+            <a href={record.storyUrl} target="_blank" rel="noreferrer">{record.storyUrl}</a>
+          ) : (
+            <span style={{ color: '#9ca3af' }}>[restricted until controlled access is authorized]</span>
+          )}
+        </div>
+        <div><strong>Repository</strong><br />{controlledVisible ? record.repoFullName : '[restricted]'}</div>
+        <div><strong>Branch</strong><br />{controlledVisible ? <><code>{record.branch}</code> from <code>{record.baseBranch}</code></> : <span style={{ color: '#9ca3af' }}>[restricted]</span>}</div>
         <div><strong>Pull Request</strong><br />
-          {record.prUrl
+          {controlledVisible && record.prUrl
             ? <a href={record.prUrl} target="_blank" rel="noreferrer">PR #{record.prNumber} ({record.prStatus})</a>
             : <span style={{ color: '#9ca3af' }}>Not yet opened</span>
           }
         </div>
-        {record.notes && <div style={{ gridColumn: '1/-1' }}><strong>Notes</strong><br />{record.notes}</div>}
+        {controlledVisible && record.notes && <div style={{ gridColumn: '1/-1' }}><strong>Notes</strong><br />{record.notes}</div>}
       </div>
 
       {/* PR Comments */}
