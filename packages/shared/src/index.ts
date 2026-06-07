@@ -208,6 +208,7 @@ export interface SprintRituals {
 // Extends StoryRecord with sprint/agile fields (used in wizard output)
 
 export * from './client-scope.js';
+export * from './client-security-policy.js';
 export interface StoryMission {
   story: AgileStory;
   sprint: AgileSprint | null;

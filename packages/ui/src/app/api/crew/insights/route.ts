@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Load real crew data from Supabase
     const roster = await getCrewRosterWithStats();
-    const insights = [];
+    const insights: any[] = [];
 
     // Build insights from crew specializations and improvements
     for (const member of roster) {

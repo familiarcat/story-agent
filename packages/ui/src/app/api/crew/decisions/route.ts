@@ -76,16 +76,24 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { storyRef, decisionType, context } = body as {
+      storyRef?: string;
+      decisionType?: string;
+      context?: string;
+    };
+
+    if (!storyRef || !decisionType) {
+      return NextResponse.json(
+        { success: false, error: 'storyRef and decisionType are required' },
+        { status: 400 }
+      );
     }
 
     // TODO: Call crewAutonomyManager.requestAutonomousDecision()
-    // const decision = await crewAutonomyManager.requestAutonomousDecision(
-    //   storyRef,
-    //   decisionType,
-    //   context
-    // );
-
-    // Mock response
     const decision = {
       id: `decision-${Date.now()}`,
       type: decisionType,

@@ -12,6 +12,10 @@
     "./db": {
       "import": "./dist/src/db.js",
       "types": "./dist/src/db.d.ts"
+    },
+    "./client-security-policy": {
+      "import": "./dist/src/client-security-policy.js",
+      "types": "./dist/src/client-security-policy.d.ts"
     }
   },
   "scripts": {
