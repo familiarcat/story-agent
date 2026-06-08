@@ -10,12 +10,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <nav style={{ padding: '1rem 2rem', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '2rem', alignItems: 'center' }}>
+        <nav style={{ padding: '1rem 2rem', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>Story Agent</span>
-          <a href="/dashboard" style={{ color: '#2563eb', textDecoration: 'none' }}>Dashboard</a>
-          <a href="/sprint" style={{ color: '#2563eb', textDecoration: 'none' }}>Sprint Board</a>
-          <a href="/story/new" style={{ color: '#2563eb', textDecoration: 'none' }}>+ New Story</a>
-          <a href="/observation-lounge" style={{ color: '#2563eb', textDecoration: 'none' }}>Observation Lounge</a>
+          <a href="/dashboard" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>Dashboard</a>
+          <a href="/sprint" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>Sprint Board</a>
+          <a href="/crew/memories" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>👥 Crew Memories</a>
+          <a href="/story/new" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>+ New Story</a>
+          <a href="/observation-lounge" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>Observation Lounge</a>
           <a href="/dashboard" style={{ color: '#6b7280', textDecoration: 'none', marginLeft: 'auto', fontSize: '0.85rem' }}>
             v1.0.0
           </a>
