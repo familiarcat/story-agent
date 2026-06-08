@@ -53,6 +53,7 @@ const DEFAULT_CONTROLLED_MARKERS = [
 type ObservationMemoryPayload = {
   id: string;
   story_id: string;
+  client_id: string | null;
   source: ObservationMemoryRecord['source'];
   transcript_hash: string;
   transcript_text: string;
@@ -331,6 +332,7 @@ function mapObservationMemory(row: Record<string, unknown>): ObservationMemoryRe
   return {
     id: row.id as string,
     storyId: row.story_id as string,
+    clientId: (row.client_id as string | null) ?? null,
     source: row.source as ObservationMemoryRecord['source'],
     transcriptHash: row.transcript_hash as string,
     transcriptText: row.transcript_text as string,
@@ -346,6 +348,7 @@ function mapObservationMemoryPayload(row: ObservationMemoryPayload): Observation
   return {
     id: row.id,
     storyId: row.story_id,
+    clientId: row.client_id ?? null,
     source: row.source,
     transcriptHash: row.transcript_hash,
     transcriptText: row.transcript_text,
@@ -726,6 +729,8 @@ export async function listProjects(): Promise<ProjectRecord[]> {
 
 export async function storeObservationMemory(input: {
   storyId: string;
+  /** Client org that owns this memory — isolates memories between clients */
+  clientId?: string | null;
   source: ObservationMemoryRecord['source'];
   transcript: ObservationDebateResult;
   missionPlan?: CrewMissionPlan;
@@ -738,12 +743,14 @@ export async function storeObservationMemory(input: {
   });
 
   const transcriptText = JSON.stringify(worfGate.transcript);
-  const transcriptHash = hashText(`${input.storyId}:${transcriptText}`);
+  // Include clientId in hash to prevent cross-client hash collisions
+  const transcriptHash = hashText(`${input.clientId ?? 'global'}:${input.storyId}:${transcriptText}`);
   const embedding = toEmbedding(transcriptText);
 
   const payload: ObservationMemoryPayload = {
     id: randomUUID(),
     story_id: input.storyId,
+    client_id: input.clientId ?? null,
     source: input.source,
     transcript_hash: transcriptHash,
     transcript_text: transcriptText,
@@ -774,19 +781,32 @@ export async function storeObservationMemory(input: {
   return mapObservationMemory((row as Record<string, unknown>) ?? payload);
 }
 
-export async function getRecentObservationMemories(limit = 8, storyId?: string): Promise<ObservationMemoryRecord[]> {
+export async function getRecentObservationMemories(
+  limit = 8,
+  storyId?: string,
+  clientId?: string | null,
+): Promise<ObservationMemoryRecord[]> {
   const cached = await getCachedObservationMemories(limit, storyId);
-  if (cached.length >= limit) {
-    return cached.slice(0, limit);
+  // Filter cached results by clientId if provided
+  const filteredCache = clientId
+    ? cached.filter(m => m.clientId === clientId)
+    : cached;
+  if (filteredCache.length >= limit) {
+    return filteredCache.slice(0, limit);
   }
 
   let query = (await db()).from('sa_observation_memories').select('*').order('created_at', { ascending: false }).limit(limit);
   if (storyId) {
     query = query.eq('story_id', storyId);
   }
+  // Client isolation: if clientId provided, only return that client's memories.
+  // null clientId = legacy/global memories accessible to all clients.
+  if (clientId) {
+    query = query.or(`client_id.eq.${clientId},client_id.is.null`);
+  }
   const rows = throwOnError(await query);
 
-  const merged = [...cached, ...(rows ?? []).map(row => mapObservationMemory(row as Record<string, unknown>))];
+  const merged = [...filteredCache, ...(rows ?? []).map(row => mapObservationMemory(row as Record<string, unknown>))];
   const deduped = Array.from(new Map(merged.map(memory => [memory.transcriptHash, memory])).values());
   return deduped.slice(0, limit);
 }
@@ -794,11 +814,13 @@ export async function getRecentObservationMemories(limit = 8, storyId?: string):
 export async function getRelevantObservationMemories(input: {
   queryText: string;
   storyId?: string;
+  /** Client isolation: only return memories for this client (+ global memories) */
+  clientId?: string | null;
   limit?: number;
   candidatePool?: number;
 }): Promise<ObservationMemoryRecord[]> {
-  const { queryText, storyId, limit = 5, candidatePool = 40 } = input;
-  const candidates = await getRecentObservationMemories(candidatePool, storyId);
+  const { queryText, storyId, clientId, limit = 5, candidatePool = 40 } = input;
+  const candidates = await getRecentObservationMemories(candidatePool, storyId, clientId);
   const queryEmbedding = toEmbedding(queryText);
 
   return candidates

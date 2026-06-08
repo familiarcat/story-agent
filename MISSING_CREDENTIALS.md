@@ -147,11 +147,38 @@ To check programmatically, call the MCP tool `crew_integrity_summary` or query `
 
 ## Security Tier Summary
 
-| Client | Tier | Entra Required | Session Isolation | WorfGate | SSM Required |
-|---|---|---|---|---|---|
-| `bayer-int` | **regulated** (gold standard) | ✅ Yes | ✅ Yes | 🔴 Hard | ✅ Yes |
-| *new enterprise client* | enterprise | ❌ Any OIDC | ✅ Yes | 🔴 Hard | Optional |
-| *new standard client* | standard | ❌ No | ❌ No | 🟡 Advisory | ❌ No |
+| Client | Tier | Entra Required | Session Isolation | WorfGate | SSM Required | GitHub Org |
+|---|---|---|---|---|---|---|
+| `bayer-int` | **regulated** (gold standard) | ✅ Yes | ✅ Yes | 🔴 Hard | ✅ Yes | `bayer-int` |
+| `familiarcat` | **enterprise** | ❌ Any OIDC | ✅ Yes | 🔴 Hard | ❌ No | `familiarcat` |
+| *new enterprise client* | enterprise | ❌ Any OIDC | ✅ Yes | 🔴 Hard | Optional | (client org) |
+| *new standard client* | standard | ❌ No | ❌ No | 🟡 Advisory | ❌ No | (any) |
 
 > **Rule:** New clients never start at `standard` tier. The default for unknown clients is `enterprise`.  
-> **Rule:** No requirement in the `regulated` (Bayer) tier can be lowered without explicit security review by Worf.
+> **Rule:** No requirement in the `regulated` (Bayer) tier can be lowered without explicit security review by Worf.  
+> **Reference project:** `familiarcat/retailer-rewards-program` — enterprise tier reference implementation. React CRA app, loyalty point tracking, PII-lite data, no regulated obligations.
+
+## Retailer Rewards Program (familiarcat) — Enterprise Tier
+
+`git@github.com:familiarcat/retailer-rewards-program.git`
+
+This project demonstrates the **enterprise tier** — below Bayer gold standard but above standard.
+
+| Credential | Env Var | Purpose |
+|---|---|---|
+| OIDC JWKS URI | `STORY_AGENT_AUTH_JWKS_URI` | Any OIDC provider (not required to be Entra) |
+| OIDC Audience | `STORY_AGENT_AUTH_AUDIENCE` | Expected aud claim for familiarcat tokens |
+| WorfGate enforce | `WORFGATE_ENFORCE=true` | Required — same as Bayer |
+| GitHub org | `WORFGATE_ALLOWED_GITHUB_ORGS=familiarcat` | Commits only go to familiarcat repos |
+| Redis | `REDIS_URL` | Session isolation (env var acceptable, no SSM mandate) |
+| Supabase | `SUPABASE_URL` + `SUPABASE_KEY` | DB access (env var acceptable) |
+| GitHub token | `GITHUB_TOKEN` | Scoped to familiarcat org |
+
+**What differs from Bayer:**
+- No Entra issuer requirement — any OIDC JWT accepted
+- `controlledDataHardBlock=false` — can be relaxed per deployment
+- No SSM mandate — env vars acceptable
+- 2-hour session TTL (vs 1-hour for Bayer)
+- WorfGate controlled markers include `transaction`, `rewards`, `loyalty` (domain-specific)
+
+**Memory isolation:** All crew mission memories for `familiarcat/retailer-rewards-program` are stored with `client_id='familiarcat'` and will never surface in a Bayer session.

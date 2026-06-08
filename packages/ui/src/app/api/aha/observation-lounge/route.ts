@@ -113,6 +113,8 @@ export async function prepareObservationLoungePayload(input: {
   testPolicy?: string;
   reviewers?: string;
   executionMode: 'autonomous' | 'guided';
+  /** Client org ID — scopes memory retrieval/storage. Inferred from repoFullName owner if omitted. */
+  clientId?: string | null;
 }): Promise<ObservationLoungePayload> {
   const {
     referenceNum,
@@ -124,9 +126,13 @@ export async function prepareObservationLoungePayload(input: {
     executionMode,
   } = input;
 
+  // Infer clientId from repoFullName owner if not explicitly provided
+  const clientId = input.clientId ?? (repoFullName ? repoFullName.split('/')[0] : null) ?? null;
+
   const story = await getStory(referenceNum);
   const sharedMemories = await getRelevantObservationMemories({
     queryText: `${story.referenceNum} ${story.name} ${story.description} ${story.acceptanceCriteria}`,
+    clientId,
     limit: 6,
   });
   const brief = buildObservationLoungeBrief(story, {
@@ -150,11 +156,12 @@ export async function prepareObservationLoungePayload(input: {
   const debate = runObservationLoungeDebate(missionPlan);
   await storeObservationMemory({
     storyId: story.referenceNum,
+    clientId,
     source: 'ui',
     transcript: debate,
     missionPlan,
     missionReference: story.referenceNum,
-    tags: ['observation-lounge', executionMode, 'ui-debate'],
+    tags: ['observation-lounge', executionMode, 'ui-debate', clientId ?? 'global'],
   });
 
   return {

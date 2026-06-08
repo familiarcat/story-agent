@@ -333,6 +333,101 @@ export const DEFAULT_STANDARD_POLICY: ClientSecurityPolicy = {
 
 const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
   'bayer-int': BAYER_SECURITY_POLICY,
+
+  // familiarcat / Retailer Rewards Program
+  // React CRA app tracking customer loyalty points and transaction history.
+  // Enterprise tier: customer financial data (transaction amounts, PII-lite),
+  // but no regulated/GDPR/PHI obligations. Bearer auth required, WorfGate on,
+  // session isolation required, env vars acceptable (no SSM mandate).
+  'familiarcat': {
+    clientId: 'familiarcat',
+    clientName: 'Retailer Rewards Program (familiarcat)',
+    tier: 'enterprise',
+    tierRationale:
+      'React app tracking customer loyalty points and transaction history. ' +
+      'Handles PII-lite data (customer IDs, transaction amounts) with no regulated/GDPR/PHI obligations. ' +
+      'Enterprise tier is below Bayer gold standard but above standard tier.',
+
+    auth: {
+      requireBearerToken: true,
+      requireEntraIssuer: false, // any OIDC provider acceptable
+      requireSessionIsolation: true,
+      requireFullAuditTrail: true,
+      worfGateEnforce: true,
+      controlledDataHardBlock: false, // can be relaxed per deployment
+      requireSsmSecrets: false, // env vars acceptable
+      sessionTtlSeconds: 7200, // 2-hour session TTL
+    },
+
+    worfGate: {
+      enforceMode: 'hard',
+      allowedGithubOrgs: ['familiarcat'],
+      controlledMarkers: [
+        'confidential',
+        'internal use only',
+        'customer data',
+        'pii',
+        'secret',
+        'proprietary',
+        'transaction',
+        'rewards',
+        'loyalty',
+      ],
+      allowControlledOutbound: false,
+    },
+
+    requiredEnvVars: [
+      {
+        name: 'STORY_AGENT_AUTH_JWKS_URI',
+        description: 'JWKS URI for token validation (any OIDC provider).',
+        source: 'env',
+        sensitive: false,
+      },
+      {
+        name: 'STORY_AGENT_AUTH_AUDIENCE',
+        description: 'Expected aud claim for familiarcat tokens.',
+        source: 'env',
+        sensitive: false,
+      },
+      {
+        name: 'WORFGATE_ENFORCE',
+        description: 'Must be "true" for enterprise tier.',
+        source: 'env',
+        sensitive: false,
+      },
+      {
+        name: 'WORFGATE_ALLOWED_GITHUB_ORGS',
+        description: 'Must include "familiarcat".',
+        source: 'env',
+        sensitive: false,
+      },
+      {
+        name: 'REDIS_URL',
+        description: 'Redis for session isolation.',
+        source: 'either',
+        sensitive: true,
+      },
+      {
+        name: 'SUPABASE_URL',
+        description: 'Supabase project URL.',
+        source: 'either',
+        sensitive: false,
+      },
+      {
+        name: 'SUPABASE_KEY',
+        description: 'Supabase service role key.',
+        source: 'either',
+        sensitive: true,
+      },
+      {
+        name: 'GITHUB_TOKEN',
+        description: 'GitHub PAT scoped to familiarcat org.',
+        source: 'either',
+        sensitive: true,
+      },
+    ],
+  },
+
   // Add additional clients here. They are measured against BAYER_SECURITY_POLICY
   // as the gold standard. Never lower the bar below Bayer.
 };

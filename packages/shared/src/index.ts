@@ -350,6 +350,8 @@ export interface ObservationDebateResult {
 export interface ObservationMemoryRecord {
   id: string;
   storyId: string;
+  /** Client org that owns this memory — used for memory isolation between clients */
+  clientId: string | null;
   source: 'mcp' | 'ui';
   transcriptHash: string;
   transcriptText: string;

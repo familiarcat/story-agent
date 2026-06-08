@@ -266,12 +266,23 @@ Follow the story-execution-master-template workflow.
       testPolicy: z.string().optional().describe('Optional testing policy override'),
       reviewers: z.string().optional().describe('Optional reviewer group or users'),
       includeDebate: z.boolean().optional().default(true).describe('If true, run Observation Lounge debate automatically'),
+      clientId: z.string().optional().describe(
+        'Client org ID (e.g. "bayer-int", "familiarcat"). Scopes memory retrieval and storage to this client. ' +
+        'If omitted, inferred from repoFullName owner. Bayer = regulated tier, familiarcat = enterprise tier.'
+      ),
     },
-    async ({ referenceNum, repoFullName, targetBranch, executionMode, techStack, testPolicy, reviewers, includeDebate }) => {
+    async ({ referenceNum, repoFullName, targetBranch, executionMode, techStack, testPolicy, reviewers, includeDebate, clientId }) => {
       try {
         const story = await getAgileProvider().getStory(referenceNum);
+
+        // Infer clientId from repoFullName owner if not explicitly provided
+        const resolvedClientId = clientId ?? repoFullName.split('/')[0] ?? null;
+
+        // Memories are now auto-loaded inside buildAutonomousMissionPlan via resolvedClientId.
+        // We still pre-load here so the plan has full context from the top.
         const sharedMemories = await getRelevantObservationMemories({
           queryText: `${story.referenceNum} ${story.name} ${story.description} ${story.acceptanceCriteria}`,
+          clientId: resolvedClientId,
           limit: 6,
         });
 
@@ -281,28 +292,30 @@ Follow the story-execution-master-template workflow.
           repoFullName,
           targetBranch,
           executionMode,
+          clientId: resolvedClientId,
           sharedMemories,
           techStack,
           testPolicy,
           reviewers,
         });
 
-        // Store debate transcript to crew memory if included
+        // Store debate transcript to client-scoped crew memory
         if (includeDebate && debate) {
           await storeObservationMemory({
             storyId: story.referenceNum,
+            clientId: resolvedClientId,
             source: 'mcp',
             transcript: debate,
             missionPlan: plan,
             missionReference: story.referenceNum,
-            tags: [executionMode, 'observation-lounge', 'crew-debate', 'autonomous'],
+            tags: [executionMode, 'observation-lounge', 'crew-debate', 'autonomous', resolvedClientId ?? 'global'],
           });
         }
 
         return {
           content: [{
             type: 'text' as const,
-            text: JSON.stringify({ plan, debate, status: 'success' }, null, 2),
+            text: JSON.stringify({ plan, debate, status: 'success', clientId: resolvedClientId }, null, 2),
           }],
         };
       } catch (error) {

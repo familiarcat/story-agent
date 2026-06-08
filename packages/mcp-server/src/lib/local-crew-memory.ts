@@ -177,6 +177,7 @@ export async function loadExternalCrewObservationMemories(roster: CrewAgentProfi
           sourceLabel: source.label,
           rawRole: parsed.role ?? '',
           storyId: 'cross-project-legacy-memory',
+          clientId: null, // legacy memories are global — accessible to all clients
           transcriptHash: hashText(transcriptText),
           transcriptText,
           transcript: buildObservationDebate(parsed, resolvedCrew.crewName),

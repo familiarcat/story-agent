@@ -29,6 +29,12 @@ interface CrewOperationContext {
   repoFullName: string;
   targetBranch: string;
   executionMode: 'autonomous' | 'guided';
+  /**
+   * Client org that scopes memory retrieval.
+   * Pass 'bayer-int' for Bayer, 'familiarcat' for the Retailer Rewards project, etc.
+   * When null, falls back to global/unscoped memories.
+   */
+  clientId?: string | null;
   sharedMemories?: ObservationMemoryRecord[];
   techStack?: string;
   testPolicy?: string;
@@ -83,8 +89,26 @@ export async function executeCrewAnalysis(context: CrewOperationContext): Promis
 export async function buildAutonomousMissionPlan(context: CrewOperationContext): Promise<CrewMissionPlan> {
   const crew = getCrewRoster();
 
-  // Execute all crew analyses in parallel
-  const findings = await executeCrewAnalysis(context);
+  // ── Auto-load client-scoped memories if not pre-supplied ──────────────────
+  // This is the core memory integration: before the crew runs, we hydrate
+  // sharedMemories from the right client bucket so the crew doesn't start blind.
+  let sharedMemories = context.sharedMemories;
+  if (!sharedMemories || sharedMemories.length === 0) {
+    try {
+      const { getRelevantObservationMemories } = await import('@story-agent/shared/db');
+      sharedMemories = await getRelevantObservationMemories({
+        queryText: `${context.story.referenceNum} ${context.story.name} ${context.story.description}`,
+        clientId: context.clientId ?? null,
+        limit: 6,
+        candidatePool: 40,
+      });
+    } catch {
+      sharedMemories = [];
+    }
+  }
+
+  // Execute all crew analyses in parallel, now with client-scoped memory hydration
+  const findings = await executeCrewAnalysis({ ...context, sharedMemories });
 
   // Determine recommended execution order based on crew hierarchy and findings
   // Picard leads, Data and Riker coordinate, specialists support
@@ -104,7 +128,7 @@ export async function buildAutonomousMissionPlan(context: CrewOperationContext):
     repoFullName: context.repoFullName,
     targetBranch: context.targetBranch,
     crew,
-    sharedMemoryContext: context.sharedMemories ?? [],
+    sharedMemoryContext: sharedMemories,
     assignments,
     findings,
     recommendedExecutionOrder: executionOrder,
