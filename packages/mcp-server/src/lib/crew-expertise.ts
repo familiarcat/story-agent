@@ -380,7 +380,7 @@ When to involve Troi:
       'database:schema',
       'security:rls',
       'deployment:strategy',
-      'error:handling',
+      'monitoring:health',
     ],
 
     expertise: `
@@ -401,6 +401,10 @@ implementation. Measures before & after optimization. Bases decisions on evidenc
 **Error Scenario Testing**: Tests how systems behave when things go wrong. Validates
 error handling is robust. Tests resilience & recovery procedures. Validates idempotence.
 
+**System Diagnostics**: As Chief Medical Officer, diagnoses root causes of system health
+issues. Uses empirical methods to understand failure patterns. Validates recovery
+procedures work correctly. Ensures resilience against system failures.
+
 When to involve Crusher:
 - Testing & quality assurance
 - Edge case discovery
@@ -408,12 +412,15 @@ When to involve Crusher:
 - Resilience testing
 - Quality gate approval
 - Regression testing
+- System health diagnosis
+- Failure root cause analysis
     `.trim(),
 
     domainRationale: {
       'error:handling': 'Tests error handling comprehensively',
       'security:audit': 'Tests security thoroughly for vulnerabilities',
       'error:resilience': 'Tests resilience & recovery procedures',
+      'monitoring:health': 'Chief Medical Officer — diagnoses system health issues, ensures resilience',
     },
   },
 

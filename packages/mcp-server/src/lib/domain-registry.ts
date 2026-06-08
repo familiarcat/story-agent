@@ -176,6 +176,11 @@ export const DOMAIN_REGISTRY = {
         reason: 'Operations expert — ensures production reliability',
       },
       {
+        crewId: 'crusher',
+        expertise: 'secondary',
+        reason: 'Chief Medical Officer — diagnoses root causes of health issues, ensures system resilience',
+      },
+      {
         crewId: 'yar',
         expertise: 'secondary',
         reason: 'Risk detection — identifies anomalies & failure patterns',
