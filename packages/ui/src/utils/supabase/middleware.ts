@@ -13,9 +13,15 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  // Skip auth middleware if Supabase config is missing
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+    process.stderr.write('[auth-middleware] Supabase config missing — skipping auth refresh\n');
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       cookies: {
         getAll() {
@@ -35,7 +41,14 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refresh session — do not remove, required for Server Component auth.
-  await supabase.auth.getUser();
+  // Wrapped in try-catch to handle OAuth registration errors gracefully.
+  try {
+    await supabase.auth.getUser();
+  } catch (error) {
+    // Silently ignore auth errors (e.g., no session, OAuth registration issues)
+    // Unauthenticated users are allowed; protected routes handle auth checks
+    process.stderr.write(`[auth-middleware] Non-critical auth check failed: ${error instanceof Error ? error.message : String(error)}\n`);
+  }
 
   return supabaseResponse;
 }
