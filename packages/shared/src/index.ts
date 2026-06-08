@@ -587,3 +587,28 @@ export {
   getCrewRosterWithStats,
   getStarshipStatus,
 } from './crew-db.js';
+
+// ── Crew Personal Memory Storage ────────────────────────────────────────────
+
+export type { CrewPersonalMemory } from './db.js';
+
+export {
+  storeCrewPersonalMemory,
+  getCrewPersonalMemories,
+  searchCrewPersonalMemories,
+  searchCrewPersonalMemoriesByEmbedding,
+  getCrewMemoriesByProject,
+  getCrewMemoryStats,
+} from './db.js';
+
+// ── Domain-Driven Crew Coordination ─────────────────────────────────────────
+
+export { DOMAIN_REGISTRY, getDomainExperts, getPrimaryExpert, hasExpertise, getRelatedDomains, getCrewForTask, generateDomainOwnershipReport } from './lib/domain-registry.js';
+
+export { CREW_EXPERTISE, getCrewExpertise, generateCrewExpertiseSummary } from './lib/crew-expertise.js';
+
+export { routeTaskToCrew, getPrimaryCrewForTask, generateCrewBriefing, validateCrewCapability, findCoverageGaps, recommendCrewForGaps, generateDetailedCollaborationReport, inferTaskDomains } from './lib/crew-task-routing.js';
+
+// ── Crew Baseline Knowledge ─────────────────────────────────────────────────
+
+export { CREW_BASELINE_MEMORIES } from './lib/crew-baseline-memories.js';
