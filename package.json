@@ -36,7 +36,11 @@
     "docs:ingest": "node scripts/ingest-docs-to-rag.mjs",
     "docs:ingest:dry": "node scripts/ingest-docs-to-rag.mjs --dry-run",
     "docs:ingest:fresh": "node scripts/ingest-docs-to-rag.mjs --fresh",
-    "docs:refresh": "pnpm run docs:ingest"
+    "docs:refresh": "pnpm run docs:ingest",
+    "project:list": "node scripts/project-management.mjs list",
+    "project:select": "node scripts/project-management.mjs select",
+    "project:info": "node scripts/project-management.mjs info",
+    "project:crew": "node scripts/project-management.mjs crew"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

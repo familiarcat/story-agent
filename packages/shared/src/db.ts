@@ -1032,3 +1032,189 @@ export async function refreshDocumentationIndex(): Promise<boolean> {
 
   return true;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Crew Personal Memory Functions — Individual Crew Member Knowledge Storage
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CrewPersonalMemory {
+  id: number;
+  crew_id: string;
+  memory_type: 'insight' | 'lesson_learned' | 'decision_note' | 'reminder';
+  title: string;
+  content: string;
+  project_id?: string;
+  task_id?: string;
+  tags: string[];
+  created_at: string;
+  is_private: boolean;
+}
+
+/**
+ * Store a personal memory for a crew member
+ * Used for capturing insights, lessons learned, and decision notes
+ */
+export async function storeCrewPersonalMemory(input: {
+  crew_id: string;
+  memory_type: 'insight' | 'lesson_learned' | 'decision_note' | 'reminder';
+  title: string;
+  content: string;
+  project_id?: string;
+  task_id?: string;
+  tags?: string[];
+  relates_to_crew?: string[];
+}): Promise<number | null> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('store_crew_personal_memory', {
+    crew_id: input.crew_id,
+    memory_type: input.memory_type,
+    title: input.title,
+    content: input.content,
+    project_id: input.project_id || null,
+    task_id: input.task_id || null,
+    tags: input.tags || [],
+    relates_to_crew: input.relates_to_crew || [],
+  });
+
+  if (error) {
+    console.error('Error storing crew personal memory:', error);
+    return null;
+  }
+
+  return data as number;
+}
+
+/**
+ * Retrieve crew personal memories
+ * Get all personal memories for a specific crew member
+ */
+export async function getCrewPersonalMemories(
+  crew_id: string,
+  limit: number = 20,
+  includePrivate: boolean = false
+): Promise<CrewPersonalMemory[]> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('get_crew_personal_memory', {
+    crew_id,
+    memory_limit: limit,
+    include_private: includePrivate,
+  });
+
+  if (error) {
+    console.error(`Error getting crew personal memories for ${crew_id}:`, error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Search crew personal memories by text query
+ * Useful for finding past insights and lessons learned
+ */
+export async function searchCrewPersonalMemories(
+  crew_id: string,
+  query: string,
+  limit: number = 10
+): Promise<CrewPersonalMemory[]> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('search_crew_personal_memory', {
+    crew_id,
+    search_query: query,
+    memory_limit: limit,
+  });
+
+  if (error) {
+    console.error('Error searching crew personal memories:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Search crew personal memories by semantic embedding
+ * Find memories by meaning, not just keywords
+ */
+export async function searchCrewPersonalMemoriesByEmbedding(
+  crew_id: string,
+  embeddingVector: number[],
+  limit: number = 10,
+  similarityThreshold: number = 0.7
+): Promise<CrewPersonalMemory[]> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc(
+    'search_crew_personal_memory_by_embedding',
+    {
+      crew_id,
+      embedding_vector: embeddingVector,
+      memory_limit: limit,
+      similarity_threshold: similarityThreshold,
+    }
+  );
+
+  if (error) {
+    console.error('Error searching crew personal memories by embedding:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get crew memories for a specific project
+ * Useful for reviewing what a crew member learned on a specific project
+ */
+export async function getCrewMemoriesByProject(
+  crew_id: string,
+  project_id: string,
+  limit: number = 20
+): Promise<CrewPersonalMemory[]> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('get_crew_memories_by_project', {
+    crew_id,
+    project_id,
+    memory_limit: limit,
+  });
+
+  if (error) {
+    console.error(
+      `Error getting crew memories for ${crew_id} on project ${project_id}:`,
+      error
+    );
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get crew memory statistics
+ * Understand a crew member's learning across projects and memory types
+ */
+export async function getCrewMemoryStats(crew_id: string): Promise<
+  Array<{
+    total_memories: number;
+    memory_by_type: string;
+    projects_count: number;
+    most_recent_memory: string;
+  }>
+> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('get_crew_memory_stats', {
+    crew_id,
+  });
+
+  if (error) {
+    console.error(`Error getting crew memory stats for ${crew_id}:`, error);
+    return [];
+  }
+
+  return data || [];
+}

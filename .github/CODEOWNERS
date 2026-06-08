@@ -1,0 +1,37 @@
+# Code ownership for multi-client monorepo
+# Defines which teams/people own specific project folders
+# Automatically requests review from code owners for PRs
+
+# Global ownership
+*                                  @familiarcat
+
+# Documentation ownership
+docs/**                            @familiarcat
+*.md                               @familiarcat
+
+# Packages ownership (shared libraries)
+packages/shared/**                 @familiarcat
+packages/mcp-server/**             @familiarcat
+packages/ui/**                     @familiarcat
+
+# Scripts ownership
+scripts/**                         @familiarcat
+
+# Supabase migrations (shared)
+supabase/migration.sql             @familiarcat
+supabase/20260607_*                @familiarcat
+
+# Project-specific ownership
+
+# Bayer Pharmaceutical - Patient-Centric Trial Management System
+projects/bayer-pctms/**            @familiarcat
+
+# Template project (for new clients)
+projects/template-project/**       @familiarcat
+
+# GitHub workflow ownership
+.github/workflows/**               @familiarcat
+
+# GitHub configuration
+.github/*.yml                      @familiarcat
+.github/*.yaml                     @familiarcat
