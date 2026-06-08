@@ -899,3 +899,136 @@ export async function getRelevantObservationMemories(input: {
     .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
     .slice(0, limit);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Documentation RAG Functions — Crew Access to Searchable Documentation
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DocumentationRecord {
+  id: number;
+  title: string;
+  category: string;
+  source_path: string;
+  filename: string;
+  chunk_index: number;
+  chunk_count: number;
+  chunk_content: string;
+  tags: string[];
+  similarity?: number;
+  ingested_at: string;
+}
+
+export interface DocumentationCategory {
+  category: string;
+  count: number;
+  last_updated: string;
+}
+
+/**
+ * Search documentation by text query
+ * Useful for finding guides and references related to crew tasks
+ */
+export async function searchDocumentation(
+  query: string,
+  category?: string,
+  limit: number = 10
+): Promise<DocumentationRecord[]> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('search_documentation_by_text', {
+    search_query: query,
+    category_filter: category || null,
+    max_results: limit,
+  });
+
+  if (error) {
+    console.error('Error searching documentation:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get documentation by category
+ * Returns all documents in a specific category for browsing
+ */
+export async function getDocumentationByCategory(
+  category: string
+): Promise<DocumentationRecord[]> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('get_documentation_by_category', {
+    category_name: category,
+  });
+
+  if (error) {
+    console.error(`Error getting documentation for category ${category}:`, error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get all available documentation categories
+ * Useful for building documentation navigation
+ */
+export async function getDocumentationCategories(): Promise<DocumentationCategory[]> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('get_documentation_categories');
+
+  if (error) {
+    console.error('Error getting documentation categories:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Search documentation by semantic embedding
+ * Useful for finding related documentation based on task description
+ */
+export async function searchDocumentationByEmbedding(
+  embeddingVector: number[],
+  category?: string,
+  limit: number = 10,
+  similarityThreshold: number = 0.7
+): Promise<DocumentationRecord[]> {
+  const client = await getSupabaseClient();
+
+  const { data, error } = await client.rpc('search_documentation_by_embedding', {
+    embedding_vector: embeddingVector,
+    category_filter: category || null,
+    max_results: limit,
+    similarity_threshold: similarityThreshold,
+  });
+
+  if (error) {
+    console.error('Error searching documentation by embedding:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Refresh documentation materialized view
+ * Call after ingesting new documentation to update indexes
+ */
+export async function refreshDocumentationIndex(): Promise<boolean> {
+  const client = await getSupabaseClient();
+
+  const { error } = await client.rpc('refresh_materialized_view', {
+    view_name: 'mv_documentation_index',
+  });
+
+  if (error) {
+    console.error('Error refreshing documentation index:', error);
+    return false;
+  }
+
+  return true;
+}
