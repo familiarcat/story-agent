@@ -350,8 +350,8 @@ LONG-TERM THINKING:
   },
 };
 
-export function getCrewMemoryStory(crewId) {
-  const crew = CREW_BASELINE_MEMORIES[crewId];
+export function getCrewMemoryStory(crewId: string) {
+  const crew = CREW_BASELINE_MEMORIES[crewId as keyof typeof CREW_BASELINE_MEMORIES];
   if (!crew) return null;
 
   return {
