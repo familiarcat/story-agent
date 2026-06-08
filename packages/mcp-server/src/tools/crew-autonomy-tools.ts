@@ -13,7 +13,8 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { db } from '@story-agent/shared/db';
+// Import db functions as needed - TODO: update imports as implementation progresses
+// import { getRelevantObservationMemories, storeObservationMemory } from '@story-agent/shared/db';
 
 export function registerCrewAutonomyTools(server: McpServer) {
   // ══════════════════════════════════════════════════════════════════════════════
