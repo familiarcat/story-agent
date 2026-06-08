@@ -17,7 +17,7 @@ import {
  * Crew memory analysis tools for querying and summarizing observation lounge debate patterns.
  * Enables the crew to learn collectively from past missions and identify trends.
  */
-export function registerCrewMemoryTools(server: McpServer) {
+export async function registerCrewMemoryTools(server: McpServer) {
   server.tool(
     'crew_observation_lounge_status',
     'Generate an Observation Lounge formatted crew roll-call using current project runtime status plus imported legacy crew memories from ai-enterprise-os when available.',

@@ -22,13 +22,16 @@ const server = new McpServer({
 registerStoryTools(server);
 registerRepoTools(server);
 registerDeliveryTools(server);
-registerCrewMemoryTools(server);
+// NOTE: registerCrewMemoryTools is now async - called in main()
 registerCrewMemberTools(server);
 registerDocTools(server);
 registerCrewIntegrityTools(server);
 registerStarshipTools(server);
 
 async function main() {
+  // Initialize async tool registrations
+  await registerCrewMemoryTools(server);
+
   // Report any missing credentials at startup — especially Bayer-tier requirements.
   reportMissingCredentialsAtStartup();
 
@@ -69,7 +72,7 @@ async function main() {
           registerStoryTools(perRequestServer);
           registerRepoTools(perRequestServer);
           registerDeliveryTools(perRequestServer);
-          registerCrewMemoryTools(perRequestServer);
+          await registerCrewMemoryTools(perRequestServer);
           registerCrewMemberTools(perRequestServer);
           registerDocTools(perRequestServer);
           registerCrewIntegrityTools(perRequestServer);

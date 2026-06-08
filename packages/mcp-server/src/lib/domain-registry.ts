@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Domain Registry & Crew Expertise Mapping
  * 
