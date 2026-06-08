@@ -811,6 +811,74 @@ export async function getRecentObservationMemories(
   return deduped.slice(0, limit);
 }
 
+/**
+ * Fetch baseline memory for a specific crew member
+ * Used during missions for crew to reference their own principles and learnings
+ */
+export async function getCrewBaselineMemory(crewId: string): Promise<ObservationMemoryRecord | null> {
+  const client = await getClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('sa_observation_memories')
+      .select('*')
+      .eq('crew_id', crewId)
+      .eq('story_id', `crew-baseline-${crewId}`)
+      .is('client_id', null) // Baseline memories are global (null client_id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows found
+        return null;
+      }
+      console.error(`Error fetching crew baseline memory for ${crewId}:`, error);
+      return null;
+    }
+
+    return mapObservationMemory(data);
+  } catch (error) {
+    console.error(`Exception fetching crew baseline memory for ${crewId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Fetch baseline memories for all crew members
+ * Useful for pre-loading crew context at mission start
+ */
+export async function getAllCrewBaselineMemories(): Promise<Map<string, ObservationMemoryRecord>> {
+  const client = await getClient();
+  if (!client) return new Map();
+
+  try {
+    const { data, error } = await client
+      .from('sa_observation_memories')
+      .select('*')
+      .like('story_id', 'crew-baseline-%')
+      .is('client_id', null)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching all crew baseline memories:', error);
+      return new Map();
+    }
+
+    const memories = new Map<string, ObservationMemoryRecord>();
+    for (const record of data || []) {
+      const mapped = mapObservationMemory(record);
+      if (mapped.crewId) {
+        memories.set(mapped.crewId, mapped);
+      }
+    }
+    return memories;
+  } catch (error) {
+    console.error('Exception fetching all crew baseline memories:', error);
+    return new Map();
+  }
+}
+
 export async function getRelevantObservationMemories(input: {
   queryText: string;
   storyId?: string;

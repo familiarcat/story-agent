@@ -23,7 +23,16 @@
     "ext:install-local": "code --install-extension packages/vscode-extension/story-agent-vscode-1.0.0.vsix --force",
     "web:build-local": "pnpm --filter @story-agent/ui build",
     "web:start-local": "cd packages/ui && node_modules/.bin/next start -p 3000",
-    "publish:local": "pnpm run web:build-local && pnpm run ext:package"
+    "publish:local": "pnpm run web:build-local && pnpm run ext:package",
+    "db:migrate": "node scripts/run-migrations-auto.mjs",
+    "db:migrate:test": "node scripts/test-migrations.mjs",
+    "db:auto-migrate": "node scripts/auto-migrate.mjs",
+    "db:auto-migrate:dry": "node scripts/auto-migrate.mjs --dry-run",
+    "db:health-check": "node scripts/db-health-check.mjs",
+    "client:onboard": "node scripts/client-onboard.mjs",
+    "crew:seed": "CREW_LLM_PROVIDER=demo pnpm --filter @story-agent/mcp-server exec node --input-type=module -e \"import { seedAllCrewSkillManifests } from './dist/src/lib/crew-skill-system.js'; await seedAllCrewSkillManifests(); console.log('✅ Crew skill manifests seeded');\"",
+    "crew:seed-memories": "node scripts/seed-crew-memories.mjs",
+    "crew:check": "CREW_LLM_PROVIDER=demo pnpm --filter @story-agent/mcp-server exec node --input-type=module -e \"import { generateCrewIntegrityReport } from './dist/src/lib/crew-integrity.js'; const report = await generateCrewIntegrityReport(); console.log(JSON.stringify(report, null, 2));\""
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

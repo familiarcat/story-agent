@@ -1,17 +1,27 @@
 {
-  "servers": {
-    "story-agent": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["${workspaceFolder}/packages/mcp-server/dist/index.js"],
-      "env": {
-        "AHA_DOMAIN": "${env:AHA_DOMAIN}",
-        "AHA_API_KEY": "${env:AHA_API_KEY}",
-        "GITHUB_TOKEN": "${env:GITHUB_TOKEN}",
-        "GITHUB_DEFAULT_ORG": "${env:GITHUB_DEFAULT_ORG}",
-        "SUPABASE_URL": "${env:SUPABASE_URL}",
-        "SUPABASE_KEY": "${env:SUPABASE_KEY}"
-      }
-    }
-  }
+	"servers": {
+		"story-agent": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"${workspaceFolder}/packages/mcp-server/dist/index.js"
+			],
+			"env": {
+				"AHA_DOMAIN": "${env:AHA_DOMAIN}",
+				"AHA_API_KEY": "${env:AHA_API_KEY}",
+				"GITHUB_TOKEN": "${env:GITHUB_TOKEN}",
+				"GITHUB_DEFAULT_ORG": "${env:GITHUB_DEFAULT_ORG}",
+				"SUPABASE_URL": "${env:SUPABASE_URL}",
+				"SUPABASE_KEY": "${env:SUPABASE_KEY}"
+			}
+		},
+		"supabase": {
+			"type": "http",
+			"url": "https://mcp.supabase.com/mcp?project_ref=sqachwmzyuuyyyxekdxp",
+			"headers": {
+				"Authorization": "Bearer ${env:SUPABASE_ACCESS_TOKEN}"
+			}
+		}
+	},
+	"inputs": []
 }
