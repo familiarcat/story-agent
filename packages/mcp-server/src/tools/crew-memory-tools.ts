@@ -750,4 +750,346 @@ Total Across All Crew: $${stats.totalCost.toFixed(4)} | ${stats.totalTokens.toLo
       };
     }
   );
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // NEW: Crew Personal Memory Tools
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  // Import personal memory functions
+  const { 
+    storeCrewPersonalMemory,
+    getCrewPersonalMemories,
+    searchCrewPersonalMemories,
+    searchCrewPersonalMemoriesByEmbedding,
+    getCrewMemoriesByProject,
+    getCrewMemoryStats,
+    toEmbedding,
+  } = await import('@story-agent/shared');
+
+  // crew:store-memory
+  server.tool(
+    'crew:store-memory',
+    'Store a personal memory for a crew member (insight, lesson learned, decision note, or reminder)',
+    {
+      crew_id: z.string().describe('Which crew member (e.g., "worf", "data")'),
+      memory_type: z.enum(['insight', 'lesson_learned', 'decision_note', 'reminder']).describe('Type of memory'),
+      title: z.string().describe('Short title of the memory'),
+      content: z.string().describe('Full memory text content'),
+      project_id: z.string().optional().describe('Which project this relates to'),
+      task_id: z.string().optional().describe('Which task this relates to'),
+      tags: z.array(z.string()).optional().describe('Searchable tags'),
+      relates_to_crew: z.array(z.string()).optional().describe('Other crew members involved'),
+    },
+    async (input) => {
+      try {
+        const memoryId = await storeCrewPersonalMemory({
+          crew_id: input.crew_id,
+          memory_type: input.memory_type,
+          title: input.title,
+          content: input.content,
+          project_id: input.project_id,
+          task_id: input.task_id,
+          tags: input.tags,
+          relates_to_crew: input.relates_to_crew,
+        });
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: true,
+                  memoryId,
+                  message: `✅ Memory stored for ${input.crew_id} (ID: ${memoryId})`,
+                  memory: {
+                    crew_id: input.crew_id,
+                    type: input.memory_type,
+                    title: input.title,
+                  },
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // crew:get-memories
+  server.tool(
+    'crew:get-memories',
+    'Retrieve personal memories for a crew member',
+    {
+      crew_id: z.string().describe('Which crew member'),
+      limit: z.number().optional().default(20).describe('Maximum memories to return'),
+      include_private: z.boolean().optional().default(false).describe('Include private memories?'),
+    },
+    async (input) => {
+      try {
+        const memories = await getCrewPersonalMemories(input.crew_id, input.limit, input.include_private);
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: true,
+                  count: memories.length,
+                  memories,
+                  summary: `📚 ${memories.length} memories found for ${input.crew_id}`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // crew:search-memories
+  server.tool(
+    'crew:search-memories',
+    'Search crew personal memories by text query',
+    {
+      crew_id: z.string().describe('Which crew member'),
+      query: z.string().describe('Search query (keywords or natural language)'),
+      limit: z.number().optional().default(10).describe('Maximum results'),
+    },
+    async (input) => {
+      try {
+        const memories = await searchCrewPersonalMemories(input.crew_id, input.query, input.limit);
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: true,
+                  count: memories.length,
+                  query: input.query,
+                  memories,
+                  summary: `🔍 Found ${memories.length} memories matching "${input.query}"`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // crew:search-memories-by-embedding
+  server.tool(
+    'crew:search-memories-by-embedding',
+    'Search crew personal memories by semantic meaning (AI-powered, understands context and intent)',
+    {
+      crew_id: z.string().describe('Which crew member'),
+      query: z.string().describe('Natural language question or topic'),
+      limit: z.number().optional().default(10).describe('Maximum results'),
+      similarity_threshold: z.number().optional().default(0.7).describe('Minimum similarity (0-1)'),
+    },
+    async (input) => {
+      try {
+        const embedding = await toEmbedding(input.query);
+        const memories = await searchCrewPersonalMemoriesByEmbedding(
+          input.crew_id,
+          embedding,
+          input.limit,
+          input.similarity_threshold
+        );
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: true,
+                  count: memories.length,
+                  query: input.query,
+                  memories,
+                  summary: `🧠 Found ${memories.length} semantically similar memories to "${input.query}"`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // crew:get-project-memories
+  server.tool(
+    'crew:get-project-memories',
+    'Retrieve memories for a specific project (what a crew member learned)',
+    {
+      crew_id: z.string().describe('Which crew member'),
+      project_id: z.string().describe('Which project'),
+      limit: z.number().optional().default(20).describe('Maximum memories'),
+    },
+    async (input) => {
+      try {
+        const memories = await getCrewMemoriesByProject(input.crew_id, input.project_id, input.limit);
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: true,
+                  count: memories.length,
+                  project: input.project_id,
+                  crew: input.crew_id,
+                  memories,
+                  summary: `📋 ${memories.length} memories from ${input.crew_id} on project ${input.project_id}`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // crew:get-memory-stats
+  server.tool(
+    'crew:get-memory-stats',
+    'Get statistics about a crew member\'s memories (count by type, projects covered, etc)',
+    {
+      crew_id: z.string().describe('Which crew member'),
+    },
+    async (input) => {
+      try {
+        const stats = await getCrewMemoryStats(input.crew_id);
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: true,
+                  crew_id: input.crew_id,
+                  stats,
+                  summary: `📊 ${input.crew_id} has comprehensive memory coverage across projects`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+    }
+  );
 }
