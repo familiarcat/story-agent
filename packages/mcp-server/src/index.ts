@@ -8,6 +8,7 @@ import { registerRepoTools } from './tools/repo-tools.js';
 import { registerDeliveryTools } from './tools/delivery-tools.js';
 import { registerCrewMemoryTools } from './tools/crew-memory-tools.js';
 import { registerCrewMemberTools } from './tools/crew-member-tools.js';
+import { registerCrewAutonomyTools } from './tools/crew-autonomy-tools.js';
 import { registerDocTools } from './tools/doc-tools-register.js';
 import { registerStarshipTools } from './tools/starship-tools.js';
 import { registerCrewIntegrityTools } from './tools/crew-integrity-tools.js';
@@ -24,6 +25,7 @@ registerRepoTools(server);
 registerDeliveryTools(server);
 // NOTE: registerCrewMemoryTools is now async - called in main()
 registerCrewMemberTools(server);
+registerCrewAutonomyTools(server);  // 🚀 Crew autonomy — personal tools for each member
 registerDocTools(server);
 registerCrewIntegrityTools(server);
 registerStarshipTools(server);
@@ -74,6 +76,7 @@ async function main() {
           registerDeliveryTools(perRequestServer);
           await registerCrewMemoryTools(perRequestServer);
           registerCrewMemberTools(perRequestServer);
+          registerCrewAutonomyTools(perRequestServer);  // 🚀 Crew autonomy tools available via HTTP
           registerDocTools(perRequestServer);
           registerCrewIntegrityTools(perRequestServer);
           registerStarshipTools(perRequestServer);
