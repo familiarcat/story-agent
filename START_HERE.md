@@ -12,6 +12,12 @@ Welcome! This guide helps you navigate the story-agent monorepo and understand t
 ### Setting Up Development Environment?
 → [docs/setup/QUICK_START_AUTOMATION.md](docs/setup/QUICK_START_AUTOMATION.md)
 
+### Working with Multiple Clients?
+→ [docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md)
+
+### Understanding Crew Personal Memories?
+→ [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md)
+
 ### Understanding Crew System?
 → [docs/crew/CREW_MEMORIES_GUIDE.md](docs/crew/CREW_MEMORIES_GUIDE.md)
 
@@ -37,7 +43,10 @@ docs/
 ├── domain-driven/      # Domain-driven design system
 ├── automation/         # Migration & automation tools
 ├── testing/            # Testing and QA
-└── DOCUMENTATION_GUIDE.md  # This guide
+├── DOCUMENTATION_GUIDE.md      # Guide to RAG system
+├── MONOREPO_MULTI_CLIENT_ARCHITECTURE.md  # Multi-client guide
+├── CREW_PERSONAL_MEMORIES_GUIDE.md        # Personal memory system
+└── AUTONOMOUS_CREW_MISSION_TEST.md        # Example mission scenario
 ```
 
 ### Categories at a Glance
@@ -49,6 +58,8 @@ docs/
 | **domain-driven/** | Domain ownership, task routing, expertise | Task planners, coordinators |
 | **automation/** | Migration tools, client onboarding, monitoring | Operations, DevOps |
 | **testing/** | Test coverage, QA procedures, validation | QA engineers, testers |
+| **MONOREPO_MULTI_CLIENT_ARCHITECTURE.md** | Multi-client project isolation | Project managers, architects |
+| **CREW_PERSONAL_MEMORIES_GUIDE.md** | Individual crew member learning storage | All crew members |
 
 ---
 
@@ -61,6 +72,14 @@ docs/
 3. **Search documentation**: Use `npm run docs:ingest` to load docs into RAG
 4. **Run tests**: See [docs/testing/TESTING.md](docs/testing/TESTING.md)
 
+### I'm Managing a Client Project
+
+1. **View projects**: Run `npm run project:list`
+2. **Learn multi-client architecture**: Read [docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md)
+3. **Understand crew assignments**: Run `npm run project:crew <project-id>`
+4. **Create new project**: Copy from `projects/template-project/`
+5. **Configure environment**: Edit `.env` with project credentials
+
 ### I'm Setting Up for a Client
 
 1. **Client onboarding**: Run `npm run client:onboard` (3 min setup)
@@ -71,7 +90,8 @@ docs/
 
 1. **Understand your domains**: Check [docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md](docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md)
 2. **Review baseline memories**: Read [docs/crew/CREW_MEMORIES_GUIDE.md](docs/crew/CREW_MEMORIES_GUIDE.md)
-3. **Search for docs during tasks**: Use RAG system (built-in to MCP tools)
+3. **Store personal memories**: Read [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md)
+4. **Search for docs during tasks**: Use RAG system (built-in to MCP tools)
 
 ### I'm Operating Systems
 
@@ -88,6 +108,14 @@ docs/
 npm run db:auto-migrate        # Setup database (2 min)
 npm run db:health-check        # Check health
 npm run client:onboard         # Onboard new client (3 min)
+```
+
+### Project Management (Multi-Client)
+```bash
+npm run project:list           # List all projects
+npm run project:select         # Select active project
+npm run project:info           # Show current project
+npm run project:crew           # Show crew assignments
 ```
 
 ### Documentation RAG
@@ -123,6 +151,13 @@ npm run test                   # Run all tests
 - [docs/setup/QUICK_START_AUTOMATION.md](docs/setup/QUICK_START_AUTOMATION.md) — 2-minute quick start
 - [docs/setup/SUPABASE_SETUP.md](docs/setup/SUPABASE_SETUP.md) — Database configuration
 
+**Multi-client architecture**:
+- [docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md) — Multi-project structure
+- [projects/bayer-pctms/README.md](projects/bayer-pctms/README.md) — Example project setup
+
+**Crew personal memories**:
+- [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md) — Individual learning storage
+
 **Crew system**:
 - [docs/crew/CREW_MEMORIES_GUIDE.md](docs/crew/CREW_MEMORIES_GUIDE.md) — Baseline knowledge
 - [docs/crew/CREW_STARSHIP_ARCHITECTURE.md](docs/crew/CREW_STARSHIP_ARCHITECTURE.md) — System design
@@ -134,6 +169,10 @@ npm run test                   # Run all tests
 **Automation**:
 - [docs/automation/MIGRATION_AUTOMATION.md](docs/automation/MIGRATION_AUTOMATION.md) — Migration tools
 - [docs/automation/DELIVERY_SUMMARY_AUTOMATION.md](docs/automation/DELIVERY_SUMMARY_AUTOMATION.md) — What was delivered
+
+**Testing & Mission Examples**:
+- [docs/AUTONOMOUS_CREW_MISSION_TEST.md](docs/AUTONOMOUS_CREW_MISSION_TEST.md) — Complete mission example
+- [docs/testing/TESTING.md](docs/testing/TESTING.md) — Test procedures
 
 **Documentation system**:
 - [docs/DOCUMENTATION_GUIDE.md](docs/DOCUMENTATION_GUIDE.md) — How to use RAG & docs
@@ -187,20 +226,32 @@ story-agent/                           # Root monorepo
 ├── README.md                          # Main project overview
 ├── START_HERE.md                      # This file
 ├── COPILOT_SESSION_PROMPT.md          # Agent customization
+├── .github/
+│   └── CODEOWNERS                     # GitHub access control
 ├── docs/                              # All documentation
 │   ├── setup/                         # Getting started guides
 │   ├── crew/                          # Crew documentation
 │   ├── domain-driven/                 # Domain-driven design
 │   ├── automation/                    # Automation tools
 │   ├── testing/                       # Testing guides
-│   └── DOCUMENTATION_GUIDE.md         # RAG system guide
+│   ├── DOCUMENTATION_GUIDE.md         # RAG system guide
+│   ├── MONOREPO_MULTI_CLIENT_ARCHITECTURE.md  # Multi-client
+│   ├── CREW_PERSONAL_MEMORIES_GUIDE.md        # Personal memories
+│   └── AUTONOMOUS_CREW_MISSION_TEST.md        # Example mission
 ├── packages/
 │   ├── mcp-server/                    # MCP server (crew interface)
 │   ├── ui/                            # Next.js dashboard
-│   ├── shared/                        # Shared TypeScript types
+│   ├── shared/                        # Shared TypeScript types & crew utilities
 │   └── vscode-extension/              # VS Code extension
+├── projects/                          # Multi-client projects
+│   ├── bayer-pctms/                   # Bayer Pharmaceutical project
+│   │   ├── .env.example               # Configuration template
+│   │   ├── README.md                  # Project setup
+│   │   └── supabase/                  # Project-specific migrations
+│   ├── template-project/              # Template for new projects
+│   └── ...                            # Other client projects
 ├── scripts/                           # Automation & tooling scripts
-├── supabase/                          # Database migrations
+├── supabase/                          # Shared database migrations
 └── package.json                       # Root workspace config
 ```
 
@@ -209,6 +260,12 @@ story-agent/                           # Root monorepo
 ## ✨ What You Can Do Now
 
 ✅ **Setup in 2 minutes** — Run `npm run db:auto-migrate`
+
+✅ **Manage multiple client projects** — Use `npm run project:list` and `npm run project:select`
+
+✅ **Store crew personal memories** — Track individual learning across projects
+
+✅ **Retrieve crew expertise** — Access accumulated knowledge from past projects
 
 ✅ **Ingest documentation** — Run `npm run docs:ingest`
 
@@ -227,8 +284,10 @@ story-agent/                           # Root monorepo
 **Choose your next action:**
 
 - 👨‍💻 [Setup development environment](docs/setup/QUICK_START_AUTOMATION.md)
-- 🚀 [Understand automation tools](docs/automation/MIGRATION_AUTOMATION.md)
-- 🧠 [Learn domain-driven design](docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md)
+- 🌍 [Setup multi-client projects](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md)
+- 🧠 [Learn crew personal memories](docs/CREW_PERSONAL_MEMORIES_GUIDE.md)
+- 📊 [Understand automation tools](docs/automation/MIGRATION_AUTOMATION.md)
+- 🎯 [Learn domain-driven design](docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md)
 - 👥 [Review crew system](docs/crew/CREW_MEMORIES_GUIDE.md)
 - 📖 [Explore all documentation](docs/DOCUMENTATION_GUIDE.md)
 
