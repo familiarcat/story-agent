@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getAgileProvider } from '../providers/index.js';
 import { executeAutonomousCrewMission } from '../lib/crew-coordinator.js';
-import { getRelevantObservationMemories, storeObservationMemory } from '@story-agent/shared/db';
+import { getRelevantObservationMemories, storeObservationMemory } from '../../../shared/src/db.js';
 import { enforceWorfGateOutbound } from '../lib/worfgate.js';
 
 export function registerStoryTools(server: McpServer) {
@@ -345,18 +345,25 @@ Follow the story-execution-master-template workflow.
         throw new Error('missionPlanJson must be valid JSON.');
       }
 
-      // Note: For re-running debates on existing plans, we use the cached findings
-      // In a full autonomous system, this would re-analyze with fresh LLM calls
-      const plan = parsed as Parameters<typeof executeAutonomousCrewMission>[0];
+      const missionData = parsed as any;
       
-      // Here we would call generateObservationLoungeDebate directly
-      // For now, we'll just return cached debate from the mission plan
+      // Trigger the debate logic by re-executing the mission in a 'debate-only' simulation mode
+      // or retrieving the existing debate context if it exists.
+      const { debate } = await executeAutonomousCrewMission({
+        story: missionData.story,
+        repoFullName: missionData.repoFullName,
+        targetBranch: missionData.targetBranch || 'main',
+        executionMode: 'autonomous',
+        sharedMemories: [], // Logic inside coordinator will fetch fresh memories if empty
+        includeDebate: true,
+      });
+      
       return {
         content: [{
           type: 'text' as const,
-          text: JSON.stringify({ 
-            note: 'Debate execution requires full mission context. Use launch_crew_mission with includeDebate: true to generate fresh debates.',
-            status: 'skipped'
+          text: JSON.stringify({
+            status: 'success',
+            debate,
           }, null, 2),
         }],
       };

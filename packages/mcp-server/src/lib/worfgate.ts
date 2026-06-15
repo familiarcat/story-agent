@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { getDbClient } from '../../../shared/src/db.js';
 
 type WorfGateTarget = 'github' | 'aha' | 'approved_llm' | 'supabase' | 'other';
 
@@ -76,10 +77,25 @@ function payloadHash(text: string): string {
   return createHash('sha256').update(text).digest('hex');
 }
 
-function addWorfGateAuditEntry(entry: WorfGateAuditEntry): void {
+async function addWorfGateAuditEntry(entry: WorfGateAuditEntry): Promise<void> {
   worfGateAuditLog.unshift(entry);
   if (worfGateAuditLog.length > WORFGATE_AUDIT_MAX) {
     worfGateAuditLog.splice(WORFGATE_AUDIT_MAX);
+  }
+
+  // Hardening: Async background persistence
+  try {
+    const db = await getDbClient();
+    await db.from('sa_security_audit').insert({
+      operation: entry.operation,
+      target: entry.target,
+      allowed: entry.allowed,
+      detected_markers: entry.detectedMarkers,
+      payload_hash: entry.payloadHash,
+      reasons: entry.reasons
+    });
+  } catch (err) {
+    process.stderr.write(`[WORFGATE] CRITICAL: Failed to persist audit entry: ${err}\n`);
   }
 }
 

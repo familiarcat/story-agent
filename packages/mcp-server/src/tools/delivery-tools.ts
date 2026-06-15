@@ -2,8 +2,11 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { resolveRepository, createBranch, branchExists, createPullRequest } from '../lib/github.js';
-import { upsertStory, getStory } from '@story-agent/shared/db';
+import { upsertStory, getStory } from '../../../shared/src/db.js';
 import { enforceWorfGateOutbound } from '../lib/worfgate.js';
+
+const MAX_FILES_PER_MISSION = 20;
+const MAX_FILE_SIZE_BYTES = 500000; // 500KB limit per file
 
 /**
  * deliver_mission_output — Phase 2 integration tool.
@@ -33,6 +36,17 @@ export function registerDeliveryTools(server: McpServer) {
       })).describe('Files to commit to the branch'),
     },
     async ({ storyId, storyTitle, storyUrl, repoFullName, prTitle, prBody, files }) => {
+      // Hardening: Prevent payload bloat
+      if (files.length > MAX_FILES_PER_MISSION) {
+        throw new Error(`Mission delivery exceeds maximum file limit of ${MAX_FILES_PER_MISSION}.`);
+      }
+
+      for (const file of files) {
+        if (Buffer.byteLength(file.content, 'utf8') > MAX_FILE_SIZE_BYTES) {
+          throw new Error(`File ${file.path} exceeds safety limit of ${MAX_FILE_SIZE_BYTES} bytes.`);
+        }
+      }
+
       const outboundPayload = [
         storyId,
         storyTitle,

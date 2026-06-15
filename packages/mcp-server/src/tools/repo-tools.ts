@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { resolveRepository, createBranch, branchExists, createPullRequest, getPullRequest, getPRReviewComments, postPRComment } from '../lib/github.js';
-import { upsertStory, getStory, listStories, upsertPRComments, getCommentsForStory } from '@story-agent/shared/db';
+import { upsertStory, getStory, listStories, upsertPRComments, getCommentsForStory } from '../../../shared/src/db.js';
 
 export function registerRepoTools(server: McpServer) {
 

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { getRecentObservationMemories } from '@story-agent/shared/db';
+import { getRecentObservationMemories } from '../../../shared/src/db.js';
 import { promptArchive, getPromptEngineStats, exportPromptArchive } from '../lib/prompt-archiver.js';
 import { getWorfGateAuditLog } from '../lib/worfgate.js';
 import { getPromptEngineConnectivityDiagnostics } from '../lib/prompt-engine.js';
@@ -11,7 +11,7 @@ import {
   mergeStructuredMemoryPatch,
   buildStructuredMemoryPatchFromDebate,
   summarizeStructuredMemory,
-} from '@story-agent/shared';
+} from '../../../shared/src/index.js';
 
 /**
  * Crew memory analysis tools for querying and summarizing observation lounge debate patterns.
@@ -39,7 +39,7 @@ export async function registerCrewMemoryTools(server: McpServer) {
       let currentProjectMemories: any[] = [];
 
       try {
-        const dbModule = await import('@story-agent/shared/db');
+        const dbModule = await import('../../../shared/src/db.js');
         const supabaseDiagnosticsFn = (dbModule as any).getSupabaseConnectivityDiagnostics as (() => Promise<unknown>) | undefined;
         const recentMemoriesFn = (dbModule as any).getRecentObservationMemories as ((limit?: number, storyId?: string) => Promise<any[]>) | undefined;
         if (supabaseDiagnosticsFn) {
@@ -159,7 +159,7 @@ export async function registerCrewMemoryTools(server: McpServer) {
     'Classify current LLM and Supabase runtime connectivity failures, including policy blocks, TLS trust issues, auth failures, and unreachable endpoints.',
     {},
     async () => {
-      const dbModule = await import('@story-agent/shared/db');
+      const dbModule = await import('../../../shared/src/db.js');
       const supabaseDiagnosticsFn = (dbModule as any).getSupabaseConnectivityDiagnostics as
         | (() => Promise<unknown>)
         | undefined;
@@ -317,7 +317,7 @@ export async function registerCrewMemoryTools(server: McpServer) {
     'Show Redis-to-Supabase memory sync health: queue depth, worker status, last sync success/failure, and throughput counters.',
     {},
     async () => {
-      const dbModule = await import('@story-agent/shared/db');
+      const dbModule = await import('../../../shared/src/db.js');
       const diagnosticsFn = (dbModule as any).getObservationMemorySyncDiagnostics as
         | (() => Promise<unknown>)
         | undefined;
@@ -452,7 +452,7 @@ export async function registerCrewMemoryTools(server: McpServer) {
       let relevantMemories: any[] = [];
 
       try {
-        const { getRelevantObservationMemories } = await import('@story-agent/shared/db');
+        const { getRelevantObservationMemories } = await import('../../../shared/src/db.js');
         relevantMemories = await getRelevantObservationMemories({
           queryText: scenario,
           limit,
@@ -764,7 +764,7 @@ Total Across All Crew: $${stats.totalCost.toFixed(4)} | ${stats.totalTokens.toLo
     getCrewMemoriesByProject,
     getCrewMemoryStats,
     toEmbedding,
-  } = await import('@story-agent/shared');
+  } = await import('../../../shared/src/index.js');
 
   // crew:store-memory
   server.tool(

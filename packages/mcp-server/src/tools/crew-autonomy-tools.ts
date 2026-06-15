@@ -13,8 +13,7 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-// Import db functions as needed - TODO: update imports as implementation progresses
-// import { getRelevantObservationMemories, storeObservationMemory } from '@story-agent/shared/db';
+import { getDbClient, getRelevantObservationMemories, storeObservationMemory } from '../../../shared/src/db.js';
 
 export function registerCrewAutonomyTools(server: McpServer) {
   // ══════════════════════════════════════════════════════════════════════════════
@@ -422,33 +421,85 @@ export function registerCrewAutonomyTools(server: McpServer) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function getCrewProfile(crewId: string) {
-  // TODO: Fetch from crew baseline memories and expertise registry
-  return { crewId, role: 'TODO', expertise: 'TODO', authority: 'TODO' };
+  const db = await getDbClient();
+  const { data, error } = await db
+    .from('sa_crew_personas')
+    .select('*, sa_crew_skills(*)')
+    .eq('crew_id', crewId)
+    .single();
+
+  if (error) throw new Error(`Failed to fetch profile for ${crewId}: ${error.message}`);
+  return data;
 }
 
 async function listActiveProjects(includeArchived: boolean, clientId?: string) {
-  // TODO: Query projects from database
-  return [];
+  const db = await getDbClient();
+  let query = db.from('projects').select('*');
+  if (!includeArchived) query = query.eq('status', 'active');
+  if (clientId) query = query.eq('client_id', clientId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Failed to list projects: ${error.message}`);
+  return data || [];
 }
 
 async function listActiveSprints(status?: string, projectId?: string) {
-  // TODO: Query sprints from database
-  return [];
+  const db = await getDbClient();
+  let query = db.from('sprints').select('*');
+  if (status) query = query.eq('status', status);
+  if (projectId) query = query.eq('project_id', projectId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Failed to list sprints: ${error.message}`);
+  return data || [];
 }
 
 async function queryStoriesByDomain(filters: any) {
-  // TODO: Query stories with domain-specific filters
-  return [];
+  const filterSchema = z.object({
+    status: z.string().optional(),
+    projectId: z.string().optional(),
+    clientId: z.string().optional(),
+    domain: z.string().optional(),
+    limit: z.number().max(100).optional(),
+  });
+
+  const validated = filterSchema.parse(filters);
+  const db = await getDbClient();
+  let query = db.from('stories').select('*');
+  
+  if (validated.status) query = query.eq('workflow_status', validated.status);
+  if (validated.projectId) query = query.eq('project_id', validated.projectId);
+  if (validated.clientId) query = query.eq('client_id', validated.clientId);
+  if (validated.domain) query = query.contains('tags', [validated.domain]);
+  
+  const { data, error } = await query.limit(validated.limit || 20);
+  if (error) throw new Error(`Failed to query stories: ${error.message}`);
+  return data || [];
 }
 
 async function getRelevantCrewMemories(domain: string, projectId?: string, limit?: number) {
-  // TODO: Query observation memories by domain
-  return [];
+  // Utilizing the shared DB semantic search helper
+  return await getRelevantObservationMemories({
+    queryText: domain,
+    projectId,
+    limit: limit || 10,
+  });
 }
 
 async function storeCrewLearning(params: any) {
-  // TODO: Store to observation memories
-  return { id: 'TODO', timestamp: new Date().toISOString() };
+  const result = await storeObservationMemory({
+    storyId: params.projectId || 'global',
+    clientId: params.clientId || 'global',
+    source: 'mcp-autonomy',
+    transcript: {
+      decision: params.content,
+      confidence: params.confidence,
+      domain: params.domain,
+      crewId: params.crewId,
+    },
+    tags: [...(params.tags || []), params.domain, params.crewId],
+  });
+  return { id: result.id, timestamp: new Date().toISOString() };
 }
 
 async function assessOrganizationalReadiness(projectId: string, area: string) {
