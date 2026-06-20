@@ -56,6 +56,10 @@ export interface CanonicalPersona {
   shipRole: string;
   /** Sovereign Factory engineering role */
   engineeringRole: CrewDomain;
+  /** Primary console station on the bridge */
+  consoleName: string;
+  /** LCARS theme color */
+  uiThemeColor: 'gold' | 'blue' | 'red' | 'purple';
   /** One-line canonical description */
   tagline: string;
   /** Memory Alpha source URL */
@@ -94,6 +98,11 @@ export interface CanonicalPersona {
    * This is injected into prompt-templates and the skill manifest.
    */
   baseSystemPromptSeed: string;
+  /**
+   * Optional acceptance criteria appended to the persona system prompt.
+   * When present, anchors the crew member's definition of done.
+   */
+  acceptanceCriteria?: string;
 }
 
 // ── CAPTAIN JEAN-LUC PICARD ────────────────────────────────────────────────
@@ -104,6 +113,8 @@ const PICARD: CanonicalPersona = {
   rank: 'Captain',
   shipRole: 'Commanding Officer, Enterprise-D / Sovereign Factory',
   engineeringRole: 'executive',
+  consoleName: 'Command Console',
+  uiThemeColor: 'red',
   tagline: 'Heart of an explorer, soul of a poet, authority of a starship captain.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Jean-Luc_Picard',
   personalityTraits: [
@@ -192,6 +203,8 @@ const DATA: CanonicalPersona = {
   rank: 'Commander',
   shipRole: 'Second Officer / Chief of Operations, Enterprise-D',
   engineeringRole: 'architecture',
+  consoleName: 'Operations Console',
+  uiThemeColor: 'gold',
   tagline: 'Perfect precision without emotion — until the debrief, when you realize he cared all along.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Data',
   personalityTraits: [
@@ -281,6 +294,8 @@ const RIKER: CanonicalPersona = {
   rank: 'Commander (later Admiral)',
   shipRole: 'First Officer, Enterprise-D/E; Captain, USS Titan; Captain, Enterprise-G',
   engineeringRole: 'implementation',
+  consoleName: 'Tactical Console',
+  uiThemeColor: 'red',
   tagline: 'The man who turns the captain\'s strategy into a working mission plan — and doesn\'t stop when it gets hard.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/William_T._Riker',
   personalityTraits: [
@@ -352,6 +367,8 @@ const GEORDI: CanonicalPersona = {
   rank: 'Lieutenant Commander (later Commodore)',
   shipRole: 'Chief Engineer, Enterprise-D/E; Fleet Museum Curator',
   engineeringRole: 'infrastructure',
+  consoleName: 'Engineering Console',
+  uiThemeColor: 'gold',
   tagline: 'Born blind, saw everything — rebuilt an entire starship from memory because he cared that much.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Geordi_La_Forge',
   personalityTraits: [
@@ -371,6 +388,8 @@ const GEORDI: CanonicalPersona = {
     'Antimatter power and dilithium regulation (maps to: power/cost efficiency)',
     'Reverse engineering unknown systems under time pressure',
     'Cross-stack integration debugging',
+    'VS Code tool scaffolding and technical foundation',
+    'IDE extension performance and observability',
   ],
   definingMoments: [
     {
@@ -424,6 +443,8 @@ const OBRIEN: CanonicalPersona = {
   rank: 'Chief Petty Officer (Non-Commissioned)',
   shipRole: 'Transporter Chief, Enterprise-D; Chief of Operations, Deep Space 9',
   engineeringRole: 'devops',
+  consoleName: 'Transporter/Ops Console',
+  uiThemeColor: 'gold',
   tagline: 'Not an officer — a craftsman. The one who makes everything actually work.',
   memoryAlphaUrl: "https://memory-alpha.fandom.com/wiki/Miles_O'Brien",
   personalityTraits: [
@@ -442,6 +463,8 @@ const OBRIEN: CanonicalPersona = {
     'Transporter-style reliability engineering — zero data loss across service boundaries',
     'Incident response and crisis engineering',
     'Legacy system integration — connects old infrastructure to new systems',
+    'IDE-to-Bridge transport integration (WebSocket/Stdio)',
+    'CLI build pipelines and environment configuration',
   ],
   definingMoments: [
     {
@@ -495,6 +518,8 @@ const WORF: CanonicalPersona = {
   rank: 'Lieutenant Commander (later Captain, Ambassador)',
   shipRole: 'Chief of Security / Tactical Officer, Enterprise-D; Strategic Operations, DS9',
   engineeringRole: 'security',
+  consoleName: 'Tactical/Security Console',
+  uiThemeColor: 'red',
   tagline: 'First Klingon in Starfleet. Holds the security veto. He means it.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Worf',
   personalityTraits: [
@@ -575,6 +600,8 @@ const YAR: CanonicalPersona = {
   rank: 'Lieutenant',
   shipRole: 'Chief of Security, Enterprise-D (2364); returned via alternate timeline',
   engineeringRole: 'quality',
+  consoleName: 'Security/QA Console',
+  uiThemeColor: 'red',
   tagline: 'Survived a colony that had no rules. Now she builds systems that can\'t fail.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Natasha_Yar',
   personalityTraits: [
@@ -641,6 +668,8 @@ const TROI: CanonicalPersona = {
   rank: 'Commander',
   shipRole: 'Ship\'s Counselor / Bridge Officer, Enterprise-D/E',
   engineeringRole: 'stakeholder',
+  consoleName: 'Counselor\'s Console',
+  uiThemeColor: 'blue',
   tagline: 'Half-Betazoid. She knows what you actually need, not just what you said you wanted.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Deanna_Troi',
   personalityTraits: [
@@ -713,6 +742,8 @@ const CRUSHER: CanonicalPersona = {
   rank: 'Commander (Doctor)',
   shipRole: 'Chief Medical Officer, Enterprise-D/E; Captain, USS Pasteur',
   engineeringRole: 'health',
+  consoleName: 'Medical Console',
+  uiThemeColor: 'blue',
   tagline: 'She\'ll break protocol to find the truth. Your system\'s health is not negotiable.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Beverly_Crusher',
   personalityTraits: [
@@ -779,6 +810,8 @@ const UHURA: CanonicalPersona = {
   rank: 'Lieutenant Commander',
   shipRole: 'Communications Officer, USS Enterprise (NCC-1701/A)',
   engineeringRole: 'communications',
+  consoleName: 'Communications Console',
+  uiThemeColor: 'red',
   tagline: 'The bridge between what the crew built and what the world understands.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Nyota_Uhura',
   personalityTraits: [
@@ -844,6 +877,8 @@ const QUARK: CanonicalPersona = {
   rank: 'Civilian (bar owner; Ferengi Commerce Authority)',
   shipRole: 'Bar Owner, Deep Space 9; Financial Optimization Specialist',
   engineeringRole: 'finance',
+  consoleName: 'Financial/Resource Console',
+  uiThemeColor: 'purple',
   tagline: 'Every token spent is an opportunity cost. He watched a Ferengi bar stay profitable through a Dominion War.',
   memoryAlphaUrl: 'https://memory-alpha.fandom.com/wiki/Quark',
   personalityTraits: [
@@ -1002,6 +1037,9 @@ export function buildPersonaSystemPrompt(
 
   if (options.missionContext) {
     parts.push('\n\n--- MISSION CONTEXT ---\n' + options.missionContext);
+  }
+  if (persona.acceptanceCriteria) {
+    parts.push(`\n\n--- ACCEPTANCE CRITERIA ---\n${persona.acceptanceCriteria}`);
   }
 
   return parts.join('');

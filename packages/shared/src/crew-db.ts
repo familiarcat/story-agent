@@ -48,10 +48,12 @@ export interface CanonicalPersona {
   shipRole: string;
   engineeringRole: string;
   tagline: string;
+  consoleName: string;
   memoryAlphaUrl: string;
   personalityTraits: string[];
   specializations: string[];
   definingMoments: string[];
+  uiThemeColor: string;
   canonicalQuotes: string[];
   growthAreas: string[];
   keyRelationships: Partial<Record<CrewId, string>>;
@@ -71,6 +73,11 @@ export interface ToolRecord {
   worfVetoReason?: string;
   crewVotes?: Record<CrewId, 'approve' | 'reject' | 'abstain'>;
   crewEvaluationNotes?: Record<CrewId, string>;
+  uiMetadata?: {
+    icon?: string;
+    color?: 'gold' | 'blue' | 'red' | 'purple';
+    component?: string;
+  };
   lastEvaluatedAt?: string;
   createdAt?: string;
 }
@@ -88,6 +95,16 @@ export interface MissionDebrief {
   dataValidated: boolean;
   appliedAt?: string;
   createdAt?: string;
+}
+
+export interface EpicRecord {
+  id: string;
+  clientId: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  status: string;
+  createdAt: string;
 }
 
 // ============================================================================
@@ -249,6 +266,8 @@ export async function getCrewPersona(crewId: CrewId): Promise<CanonicalPersona |
       shipRole: data.ship_role,
       engineeringRole: data.engineering_role,
       tagline: data.tagline,
+      consoleName: data.console_name,
+      uiThemeColor: data.ui_theme_color || 'gold',
       memoryAlphaUrl: data.memory_alpha_url,
       personalityTraits: data.personality_traits || [],
       specializations: data.domain_specialties || [],
@@ -283,6 +302,8 @@ export async function getAllCrewPersonas(): Promise<CanonicalPersona[]> {
       shipRole: d.ship_role,
       engineeringRole: d.engineering_role,
       tagline: d.tagline,
+      consoleName: d.console_name,
+      uiThemeColor: d.ui_theme_color || 'gold',
       memoryAlphaUrl: d.memory_alpha_url,
       personalityTraits: d.personality_traits || [],
       specializations: d.domain_specialties || [],
@@ -335,6 +356,7 @@ export async function getToolRegistry(filters?: {
       worfVetoReason: d.worf_veto_reason,
       crewVotes: d.crew_votes,
       crewEvaluationNotes: d.crew_evaluation_notes,
+      uiMetadata: d.ui_metadata,
       lastEvaluatedAt: d.last_evaluated_at,
       createdAt: d.created_at,
     }));
@@ -382,6 +404,7 @@ export async function getWorfVetoedTools(): Promise<ToolRecord[]> {
       worfVetoReason: d.worf_veto_reason,
       crewVotes: d.crew_votes,
       crewEvaluationNotes: d.crew_evaluation_notes,
+      uiMetadata: d.ui_metadata,
       lastEvaluatedAt: d.last_evaluated_at,
       createdAt: d.created_at,
     }));
@@ -558,5 +581,64 @@ export async function getStarshipStatus(): Promise<{
       tools: { total: 0, approved: 0, worfVetoed: 0, pending: 0 },
       missions: { recentDebriefs: 0, totalDebriefs: 0 },
     };
+  }
+}
+
+// ============================================================================
+// EPIC & HIERARCHY FUNCTIONS
+// ============================================================================
+
+/**
+ * Get all epics for a specific project
+ */
+export async function getEpicsForProject(projectId: string): Promise<EpicRecord[]> {
+  try {
+    const db = await getDbClient();
+    const { data, error } = await db
+      .from('epics')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(d => ({
+      id: d.id,
+      clientId: d.client_id,
+      projectId: d.project_id,
+      name: d.name,
+      description: d.description,
+      status: d.status,
+      createdAt: d.created_at,
+    }));
+  } catch (error) {
+    console.error(`[crew-db] Error loading epics for project ${projectId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Get stories grouped by epic to support hierarchical UI visualization
+ */
+export async function getStoriesGroupedByEpic(projectId: string) {
+  try {
+    const db = await getDbClient();
+    
+    // Fetch epics and stories in parallel
+    const [epicsResult, storiesResult] = await Promise.all([
+      db.from('epics').select('*').eq('project_id', projectId).order('name'),
+      db.from('stories').select('*').eq('project_id', projectId)
+    ]);
+
+    if (epicsResult.error) throw epicsResult.error;
+    if (storiesResult.error) throw storiesResult.error;
+
+    return (epicsResult.data || []).map(epic => ({
+      ...epic,
+      stories: (storiesResult.data || []).filter(s => s.epic_id === epic.id)
+    }));
+  } catch (error) {
+    console.error(`[crew-db] Error fetching epic hierarchy for project ${projectId}:`, error);
+    return [];
   }
 }

@@ -22,6 +22,10 @@ MIGRATIONS=(
   "20260606_crew_starship_tables.sql"
   "20260607_client_security_policies.sql"
   "20260607_client_memory_isolation.sql"
+  "20260611_create_clients_table.sql"
+  "20260611_add_epics_table.sql"
+  "20260611_add_client_id_to_audit.sql"
+  "20260612_add_console_name_to_personas.sql"
 )
 
 echo "=== Supabase Migration Runner (Management API) ==="

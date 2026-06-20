@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
-import { getDbClient } from '../../../shared/src/db.js';
+import { getDbClient } from '@story-agent/shared/db';
+import { resolveClientPolicy } from '@story-agent/shared/client-security-policy';
 
 type WorfGateTarget = 'github' | 'aha' | 'approved_llm' | 'supabase' | 'other';
 
@@ -14,6 +15,8 @@ export interface WorfGateAuditEntry {
   operation: string;
   target: WorfGateTarget;
   repoFullName: string | null;
+  clientId: string | null;
+  securitySensitivityScore: number | null;
   allowed: boolean;
   reasons: string[];
   detectedMarkers: string[];
@@ -23,19 +26,6 @@ export interface WorfGateAuditEntry {
 const WORFGATE_AUDIT_MAX = parseInt(process.env.WORFGATE_AUDIT_MAX ?? '500', 10);
 const worfGateAuditLog: WorfGateAuditEntry[] = [];
 
-const DEFAULT_CONTROLLED_MARKERS = [
-  'bayer',
-  'confidential',
-  'internal use only',
-  'regulated',
-  'customer data',
-  'patient',
-  'phi',
-  'pii',
-  'secret',
-  'proprietary',
-];
-
 function parseCsv(value: string | undefined): string[] {
   if (!value) return [];
   return value
@@ -44,9 +34,17 @@ function parseCsv(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function detectControlledMarkers(text: string): string[] {
-  const custom = parseCsv(process.env.WORFGATE_CONTROLLED_MARKERS);
-  const markers = custom.length > 0 ? custom : DEFAULT_CONTROLLED_MARKERS;
+function detectStructuralMarkers(text: string): string[] {
+  const markers: string[] = [];
+  // Detect crew usage of lax types requested for autonomous flexibility
+  if (text.includes(': any') || text.includes('as any')) markers.push('TS_ANY_USAGE');
+  if (text.includes('undefined')) markers.push('TS_UNDEFINED_USAGE');
+  return markers;
+}
+
+function detectControlledMarkers(text: string, clientId?: string | null): string[] {
+  const policy = resolveClientPolicy(clientId);
+  const markers = policy.worfGate.controlledMarkers;
   const lower = text.toLowerCase();
 
   return markers.filter(marker => lower.includes(marker.toLowerCase()));
@@ -87,8 +85,12 @@ async function addWorfGateAuditEntry(entry: WorfGateAuditEntry): Promise<void> {
   try {
     const db = await getDbClient();
     await db.from('sa_security_audit').insert({
+      timestamp: entry.timestamp,
       operation: entry.operation,
       target: entry.target,
+      repo_full_name: entry.repoFullName,
+      client_id: entry.clientId,
+      security_sensitivity_score: entry.securitySensitivityScore,
       allowed: entry.allowed,
       detected_markers: entry.detectedMarkers,
       payload_hash: entry.payloadHash,
@@ -117,21 +119,26 @@ export function evaluateWorfGateOutbound(input: {
   target: WorfGateTarget;
   payloadText: string;
   repoFullName?: string;
+  clientId?: string | null;
+  securitySensitivityScore?: number;
 }): WorfGateDecision {
   if (!isEnforced()) {
     return { allowed: true, reasons: ['WORFGATE_ENFORCE=false'], detectedMarkers: [] };
   }
 
-  const detectedMarkers = detectControlledMarkers(input.payloadText);
-  if (detectedMarkers.length === 0) {
-    return { allowed: true, reasons: ['No controlled markers detected'], detectedMarkers };
+  const policy = resolveClientPolicy(input.clientId);
+  const detectedMarkers = detectControlledMarkers(input.payloadText, input.clientId);
+  const structuralMarkers = detectStructuralMarkers(input.payloadText);
+  
+  if (detectedMarkers.length === 0 && structuralMarkers.length === 0) {
+    return { allowed: true, reasons: ['No controlled or structural markers detected'], detectedMarkers: [] };
   }
 
-  if (allowControlledData()) {
+  if (policy.worfGate.allowControlledOutbound || allowControlledData()) {
     return {
       allowed: true,
-      reasons: ['Controlled data explicitly allowed by WORFGATE_ALLOW_CONTROLLED=true'],
-      detectedMarkers,
+      reasons: ['Controlled/Structural data explicitly allowed by policy or flag'],
+      detectedMarkers: [...detectedMarkers, ...structuralMarkers],
     };
   }
 
@@ -139,14 +146,23 @@ export function evaluateWorfGateOutbound(input: {
     return {
       allowed: true,
       reasons: ['GitHub organization explicitly allowed by WORFGATE_ALLOWED_GITHUB_ORGS'],
-      detectedMarkers,
+      detectedMarkers: [...detectedMarkers, ...structuralMarkers],
+    };
+  }
+
+  // Allow structural markers (any/undefined) even if no specific allow policy, but log them for governance
+  if (detectedMarkers.length === 0 && structuralMarkers.length > 0) {
+    return {
+      allowed: true,
+      reasons: ['Structural markers detected and permitted for autonomous flexibility under governance'],
+      detectedMarkers: structuralMarkers,
     };
   }
 
   return {
     allowed: false,
-    reasons: ['Controlled markers detected without an allow policy for this target'],
-    detectedMarkers,
+    reasons: ['Security protocols enforced: controlled markers detected without an allow policy'],
+    detectedMarkers: [...detectedMarkers, ...structuralMarkers],
   };
 }
 
@@ -154,6 +170,8 @@ export function enforceWorfGateOutbound(input: {
   target: WorfGateTarget;
   payloadText: string;
   repoFullName?: string;
+  clientId?: string | null;
+  securitySensitivityScore?: number;
   operation: string;
 }): void {
   const decision = evaluateWorfGateOutbound(input);
@@ -162,6 +180,8 @@ export function enforceWorfGateOutbound(input: {
     operation: input.operation,
     target: input.target,
     repoFullName: input.repoFullName ?? null,
+    clientId: input.clientId ?? null,
+    securitySensitivityScore: input.securitySensitivityScore ?? null,
     allowed: decision.allowed,
     reasons: decision.reasons,
     detectedMarkers: decision.detectedMarkers,

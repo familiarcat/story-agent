@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.sa_projects (
 );
 
 ALTER TABLE public.sa_projects ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON public.sa_projects;
 CREATE POLICY "Service role full access" ON public.sa_projects USING (auth.role() = 'service_role');
 
 -- ── Stories ───────────────────────────────────────────────────────────────────
@@ -39,6 +40,7 @@ CREATE INDEX IF NOT EXISTS sa_stories_status_idx    ON public.sa_stories (status
 CREATE INDEX IF NOT EXISTS sa_stories_updated_at_idx ON public.sa_stories (updated_at DESC);
 
 ALTER TABLE public.sa_stories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON public.sa_stories;
 CREATE POLICY "Service role full access" ON public.sa_stories USING (auth.role() = 'service_role');
 
 CREATE OR REPLACE FUNCTION update_sa_stories_updated_at()
@@ -49,6 +51,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_sa_stories_updated_at ON public.sa_stories;
 CREATE TRIGGER set_sa_stories_updated_at
   BEFORE UPDATE ON public.sa_stories
   FOR EACH ROW
@@ -72,6 +75,7 @@ CREATE TABLE IF NOT EXISTS public.sa_pr_comments (
 CREATE INDEX IF NOT EXISTS sa_pr_comments_story_id_idx ON public.sa_pr_comments (story_id);
 
 ALTER TABLE public.sa_pr_comments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON public.sa_pr_comments;
 CREATE POLICY "Service role full access" ON public.sa_pr_comments USING (auth.role() = 'service_role');
 
 -- ── Revision Cycles ───────────────────────────────────────────────────────────
@@ -91,6 +95,7 @@ CREATE TABLE IF NOT EXISTS public.sa_revision_cycles (
 CREATE INDEX IF NOT EXISTS sa_revision_cycles_story_id_idx ON public.sa_revision_cycles (story_id);
 
 ALTER TABLE public.sa_revision_cycles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON public.sa_revision_cycles;
 CREATE POLICY "Service role full access" ON public.sa_revision_cycles USING (auth.role() = 'service_role');
 
 -- ── Observation Lounge Shared Memory (Vector Store) ─────────────────────────
@@ -122,4 +127,5 @@ CREATE INDEX IF NOT EXISTS sa_observation_memories_embedding_idx
   WITH (lists = 64);
 
 ALTER TABLE public.sa_observation_memories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON public.sa_observation_memories;
 CREATE POLICY "Service role full access" ON public.sa_observation_memories USING (auth.role() = 'service_role');

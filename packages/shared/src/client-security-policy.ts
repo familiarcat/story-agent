@@ -17,6 +17,24 @@
 
 export type SecurityTier = 'regulated' | 'enterprise' | 'standard';
 
+export interface UITheme {
+  primary: string;
+  secondary: string;
+  accent: string;
+  alert: string;
+  environmentMode: string;
+}
+
+/**
+ * Sovereign Factory Theme Theory:
+ * Maps security tiers to visual environment "Baselines"
+ */
+export const TIER_THEMES: Record<SecurityTier, UITheme> = {
+  regulated: { primary: '#2D3E50', secondary: '#1A5276', accent: '#5DADE2', alert: '#CC0000', environmentMode: 'compliance_clinical' },
+  enterprise: { primary: '#1B4D3E', secondary: '#239B56', accent: '#82E0AA', alert: '#E67E22', environmentMode: 'operational_growth' },
+  standard: { primary: '#4A235A', secondary: '#7D3C98', accent: '#BB8FCE', alert: '#F1C40F', environmentMode: 'dynamic_standard' }
+};
+
 export interface ClientAuthRequirements {
   /** Bearer token required on every HTTP MCP call */
   requireBearerToken: boolean;
@@ -425,6 +443,68 @@ const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
         source: 'either',
         sensitive: true,
       },
+    ],
+  },
+
+  // Jonah Corporation - Enterprise Tier
+  // Requires strong auth, WorfGate on, session isolation, but env vars acceptable.
+  'jonah-corp': {
+    clientId: 'jonah-corp',
+    clientName: 'Jonah Corporation',
+    tier: 'enterprise',
+    tierRationale:
+      'Enterprise client with strong auth requirements for internal applications. ' +
+      'Requires robust security but without regulated-tier GDPR/PHI obligations. ' +
+      'Env vars acceptable for secrets.',
+
+    auth: {
+      requireBearerToken: true,
+      requireEntraIssuer: false, // any OIDC issuer acceptable
+      requireSessionIsolation: true,
+      requireFullAuditTrail: true,
+      worfGateEnforce: true,
+      controlledDataHardBlock: false, // can be overridden per-deployment
+      requireSsmSecrets: false, // env vars acceptable
+      sessionTtlSeconds: 7200, // 2-hour session TTL
+    },
+
+    worfGate: {
+      enforceMode: 'hard',
+      allowedGithubOrgs: ['jonah-corp'],
+      controlledMarkers: [
+        'confidential',
+        'internal use only',
+        'proprietary',
+        'project plan',
+        'financial data',
+      ],
+      allowControlledOutbound: false,
+    },
+
+    requiredEnvVars: [
+      {
+        name: 'STORY_AGENT_AUTH_JWKS_URI',
+        description: 'JWKS URI for token validation (any OIDC provider).',
+        source: 'env',
+        sensitive: false,
+      },
+      {
+        name: 'STORY_AGENT_AUTH_AUDIENCE',
+        description: 'Expected aud claim for Jonah tokens.',
+        source: 'env',
+        sensitive: false,
+      },
+      { name: 'WORFGATE_ENFORCE', description: 'Must be "true".', source: 'env', sensitive: false },
+      {
+        name: 'WORFGATE_ALLOWED_GITHUB_ORGS',
+        description: 'Must include "jonah-corp".',
+        source: 'env',
+        sensitive: false,
+      },
+      { name: 'REDIS_URL', description: 'Redis for session isolation.', source: 'either', sensitive: true },
+      { name: 'SUPABASE_URL', description: 'Supabase project URL.', source: 'either', sensitive: false },
+      { name: 'SUPABASE_KEY', description: 'Supabase service role key.', source: 'either', sensitive: true },
+      { name: 'GITHUB_TOKEN', description: 'GitHub PAT scoped to jonah-corp org.', source: 'either', sensitive: true },
     ],
   },
 

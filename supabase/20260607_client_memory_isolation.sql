@@ -18,8 +18,7 @@ ALTER TABLE public.sa_observation_memories
   ADD COLUMN IF NOT EXISTS client_id TEXT REFERENCES sa_client_security_policies(client_id) ON DELETE SET NULL;
 
 COMMENT ON COLUMN public.sa_observation_memories.client_id IS
-  'Client org that owns this memory. NULL = legacy/global, readable by all. ' ||
-  'Non-null = scoped to that client only. bayer-int = regulated, familiarcat = enterprise.';
+  'Client org that owns this memory. NULL = legacy/global, readable by all. Non-null = scoped to that client only. bayer-int = regulated, familiarcat = enterprise.';
 
 CREATE INDEX IF NOT EXISTS idx_sa_observation_memories_client_id
   ON public.sa_observation_memories(client_id);
@@ -120,6 +119,4 @@ ORDER BY
   p.client_name;
 
 COMMENT ON VIEW sa_security_tier_summary IS
-  'Security tier comparison across all registered clients. ' ||
-  'Ordered: regulated (Bayer gold standard) → enterprise (familiarcat) → standard. ' ||
-  'Use this view to show how new clients compare against the Bayer ceiling.';
+  'Security tier comparison across all registered clients. Ordered: regulated (Bayer gold standard) → enterprise (familiarcat) → standard. Use this view to show how new clients compare against the Bayer ceiling.';

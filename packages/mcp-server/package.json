@@ -7,8 +7,8 @@
     "story-agent-mcp": "./dist/src/index.js"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc && node --watch dist/src/index.js",
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json && node --watch dist/src/index.js",
     "start": "node dist/src/index.js",
     "test": "vitest run",
     "test:unit": "RUN_MODE=unit vitest run",

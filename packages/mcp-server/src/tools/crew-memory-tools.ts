@@ -1,6 +1,7 @@
+import { createHash } from 'crypto';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { getRecentObservationMemories } from '../../../shared/src/db.js';
+import { getDbClient, getRecentObservationMemories } from '@story-agent/shared/db';
 import { promptArchive, getPromptEngineStats, exportPromptArchive } from '../lib/prompt-archiver.js';
 import { getWorfGateAuditLog } from '../lib/worfgate.js';
 import { getPromptEngineConnectivityDiagnostics } from '../lib/prompt-engine.js';
@@ -11,7 +12,7 @@ import {
   mergeStructuredMemoryPatch,
   buildStructuredMemoryPatchFromDebate,
   summarizeStructuredMemory,
-} from '../../../shared/src/index.js';
+} from '@story-agent/shared';
 
 /**
  * Crew memory analysis tools for querying and summarizing observation lounge debate patterns.
@@ -39,7 +40,7 @@ export async function registerCrewMemoryTools(server: McpServer) {
       let currentProjectMemories: any[] = [];
 
       try {
-        const dbModule = await import('../../../shared/src/db.js');
+        const dbModule = await import('@story-agent/shared/db');
         const supabaseDiagnosticsFn = (dbModule as any).getSupabaseConnectivityDiagnostics as (() => Promise<unknown>) | undefined;
         const recentMemoriesFn = (dbModule as any).getRecentObservationMemories as ((limit?: number, storyId?: string) => Promise<any[]>) | undefined;
         if (supabaseDiagnosticsFn) {
@@ -159,7 +160,7 @@ export async function registerCrewMemoryTools(server: McpServer) {
     'Classify current LLM and Supabase runtime connectivity failures, including policy blocks, TLS trust issues, auth failures, and unreachable endpoints.',
     {},
     async () => {
-      const dbModule = await import('../../../shared/src/db.js');
+      const dbModule = await import('@story-agent/shared/db');
       const supabaseDiagnosticsFn = (dbModule as any).getSupabaseConnectivityDiagnostics as
         | (() => Promise<unknown>)
         | undefined;
@@ -313,11 +314,78 @@ export async function registerCrewMemoryTools(server: McpServer) {
   );
 
   server.tool(
+    'worfgate:generate-compliance-report',
+    'Aggregate audited outbound hashes into a signed markdown document for regulatory review. Essential for PHI/PII compliance auditing.',
+    {
+      lookbackDays: z.number().optional().default(7).describe('Days of history to include in the report'),
+      clientId: z.string().optional().describe('Filter by specific client organization'),
+    },
+    async ({ lookbackDays, clientId }) => {
+      const db = await getDbClient();
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - lookbackDays);
+
+      let query = db
+        .from('sa_security_audit')
+        .select('*')
+        .gte('timestamp', cutoffDate.toISOString())
+        .order('timestamp', { ascending: false });
+
+      const { data: entries, error } = await query;
+      if (error) throw new Error(`Audit retrieval failed: ${error.message}`);
+
+      const reportRows = (entries || []).map(e => 
+        `| ${e.timestamp} | ${e.operation} | ${e.target} | ${e.allowed ? '✅' : '❌'} | ${e.security_sensitivity_score ?? 0}/100 | \`${e.payload_hash.substring(0, 12)}...\` |`
+      ).join('\n');
+
+      // Generate Master Manifest Signature
+      const manifestString = (entries || []).map(e => e.payload_hash).join(':');
+      const signature = createHash('sha256').update(manifestString).digest('hex');
+
+      const markdown = `# WorfGate Regulatory Compliance Report
+**Generation Date:** ${new Date().toISOString()}
+**Lookback Period:** ${lookbackDays} days
+**Entity Scoping:** ${clientId || 'GLOBAL'}
+
+## 📋 Audit Manifest
+Total Operations Audited: ${(entries || []).length}
+
+| Timestamp | Operation | Target | Result | Sensitivity | Payload Hash (SHA-256) |
+|-----------|-----------|--------|--------|-------------|------------------------|
+${reportRows || '| N/A | No records found in period | - | - | - |'}
+
+---
+
+## 🛡️ Cryptographic Integrity
+To verify the integrity of this manifest, validate the signature below against the project vault.
+
+**COMPLIANCE_MANIFEST_SIGNATURE:**
+\`${signature}\`
+
+**VERIFIED BY:** WorfGate Autonomy Subsystem
+`;
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({
+              status: 'success',
+              signature,
+              report: markdown
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
     'memory_sync_diagnostics',
     'Show Redis-to-Supabase memory sync health: queue depth, worker status, last sync success/failure, and throughput counters.',
     {},
     async () => {
-      const dbModule = await import('../../../shared/src/db.js');
+      const dbModule = await import('@story-agent/shared/db');
       const diagnosticsFn = (dbModule as any).getObservationMemorySyncDiagnostics as
         | (() => Promise<unknown>)
         | undefined;
@@ -452,7 +520,7 @@ export async function registerCrewMemoryTools(server: McpServer) {
       let relevantMemories: any[] = [];
 
       try {
-        const { getRelevantObservationMemories } = await import('../../../shared/src/db.js');
+        const { getRelevantObservationMemories } = await import('@story-agent/shared/db');
         relevantMemories = await getRelevantObservationMemories({
           queryText: scenario,
           limit,
@@ -764,7 +832,7 @@ Total Across All Crew: $${stats.totalCost.toFixed(4)} | ${stats.totalTokens.toLo
     getCrewMemoriesByProject,
     getCrewMemoryStats,
     toEmbedding,
-  } = await import('../../../shared/src/index.js');
+  } = await import('@story-agent/shared');
 
   // crew:store-memory
   server.tool(

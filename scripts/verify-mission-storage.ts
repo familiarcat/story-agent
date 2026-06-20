@@ -7,6 +7,7 @@ import { getDbClient } from '../packages/shared/src/db.js';
  */
 async function verifyMissionStorage() {
   const storyRef = 'PCTMS-001';
+  const clientId = process.env.TARGET_CLIENT_ID || 'bayer-int';
   console.log(`🔍 Searching sa_observation_memories for mission: ${storyRef}...`);
 
   const db = await getDbClient();
@@ -14,6 +15,7 @@ async function verifyMissionStorage() {
     .from('sa_observation_memories')
     .select('*')
     .eq('story_id', storyRef)
+    .eq('client_id', clientId)
     .order('created_at', { ascending: false })
     .limit(1);
 

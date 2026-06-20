@@ -242,6 +242,8 @@ export async function initializeMissingCrewMember(crewId: CrewId): Promise<{
           rank: persona.rank,
           ship_role: persona.shipRole,
           engineering_role: persona.engineeringRole,
+          console_name: persona.consoleName,
+          ui_theme_color: persona.uiThemeColor,
           tagline: persona.tagline,
           memory_alpha_url: persona.memoryAlphaUrl,
           personality_traits: persona.personalityTraits,

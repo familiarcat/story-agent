@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { fetchAhaStory } from './aha';
 import { buildObservationLoungeBrief } from './brief';
+import { runAssistantTurn, resetSession } from './chatEngine';
 
 const PARTICIPANT_ID = 'story-agent.agent';
 
@@ -48,7 +49,13 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         return { metadata: { [META_CMD]: 'dashboard' } };
       }
 
-      if (cmd === 'prepare' || (!cmd && extractStoryInput(prompt))) {
+      if (cmd === 'reset') {
+        resetSession();
+        stream.markdown('🔄 Session token ledger reset. The token budget meter starts fresh.');
+        return { metadata: { [META_CMD]: 'reset' } };
+      }
+
+      if (cmd === 'prepare') {
         const referenceNum = extractStoryInput(prompt);
         const repoFullName = extractRepo(prompt);
 
@@ -109,14 +116,23 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         return { metadata: { [META_CMD]: 'status', [META_REF]: referenceNum } };
       }
 
-      // Default help
+      // Free-form chat (/ask or any non-command prompt) → token-optimizing assistant
+      if (cmd === 'ask' || prompt.length > 0) {
+        const result = await runAssistantTurn(prompt, stream, token, context.globalState);
+        return { metadata: { [META_CMD]: 'ask', tier: result.tier, cached: result.cached } };
+      }
+
+      // Empty prompt → help
       stream.markdown(
         `## Story Agent\n\n` +
+        `Ask me anything — I'm a token-optimizing assistant (model tiering, prompt caching, RAG context pruning, live token meter).\n\n` +
         `| Command | What it does |\n|---|---|\n` +
-        `| \`/prepare STORY-####\` | Load story mission from Aha (or pass full URL), generate Observation Lounge brief |\n` +
+        `| _(just type)_ | Chat with the assistant — simple turns use a cheap model, complex turns a capable one |\n` +
+        `| \`/ask <question>\` | Same as typing — explicit chat |\n` +
+        `| \`/reset\` | Reset the session token budget meter |\n` +
+        `| \`/prepare STORY-####\` | Load story mission from Aha, generate Observation Lounge brief |\n` +
         `| \`/status STORY-####\` | Check tracked story status |\n` +
-        `| \`/dashboard\` | Open the Story Agent web UI |\n\n` +
-        `**Workflow:** \`/prepare\` → review brief → copy kickoff prompt → Phase 1 execution\n`
+        `| \`/dashboard\` | Open the Story Agent web UI |\n`
       );
       stream.button({ command: 'story-agent.openDashboard', title: '$(browser) Open Dashboard' });
       return { metadata: { [META_CMD]: 'help' } };

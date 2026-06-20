@@ -36,7 +36,8 @@ CREATE INDEX IF NOT EXISTS sa_observation_memories_embedding_idx
 ALTER TABLE public.sa_observation_memories ENABLE ROW LEVEL SECURITY;
 
 -- Grant service role full access
-CREATE POLICY "Service role full access" ON public.sa_observation_memories 
+DROP POLICY IF EXISTS "Service role full access" ON public.sa_observation_memories;
+CREATE POLICY "Service role full access" ON public.sa_observation_memories
   USING (auth.role() = 'service_role');
 
 -- Add comment documenting the table

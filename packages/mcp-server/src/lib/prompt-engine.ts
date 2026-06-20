@@ -128,7 +128,12 @@ function getLlmClient(): OpenAI | null {
 /**
  * Generate deterministic demo response for testing without external LLM
  */
-function generateDemoResponse(crewId: string): string {
+function generateDemoResponse(
+  crewId: string,
+  template: PromptTemplate,
+  variables: PromptVariables,
+  additionalTags: string[]
+): string {
   const demoResponses: Record<string, string> = {
     picard:
       'ANALYSIS:\nThe mission parameters are clear and strategically sound. I recommend proceeding with autonomous execution after security veto checks.\n\nFINDINGS:\n1. Governance structure is defined\n2. Crew authority hierarchy is established\n3. Fallback protocols are in place\n\nRECOMMENDATIONS:\n1. Validate all crew member authority levels\n2. Ensure WorfGate security gates are enforced\n3. Archive all decisions to audit trail\n\nCONFIDENCE: 0.92\nHAS_SECURITY_VETO: false',
@@ -139,6 +144,83 @@ function generateDemoResponse(crewId: string): string {
     worf:
       'ANALYSIS:\nSecurity posture requires hardening. Policy enforcement is critical.\n\nFINDINGS:\n1. Network isolation from external AI routes verified\n2. Approved endpoint configuration required\n3. Degraded mode fallback documented\n\nRECOMMENDATIONS:\n1. Use approved Bayer LLM endpoint only\n2. Require explicit downgrade to advisory mode when blocked\n3. Add security banner on degraded operation\n\nCONFIDENCE: 0.95\nHAS_SECURITY_VETO: true',
   };
+
+  if (crewId === 'data' && template.category === 'architect' && template.id === 'data_architecture_validation' && String(variables.storyDescription ?? '').includes('#vscode:webview')) {
+    return `ANALYSIS:\nWebview UI architecture is feasible. React component structure is standard.\n\nFINDINGS:\n1. Component hierarchy defined for story visualization\n2. Data flow from MCP server to Webview is clear\n3. State management approach is robust\n\nRECOMMENDATIONS:\n1. Implement React components for StoryCard and ConsoleView\n2. Use VS Code Webview API for message passing\n3. Ensure accessibility standards are met\n\nCONFIDENCE: 0.90\nHAS_SECURITY_VETO: false`;
+  }
+
+  if (crewId === 'geordi' && additionalTags.includes('implementation-generation') && String(variables.storyDescription ?? '').includes('Project Manager Dashboard')) {
+    const componentName = 'ProjectManagerDashboard';
+    const type = 'dashboard';
+    const componentContent = `
+import React from 'react';
+import styles from './${componentName}.module.css';
+
+interface ${componentName}Props {
+  title: string;
+  children: React.ReactNode;
+}
+
+const ${componentName}: React.FC<${componentName}Props> = ({ title, children }) => {
+  return (
+    <div className={styles.dashboardContainer}>
+      <h1 className={styles.dashboardTitle}>{title}</h1>
+      <div className={styles.dashboardGrid}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export default ${componentName};
+`;
+    const cssContent = `
+.dashboardContainer {
+  background-color: var(--lcars-background-dark);
+  color: var(--lcars-text-primary);
+  font-family: 'Exo 2', sans-serif;
+  padding: 2rem;
+  border-radius: 8px;
+}
+
+.dashboardTitle {
+  color: var(--lcars-accent-gold);
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+`;
+    return `### File: src/components/bridge/${componentName}.tsx
+\`\`\`tsx
+${componentContent}
+\`\`\`
+
+### File: src/components/bridge/${componentName}.module.css
+\`\`\`css
+${cssContent}
+\`\`\`
+
+### File: src/components/bridge/${componentName}.test.tsx
+\`\`\`tsx
+import { expect, describe, it } from 'vitest';
+import { render } from '@testing-library/react';
+import ${componentName} from './${componentName}';
+
+describe('${componentName}', () => {
+  it('should render the dashboard title', () => {
+    const { getByText } = render(<${componentName} title="Test Dashboard"><div></div></${componentName}>);
+    expect(getByText('Test Dashboard')).toBeInTheDocument();
+  });
+});
+\`\`\`
+`;
+  }
 
   return demoResponses[crewId] || demoResponses.picard;
 }
@@ -368,7 +450,7 @@ export async function executePromptEngineCall(
     if (!client) {
       // Use deterministic demo mode
       console.log(`[PROMPT_ENGINE] Using demo mode for ${crewId}`);
-      responseText = generateDemoResponse(crewId);
+      responseText = generateDemoResponse(crewId, template, variables, additionalTags);
     } else {
       try {
         // Call external LLM
@@ -387,7 +469,7 @@ export async function executePromptEngineCall(
         console.warn(
           `[PROMPT_ENGINE] Provider call failed for ${crewId} via ${provider} (${providerMessage}). Falling back to demo mode.`
         );
-        responseText = generateDemoResponse(crewId);
+        responseText = generateDemoResponse(crewId, template, variables, additionalTags);
       }
     }
 

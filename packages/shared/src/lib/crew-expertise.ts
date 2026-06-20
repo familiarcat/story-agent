@@ -573,7 +573,7 @@ When to involve Yar:
 /**
  * Get expertise declaration for a crew member
  */
-export function getCrewExpertise(crewId) {
+export function getCrewExpertise(crewId: keyof typeof CREW_EXPERTISE) {
   return CREW_EXPERTISE[crewId] || null;
 }
 
@@ -581,7 +581,11 @@ export function getCrewExpertise(crewId) {
  * Generate crew expertise summary
  */
 export function generateCrewExpertiseSummary() {
-  const summary = {};
+  const summary: Record<string, {
+    title: string;
+    primaryDomains: readonly string[];
+    secondaryDomains: readonly string[];
+  }> = {};
   for (const [crewId, expertise] of Object.entries(CREW_EXPERTISE)) {
     summary[crewId] = {
       title: expertise.title,

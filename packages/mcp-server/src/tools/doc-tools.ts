@@ -9,7 +9,7 @@ import {
   listDocPhases,
   getRoleGuidance,
   searchDocs,
-} from '../../../shared/src/index.js';
+} from '@story-agent/shared';
 
 // ── Tool Implementations ─────────────────────────────────────────────────────
 

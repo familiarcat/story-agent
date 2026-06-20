@@ -10,6 +10,7 @@ export const CREW_EXPERTISE = {
     crewId: 'picard',
     title: 'Captain & Strategic Command',
     bio: 'Strategic leader, institutional memory, deliberation over action',
+    consoleName: 'Command Console',
 
     primaryDomains: [
       'crew:coordination',
@@ -53,6 +54,7 @@ When to involve Picard:
     crewId: 'data',
     title: 'Architecture & Systems',
     bio: 'Type systems, domain boundaries, consistency, schema design',
+    consoleName: 'Operations Console',
 
     primaryDomains: [
       'database:schema',
@@ -102,6 +104,7 @@ When to involve Data:
     crewId: 'riker',
     title: 'Execution & Delegation',
     bio: 'Task execution, delegation, team coordination, practical implementation',
+    consoleName: 'Tactical Console',
 
     primaryDomains: [
       'tenancy:onboarding',
@@ -151,17 +154,20 @@ When to involve Riker:
     crewId: 'geordi',
     title: 'Performance & Optimization',
     bio: 'Performance tuning, bottleneck removal, resource efficiency, optimization',
+    consoleName: 'Engineering Console',
 
     primaryDomains: [
       'monitoring:health',
       'performance:indexing',
       'performance:metrics',
       'performance:caching',
+      'infrastructure:scaffolding',
     ],
 
     secondaryDomains: [
       'database:schema',
       'obrien',
+      'vscode:extension',
     ],
 
     expertise: `
@@ -198,6 +204,7 @@ When to involve Geordi:
       'performance:indexing': 'Expert query optimizer',
       'performance:metrics': 'Analyzes performance data',
       'performance:caching': 'Caching strategy & optimization',
+      'infrastructure:scaffolding': 'Technical foundation for IDE tools and CLIs',
     },
   },
 
@@ -205,6 +212,7 @@ When to involve Geordi:
     crewId: 'obrien',
     title: 'Operations & Reliability',
     bio: 'Operations, deployment, reliability, continuous improvement, uptime',
+    consoleName: 'Transporter/Ops Console',
 
     primaryDomains: [
       'deployment:cicd',
@@ -212,6 +220,8 @@ When to involve Geordi:
       'monitoring:alerts',
       'infrastructure:automation',
       'infrastructure:configuration',
+      'devops:integration',
+      'mcp:transport',
     ],
 
     secondaryDomains: [
@@ -256,6 +266,8 @@ When to involve O'Brien:
       'monitoring:alerts': 'Manages operational alerts & response',
       'infrastructure:automation': 'Automates operational tasks',
       'infrastructure:configuration': 'Manages environment configuration',
+      'devops:integration': 'Connects external tools to the MCP transport layer',
+      'mcp:transport': 'Master of service bridging and WebSocket/Stdio reliability',
     },
   },
 
@@ -263,6 +275,7 @@ When to involve O'Brien:
     crewId: 'worf',
     title: 'Security & Defense',
     bio: 'Security, threat modeling, WorfGate principles, credential segregation',
+    consoleName: 'Tactical/Security Console',
 
     primaryDomains: [
       'security:rls',
@@ -319,10 +332,12 @@ When to involve Worf:
     crewId: 'troi',
     title: 'Stakeholder Communication',
     bio: 'Communication, empathy, user experience, stakeholder engagement',
+    consoleName: 'Counselor\'s Console',
 
     primaryDomains: [
       'tenancy:onboarding',
       'documentation:guides',
+      'vscode:webview',
     ],
 
     secondaryDomains: [
@@ -362,6 +377,7 @@ When to involve Troi:
     domainRationale: {
       'tenancy:onboarding': 'Ensures client onboarding experience is smooth',
       'documentation:guides': 'Writes clear, empathetic documentation',
+      'vscode:webview': 'Stakeholder & UX expert — ensures the UI reflects user intent',
     },
   },
 
@@ -369,6 +385,7 @@ When to involve Troi:
     crewId: 'crusher',
     title: 'Testing & Scientific Method',
     bio: 'Testing, validation, empirical rigor, quality assurance',
+    consoleName: 'Medical Console',
 
     primaryDomains: [
       'error:handling',
@@ -428,6 +445,7 @@ When to involve Crusher:
     crewId: 'uhura',
     title: 'Communication & Protocols',
     bio: 'Communication protocols, message clarity, accessibility, knowledge transfer',
+    consoleName: 'Communications Console',
 
     primaryDomains: [
       'crew:communication',

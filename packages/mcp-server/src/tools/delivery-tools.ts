@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { randomUUID } from 'crypto';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { createHash } from 'crypto';
 import { resolveRepository, createBranch, branchExists, createPullRequest } from '../lib/github.js';
-import { upsertStory, getStory } from '../../../shared/src/db.js';
+import { upsertStory, getStory } from '@story-agent/shared/db';
 import { enforceWorfGateOutbound } from '../lib/worfgate.js';
 
 const MAX_FILES_PER_MISSION = 20;
@@ -34,8 +34,9 @@ export function registerDeliveryTools(server: McpServer) {
         content: z.string().describe('Full UTF-8 file content'),
         message: z.string().optional().describe('Optional per-file commit message override'),
       })).describe('Files to commit to the branch'),
+      clientId: z.string().optional().describe('Optional client ID for multi-tenant auditing'),
     },
-    async ({ storyId, storyTitle, storyUrl, repoFullName, prTitle, prBody, files }) => {
+    async ({ storyId, storyTitle, storyUrl, repoFullName, prTitle, prBody, files, clientId }) => {
       // Hardening: Prevent payload bloat
       if (files.length > MAX_FILES_PER_MISSION) {
         throw new Error(`Mission delivery exceeds maximum file limit of ${MAX_FILES_PER_MISSION}.`);
@@ -61,11 +62,16 @@ export function registerDeliveryTools(server: McpServer) {
         target: 'github',
         payloadText: outboundPayload,
         repoFullName,
+      clientId: clientId ?? null,
         operation: 'deliver_mission_output',
       });
 
       const repo = await resolveRepository(repoFullName);
-      const branchName = storyId.toUpperCase();
+      
+      // Implementation: Scoped branching for monorepo isolation
+      const branchName = clientId 
+        ? `client/${clientId}/${repo.name}/${storyId.toUpperCase()}`
+        : storyId.toUpperCase();
 
       // Create branch if not already present
       const exists = await branchExists(repo, branchName);
@@ -122,8 +128,11 @@ export function registerDeliveryTools(server: McpServer) {
       });
 
       // Record in Supabase
-      await upsertStory({
-        id:           randomUUID(),
+      // Generate a deterministic UUID based on repo and story reference for idempotent upserts
+      const deterministicId = createHash('sha256').update(`${repo.fullName}:${storyId}`).digest('hex').substring(0, 36);
+
+      await upsertStory(clientId ?? '', {
+        id:           deterministicId,
         storyId,
         storyTitle,
         storyUrl,
@@ -135,6 +144,7 @@ export function registerDeliveryTools(server: McpServer) {
         prUrl:        pr.url,
         prStatus:     'open',
         phase:        1,
+        acceptanceCriteria: '',
         notes:        `Delivered by ai-enterprise-os factory mission. Files: ${committedPaths.join(', ')}`,
       });
 

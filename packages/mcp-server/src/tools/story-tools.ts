@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getAgileProvider } from '../providers/index.js';
 import { executeAutonomousCrewMission } from '../lib/crew-coordinator.js';
-import { getRelevantObservationMemories, storeObservationMemory } from '../../../shared/src/db.js';
+import { getRelevantObservationMemories, storeObservationMemory } from '@story-agent/shared/db';
 import { enforceWorfGateOutbound } from '../lib/worfgate.js';
 
 export function registerStoryTools(server: McpServer) {
@@ -62,11 +62,13 @@ export function registerStoryTools(server: McpServer) {
     {
       storyId: z.string().describe('Story/issue ID (from get_story result, field: id)'),
       statusName: z.string().describe('Workflow status name as it appears in the provider (e.g. "In Progress", "Done", "Complete")'),
+      clientId: z.string().optional().describe('Optional client ID for multi-tenant auditing'),
     },
-    async ({ storyId, statusName }) => {
+    async ({ storyId, statusName, clientId }) => {
       enforceWorfGateOutbound({
         target: 'aha',
         payloadText: `${storyId} ${statusName}`,
+        clientId: clientId ?? null,
         operation: 'update_aha_story_status',
       });
 
@@ -87,12 +89,14 @@ export function registerStoryTools(server: McpServer) {
       storyId: z.string().describe('Story/issue ID (from get_story result, field: id)'),
       prUrl: z.string().describe('Full GitHub PR URL'),
       prTitle: z.string().describe('PR title starting with the story ID, e.g. [STORY-123] ...'),
+      clientId: z.string().optional().describe('Optional client ID for multi-tenant auditing'),
     },
-    async ({ storyId, prUrl, prTitle }) => {
+    async ({ storyId, prUrl, prTitle, clientId }) => {
       const commentBody = `Pull Request opened: [${prTitle}](${prUrl})`;
       enforceWorfGateOutbound({
         target: 'aha',
         payloadText: `${storyId} ${commentBody}`,
+        clientId: clientId ?? null,
         operation: 'link_aha_story_to_pr',
       });
 
@@ -292,6 +296,7 @@ Follow the story-execution-master-template workflow.
           repoFullName,
           targetBranch,
           executionMode,
+          acceptanceCriteria: story.acceptanceCriteria,
           clientId: resolvedClientId,
           sharedMemories,
           techStack,
@@ -353,9 +358,9 @@ Follow the story-execution-master-template workflow.
         story: missionData.story,
         repoFullName: missionData.repoFullName,
         targetBranch: missionData.targetBranch || 'main',
+        acceptanceCriteria: missionData.story.acceptanceCriteria,
         executionMode: 'autonomous',
         sharedMemories: [], // Logic inside coordinator will fetch fresh memories if empty
-        includeDebate: true,
       });
       
       return {

@@ -36,6 +36,7 @@ CREATE INDEX IF NOT EXISTS sa_docs_knowledge_vectors_embedding_idx
 
 ALTER TABLE public.sa_docs_knowledge_vectors ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role full access docs vectors" ON public.sa_docs_knowledge_vectors;
 CREATE POLICY "Service role full access docs vectors"
 ON public.sa_docs_knowledge_vectors
 USING (auth.role() = 'service_role');

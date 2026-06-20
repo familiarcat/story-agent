@@ -32,14 +32,14 @@ export interface CrewAssignment {
 export function routeTaskToCrew(context: TaskDomainContext): CrewAssignment[] {
   const crew = getCrewForTask(context.domains);
 
-  return crew.map(c => {
-    const expertise = CREW_EXPERTISE[c.crewId];
+  return crew.map((c: { crewId: string; domains: { domainId: string; expertise: string }[] }) => {
+    const expertise = CREW_EXPERTISE[c.crewId as keyof typeof CREW_EXPERTISE];
     return {
       crewId: c.crewId,
       role: expertise.title,
-      primaryDomains: c.domains.filter(d => d.expertise === 'primary').map(d => d.domainId),
-      secondaryDomains: c.domains.filter(d => d.expertise === 'secondary').map(d => d.domainId),
-      expertise: c.domains.map(d => d.domainId).join(', '),
+      primaryDomains: c.domains.filter((d: { expertise: string }) => d.expertise === 'primary').map((d: { domainId: string }) => d.domainId),
+      secondaryDomains: c.domains.filter((d: { expertise: string }) => d.expertise === 'secondary').map((d: { domainId: string }) => d.domainId),
+      expertise: c.domains.map((d: { domainId: string }) => d.domainId).join(', '),
     };
   });
 }
@@ -63,7 +63,7 @@ export function generateCrewBriefing(context: TaskDomainContext) {
   // Collect all related domains
   for (const domain of context.domains) {
     const related = getRelatedDomains(domain);
-    related.forEach(d => relatedDomainsList.add(d));
+    related.forEach((d: string) => relatedDomainsList.add(d));
   }
 
   return {
@@ -107,9 +107,9 @@ export function generateCrewBriefing(context: TaskDomainContext) {
       context.domains.map(domainId => [
         domainId,
         {
-          name: DOMAIN_REGISTRY[domainId]?.name,
-          description: DOMAIN_REGISTRY[domainId]?.description,
-          experts: getDomainExperts(domainId).map(e => ({
+          name: DOMAIN_REGISTRY[domainId as keyof typeof DOMAIN_REGISTRY]?.name,
+          description: DOMAIN_REGISTRY[domainId as keyof typeof DOMAIN_REGISTRY]?.description,
+          experts: getDomainExperts(domainId).map((e: { crewId: string; expertise: string; reason: string }) => ({
             crewId: e.crewId,
             expertise: e.expertise,
             reason: e.reason,
@@ -127,11 +127,11 @@ export function validateCrewCapability(crewIds: string[], taskDomains: string[])
   const crewExpertise = new Set<string>();
 
   for (const crewId of crewIds) {
-    const expertise = CREW_EXPERTISE[crewId];
+    const expertise = CREW_EXPERTISE[crewId as keyof typeof CREW_EXPERTISE];
     if (!expertise) continue;
 
-    expertise.primaryDomains.forEach(d => crewExpertise.add(d));
-    expertise.secondaryDomains.forEach(d => crewExpertise.add(d));
+    expertise.primaryDomains.forEach((d: string) => crewExpertise.add(d));
+    expertise.secondaryDomains.forEach((d: string) => crewExpertise.add(d));
   }
 
   return taskDomains.every(domain => crewExpertise.has(domain));
@@ -140,15 +140,15 @@ export function validateCrewCapability(crewIds: string[], taskDomains: string[])
 /**
  * Find coverage gaps - domains not covered by assigned crew
  */
-export function findCoveragGaps(crewIds: string[], taskDomains: string[]): string[] {
+export function findCoverageGaps(crewIds: string[], taskDomains: string[]): string[] {
   const crewExpertise = new Set<string>();
 
   for (const crewId of crewIds) {
-    const expertise = CREW_EXPERTISE[crewId];
+    const expertise = CREW_EXPERTISE[crewId as keyof typeof CREW_EXPERTISE];
     if (!expertise) continue;
 
-    expertise.primaryDomains.forEach(d => crewExpertise.add(d));
-    expertise.secondaryDomains.forEach(d => crewExpertise.add(d));
+    expertise.primaryDomains.forEach((d: string) => crewExpertise.add(d));
+    expertise.secondaryDomains.forEach((d: string) => crewExpertise.add(d));
   }
 
   return taskDomains.filter(domain => !crewExpertise.has(domain));
@@ -164,7 +164,7 @@ export function recommendCrewForGaps(gaps: string[]): CrewAssignment[] {
     const experts = getDomainExperts(domainId);
     for (const expert of experts) {
       if (!recommended.has(expert.crewId)) {
-        const crewExpertise = CREW_EXPERTISE[expert.crewId];
+        const crewExpertise = CREW_EXPERTISE[expert.crewId as keyof typeof CREW_EXPERTISE];
         recommended.set(expert.crewId, {
           count: 1,
           expertise: {
@@ -195,7 +195,7 @@ export function generateDetailedCollaborationReport(context: TaskDomainContext) 
   const allAssignments = Object.values(briefing.crewAssignments);
 
   // Check for gaps
-  const gaps = findCoveragGaps(
+  const gaps = findCoverageGaps(
     allAssignments.map(a => a.crewId),
     context.domains
   );

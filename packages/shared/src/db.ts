@@ -18,7 +18,7 @@ let _redisClient: any = null;
 let _redisInitAttempted = false;
 let _memorySyncTimer: NodeJS.Timeout | null = null;
 let _activeSupabaseConfig: {
-  source: 'primary' | 'fallback';
+  source: 'cloud' | 'local';
   url: string;
   mode: 'auto' | 'local' | 'live';
 } | null = null;
@@ -67,7 +67,8 @@ type ObservationMemoryPayload = {
 type SupabaseMode = 'auto' | 'local' | 'live';
 
 type SupabaseCandidate = {
-  source: 'primary' | 'fallback';
+  /** Classified by URL: 'cloud' = remote RAG store, 'local' = on-box Supabase. */
+  source: 'cloud' | 'local';
   url: string;
   key: string;
 };
@@ -78,14 +79,21 @@ function getSupabaseMode(): SupabaseMode {
   return 'auto';
 }
 
-function getFallbackSupabaseUrl(): string {
-  return (process.env.SUPABASE_FALLBACK_URL ?? process.env.SUPABASE_LIVE_URL ?? '').trim();
+/** Explicit cloud (remote RAG) endpoint. Newer SUPABASE_CLOUD_* wins; LIVE/FALLBACK kept for back-compat. */
+function getCloudSupabaseUrl(): string {
+  return (
+    process.env.SUPABASE_CLOUD_URL ??
+    process.env.SUPABASE_LIVE_URL ??
+    process.env.SUPABASE_FALLBACK_URL ??
+    ''
+  ).trim();
 }
 
-function getFallbackSupabaseKey(): string {
+function getCloudSupabaseKey(): string {
   return (
-    process.env.SUPABASE_FALLBACK_KEY ??
+    process.env.SUPABASE_CLOUD_KEY ??
     process.env.SUPABASE_LIVE_KEY ??
+    process.env.SUPABASE_FALLBACK_KEY ??
     process.env.SUPABASE_SERVICE_ROLE_KEY ??
     ''
   ).trim();
@@ -95,28 +103,66 @@ function isLocalSupabaseUrl(url: string): boolean {
   return /(^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?)/i.test(url);
 }
 
+/**
+ * Gather every configured Supabase endpoint, de-duplicated by URL and classified
+ * cloud vs local. Sources, in declaration order:
+ *  - explicit cloud (SUPABASE_CLOUD_URL / LIVE / FALLBACK)
+ *  - the legacy primary (SUPABASE_URL) — classified by its own URL
+ *  - explicit local (SUPABASE_LOCAL_URL)
+ */
+function getConfiguredCandidates(): SupabaseCandidate[] {
+  const raw: Array<{ url: string; key: string }> = [];
+
+  const cloudUrl = getCloudSupabaseUrl();
+  const cloudKey = getCloudSupabaseKey();
+  if (cloudUrl && cloudKey) raw.push({ url: cloudUrl, key: cloudKey });
+
+  const primaryUrl = (process.env.SUPABASE_URL ?? '').trim();
+  const primaryKey = (process.env.SUPABASE_KEY ?? '').trim();
+  if (primaryUrl && primaryKey) raw.push({ url: primaryUrl, key: primaryKey });
+
+  const localUrl = (process.env.SUPABASE_LOCAL_URL ?? '').trim();
+  const localKey = (process.env.SUPABASE_LOCAL_KEY ?? process.env.SUPABASE_KEY ?? '').trim();
+  if (localUrl && localKey) raw.push({ url: localUrl, key: localKey });
+
+  const seen = new Set<string>();
+  const candidates: SupabaseCandidate[] = [];
+  for (const entry of raw) {
+    const normalized = entry.url.replace(/\/$/, '').toLowerCase();
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    candidates.push({
+      source: isLocalSupabaseUrl(entry.url) ? 'local' : 'cloud',
+      url: entry.url,
+      key: entry.key,
+    });
+  }
+  return candidates;
+}
+
+/**
+ * Resolve the ordered candidate list for the active mode.
+ *  - auto  (default): cloud first, local as automatic fallback when cloud is unreachable.
+ *  - live  : cloud only — never silently drop to local (use in production / CI).
+ *  - local : local only — for offline development.
+ */
 function getSupabaseCandidates(): {
   mode: SupabaseMode;
   candidates: SupabaseCandidate[];
 } {
   const mode = getSupabaseMode();
-  const primaryUrl = process.env.SUPABASE_URL?.trim() ?? '';
-  const primaryKey = process.env.SUPABASE_KEY?.trim() ?? '';
-  const fallbackUrl = getFallbackSupabaseUrl();
-  const fallbackKey = getFallbackSupabaseKey();
-
-  const primary = primaryUrl && primaryKey
-    ? [{ source: 'primary' as const, url: primaryUrl, key: primaryKey }]
-    : [];
-  const fallback = fallbackUrl && fallbackKey
-    ? [{ source: 'fallback' as const, url: fallbackUrl, key: fallbackKey }]
-    : [];
+  const all = getConfiguredCandidates();
+  const cloud = all.filter(c => c.source === 'cloud');
+  const local = all.filter(c => c.source === 'local');
 
   if (mode === 'live') {
-    return { mode, candidates: [...fallback, ...primary] };
+    return { mode, candidates: cloud };
   }
-
-  return { mode, candidates: [...primary, ...fallback] };
+  if (mode === 'local') {
+    return { mode, candidates: local.length > 0 ? local : all };
+  }
+  // auto: always attempt cloud first, resort to local only if no cloud is reachable.
+  return { mode, candidates: [...cloud, ...local] };
 }
 
 async function probeSupabaseCandidate(candidate: SupabaseCandidate): Promise<{
@@ -332,6 +378,7 @@ function mapObservationMemory(row: Record<string, unknown>): ObservationMemoryRe
   return {
     id: row.id as string,
     storyId: row.story_id as string,
+    crewId: (row.crew_id as string | null) ?? null,
     clientId: (row.client_id as string | null) ?? null,
     source: row.source as ObservationMemoryRecord['source'],
     transcriptHash: row.transcript_hash as string,
@@ -488,7 +535,7 @@ export async function getObservationMemorySyncDiagnostics(): Promise<{
 export async function getSupabaseConnectivityDiagnostics(): Promise<{
   mode: SupabaseMode;
   activeUrl: string | null;
-  activeSource: 'primary' | 'fallback' | null;
+  activeSource: 'cloud' | 'local' | null;
   url: string | null;
   configured: boolean;
   reachable: boolean;
@@ -496,7 +543,7 @@ export async function getSupabaseConnectivityDiagnostics(): Promise<{
   classification: 'ok' | 'auth_failed' | 'policy_blocked' | 'endpoint_unreachable' | 'tls_trust_failed' | 'not_configured' | 'unexpected_response';
   detail: string;
   candidates: Array<{
-    source: 'primary' | 'fallback';
+    source: 'cloud' | 'local';
     url: string;
     reachable: boolean;
     statusCode: number | null;
@@ -576,12 +623,72 @@ export async function getDbClient(): Promise<SupabaseClient> {
   return db();
 }
 
+/**
+ * Cloud-first Supabase client for callers that require a client and treat an
+ * unreachable store as fatal (crew personal memory, documentation RAG).
+ * Throws if no endpoint (cloud → local) is reachable.
+ */
+export async function getSupabaseClient(): Promise<SupabaseClient> {
+  return db();
+}
+
+/**
+ * Cloud-first Supabase client for optional paths that prefer to degrade
+ * gracefully (e.g. baseline-memory preload). Returns null instead of throwing.
+ */
+async function getClient(): Promise<SupabaseClient | null> {
+  try {
+    return await db();
+  } catch {
+    return null;
+  }
+}
+
+// ── Ephemeral Redis lane (transient, never synced to Supabase / RAG) ─────────
+// Use for quick local memory transactions that do NOT need durable storage and
+// must NOT influence the crew's RAG decision-making. Keys auto-expire (TTL).
+// Durable, RAG-eligible memory must go through storeObservationMemory / the
+// crew memory functions, which persist to the cloud (remote) Supabase.
+
+const EPHEMERAL_PREFIX = 'sa:ephemeral:';
+const EPHEMERAL_DEFAULT_TTL_SECONDS = parseInt(process.env.MEMORY_EPHEMERAL_TTL_SECONDS ?? '3600', 10);
+
+/** Store a transient value in Redis with a TTL. Returns false if Redis is unavailable. */
+export async function setEphemeral(key: string, value: unknown, ttlSeconds = EPHEMERAL_DEFAULT_TTL_SECONDS): Promise<boolean> {
+  const client = await redis();
+  if (!client) return false;
+  await client.set(`${EPHEMERAL_PREFIX}${key}`, JSON.stringify(value), { EX: Math.max(1, ttlSeconds) });
+  return true;
+}
+
+/** Read a transient value from Redis. Returns null if missing, expired, or Redis is unavailable. */
+export async function getEphemeral<T = unknown>(key: string): Promise<T | null> {
+  const client = await redis();
+  if (!client) return null;
+  const raw = await client.get(`${EPHEMERAL_PREFIX}${key}`);
+  if (raw == null) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Delete a transient value from Redis. Returns false if Redis is unavailable. */
+export async function deleteEphemeral(key: string): Promise<boolean> {
+  const client = await redis();
+  if (!client) return false;
+  await client.del(`${EPHEMERAL_PREFIX}${key}`);
+  return true;
+}
+
 
 export async function upsertStory(
-  story: Omit<StoryRecord, 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string }
+  clientId: string,
+  story: Omit<StoryRecord, 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string, clientId?: string }
 ): Promise<void> {
   const now = new Date().toISOString();
-  throwOnError(await (await db()).from('sa_stories').upsert({
+  throwOnError(await (await db()).from('stories').upsert({
     id:             story.id,
     story_id:       story.storyId,
     story_title:    story.storyTitle,
@@ -594,19 +701,23 @@ export async function upsertStory(
     pr_url:         story.prUrl,
     pr_status:      story.prStatus,
     phase:          story.phase,
+    project_id:     story.projectId,
+    epic_id:        story.epicId,
+    acceptance_criteria: story.acceptanceCriteria,
     created_at:     story.createdAt ?? now,
     updated_at:     now,
     notes:          story.notes,
-  }, { onConflict: 'story_id' }));
+    client_id:      clientId,
+  }, { onConflict: 'id' }));
 }
 
-export async function getStory(storyId: string): Promise<StoryRecord | null> {
-  const { data } = await (await db()).from('sa_stories').select('*').eq('story_id', storyId).single();
+export async function getStory(storyId: string, clientId: string): Promise<StoryRecord | null> {
+  const { data } = await (await db()).from('stories').select('*').eq('story_id', storyId).eq('client_id', clientId).maybeSingle();
   return data ? mapStory(data) : null;
 }
 
 export async function listStories(): Promise<StoryRecord[]> {
-  const rows = throwOnError(await (await db()).from('sa_stories').select('*').order('updated_at', { ascending: false }));
+  const rows = throwOnError(await (await db()).from('stories').select('*').order('updated_at', { ascending: false }));
   return (rows ?? []).map(mapStory);
 }
 
@@ -624,6 +735,9 @@ function mapStory(row: Record<string, unknown>): StoryRecord {
     prUrl:        row.pr_url as string | null,
     prStatus:     row.pr_status as StoryRecord['prStatus'],
     phase:        row.phase as 1 | 2,
+    projectId:     row.project_id as string | null,
+    epicId:        row.epic_id as string | null,
+    acceptanceCriteria: row.acceptance_criteria as string,
     createdAt:    row.created_at as string,
     updatedAt:    row.updated_at as string,
     notes:        row.notes as string | null,
@@ -1097,7 +1211,7 @@ export async function getCrewPersonalMemories(
   const client = await getSupabaseClient();
 
   const { data, error } = await client.rpc('get_crew_personal_memory', {
-    crew_id,
+    p_crew_id: crew_id,
     memory_limit: limit,
     include_private: includePrivate,
   });
@@ -1122,7 +1236,7 @@ export async function searchCrewPersonalMemories(
   const client = await getSupabaseClient();
 
   const { data, error } = await client.rpc('search_crew_personal_memory', {
-    crew_id,
+    p_crew_id: crew_id,
     search_query: query,
     memory_limit: limit,
   });
@@ -1150,7 +1264,7 @@ export async function searchCrewPersonalMemoriesByEmbedding(
   const { data, error } = await client.rpc(
     'search_crew_personal_memory_by_embedding',
     {
-      crew_id,
+      p_crew_id: crew_id,
       embedding_vector: embeddingVector,
       memory_limit: limit,
       similarity_threshold: similarityThreshold,

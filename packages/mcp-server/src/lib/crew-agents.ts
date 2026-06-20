@@ -137,6 +137,7 @@ export async function obrienDevOpsAnalysis(context: CrewAgentContext): Promise<C
     {
       storyNum: context.story.referenceNum,
       storyName: context.story.name,
+      acceptanceCriteria: context.story.acceptanceCriteria,
       repoFullName: context.repoFullName,
       targetBranch: context.targetBranch,
       techStack: context.techStack,
@@ -237,6 +238,7 @@ export async function crusherHealthAnalysis(context: CrewAgentContext): Promise<
     {
       storyNum: context.story.referenceNum,
       storyName: context.story.name,
+      acceptanceCriteria: context.story.acceptanceCriteria,
       repoFullName: context.repoFullName,
       targetBranch: context.targetBranch,
       techStack: context.techStack,
@@ -282,6 +284,7 @@ export async function quarkFinanceAnalysis(context: CrewAgentContext): Promise<C
       storyNum: context.story.referenceNum,
       storyName: context.story.name,
       repoFullName: context.repoFullName,
+      acceptanceCriteria: context.story.acceptanceCriteria,
       targetBranch: context.targetBranch,
       techStack: context.techStack,
     },

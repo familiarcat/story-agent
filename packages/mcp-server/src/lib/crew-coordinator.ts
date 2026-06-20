@@ -8,7 +8,8 @@
  * - Debate generation from agent findings
  */
 
-import type { AgileStory, CrewMissionPlan, CrewFinding, ObservationDebateResult, ObservationMemoryRecord, StoryRecord } from '../../../shared/src/index.js';
+import type { AgileStory, CrewMissionPlan, CrewFinding, ObservationDebateResult, ObservationMemoryRecord, StoryRecord } from '@story-agent/shared';
+import { resolveClientPolicy } from '@story-agent/shared/client-security-policy';
 import { executePromptEngineCall } from './prompt-engine.js';
 import { getCrewRoster } from './crew.js';
 import {
@@ -24,13 +25,15 @@ import {
   uhuraCommunicationsAnalysis,
   quarkFinanceAnalysis,
 } from '../lib/crew-agents.js';
-import { storeObservationMemory } from '../../../shared/src/db.js';
+import { getPrimaryExpert } from './domain-registry.js';
+import { storeObservationMemory } from '@story-agent/shared/db';
 
 interface CrewOperationContext {
   story: AgileStory;
   repoFullName: string;
   targetBranch: string;
   executionMode: 'autonomous' | 'guided';
+  acceptanceCriteria: string;
   /**
    * Client org that scopes memory retrieval.
    * Pass 'bayer-int' for Bayer, 'familiarcat' for the Retailer Rewards project, etc.
@@ -49,6 +52,8 @@ export interface FullMissionResult {
   implementation?: {
     files: Array<{ path: string; content: string; message: string }>;
   };
+  summary?: { commitMessage: string; prBody: string };
+  securitySensitivityScore?: number;
   status: 'analyzed' | 'implemented' | 'delivered';
 }
 
@@ -61,6 +66,7 @@ export async function executeCrewAnalysis(context: CrewOperationContext): Promis
     repoFullName: context.repoFullName,
     targetBranch: context.targetBranch,
     techStack: context.techStack,
+    acceptanceCriteria: context.story.acceptanceCriteria,
     testPolicy: context.testPolicy,
     reviewers: context.reviewers,
     sharedMemories: context.sharedMemories,
@@ -100,13 +106,17 @@ export async function executeCrewAnalysis(context: CrewOperationContext): Promis
 export async function buildAutonomousMissionPlan(context: CrewOperationContext): Promise<CrewMissionPlan> {
   const crew = getCrewRoster();
 
+  // Resolve specific security tier for the client to inform Data and Worf
+  const policy = resolveClientPolicy(context.clientId);
+
   // ── Auto-load client-scoped memories if not pre-supplied ──────────────────
   // This is the core memory integration: before the crew runs, we hydrate
   // sharedMemories from the right client bucket so the crew doesn't start blind.
   let sharedMemories = context.sharedMemories;
+
   if (!sharedMemories || sharedMemories.length === 0) {
     try {
-      const { getRelevantObservationMemories } = await import('../../../shared/src/db.js');
+      const { getRelevantObservationMemories } = await import('@story-agent/shared/db');
       sharedMemories = await getRelevantObservationMemories({
         queryText: `${context.story.referenceNum} ${context.story.name} ${context.story.description}`,
         clientId: context.clientId ?? null,
@@ -118,8 +128,12 @@ export async function buildAutonomousMissionPlan(context: CrewOperationContext):
     }
   }
 
-  // Execute all crew analyses in parallel, now with client-scoped memory hydration
-  const findings = await executeCrewAnalysis({ ...context, sharedMemories });
+  // Execute all crew analyses in parallel with security tier awareness
+  const findings = await executeCrewAnalysis({ 
+    ...context, 
+    sharedMemories,
+    techStack: `${context.techStack || ''} [Security Tier: ${policy.tier}]`
+  });
 
   // Determine recommended execution order based on crew hierarchy and findings
   // Picard leads, Data and Riker coordinate, specialists support
@@ -255,6 +269,27 @@ export async function executeAutonomousCrewMission(
 }
 
 /**
+ * Helper to parse file paths and content from LLM markdown responses
+ * Expects format: ### File: src/path/to/file.ts followed by a code block
+ */
+function parseFilesFromImplementation(raw: string): Array<{ path: string; content: string; message: string }> {
+  const files: Array<{ path: string; content: string; message: string }> = [];
+  // Matches ### File: path/to/file followed by any characters until the next ### or end of string
+  // Looking for standard markdown code blocks
+  const regex = /### File: ([\w./-]+)\n```[\w]*\n([\s\S]*?)\n```/g;
+  let match;
+  
+  while ((match = regex.exec(raw)) !== null) {
+    files.push({
+      path: match[1],
+      content: match[2].trim(),
+      message: `feat: autonomously generate ${match[1]}`
+    });
+  }
+  return files;
+}
+
+/**
  * Execute the entire Sovereign Factory lifecycle:
  * Analysis -> Debate -> Implementation Generation -> Ready for Delivery
  */
@@ -269,11 +304,15 @@ export async function executeFullMissionLifecycle(
   }
 
   // Phase 2: Implementation Generation (Scaffolding)
-  // We task Data and Riker with generating the actual code based on the debate consensus
-  console.log(`[CREW] Consensus achieved for ${context.story.referenceNum}. Generating implementation...`);
-  
+  // Identify the lead expert based on story tags (default to Data)
+  const tags = context.story.description.match(/#(\w+:\w+)/g)?.map(t => t.slice(1)) || [];
+  const leadExpertId = (tags.length > 0 ? getPrimaryExpert(tags[0]) : 'data') || 'data';
+
+  console.log(`[CREW] Consensus achieved for ${context.story.referenceNum}.`);
+  console.log(`[CREW] Routing implementation generation to Lead Expert: ${leadExpertId.toUpperCase()}`);
+
   const implementationResult = await executePromptEngineCall(
-    'data',
+    leadExpertId as any,
     {
       storyNum: context.story.referenceNum,
       storyName: context.story.name,
@@ -288,18 +327,40 @@ export async function executeFullMissionLifecycle(
     ['implementation-generation']
   );
 
-  // Parse implementation findings into files
-  // Expectation: Data returns a structured list of files in the 'findings' or 'raw' response
-  const files: Array<{ path: string; content: string; message: string }> = [];
-  
-  // Logic to extract file paths/content from implementationResult.raw would go here
-  // For this cycle, we ensure the result is stored so Riker can proceed to delivery tools.
-  
+  // Phase 2.5: Technical Communication (Uhura)
+  // Task Uhura with summarizing the entire mission for git and PR logs
+  const commsResult = await executePromptEngineCall(
+    'uhura',
+    {
+      storyNum: context.story.referenceNum,
+      storyName: context.story.name,
+      repoFullName: context.repoFullName,
+      targetBranch: context.targetBranch,
+      findings: debate.consensusSummary,
+    },
+    context.story.referenceNum,
+    ['mission-summarization']
+  );
+
+  // Extract commit summary from Uhura's structured output
+  const commitSummaryMatch = commsResult.reasoning.match(/COMMIT_SUMMARY:\s*(.+)/i);
+  const commitMessage = commitSummaryMatch ? commitSummaryMatch[1].trim() : `feat: implement ${context.story.referenceNum}`;
+
+  // Extract security sensitivity score
+  const securityScoreMatch = commsResult.reasoning.match(/SECURITY_SENSITIVITY_SCORE:\s*(\d+)/i);
+  const securitySensitivityScore = securityScoreMatch ? parseInt(securityScoreMatch[1], 10) : 0;
+
+  const generatedFiles = parseFilesFromImplementation(implementationResult.reasoning || '');
+  // Apply Uhura's commit message to the files
+  generatedFiles.forEach(f => {
+    f.message = `${context.story.referenceNum}: ${commitMessage}`;
+  });
+
   // Phase 3: Learning Persistence
   await storeObservationMemory({
     storyId: context.story.referenceNum,
     clientId: context.clientId || 'global',
-    source: 'autonomous-mission-loop',
+    source: 'mcp',
     transcript: debate,
     missionPlan: plan,
     tags: ['full-lifecycle', 'autonomous-execution', context.story.referenceNum],
@@ -309,7 +370,7 @@ export async function executeFullMissionLifecycle(
     plan,
     debate,
     implementation: {
-      files: [
+      files: generatedFiles.length > 0 ? generatedFiles : [
         {
           path: `docs/missions/${context.story.referenceNum}-architecture.md`,
           content: JSON.stringify({ plan, debate }, null, 2),
@@ -317,6 +378,11 @@ export async function executeFullMissionLifecycle(
         }
       ]
     },
+    summary: {
+      commitMessage,
+      prBody: commsResult.reasoning || debate.consensusSummary,
+    },
+    securitySensitivityScore,
     status: 'implemented'
   };
 }

@@ -21,6 +21,14 @@
         "isSticky": true,
         "commands": [
           {
+            "name": "ask",
+            "description": "Chat with the token-optimizing assistant (model tiering, caching, RAG context pruning)"
+          },
+          {
+            "name": "reset",
+            "description": "Reset the session token budget meter"
+          },
+          {
             "name": "prepare",
             "description": "Load an Aha story and generate an execution brief for human review (Observation Lounge)"
           },
@@ -127,6 +135,88 @@
             "Azure DevOps — requires AZURE_DEVOPS_ORG and AZURE_DEVOPS_TOKEN (stub)"
           ],
           "description": "Agile project management provider to use for story intake."
+        },
+        "storyAgent.chat.provider": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["auto", "openrouter", "copilot"],
+          "enumDescriptions": [
+            "OpenRouter (cost-optimized crew routing) first, Copilot only as fallback — recommended",
+            "Force OpenRouter (errors if no key configured)",
+            "Force VS Code Copilot (uses your subscription; ignores crew cost routing)"
+          ],
+          "description": "Which LLM backend the chat assistant uses. 'auto' prioritizes OpenRouter + Quark cost-optimized routing, falling back to Copilot."
+        },
+        "storyAgent.chat.tokenBudget": {
+          "type": "number",
+          "default": 200000,
+          "description": "Per-session token budget for the chat assistant. The live meter warns as you approach it and blocks further turns once reached (use /reset to clear)."
+        },
+        "storyAgent.chat.modelTiering": {
+          "type": "boolean",
+          "default": true,
+          "description": "Quark cost-optimized routing: simple turns use the cheap model, complex turns the quality model. Disable to always use the quality model."
+        },
+        "storyAgent.chat.costProfile": {
+          "type": "string",
+          "default": "cost_optimized",
+          "enum": ["cost_optimized", "quality_first"],
+          "description": "Routing profile. 'cost_optimized' (default) tiers cheap vs quality by task complexity; 'quality_first' always uses the quality model. Falls back to the CREW_LLM_MODEL_PROFILE env var if set."
+        },
+        "storyAgent.chat.openRouterApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenRouter API key (PRIMARY backend). Prefer the crew env var CREW_LLM_APPROVED_KEY (auto-loaded from ~/.alexai-secrets); this setting is a fallback for when VS Code is not launched from a shell with that env."
+        },
+        "storyAgent.chat.openRouterUrl": {
+          "type": "string",
+          "default": "https://openrouter.ai/api/v1",
+          "description": "OpenRouter base URL. Falls back to the CREW_LLM_APPROVED_URL env var if set."
+        },
+        "storyAgent.chat.openRouterModel": {
+          "type": "string",
+          "default": "anthropic/claude-sonnet-4.6",
+          "description": "Quality model slug (complex/critical turns). Falls back to the CREW_LLM_APPROVED_MODEL env var if set."
+        },
+        "storyAgent.chat.openRouterModelCheap": {
+          "type": "string",
+          "default": "anthropic/claude-haiku-4.5",
+          "description": "Cost-optimized model slug (simple/support turns). Falls back to the CREW_LLM_APPROVED_MODEL_CHEAP env var if set."
+        },
+        "storyAgent.chat.smallModelFamily": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "Copilot-fallback model family used for simple turns."
+        },
+        "storyAgent.chat.capableModelFamily": {
+          "type": "string",
+          "default": "gpt-4o",
+          "description": "Copilot-fallback model family used for complex turns."
+        },
+        "storyAgent.chat.ragTopK": {
+          "type": "number",
+          "default": 4,
+          "description": "Max number of editor/workspace context snippets injected per turn (RAG context pruning). Lower = fewer input tokens."
+        },
+        "storyAgent.chat.cacheTtlMinutes": {
+          "type": "number",
+          "default": 60,
+          "description": "How long identical prompt+context responses are cached (minutes). Cache hits cost zero tokens."
+        },
+        "storyAgent.chat.ragUseCloudMemory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Augment chat with the crew's cloud RAG memory (observation memories + documentation) via the RAG read service. Falls back gracefully to editor-only context if the service is unavailable."
+        },
+        "storyAgent.chat.ragServiceUrl": {
+          "type": "string",
+          "default": "http://localhost:3102",
+          "description": "URL of the Story Agent RAG read service (scripts/start-rag-service.ts). Provides crew cloud memory to the assistant without the extension holding the service_role key."
+        },
+        "storyAgent.chat.ragServiceToken": {
+          "type": "string",
+          "default": "",
+          "description": "Optional bearer token for the RAG read service (matches RAG_SERVICE_TOKEN). Falls back to the RAG_SERVICE_TOKEN env var."
         }
       }
     }

@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
+import { createHash } from 'crypto';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { resolveRepository, createBranch, branchExists, createPullRequest, getPullRequest, getPRReviewComments, postPRComment } from '../lib/github.js';
-import { upsertStory, getStory, listStories, upsertPRComments, getCommentsForStory } from '../../../shared/src/db.js';
+import { upsertStory, getStory, listStories, upsertPRComments, getCommentsForStory } from '@story-agent/shared/db';
 
 export function registerRepoTools(server: McpServer) {
 
@@ -24,18 +25,23 @@ export function registerRepoTools(server: McpServer) {
       storyTitle: z.string().describe('Short story title for documentation'),
       storyUrl: z.string().describe('Full Aha story URL'),
       repoFullName: z.string().describe('GitHub owner/name'),
+      clientId: z.string().describe('Client ID for multi-tenant context'),
     },
-    async ({ storyId, storyTitle, storyUrl, repoFullName }) => {
+    async ({ storyId, storyTitle, storyUrl, repoFullName, clientId }) => {
       const repo = await resolveRepository(repoFullName);
-      const branchName = storyId.toUpperCase();
+      // Implementation: Scoped branching for monorepo isolation
+      const branchName = `client/${clientId}/${repo.name}/${storyId.toUpperCase()}`;
 
       const exists = await branchExists(repo, branchName);
       if (!exists) {
         await createBranch(repo, branchName);
       }
 
-      await upsertStory({
-        id: randomUUID(),
+      // Generate a deterministic UUID based on repo and story reference for idempotent upserts
+      const deterministicId = createHash('sha256').update(`${repoFullName}:${storyId}`).digest('hex').substring(0, 36);
+
+      await upsertStory(clientId, {
+        id: deterministicId,
         storyId,
         storyTitle,
         storyUrl,
@@ -46,7 +52,9 @@ export function registerRepoTools(server: McpServer) {
         prNumber: null,
         prUrl: null,
         prStatus: null,
+        clientId,
         phase: 1,
+        acceptanceCriteria: '',
         notes: null,
       });
 
@@ -64,17 +72,21 @@ export function registerRepoTools(server: McpServer) {
     'Open a pull request for a story branch. Records PR number and URL in local DB and transitions story to pr_open status.',
     {
       storyId: z.string().describe('Story reference number e.g. STORY-123'),
+      clientId: z.string().describe('Client ID for multi-tenant context'),
       title: z.string().describe('PR title — should start with [STORY_ID]'),
       body: z.string().describe('Full PR body markdown'),
     },
-    async ({ storyId, title, body }) => {
-      const record = await getStory(storyId);
+    async ({ storyId, clientId, title, body }) => {
+      const record = await getStory(storyId, clientId);
       if (!record) throw new Error(`Story ${storyId} not found in local DB. Run create_story_branch first.`);
 
       const repo = await resolveRepository(record.repoFullName);
       const pr = await createPullRequest({ repo, title, body, head: record.branch, base: record.baseBranch });
 
-      await upsertStory({ ...record, prNumber: pr.number, prUrl: pr.url, prStatus: 'open', status: 'pr_open', phase: 1 });
+      // Use the existing deterministic ID for upsert
+      await upsertStory(record.clientId ?? clientId, {
+        ...record, clientId: record.clientId ?? clientId, prNumber: pr.number, prUrl: pr.url, prStatus: 'open', status: 'pr_open', phase: 1
+      });
 
       return {
         content: [{
@@ -88,9 +100,12 @@ export function registerRepoTools(server: McpServer) {
   server.tool(
     'sync_pr_comments',
     'Fetch latest PR review comments and issue comments from GitHub, store them in local DB, and return unresolved items.',
-    { storyId: z.string().describe('Story reference number e.g. STORY-123') },
-    async ({ storyId }) => {
-      const record = await getStory(storyId);
+    {
+      storyId: z.string().describe('Story reference number e.g. STORY-123'),
+      clientId: z.string().describe('Client ID for multi-tenant context'),
+    },
+    async ({ storyId, clientId }) => {
+      const record = await getStory(storyId, clientId);
       if (!record?.prNumber) throw new Error(`Story ${storyId} has no open PR. Run open_pull_request first.`);
 
       const comments = await getPRReviewComments(storyId, record.repoFullName, record.prNumber);
@@ -98,7 +113,10 @@ export function registerRepoTools(server: McpServer) {
 
       // Transition to revision phase if any comments exist
       if (comments.length > 0 && record.status === 'pr_open') {
-        await upsertStory({ ...record, status: 'pr_revision', phase: 2 });
+        // Use the existing deterministic ID for upsert
+        await upsertStory(record.clientId ?? clientId, {
+          ...record, clientId: record.clientId ?? clientId, status: 'pr_revision', phase: 2
+        });
       }
 
       // Fetch updated PR status
@@ -111,7 +129,10 @@ export function registerRepoTools(server: McpServer) {
       if (merged) prStatus = 'merged';
       else if (prState === 'closed') prStatus = 'closed';
 
-      await upsertStory({ ...record, prStatus: prStatus ?? 'open' });
+      // Use the existing deterministic ID for upsert
+      await upsertStory(record.clientId ?? clientId, {
+        ...record, clientId: record.clientId ?? clientId, prStatus: prStatus ?? 'open'
+      });
 
       return {
         content: [{
@@ -131,9 +152,12 @@ export function registerRepoTools(server: McpServer) {
   server.tool(
     'get_story_status',
     'Get the full status of a story including PR state, phase, open comments, and revision history from local DB.',
-    { storyId: z.string().describe('Story reference number e.g. STORY-123') },
-    async ({ storyId }) => {
-      const record = await getStory(storyId);
+    {
+      storyId: z.string().describe('Story reference number e.g. STORY-123'),
+      clientId: z.string().describe('Client ID for multi-tenant context'),
+    },
+    async ({ storyId, clientId }) => {
+      const record = await getStory(storyId, clientId);
       if (!record) throw new Error(`Story ${storyId} not found.`);
       const comments = await getCommentsForStory(storyId);
       return {
@@ -150,13 +174,17 @@ export function registerRepoTools(server: McpServer) {
     'Update the status of a story in local DB (e.g. after implementing changes or merging).',
     {
       storyId: z.string().describe('Story reference number'),
+      clientId: z.string().describe('Client ID for multi-tenant context'),
       status: z.enum(['pending', 'discovery', 'implementing', 'pr_open', 'pr_revision', 'pr_approved', 'merged', 'blocked']),
       notes: z.string().optional().describe('Optional notes to record'),
     },
-    async ({ storyId, status, notes }) => {
-      const record = await getStory(storyId);
+    async ({ storyId, clientId, status, notes }) => {
+      const record = await getStory(storyId, clientId);
       if (!record) throw new Error(`Story ${storyId} not found.`);
-      await upsertStory({ ...record, status, notes: notes ?? record.notes });
+      // Use the existing deterministic ID for upsert
+      await upsertStory(record.clientId ?? clientId, {
+        ...record, clientId: record.clientId ?? clientId, status, notes: notes ?? record.notes
+      });
       return { content: [{ type: 'text', text: `Story ${storyId} updated to status: ${status}` }] };
     }
   );
@@ -176,10 +204,11 @@ export function registerRepoTools(server: McpServer) {
     'Post a comment on a pull request (e.g. revision summary, reviewer response).',
     {
       storyId: z.string().describe('Story reference number'),
+      clientId: z.string().describe('Client ID for multi-tenant context'),
       body: z.string().describe('Comment body in markdown'),
     },
-    async ({ storyId, body }) => {
-      const record = await getStory(storyId);
+    async ({ storyId, clientId, body }) => {
+      const record = await getStory(storyId, clientId);
       if (!record?.prNumber) throw new Error(`Story ${storyId} has no open PR.`);
       const url = await postPRComment(record.repoFullName, record.prNumber, body);
       return { content: [{ type: 'text', text: `Comment posted: ${url}` }] };

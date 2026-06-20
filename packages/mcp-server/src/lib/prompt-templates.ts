@@ -305,6 +305,8 @@ CONSTRAINTS:
     userPromptTemplate: `Assess infrastructure readiness for story {{storyNum}}:
 
 STORY: {{storyName}}
+DESCRIPTION: {{storyDescription}}
+ACCEPTANCE CRITERIA: {{acceptanceCriteria}}
 REPOSITORY: {{repoFullName}} ({{targetBranch}})
 {{#techStack}}TECH STACK: {{techStack}}{{/techStack}}
 
@@ -321,7 +323,7 @@ Ensure your analysis:
 - Identifies infrastructure gaps
 - Recommends monitoring strategy`,
 
-    requiredVariables: ['storyNum', 'storyName', 'repoFullName', 'targetBranch'],
+    requiredVariables: ['storyNum', 'storyName', 'storyDescription', 'acceptanceCriteria', 'repoFullName', 'targetBranch'],
     guidelines: [
       'Ensure infrastructure reliability',
       'Plan for scaling needs',
@@ -372,6 +374,8 @@ COMMUNICATION STYLE:
     userPromptTemplate: `Plan DevOps integration for story {{storyNum}}:
 
 STORY: {{storyName}}
+DESCRIPTION: {{storyDescription}}
+ACCEPTANCE CRITERIA: {{acceptanceCriteria}}
 REPOSITORY: {{repoFullName}} ({{targetBranch}})
 {{#techStack}}TECH STACK: {{techStack}}{{/techStack}}
 
@@ -388,7 +392,7 @@ Ensure your plan:
 - Addresses deployment safety
 - Documents operational procedures`,
 
-    requiredVariables: ['storyNum', 'storyName', 'repoFullName', 'targetBranch'],
+    requiredVariables: ['storyNum', 'storyName', 'storyDescription', 'acceptanceCriteria', 'repoFullName', 'targetBranch'],
     guidelines: [
       'Automate everything possible',
       'Design for reliability',
@@ -459,13 +463,15 @@ Security analysis:
 4. Cryptography and key management
 5. Blocking concerns (if any)
 
+Analyze against the specific security tier and compliance obligations of the client.
+
 ⚠️ IF YOU IDENTIFY BLOCKING SECURITY CONCERNS:
 Mark them clearly with: SECURITY_VETO: [description]
 This will trigger escalation to Captain Picard.
 
 Ensure your analysis:
 - Covers all threat vectors
-- References security policies
+- References client-specific security policies
 - Provides actionable recommendations
 - Escalates blocking concerns`,
 
@@ -474,7 +480,7 @@ Ensure your analysis:
       'Never compromise on security',
       'Identify all threat vectors',
       'Consider insider threats',
-      'Reference compliance requirements',
+      'Reference client-tier compliance requirements',
       'Escalate blocking concerns immediately',
       'Suggest secure alternatives',
     ],
@@ -673,6 +679,8 @@ CONSTRAINTS:
     userPromptTemplate: `Assess system health for story {{storyNum}}:
 
 STORY: {{storyName}}
+DESCRIPTION: {{storyDescription}}
+ACCEPTANCE CRITERIA: {{acceptanceCriteria}}
 REPOSITORY: {{repoFullName}} ({{targetBranch}})
 {{#techStack}}TECH STACK: {{techStack}}{{/techStack}}
 
@@ -689,7 +697,7 @@ Ensure your analysis:
 - Documents runbooks
 - Plans for incident response`,
 
-    requiredVariables: ['storyNum', 'storyName', 'repoFullName', 'targetBranch'],
+    requiredVariables: ['storyNum', 'storyName', 'storyDescription', 'acceptanceCriteria', 'repoFullName', 'targetBranch'],
     guidelines: [
       'Maintain system visibility',
       'Plan comprehensive monitoring',
@@ -720,6 +728,7 @@ EXPERTISE:
 - Communication strategy and planning
 - Stakeholder broadcasting and updates
 - Status tracking and reporting
+- PR descriptions and technical git commit summarization
 - Escalation communication
 - Information architecture
 - Feedback mechanisms
@@ -745,32 +754,44 @@ CONSTRAINTS:
     userPromptTemplate: `Plan communication strategy for story {{storyNum}}:
 
 STORY: {{storyName}}
+ACCEPTANCE CRITERIA: {{acceptanceCriteria}}
 REPOSITORY: {{repoFullName}} ({{targetBranch}})
 {{#reviewers}}REVIEWERS: {{reviewers}}{{/reviewers}}
+{{#findings}}CREW FINDINGS: {{findings}}{{/reviewers}}
 
 Communication analysis:
 1. Stakeholder communication needs
 2. Status tracking and reporting
-3. Escalation communication plan
-4. Feedback mechanisms
-5. Information sharing strategy
+3. Git Commit Summary (Concise summary of all file changes)
+4. Security Sensitivity Score (0-100 based on presence of PHI, PII, or credentials)
+4. Escalation communication plan
+5. Feedback mechanisms
+6. Information sharing strategy
 
 Ensure your plan:
 - Addresses all stakeholder needs
 - Includes status tracking
+  - Provides a SECURITY_SENSITIVITY_SCORE:
+    - 80-100: PHI, Patient Data, or Private Keys detected.
+    - 50-79: Internal strategic roadmaps or PII.
+    - 0-49: Public documentation or routine code logic.
+  - Includes a concise git commit summary of 50-72 characters
 - Plans escalation communication
 - Enables feedback`,
 
-    requiredVariables: ['storyNum', 'storyName', 'repoFullName', 'targetBranch'],
+    requiredVariables: ['storyNum', 'storyName', 'acceptanceCriteria', 'repoFullName', 'targetBranch'],
     guidelines: [
       'Keep stakeholders informed',
       'Use appropriate communication channels',
+      'Always provide a concise git commit summary',
       'Plan escalation paths',
       'Enable feedback loops',
       'Balance frequency with need',
     ],
     outputFormat: `FINDINGS: [Communication needs assessment]
 RECOMMENDATIONS: [Communication strategy and cadence]
+COMMIT_SUMMARY: [Concise git commit message summary]
+SECURITY_SENSITIVITY_SCORE: [Numeric score 0-100]
 CONFIDENCE: [0-100 confidence score]`,
     createdAt: '2026-06-05T00:00:00Z',
     updatedAt: '2026-06-05T00:00:00Z',
@@ -817,6 +838,8 @@ CONSTRAINTS:
     userPromptTemplate: `Analyze financial impact for story {{storyNum}}:
 
 STORY: {{storyName}}
+DESCRIPTION: {{storyDescription}}
+ACCEPTANCE CRITERIA: {{acceptanceCriteria}}
 REPOSITORY: {{repoFullName}} ({{targetBranch}})
 {{#techStack}}TECH STACK: {{techStack}}{{/techStack}}
 

@@ -72,7 +72,7 @@ $$ LANGUAGE plpgsql;
 
 -- Function to retrieve crew personal memories
 CREATE OR REPLACE FUNCTION get_crew_personal_memory(
-  crew_id TEXT,
+  p_crew_id TEXT,
   memory_limit INT DEFAULT 10,
   include_private BOOLEAN DEFAULT TRUE
 )
@@ -111,7 +111,7 @@ $$ LANGUAGE plpgsql;
 
 -- Function to search crew personal memories by text
 CREATE OR REPLACE FUNCTION search_crew_personal_memory(
-  crew_id TEXT,
+  p_crew_id TEXT,
   search_query TEXT,
   memory_limit INT DEFAULT 10
 )
@@ -150,7 +150,7 @@ $$ LANGUAGE plpgsql;
 
 -- Function to search crew memories by semantic embedding
 CREATE OR REPLACE FUNCTION search_crew_personal_memory_by_embedding(
-  crew_id TEXT,
+  p_crew_id TEXT,
   embedding_vector VECTOR(1536),
   memory_limit INT DEFAULT 10,
   similarity_threshold FLOAT DEFAULT 0.7
@@ -246,21 +246,25 @@ ALTER TABLE sa_crew_personal_memory ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 -- Crew members can only see their own memories (unless shared)
+DROP POLICY IF EXISTS "crew_can_view_own_memories" ON sa_crew_personal_memory;
 CREATE POLICY "crew_can_view_own_memories" ON sa_crew_personal_memory
   FOR SELECT
   USING (crew_id = auth.jwt()->>'crew_id' OR is_private = FALSE);
 
 -- Crew members can insert their own memories
+DROP POLICY IF EXISTS "crew_can_insert_own_memories" ON sa_crew_personal_memory;
 CREATE POLICY "crew_can_insert_own_memories" ON sa_crew_personal_memory
   FOR INSERT
   WITH CHECK (crew_id = auth.jwt()->>'crew_id');
 
 -- Crew members can update their own memories
+DROP POLICY IF EXISTS "crew_can_update_own_memories" ON sa_crew_personal_memory;
 CREATE POLICY "crew_can_update_own_memories" ON sa_crew_personal_memory
   FOR UPDATE
   USING (crew_id = auth.jwt()->>'crew_id');
 
 -- Crew members can delete their own memories
+DROP POLICY IF EXISTS "crew_can_delete_own_memories" ON sa_crew_personal_memory;
 CREATE POLICY "crew_can_delete_own_memories" ON sa_crew_personal_memory
   FOR DELETE
   USING (crew_id = auth.jwt()->>'crew_id');
@@ -274,6 +278,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_crew_personal_memory_updated_at ON sa_crew_personal_memory;
 CREATE TRIGGER trigger_update_crew_personal_memory_updated_at
   BEFORE UPDATE ON sa_crew_personal_memory
   FOR EACH ROW

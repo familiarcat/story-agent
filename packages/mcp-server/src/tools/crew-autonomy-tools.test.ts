@@ -8,6 +8,7 @@ vi.mock('../../../shared/src/db.js', () => ({
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
     contains: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     single: vi.fn(),
@@ -34,22 +35,40 @@ describe('Crew Autonomy Tools', () => {
   it('registers all tools including domain-specific ones', () => {
     const expectedTools = [
       'crew:get-personal-profile',
+      'crew:get-console-status',
+      'crew:assume-station',
+      'crew:get-station-briefing',
+      'crew:get-campaign-summary',
+      'crew:request-station-support',
+      'crew:request-tool-access',
+      'crew:list-clients',
       'crew:list-active-projects',
+      'crew:list-epics',
       'crew:list-active-sprints',
       'crew:query-stories',
       'crew:get-relevant-memories',
       'crew:store-learning',
       'picard:assess-readiness',
       'data:review-architecture',
+      'data:analyze-type-safety',
       'riker:plan-execution',
+      'geordi:scaffold-vscode-tool',
+      'obrien:integrate-mcp-transport',
       'geordi:assess-infrastructure',
       'obrien:plan-deployment',
+      'obrien:audit-workspace',
+      'geordi:verify-build-references',
+      'obrien:sync-dependencies',
       'worf:security-audit',
+      'worf:veto-scaffolding',
       'yar:assess-test-coverage',
+      'yar:audit-scaffolding',
       'troi:assess-stakeholder-impact',
+      'troi:analyze-ux-alignment',
       'crusher:diagnose-system-health',
       'uhura:draft-communication',
-      'quark:analyze-costs'
+      'quark:analyze-costs',
+      'quark:audit-tool-costs'
     ];
     expectedTools.forEach(tool => {
       expect(toolHandlers[tool]).toBeDefined();
@@ -64,6 +83,16 @@ describe('Crew Autonomy Tools', () => {
     const result = await toolHandlers['crew:get-personal-profile']({ crewId: 'picard' });
     expect(result.content[0].text).toContain('picard');
     expect(mockDb.from).toHaveBeenCalledWith('sa_crew_personas');
+  });
+
+  it('crew:list-clients fetches from clients table', async () => {
+    const mockClients = [{ id: 'client-1', name: 'Bayer' }];
+    const mockDb = await getDbClient();
+    (mockDb.from as any)().select().order.mockResolvedValue({ data: mockClients, error: null });
+
+    const result = await toolHandlers['crew:list-clients']({});
+    expect(result.content[0].text).toContain('Bayer');
+    expect(mockDb.from).toHaveBeenCalledWith('clients');
   });
 
   it('crew:list-active-projects handles clientId filter', async () => {
@@ -107,9 +136,19 @@ describe('Crew Autonomy Tools', () => {
     expect(storeObservationMemory).toHaveBeenCalled();
   });
 
-  it('stubs return placeholder TODO data', async () => {
+  it('assess-readiness returns calculated readiness status', async () => {
     const result = await toolHandlers['picard:assess-readiness']({ projectId: 'p1', readinessArea: 'technical' });
     const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.readiness).toBe('TODO');
+    expect(['at_risk', 'high', 'medium']).toContain(parsed.readiness);
+  });
+
+  it('data:analyze-type-safety identifies "any" usage in critical interfaces', async () => {
+    const codeSnippet = `interface AuthContext { user: any; token: string; }`;
+    const criticalInterfaces = ['AuthContext'];
+    const result = await toolHandlers'data:analyze-type-safety';
+    const parsed = JSON.parse(result.content[0].text);
+    expect(parsed.status).toBe('REVIEW_REQUIRED');
+    expect(parsed.findings).toContain("Critical interface 'AuthContext' contains 'any' type usage.");
+    expect(parsed.recommendations).toContain("Refactor 'AuthContext' to use specific types instead of 'any'.");
   });
 });

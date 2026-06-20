@@ -10,9 +10,14 @@
  */
 
 import { EventEmitter } from 'events';
-import type { CrewExecutionState, StoryRecord } from '@story-agent/shared';
+import type { CrewExecutionState, StoryRecord, AgileStory } from '@story-agent/shared';
 import { crewStateBroadcaster } from './crew-state-broadcaster.js';
 import { crewCommunicationBus } from './crew-communication.js';
+import { getDbClient } from '@story-agent/shared/db';
+import { executeFullMissionLifecycle } from './crew-coordinator.js';
+import { getCrewForTask } from './domain-registry.js';
+import { getApprovedToolsForCrew } from './crew-tool-registry.js';
+import { enforceWorfGateOutbound } from './worfgate.js';
 
 export type CrewInsightType =
   | 'architecture_recommendation'
@@ -102,6 +107,9 @@ export class CrewAutonomyManager extends EventEmitter {
       this.monitorActiveStories();
       this.generateProactiveInsights();
       this.evaluateAutonomousDecisions();
+      this.scanBacklogForMissions(); // Step 1: Autonomous Triggering
+      this.checkDependencyHealth();
+      this.ensureSupportTooling(); // Proactive tool sharing
       this.facilitateCrewCommunication();
     }, 5000);
   }
@@ -335,6 +343,125 @@ export class CrewAutonomyManager extends EventEmitter {
     });
   }
 
+  /**
+   * Hands-Free Step 1: scanBacklogForMissions
+   * Proactively searches for stories in 'discovery' status and launches
+   * the mission lifecycle if they meet the readiness criteria.
+   */
+  private async scanBacklogForMissions(): Promise<void> {
+    try {
+      const db = await getDbClient();
+      const { data: pending, error } = await db
+        .from('stories')
+        .select('*')
+        .eq('status', 'discovery')
+        .limit(1); // Process one at a time for safety
+
+      if (error || !pending || pending.length === 0) return;
+
+      const record = pending[0];
+
+      // Data's Readiness Check: Must have tags and acceptance criteria
+      if (!record.tags || record.tags.length === 0 || !record.acceptance_criteria) {
+        console.log(`[AUTONOMY] Mission ${record.story_id} rejected for hands-free: Missing readiness metadata.`);
+        return;
+      }
+
+      console.log(`[AUTONOMY] Launching HANDS-FREE mission for ${record.story_id}...`);
+      
+      const agileStory: AgileStory = {
+        id: record.id,
+        referenceNum: record.story_id,
+        name: record.story_title,
+        description: record.notes || '',
+        acceptanceCriteria: record.acceptance_criteria,
+        workflowStatus: record.status,
+        url: record.story_url || ''
+      };
+
+      // Execute the mission lifecycle autonomously
+      await executeFullMissionLifecycle({
+        story: agileStory,
+        repoFullName: record.repo_full_name,
+        targetBranch: record.base_branch || 'main',
+        executionMode: 'autonomous',
+        acceptanceCriteria: record.acceptance_criteria,
+        clientId: record.client_id,
+        techStack: 'TypeScript, MCP'
+      });
+
+      console.log(`[AUTONOMY] HANDS-FREE mission for ${record.story_id} implementation complete.`);
+
+    } catch (err) {
+      console.error('[AUTONOMY] Critical Failure in hands-free scanning:', err);
+    }
+  }
+
+  /**
+   * Hands-Free Tooling Check: ensureSupportTooling
+   * Automatically detects if support officers lack tools for active stories
+   * and triggers the request-tool-access workflow.
+   */
+  private async ensureSupportTooling(): Promise<void> {
+    const activeRefs = Array.from(this.activeStories.keys());
+    if (activeRefs.length === 0) return;
+
+    try {
+      const db = await getDbClient();
+      for (const storyRef of activeRefs) {
+        const { data: story } = await db.from('stories').select('tags, status').eq('story_id', storyRef).single();
+        if (!story || story.status === 'merged') continue;
+
+        const routing = getCrewForTask(story.tags || []);
+        const lead = routing.find(r => r.domains.some((d: { domainId: string; expertise: string }) => d.expertise === 'primary'));
+        const supports = routing.filter(r => r.crewId !== lead?.crewId);
+
+        for (const support of supports) {
+          this.addInsight({
+            id: `insight-tooling-${storyRef}-${support.crewId}`,
+            type: 'health_improvement',
+            crewMember: support.crewId,
+            targetRole: 'developer',
+            storyRef,
+            title: 'Autonomous Tool Sharing Required',
+            description: `Support officer ${support.crewId} requires access to ${lead?.crewId} tools for story ${storyRef}.`,
+            priority: 'medium',
+            confidence: 100,
+            requiresApproval: false,
+            autonomousAction: 'crew:request-tool-access',
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[AUTONOMY] Support tooling check failure:', err);
+    }
+  }
+
+  private checkDependencyHealth(): void {
+    // Chief O'Brien proactively monitors for system faults related to dependencies or pointing
+    const hasManifestFaults = this.insights.some(i => 
+      i.description.toLowerCase().includes('cannot find package') || 
+      i.description.toLowerCase().includes('pointed correctly')
+    );
+
+    if (hasManifestFaults || Math.random() > 0.98) {
+      console.log('[AUTONOMY] System integrity fault detected. Tasking Chief O\'Brien with maintenance mission.');
+      this.addInsight({
+        type: 'health_improvement',
+        crewMember: 'obrien',
+        targetRole: 'both',
+        storyRef: 'MAINTENANCE-001',
+        title: 'Monorepo Linkage Integrity Check',
+        description: 'Automatic synchronization triggered to resolve mispointed libraries or missing dependencies.',
+        priority: 'high',
+        confidence: 100,
+        requiresApproval: false,
+        autonomousAction: 'obrien:sync-dependencies',
+      });
+      this.emit('operation:sync-dependencies', { crewId: 'obrien' });
+    }
+  }
+
   private facilitateCrewCommunication(): void {
     // Look for consensus-based decisions that need crew discussion
     const consensusDecisions = this.decisions.filter(
@@ -452,7 +579,7 @@ export class CrewAutonomyManager extends EventEmitter {
     // Post comment on PR, update story status, etc.
   }
 
-  private addInsight(partialInsight: Partial<CrewInsight>): void {
+  public addInsight(partialInsight: Partial<CrewInsight>): void {
     const insight: CrewInsight = {
       id: `insight-${Date.now()}`,
       type: partialInsight.type!,

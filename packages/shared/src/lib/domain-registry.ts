@@ -577,13 +577,16 @@ export const DOMAIN_REGISTRY = {
   },
 };
 
+type DomainId = keyof typeof DOMAIN_REGISTRY;
+type DomainOwner = (typeof DOMAIN_REGISTRY)[DomainId]['owners'][number];
+
 /**
  * Get all domains owned by a crew member
  */
-export function getCrewDomains(crewId) {
+export function getCrewDomains(crewId: string) {
   const domains = [];
   for (const [domainId, domain] of Object.entries(DOMAIN_REGISTRY)) {
-    const ownership = domain.owners.find(o => o.crewId === crewId);
+    const ownership = domain.owners.find((o: DomainOwner) => o.crewId === crewId);
     if (ownership) {
       domains.push({
         domainId,
@@ -599,18 +602,18 @@ export function getCrewDomains(crewId) {
 /**
  * Get all crew members responsible for a domain
  */
-export function getDomainExperts(domainId, expertiseLevel = null) {
-  const domain = DOMAIN_REGISTRY[domainId];
+export function getDomainExperts(domainId: string, expertiseLevel: string | null = null) {
+  const domain = DOMAIN_REGISTRY[domainId as DomainId];
   if (!domain) {
     return [];
   }
 
-  let experts = domain.owners;
+  let experts: DomainOwner[] = domain.owners;
   if (expertiseLevel) {
-    experts = experts.filter(o => o.expertise === expertiseLevel);
+    experts = experts.filter((o: DomainOwner) => o.expertise === expertiseLevel);
   }
 
-  return experts.map(o => ({
+  return experts.map((o: DomainOwner) => ({
     crewId: o.crewId,
     expertise: o.expertise,
     reason: o.reason,
@@ -620,7 +623,7 @@ export function getDomainExperts(domainId, expertiseLevel = null) {
 /**
  * Get primary expert for a domain
  */
-export function getPrimaryExpert(domainId) {
+export function getPrimaryExpert(domainId: string) {
   const experts = getDomainExperts(domainId, 'primary');
   return experts.length > 0 ? experts[0].crewId : null;
 }
@@ -628,16 +631,16 @@ export function getPrimaryExpert(domainId) {
 /**
  * Check if a crew member has expertise in a domain
  */
-export function hasExpertise(crewId, domainId) {
-  const domain = DOMAIN_REGISTRY[domainId];
-  return domain && domain.owners.some(o => o.crewId === crewId);
+export function hasExpertise(crewId: string, domainId: string) {
+  const domain = DOMAIN_REGISTRY[domainId as DomainId];
+  return domain && domain.owners.some((o: DomainOwner) => o.crewId === crewId);
 }
 
 /**
  * Get all related domains for a given domain
  */
-export function getRelatedDomains(domainId) {
-  const domain = DOMAIN_REGISTRY[domainId];
+export function getRelatedDomains(domainId: string) {
+  const domain = DOMAIN_REGISTRY[domainId as DomainId];
   return domain ? domain.relatedDomains || [] : [];
 }
 
@@ -645,7 +648,7 @@ export function getRelatedDomains(domainId) {
  * Get crew members for a task by domain classification
  * Useful for auto-routing tasks to appropriate SMEs
  */
-export function getCrewForTask(taskDomains) {
+export function getCrewForTask(taskDomains: string[]) {
   const crewMembers = new Map();
 
   for (const domainId of taskDomains) {
@@ -679,8 +682,8 @@ export function generateDomainOwnershipReport() {
   const report = {
     timestamp: new Date().toISOString(),
     totalDomains: Object.keys(DOMAIN_REGISTRY).length,
-    domains: {},
-    crewDistribution: {},
+    domains: {} as Record<string, unknown>,
+    crewDistribution: {} as Record<string, unknown>,
   };
 
   // Aggregate by domain

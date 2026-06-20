@@ -23,6 +23,7 @@ export interface AhaStory {
   name: string;
   description: string;
   acceptanceCriteria: string;
+  epicId?: string; // Added for hierarchical context
   url: string;
   workflowStatus: string;
 }
@@ -105,11 +106,13 @@ export interface StoryRecord {
   phase: 1 | 2;             // 1 = implementation, 2 = revision
   createdAt: string;
   updatedAt: string;
+  acceptanceCriteria: string;
   notes: string | null;
   clientId?: string | null;
   clientName?: string | null;
   projectId?: string | null;
   projectName?: string | null;
+  epicId?: string | null;
   sprintId?: string | null;
   sprintName?: string | null;
 }
@@ -350,6 +353,8 @@ export interface ObservationDebateResult {
 export interface ObservationMemoryRecord {
   id: string;
   storyId: string;
+  /** Crew member this memory belongs to (baseline/personal memories); null for shared lounge memories */
+  crewId?: string | null;
   /** Client org that owns this memory — used for memory isolation between clients */
   clientId: string | null;
   source: 'mcp' | 'ui';

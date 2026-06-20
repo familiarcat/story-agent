@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { AgileStory } from '../../../shared/src/index.js';
+import type { AgileStory } from '@story-agent/shared';
 import {
   captainPicardAnalysis,
   dataArchitectAnalysis,
@@ -35,6 +35,7 @@ export function registerCrewMemberTools(server: McpServer): void {
     name: args.storyName || 'Unknown',
     description: args.storyDescription || '',
     acceptanceCriteria: args.acceptanceCriteria || '',
+    epicId: args.epicId || undefined, // Pass epicId if available
     referenceNum: args.referenceNum || '',
     url: '',
     workflowStatus: 'ready',

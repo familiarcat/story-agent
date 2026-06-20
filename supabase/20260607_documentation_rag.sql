@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS sa_documentation (
   id BIGSERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   category TEXT NOT NULL, -- 'setup', 'crew', 'domain-driven', 'automation', 'testing'
-  source_path TEXT NOT NULL UNIQUE, -- docs/category/filename.md
+  source_path TEXT NOT NULL, -- docs/category/filename.md (uniqueness is composite with chunk_index)
   filename TEXT NOT NULL,
   chunk_index INT NOT NULL DEFAULT 0, -- For documents split into chunks
   chunk_count INT NOT NULL DEFAULT 1, -- Total chunks for this document
@@ -178,19 +178,23 @@ $$ LANGUAGE plpgsql STABLE;
 ALTER TABLE sa_documentation ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies: documentation is readable by all authenticated users
+DROP POLICY IF EXISTS "documentation_readable_by_all" ON sa_documentation;
 CREATE POLICY "documentation_readable_by_all" ON sa_documentation
   FOR SELECT
   USING (is_searchable = TRUE);
 
 -- Only service role can insert/update/delete documentation
+DROP POLICY IF EXISTS "documentation_write_by_service" ON sa_documentation;
 CREATE POLICY "documentation_write_by_service" ON sa_documentation
   FOR INSERT
   WITH CHECK (auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "documentation_update_by_service" ON sa_documentation;
 CREATE POLICY "documentation_update_by_service" ON sa_documentation
   FOR UPDATE
   USING (auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "documentation_delete_by_service" ON sa_documentation;
 CREATE POLICY "documentation_delete_by_service" ON sa_documentation
   FOR DELETE
   USING (auth.role() = 'service_role');
@@ -225,6 +229,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_documentation_updated_at ON sa_documentation;
 CREATE TRIGGER trigger_update_documentation_updated_at
   BEFORE UPDATE ON sa_documentation
   FOR EACH ROW

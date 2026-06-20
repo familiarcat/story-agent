@@ -13,6 +13,7 @@ import { registerDocTools } from './tools/doc-tools-register.js';
 import { registerStarshipTools } from './tools/starship-tools.js';
 import { registerCrewIntegrityTools } from './tools/crew-integrity-tools.js';
 import { CrewWebSocketServer } from './lib/websocket-server.js';
+import { startRagHttpServer } from './lib/rag-http-server.js';
 import { createHttpAuthMiddleware, reportMissingCredentialsAtStartup } from './lib/http-auth-middleware.js';
 
 const server = new McpServer({
@@ -99,6 +100,13 @@ async function main() {
         `  Auth: Bearer token required (Bayer-tier: Entra JWT). Set BAYER_ENTRA_TENANT_ID, BAYER_ENTRA_AUDIENCE, BAYER_ENTRA_JWKS_URI.\n`,
       );
     });
+  }
+
+  // ── RAG read service (crew cloud memory for the VS Code assistant) ──────────
+  // Enabled by default on localhost; opt out with STORY_AGENT_RAG_DISABLE=1.
+  if (process.env.STORY_AGENT_RAG_DISABLE !== '1') {
+    const ragPort = parseInt(process.env.STORY_AGENT_RAG_PORT ?? '3102', 10) || 3102;
+    startRagHttpServer(ragPort);
   }
 
   // ── WebSocket server (optional, crew state broadcasting) ───────────────────

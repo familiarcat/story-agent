@@ -23,6 +23,9 @@
     "ext:install-local": "code --install-extension packages/vscode-extension/story-agent-vscode-1.0.0.vsix --force",
     "web:build-local": "pnpm --filter @story-agent/ui build",
     "web:start-local": "cd packages/ui && node_modules/.bin/next start -p 3000",
+    "bridge:view": "pnpm run ui",
+    "bridge:all": "pnpm --filter @story-agent/shared build && pnpm run crew:sync-ui && concurrently --names MCP,UI,MONITOR --colors magenta,blue,cyan \"pnpm run mcp\" \"pnpm run bridge:view\" \"npx ts-node scripts/list-all-stories.ts\"",
+    "crew:sync-ui": "npx ts-node scripts/update-tool-ui-metadata.ts",
     "publish:local": "pnpm run web:build-local && pnpm run ext:package",
     "db:migrate": "node scripts/run-migrations-auto.mjs",
     "db:migrate:test": "node scripts/test-migrations.mjs",
@@ -44,6 +47,7 @@
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",
+    "dotenv": "^16.4.7",
     "concurrently": "^9.1.0",
     "typescript": "^5.7.2"
   }

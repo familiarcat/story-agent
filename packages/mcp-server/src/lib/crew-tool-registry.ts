@@ -18,6 +18,7 @@
 
 import { getDbClient } from '@story-agent/shared/db';
 import { executePromptEngineCall } from './prompt-engine.js';
+import { getCrewForTask } from './domain-registry.js';
 import type { CrewId } from './crew-personas.js';
 
 export type ToolCategory =
@@ -63,6 +64,12 @@ export interface ToolRecord {
   crewVotes: Partial<Record<CrewId, 'approve' | 'reject' | 'abstain'>>;
   /** Per-crew evaluation notes */
   crewEvaluationNotes: Partial<Record<CrewId, string>>;
+  /** UI hints for LCARS console rendering */
+  uiMetadata?: {
+    icon?: string;
+    color?: 'gold' | 'blue' | 'red' | 'purple';
+    component?: string; // e.g. 'SecurityAuditWidget'
+  };
   metadata: Record<string, unknown>;
   lastEvaluatedAt?: string;
   createdAt?: string;
@@ -425,25 +432,52 @@ async function persistToolRecord(tool: ToolRecord): Promise<void> {
 
 /**
  * Get all approved tools for a specific crew member (filtered by their role).
+ * Supports "Support Officer Elevation" if a storyId is provided for a high-priority mission.
  */
-export async function getApprovedToolsForCrew(crewId: CrewId): Promise<ToolRecord[]> {
+export async function getApprovedToolsForCrew(crewId: CrewId, storyId?: string): Promise<ToolRecord[]> {
   try {
     const db = await getDbClient();
-    const { data, error } = await db
+    const { data: allTools, error } = await db
       .from('sa_tool_registry')
       .select('*')
       .eq('status', 'approved')
       .eq('worf_veto', false);
 
-    if (error || !data) return [];
+    if (error || !allTools) return [];
 
-    // Filter to tools relevant for this crew member's role
-    const relevantCategories = Object.entries(TOOL_EVALUATORS)
-      .filter(([, evaluators]) => evaluators.includes(crewId))
-      .map(([cat]) => cat as ToolCategory);
+    const relevantCategories = new Set<ToolCategory>();
+    
+    // 1. Add categories for the member's primary/secondary domains
+    Object.entries(TOOL_EVALUATORS).forEach(([cat, evaluators]) => {
+      if (evaluators.includes(crewId)) {
+        relevantCategories.add(cat as ToolCategory);
+      }
+    });
 
-    return (data as Record<string, unknown>[])
-      .filter((t) => relevantCategories.includes(t['category'] as ToolCategory))
+    // 2. Support Officer Elevation: If this is a high-priority mission and we are supporting, 
+    // gain access to the Lead's tool categories.
+    if (storyId) {
+      const { data: story } = await db.from('stories').select('tags, status').eq('story_id', storyId).single();
+      if (story && story.status !== 'merged') {
+        const routing = getCrewForTask(story.tags || []);
+        const isSupport = routing.some(r => r.crewId === crewId && !r.domains.some((d: { domainId: string; expertise: string }) => d.expertise === 'primary'));
+        
+        if (isSupport) {
+          // Identify categories of the primary lead to share them with the support console
+          const leadId = routing.find(r => r.domains.some((d: { domainId: string; expertise: string }) => d.expertise === 'primary'))?.crewId;
+          if (leadId) {
+            Object.entries(TOOL_EVALUATORS).forEach(([cat, evaluators]) => {
+              if (evaluators.includes(leadId as CrewId)) {
+                relevantCategories.add(cat as ToolCategory);
+              }
+            });
+          }
+        }
+      }
+    }
+
+    return (allTools as Record<string, unknown>[])
+      .filter((t) => relevantCategories.has(t['category'] as ToolCategory))
       .map((t) => ({
         id: t['id'] as string,
         name: t['name'] as string,
@@ -460,6 +494,7 @@ export async function getApprovedToolsForCrew(crewId: CrewId): Promise<ToolRecor
         worfVetoReason: t['worf_veto_reason'] as string | undefined,
         crewVotes: (t['crew_votes'] as ToolRecord['crewVotes']) ?? {},
         crewEvaluationNotes: (t['crew_evaluation_notes'] as ToolRecord['crewEvaluationNotes']) ?? {},
+        uiMetadata: (t['ui_metadata'] as ToolRecord['uiMetadata']) ?? { icon: 'default', color: 'gold' },
         metadata: (t['metadata'] as Record<string, unknown>) ?? {},
         lastEvaluatedAt: t['last_evaluated_at'] as string | undefined,
         createdAt: t['created_at'] as string | undefined,

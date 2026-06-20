@@ -576,6 +576,79 @@ export const DOMAIN_REGISTRY = {
     ],
     relatedDomains: ['documentation:knowledge', 'crew:coordination'],
   },
+
+  // Domain 11: IDE & CLI Scaffolding
+  'infrastructure:scaffolding': {
+    name: 'Tool Scaffolding & Technical Foundation',
+    description: 'Scaffolding package structures, entry points, and build configurations for extensions and CLIs',
+    owners: [
+      {
+        crewId: 'geordi',
+        expertise: 'primary',
+        reason: 'Infrastructure expert — builds the technical foundations that other tools inhabit',
+      },
+      {
+        crewId: 'obrien',
+        expertise: 'secondary',
+        reason: 'DevOps expert — ensures scaffolding aligns with deployment and build standards',
+      },
+    ],
+    relatedDomains: ['deployment:cicd', 'vscode:extension'],
+  },
+
+  'vscode:extension': {
+    name: 'VS Code Extension Development',
+    description: 'Developing VS Code extensions, webviews, and command integration',
+    owners: [
+      {
+        crewId: 'geordi',
+        expertise: 'primary',
+        reason: 'Builds performance-optimized IDE extensions and observing tools',
+      },
+    ],
+    relatedDomains: ['infrastructure:scaffolding', 'mcp:transport'],
+  },
+
+  'mcp:transport': {
+    name: 'MCP Transport Layer',
+    description: 'Implementing WebSocket and Stdio transport protocols for MCP communication',
+    owners: [
+      {
+        crewId: 'obrien',
+        expertise: 'primary',
+        reason: 'Operations expert — master of service bridging and transport reliability',
+      },
+      {
+        crewId: 'geordi',
+        expertise: 'secondary',
+        reason: 'Engineering — ensures transport layer is performance-optimized',
+      },
+    ],
+    relatedDomains: ['devops:integration', 'vscode:extension'],
+  },
+
+  'vscode:webview': {
+    name: 'VS Code Webview UI Design',
+    description: 'Designing user interfaces for VS Code webviews and dashboards',
+    owners: [
+      {
+        crewId: 'troi',
+        expertise: 'primary',
+        reason: 'UX expert — ensures the UI provides clear visualization of mission data',
+      },
+      {
+        crewId: 'geordi',
+        expertise: 'secondary',
+        reason: 'Engineering — ensures UI implementation is performant and consistent',
+      },
+      {
+        crewId: 'data',
+        expertise: 'secondary',
+        reason: 'Architecture — ensures UI code adheres to architectural patterns and type safety',
+      },
+    ],
+    relatedDomains: ['vscode:extension', 'crew:communication'],
+  },
 };
 
 /**

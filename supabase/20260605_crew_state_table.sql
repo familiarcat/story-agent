@@ -65,21 +65,29 @@ CREATE INDEX IF NOT EXISTS idx_sa_crew_state_updated_at
   ON public.sa_crew_state(updated_at DESC);
 
 -- Enable real-time broadcasts for this table
-ALTER PUBLICATION supabase_realtime ADD TABLE public.sa_crew_state;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname='supabase_realtime' AND schemaname='public' AND tablename='sa_crew_state') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.sa_crew_state;
+  END IF;
+END $$;
 
 -- Row-level security
 ALTER TABLE public.sa_crew_state ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.sa_crew_state;
 CREATE POLICY "Enable read access for all authenticated users"
   ON public.sa_crew_state
   FOR SELECT
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Enable insert access for authenticated users" ON public.sa_crew_state;
 CREATE POLICY "Enable insert access for authenticated users"
   ON public.sa_crew_state
   FOR INSERT
   WITH CHECK (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Enable update access for story owners" ON public.sa_crew_state;
 CREATE POLICY "Enable update access for story owners"
   ON public.sa_crew_state
   FOR UPDATE

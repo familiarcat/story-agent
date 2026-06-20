@@ -59,6 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_sa_client_security_policies_tier
   ON sa_client_security_policies(tier);
 
 ALTER TABLE sa_client_security_policies ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON sa_client_security_policies;
 CREATE POLICY "Service role full access" ON sa_client_security_policies
   USING (auth.role() = 'service_role');
 
@@ -175,6 +176,32 @@ CREATE TABLE IF NOT EXISTS sa_mission_debriefs (
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Reconcile schema: sa_mission_debriefs may already exist from an earlier migration
+-- (20260606_crew_starship_tables.sql) with a different column set, in which case the
+-- CREATE TABLE IF NOT EXISTS above is a no-op. Converge to the security-aware schema so
+-- the indexes/policies below succeed regardless of which migration created the table.
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS story_id              TEXT;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS story_title           TEXT;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS client_id             TEXT REFERENCES sa_client_security_policies(client_id);
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS initiated_by_project  TEXT DEFAULT 'story-agent';
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS security_tier         TEXT DEFAULT 'enterprise';
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS session_id            TEXT;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS crew_participants     TEXT[] DEFAULT '{}';
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS fast_mode             BOOLEAN DEFAULT TRUE;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS worfgate_cleared      BOOLEAN DEFAULT FALSE;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS worfgate_veto_reason  TEXT;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS final_decision        TEXT;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS consensus_summary     TEXT;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS unresolved_risks      TEXT[] DEFAULT '{}';
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS action_items          TEXT[] DEFAULT '{}';
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS phase                 INTEGER DEFAULT 1;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS repo_full_name        TEXT;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS branch                TEXT;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS pr_number             INTEGER;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS started_at            TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS completed_at          TIMESTAMPTZ;
+ALTER TABLE sa_mission_debriefs ADD COLUMN IF NOT EXISTS duration_ms           INTEGER;
+
 CREATE INDEX IF NOT EXISTS idx_sa_mission_debriefs_story_id
   ON sa_mission_debriefs(story_id);
 CREATE INDEX IF NOT EXISTS idx_sa_mission_debriefs_client_id
@@ -187,6 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_sa_mission_debriefs_security_tier
   ON sa_mission_debriefs(security_tier);
 
 ALTER TABLE sa_mission_debriefs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON sa_mission_debriefs;
 CREATE POLICY "Service role full access" ON sa_mission_debriefs
   USING (auth.role() = 'service_role');
 
@@ -228,5 +256,6 @@ CREATE INDEX IF NOT EXISTS idx_sa_http_auth_audit_allowed
   ON sa_http_auth_audit(allowed);
 
 ALTER TABLE sa_http_auth_audit ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON sa_http_auth_audit;
 CREATE POLICY "Service role full access" ON sa_http_auth_audit
   USING (auth.role() = 'service_role');

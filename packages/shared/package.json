@@ -19,8 +19,8 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
     "test": "vitest run",
     "test:unit": "RUN_MODE=unit vitest run",
     "test:integration": "RUN_MODE=integration TEST_ENV=local vitest run",
