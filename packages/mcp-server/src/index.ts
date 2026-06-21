@@ -18,6 +18,7 @@ import { registerAhaTools } from './tools/aha-tools.js';
 import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
 import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
+import { registerSkillTools } from './tools/skill-tools.js';
 import { startAgentHttpServer } from './agent-core/http-server.js';
 import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
 import { initWorfGateCredentialProviders } from '@story-agent/shared/worfgate-credential-providers';
@@ -41,6 +42,7 @@ registerAhaTools(server);  // 📋 Aha! — crew project/epic/story/sprint manag
 registerCrewMissionTools(server);  // 🧭 6-stage pipeline: Picard→Riker→Quark→crew→Quark→Picard
 registerClientTools(server);  // 👥 client onboarding + hierarchy (WorfGate-governed)
 registerWorfGateTools(server);  // 🛡️ Worf's credential broker (presence/audit; values never exposed)
+registerSkillTools(server);  // 📚 5W1H skill-theory introspection (describe_skill / coverage)
 
 async function main() {
   // Initialize async tool registrations
@@ -108,6 +110,7 @@ async function main() {
           registerCrewMissionTools(perRequestServer);  // 🧭 mission pipeline over HTTP
           registerClientTools(perRequestServer);  // 👥 client onboarding over HTTP
           registerWorfGateTools(perRequestServer);  // 🛡️ Worf credential broker over HTTP
+          registerSkillTools(perRequestServer);  // 📚 skill-theory introspection over HTTP
 
           await perRequestServer.connect(httpTransport);
 

@@ -29,6 +29,10 @@
       "import": "./dist/src/worfgate-credential-providers.js",
       "types": "./dist/src/worfgate-credential-providers.d.ts"
     },
+    "./skill-theory": {
+      "import": "./dist/src/skill-theory.js",
+      "types": "./dist/src/skill-theory.d.ts"
+    },
     "./aha-credentials": {
       "import": "./dist/src/aha-credentials.js",
       "types": "./dist/src/aha-credentials.d.ts"
