@@ -281,6 +281,7 @@ When to involve O'Brien:
       'security:rls',
       'security:secrets',
       'security:audit',
+      'security:credential-brokerage',
       'tenancy:isolation',
     ],
 
@@ -307,6 +308,13 @@ boundaries in configuration & environment variables.
 **Secrets Management**: Manages API keys, tokens, and credentials. Ensures secrets
 are rotated regularly. Prevents secret leakage in logs, error messages, or git history.
 Validates GitHub Actions uses secrets securely.
+
+**WorfGate Credential Brokerage (owned skill)**: Worf OWNS the WorfGate Credential Broker
+(resolveWorfGateCredential / credentialStatus). The crew obtains environment-loaded credentials
+(~/.zshrc / ~/.alexai-secrets) for authorized operations THROUGH Worf — he authorizes by crew
+identity, audits every access, and guarantees the secret value is never logged or serialized.
+Any crew request needing a credentialed action (supabase:migrate, aws:deploy, aha:write,
+github:push, llm:call) is brokered here automatically rather than failing.
 
 **Security Auditing**: Audits code for security vulnerabilities. Reviews RLS policies.
 Validates authentication & authorization. Tracks security compliance.

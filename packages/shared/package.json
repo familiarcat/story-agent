@@ -21,6 +21,10 @@
       "import": "./dist/src/client-registry.js",
       "types": "./dist/src/client-registry.d.ts"
     },
+    "./worfgate-credentials": {
+      "import": "./dist/src/worfgate-credentials.js",
+      "types": "./dist/src/worfgate-credentials.d.ts"
+    },
     "./aha-credentials": {
       "import": "./dist/src/aha-credentials.js",
       "types": "./dist/src/aha-credentials.d.ts"
