@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { getSkillTheory, listSkillTheories, skillCoverage } from '@story-agent/shared/skill-theory';
-import '../lib/skill-theories.js'; // side-effect: register all theories
+import '../lib/skill-theories.js'; // side-effect: register hand-authored theories
+import '../lib/skill-theories-generated.js'; // side-effect: register crew-authored (generated) theories
 
 /**
  * Skill-theory introspection — lets any agent ask the 5W1H of a tool (who/what/when/where/why/how)
