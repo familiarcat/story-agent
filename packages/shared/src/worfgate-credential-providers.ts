@@ -63,6 +63,32 @@ export const awsSecretsManagerCredentialProvider = {
   },
 };
 
+// ── Ocelot API gateway (STUB — not deployment-ready) ──────────────────────────
+// Ocelot fronts an upstream secret API in our intended architecture. This adapter is fully
+// implemented but NON-BLOCKING: it stays inactive unless OCELOT_ENABLED === 'true' AND the
+// gateway URL is set, so it can never fire (or break the chain) until Ocelot is actually ready.
+const ocelotCache = makeCache();
+export const ocelotCredentialProvider = {
+  name: 'ocelot',
+  priority: 70,
+  // Double-gated on an explicit enable flag — safe to ship while Ocelot is not yet deployed.
+  isActive: () => process.env.OCELOT_ENABLED === 'true' && Boolean(process.env.OCELOT_GATEWAY_URL),
+  async get(name: string): Promise<string | undefined> {
+    const base = process.env.OCELOT_GATEWAY_URL!.replace(/\/$/, '');
+    const route = process.env.OCELOT_SECRET_ROUTE || '/secrets';
+    const bundle = await ocelotCache.get(async () => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (process.env.OCELOT_API_KEY) headers['Authorization'] = `Bearer ${process.env.OCELOT_API_KEY}`;
+      const resp = await fetch(`${base}${route}`, { headers });
+      if (!resp.ok) throw new Error(`Ocelot ${resp.status}`);
+      const j: any = await resp.json();
+      // Ocelot proxies an upstream secret API; accept { secrets: {name:value} } or a flat map.
+      return (j?.secrets ?? j ?? {}) as Record<string, string>;
+    }, Date.now());
+    return bundle[name];
+  },
+};
+
 /**
  * Register all configured external providers. Idempotent — call once at startup. Inactive
  * providers register but report isActive()=false, so the chain harmlessly skips them.
@@ -70,7 +96,8 @@ export const awsSecretsManagerCredentialProvider = {
 export function initWorfGateCredentialProviders(): string[] {
   registerCredentialProvider(vaultCredentialProvider);
   registerCredentialProvider(awsSecretsManagerCredentialProvider);
-  return [vaultCredentialProvider, awsSecretsManagerCredentialProvider]
+  registerCredentialProvider(ocelotCredentialProvider); // stub — inactive until OCELOT_ENABLED=true
+  return [vaultCredentialProvider, awsSecretsManagerCredentialProvider, ocelotCredentialProvider]
     .filter(p => p.isActive())
     .map(p => p.name);
 }
