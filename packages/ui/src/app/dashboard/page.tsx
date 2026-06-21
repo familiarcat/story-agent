@@ -152,19 +152,19 @@ function deriveHierarchy(stories: HierarchicalStoryRecord[]): HierarchyNode[] {
   return Array.from(groups.values()).sort((a, b) => a.clientName.localeCompare(b.clientName) || a.projectName.localeCompare(b.projectName));
 }
 
-function inferClientName(repoFullName: string): string {
-  const [owner] = repoFullName.split('/');
+function inferClientName(repoFullName?: string | null): string {
+  const [owner] = (repoFullName ?? '').split('/');
   return owner ? owner.replace(/[-_]/g, ' ') : 'Unassigned Client';
 }
 
-function inferProjectName(repoFullName: string): string {
-  const [, repo] = repoFullName.split('/');
+function inferProjectName(repoFullName?: string | null): string {
+  const [, repo] = (repoFullName ?? '').split('/');
   return repo ? repo.replace(/[-_]/g, ' ') : 'Unassigned Project';
 }
 
 function inferClientId(story: HierarchicalStoryRecord): string {
   if (story.clientId) return story.clientId.toLowerCase();
-  const [owner] = story.repoFullName.split('/');
+  const [owner] = (story.repoFullName ?? '').split('/');
   return (owner ?? 'unassigned-client').toLowerCase();
 }
 

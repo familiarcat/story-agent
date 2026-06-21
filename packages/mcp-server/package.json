@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "bin": {
-    "story-agent-mcp": "./dist/src/index.js"
+    "story-agent-mcp": "./dist/src/index.js",
+    "story-agent": "./dist/src/agent-core/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -23,7 +24,8 @@
     "node-fetch": "^3.3.2",
     "openai": "^4.67.1",
     "ws": "^8.16.0",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "3.25.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

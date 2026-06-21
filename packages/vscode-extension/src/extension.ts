@@ -4,6 +4,7 @@ import { StorySidebarProvider } from './sidebar';
 import { StoryExecutionPanel } from './panels/StoryExecutionPanel';
 import { CrewCopilotProvider } from './providers/CrewCopilotProvider';
 import { AhaProjectStructureProvider } from './providers/AhaProjectStructureProvider';
+import { connectProviderInteractive } from './oauth';
 
 export function activate(context: vscode.ExtensionContext): void {
   // ── Tree Data Providers ──────────────────────────────────────────────────
@@ -129,7 +130,10 @@ export function activate(context: vscode.ExtensionContext): void {
       (referenceNum?: string, repoFullName?: string) => {
         sidebarProvider.focusPrepareForm(referenceNum, repoFullName);
       }
-    )
+    ),
+
+    // OAuth: connect a provider (Aha! MCP, Google, AWS Cognito, …) via browser sign-in
+    vscode.commands.registerCommand('story-agent.connectOAuth', () => connectProviderInteractive(context))
   );
 
   // ── Chat participant ──────────────────────────────────────────────────────

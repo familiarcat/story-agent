@@ -25,6 +25,10 @@
             "description": "Chat with the token-optimizing assistant (model tiering, caching, RAG context pruning)"
           },
           {
+            "name": "agent",
+            "description": "Autonomous agentic mode — the crew reads/edits files & runs commands via agent-core (WorfGate-governed, OpenRouter cost-optimized)"
+          },
+          {
             "name": "reset",
             "description": "Reset the session token budget meter"
           },
@@ -53,6 +57,11 @@
         "command": "story-agent.openObservationLounge",
         "title": "Story Agent: Open Observation Lounge",
         "icon": "$(eye)"
+      },
+      {
+        "command": "story-agent.connectOAuth",
+        "title": "Story Agent: Connect OAuth Provider (Aha!, Google, AWS…)",
+        "icon": "$(key)"
       },
       {
         "command": "story-agent.openSidebar",
@@ -217,6 +226,40 @@
           "type": "string",
           "default": "",
           "description": "Optional bearer token for the RAG read service (matches RAG_SERVICE_TOKEN). Falls back to the RAG_SERVICE_TOKEN env var."
+        },
+        "storyAgent.chat.agentServiceUrl": {
+          "type": "string",
+          "default": "http://localhost:3103",
+          "description": "URL of the agent-core autonomous loop endpoint (MCP server started with STORY_AGENT_AGENT_PORT). Used by the /agent command. Falls back to the STORY_AGENT_AGENT_URL env var."
+        },
+        "storyAgent.chat.agentServiceToken": {
+          "type": "string",
+          "default": "",
+          "description": "Optional bearer token for the agent-core endpoint (matches AGENT_SERVICE_TOKEN). Falls back to the AGENT_SERVICE_TOKEN env var."
+        },
+        "storyAgent.chat.clientId": {
+          "type": "string",
+          "default": "",
+          "description": "Optional client org ID scoping RAG memory recall/storage for the /agent command."
+        },
+        "storyAgent.oauthProviders": {
+          "type": "array",
+          "default": [],
+          "description": "OAuth providers for 'Story Agent: Connect OAuth Provider'. Merged over built-in defaults (aha, google, aws) by id. Each entry: { id, name, clientId, scopes[], and either discoveryUrl OR authorizationEndpoint+tokenEndpoint; optional clientSecret, resource }. Uses Authorization Code + PKCE with a localhost loopback redirect.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "clientId": { "type": "string" },
+              "clientSecret": { "type": "string" },
+              "discoveryUrl": { "type": "string" },
+              "authorizationEndpoint": { "type": "string" },
+              "tokenEndpoint": { "type": "string" },
+              "resource": { "type": "string" },
+              "scopes": { "type": "array", "items": { "type": "string" } }
+            }
+          }
         }
       }
     }

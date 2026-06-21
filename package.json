@@ -43,7 +43,10 @@
     "project:list": "node scripts/project-management.mjs list",
     "project:select": "node scripts/project-management.mjs select",
     "project:info": "node scripts/project-management.mjs info",
-    "project:crew": "node scripts/project-management.mjs crew"
+    "project:crew": "node scripts/project-management.mjs crew",
+    "aws-secrets:put": "bash scripts/aws-secrets-put.sh",
+    "aha:derive-backlog": "npx tsx scripts/derive-aha-backlog.ts",
+    "aha:commit-backlog": "npx tsx scripts/aha-commit-backlog.ts"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { fetchAhaStory } from './aha';
 import { buildObservationLoungeBrief } from './brief';
 import { runAssistantTurn, resetSession } from './chatEngine';
+import { runAgentTurn } from './agentClient';
 
 const PARTICIPANT_ID = 'story-agent.agent';
 
@@ -116,7 +117,17 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         return { metadata: { [META_CMD]: 'status', [META_REF]: referenceNum } };
       }
 
-      // Free-form chat (/ask or any non-command prompt) → token-optimizing assistant
+      // Autonomous agentic mode (/agent) → tool-calling loop over agent-core (CLI/API/VS Code share it).
+      if (cmd === 'agent') {
+        if (!prompt.length) {
+          stream.markdown('Describe a task for the autonomous crew, e.g. `/agent fix the failing test in src/foo.ts and run the suite`.');
+          return { metadata: { [META_CMD]: 'agent-missing' } };
+        }
+        const result = await runAgentTurn(prompt, stream, token);
+        return { metadata: { [META_CMD]: 'agent', escalated: result.escalated } };
+      }
+
+      // Free-form chat (/ask or any non-command prompt) → token-optimizing assistant (single-shot)
       if (cmd === 'ask' || prompt.length > 0) {
         const result = await runAssistantTurn(prompt, stream, token, context.globalState);
         return { metadata: { [META_CMD]: 'ask', tier: result.tier, cached: result.cached } };

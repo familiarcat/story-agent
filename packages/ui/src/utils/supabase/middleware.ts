@@ -14,14 +14,19 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   // Skip auth middleware if Supabase config is missing
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-    process.stderr.write('[auth-middleware] Supabase config missing — skipping auth refresh\n');
+  // Accept either the new publishable key or the legacy anon key env name.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    // NOTE: middleware runs in the Edge runtime — process.stderr is undefined here; use console.
+    console.warn('[auth-middleware] Supabase config missing — skipping auth refresh');
     return supabaseResponse;
   }
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
@@ -47,7 +52,7 @@ export async function updateSession(request: NextRequest) {
   } catch (error) {
     // Silently ignore auth errors (e.g., no session, OAuth registration issues)
     // Unauthenticated users are allowed; protected routes handle auth checks
-    process.stderr.write(`[auth-middleware] Non-critical auth check failed: ${error instanceof Error ? error.message : String(error)}\n`);
+    console.warn(`[auth-middleware] Non-critical auth check failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   return supabaseResponse;

@@ -16,6 +16,10 @@
     "./client-security-policy": {
       "import": "./dist/src/client-security-policy.js",
       "types": "./dist/src/client-security-policy.d.ts"
+    },
+    "./aha-credentials": {
+      "import": "./dist/src/aha-credentials.js",
+      "types": "./dist/src/aha-credentials.d.ts"
     }
   },
   "scripts": {
@@ -28,6 +32,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1073.0",
     "@supabase/supabase-js": "^2.47.10",
     "redis": "^4.7.1"
   },

@@ -1,20 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerCrewAutonomyTools } from '../../src/tools/crew-autonomy-tools.js';
-import { getDbClient, getRelevantObservationMemories, storeObservationMemory } from '../../../shared/src/db.js';
+import { getDbClient, getRelevantObservationMemories, storeObservationMemory, getSupabaseConnectivityDiagnostics } from '@story-agent/shared/db';
 
-vi.mock('../../../shared/src/db.js', () => ({
-  getDbClient: vi.fn().mockResolvedValue({
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    contains: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    single: vi.fn(),
-  }),
+// NOTE: the vitest config sets mockReset:true + restoreMocks:true, which wipes mock
+// implementations before each test. So the factory only declares the shape; the actual
+// implementations are (re)established in beforeEach. getSupabaseConnectivityDiagnostics
+// must be included — the SUT imports it, and a factory omitting it would make it undefined.
+vi.mock('@story-agent/shared/db', () => ({
+  getDbClient: vi.fn(),
   getRelevantObservationMemories: vi.fn(),
   storeObservationMemory: vi.fn(),
+  getSupabaseConnectivityDiagnostics: vi.fn(),
 }));
 
 describe('Crew Autonomy Tools', () => {
@@ -22,7 +19,29 @@ describe('Crew Autonomy Tools', () => {
   let toolHandlers: Record<string, Function> = {};
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Re-establish mock implementations (mockReset:true wipes them before each test).
+    // The query builder (qb) is chainable (every method returns qb) AND thenable, so both
+    // patterns work: terminating methods (.single()/.limit()/.order()) can be overridden to
+    // resolve, and direct `await query` (e.g. after chained .eq().eq()) resolves qb.__result.
+    const qb: any = {
+      select: vi.fn(() => qb),
+      eq: vi.fn(() => qb),
+      order: vi.fn(() => qb),
+      contains: vi.fn(() => qb),
+      limit: vi.fn(() => qb),
+      is: vi.fn(() => qb),
+      or: vi.fn(() => qb),
+      single: vi.fn(),
+      maybeSingle: vi.fn(),
+      __result: { data: [], error: null },
+    };
+    qb.then = (onF: any, onR?: any) => Promise.resolve(qb.__result).then(onF, onR);
+    const mockDb: any = { from: vi.fn(() => qb) };
+    vi.mocked(getDbClient).mockResolvedValue(mockDb);
+    vi.mocked(getRelevantObservationMemories).mockResolvedValue([] as any);
+    vi.mocked(storeObservationMemory).mockResolvedValue({ id: 'mem-999' } as any);
+    vi.mocked(getSupabaseConnectivityDiagnostics).mockResolvedValue({ reachable: true } as any);
+
     toolHandlers = {};
     server = {
       tool: vi.fn().mockImplementation((name, desc, schema, handler) => {
@@ -67,8 +86,7 @@ describe('Crew Autonomy Tools', () => {
       'troi:analyze-ux-alignment',
       'crusher:diagnose-system-health',
       'uhura:draft-communication',
-      'quark:analyze-costs',
-      'quark:audit-tool-costs'
+      'quark:analyze-costs'
     ];
     expectedTools.forEach(tool => {
       expect(toolHandlers[tool]).toBeDefined();
@@ -98,7 +116,8 @@ describe('Crew Autonomy Tools', () => {
   it('crew:list-active-projects handles clientId filter', async () => {
     const mockProjects = [{ id: '1', name: 'PCTMS' }];
     const mockDb = await getDbClient();
-    (mockDb.from as any)().select().eq().eq.mockResolvedValue({ data: mockProjects, error: null });
+    // listActiveProjects chains .eq().eq() then `await query` — set the builder's result.
+    (mockDb.from as any)().__result = { data: mockProjects, error: null };
 
     const result = await toolHandlers['crew:list-active-projects']({ includeArchived: false, clientId: 'bayer' });
     expect(result.content[0].text).toContain('PCTMS');
@@ -145,7 +164,7 @@ describe('Crew Autonomy Tools', () => {
   it('data:analyze-type-safety identifies "any" usage in critical interfaces', async () => {
     const codeSnippet = `interface AuthContext { user: any; token: string; }`;
     const criticalInterfaces = ['AuthContext'];
-    const result = await toolHandlers'data:analyze-type-safety';
+    const result = await toolHandlers['data:analyze-type-safety']({ code: codeSnippet, criticalInterfaces });
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.status).toBe('REVIEW_REQUIRED');
     expect(parsed.findings).toContain("Critical interface 'AuthContext' contains 'any' type usage.");

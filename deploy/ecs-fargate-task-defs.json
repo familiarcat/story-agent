@@ -1,0 +1,86 @@
+{
+  "_README": "Two Fargate task definitions per the crew's ruling. Replace <ACCOUNT>/<REGION>/<ECR>/secret ARNs. Register each separately: aws ecs register-task-definition --cli-input-json file://<(jq '.[\"story-agent-mcp\"]' deploy/ecs-fargate-task-defs.json). Secrets live in AWS Secrets Manager (story-agent/aha + story-agent/runtime); ECS injects them at task start — never in the task def or logs. Redis is ElastiCache Serverless (REDIS_URL), NOT a container.",
+
+  "story-agent-mcp": {
+    "family": "story-agent-mcp",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "2048",
+    "memory": "4096",
+    "runtimePlatform": { "cpuArchitecture": "ARM64", "operatingSystemFamily": "LINUX" },
+    "executionRoleArn": "arn:aws:iam::<ACCOUNT>:role/storyAgentEcsExecutionRole",
+    "taskRoleArn": "arn:aws:iam::<ACCOUNT>:role/storyAgentTaskRole",
+    "containerDefinitions": [
+      {
+        "name": "mcp",
+        "image": "<ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/story-agent-mcp:latest",
+        "essential": true,
+        "portMappings": [
+          { "containerPort": 3101, "protocol": "tcp", "name": "http-mcp" },
+          { "containerPort": 3102, "protocol": "tcp", "name": "rag" },
+          { "containerPort": 8000, "protocol": "tcp", "name": "ws" }
+        ],
+        "environment": [
+          { "name": "SUPABASE_MODE", "value": "live" },
+          { "name": "CREW_LLM_PROVIDER", "value": "approved" },
+          { "name": "CREW_LLM_APPROVED_URL", "value": "https://openrouter.ai/api/v1" },
+          { "name": "CREW_LLM_MODEL_PROFILE", "value": "cost_optimized" },
+          { "name": "CREW_LLM_APPROVED_MODEL", "value": "anthropic/claude-sonnet-4.6" },
+          { "name": "CREW_LLM_APPROVED_MODEL_CHEAP", "value": "anthropic/claude-haiku-4.5" },
+          { "name": "AWS_AHA_SECRET_ID", "value": "story-agent/aha" },
+          { "name": "AWS_REGION", "value": "<REGION>" },
+          { "name": "STORY_AGENT_HTTP_PORT", "value": "3101" },
+          { "name": "STORY_AGENT_RAG_PORT", "value": "3102" },
+          { "name": "STORY_AGENT_WS_PORT", "value": "8000" }
+        ],
+        "secrets": [
+          { "name": "CREW_LLM_APPROVED_KEY", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT>:secret:story-agent/runtime:CREW_LLM_APPROVED_KEY::" },
+          { "name": "SUPABASE_CLOUD_URL", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT>:secret:story-agent/runtime:SUPABASE_CLOUD_URL::" },
+          { "name": "SUPABASE_CLOUD_KEY", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT>:secret:story-agent/runtime:SUPABASE_CLOUD_KEY::" },
+          { "name": "REDIS_URL", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT>:secret:story-agent/runtime:REDIS_URL::" }
+        ],
+        "healthCheck": {
+          "command": ["CMD-SHELL", "node -e \"fetch('http://localhost:3102/rag/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""],
+          "interval": 30, "timeout": 5, "retries": 3, "startPeriod": 30
+        },
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": { "awslogs-group": "/ecs/story-agent-mcp", "awslogs-region": "<REGION>", "awslogs-stream-prefix": "mcp" }
+        }
+      }
+    ]
+  },
+
+  "story-agent-ui": {
+    "family": "story-agent-ui",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": ["FARGATE"],
+    "cpu": "1024",
+    "memory": "2048",
+    "runtimePlatform": { "cpuArchitecture": "ARM64", "operatingSystemFamily": "LINUX" },
+    "executionRoleArn": "arn:aws:iam::<ACCOUNT>:role/storyAgentEcsExecutionRole",
+    "taskRoleArn": "arn:aws:iam::<ACCOUNT>:role/storyAgentTaskRole",
+    "containerDefinitions": [
+      {
+        "name": "ui",
+        "image": "<ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/story-agent-ui:latest",
+        "essential": true,
+        "portMappings": [{ "containerPort": 3000, "protocol": "tcp", "name": "http" }],
+        "environment": [
+          { "name": "NODE_ENV", "value": "production" },
+          { "name": "SUPABASE_MODE", "value": "live" },
+          { "name": "STORY_AGENT_RAG_URL", "value": "http://story-agent-mcp.internal:3102" }
+        ],
+        "secrets": [
+          { "name": "CREW_LLM_APPROVED_KEY", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT>:secret:story-agent/runtime:CREW_LLM_APPROVED_KEY::" },
+          { "name": "SUPABASE_CLOUD_URL", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT>:secret:story-agent/runtime:SUPABASE_CLOUD_URL::" },
+          { "name": "SUPABASE_CLOUD_KEY", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT>:secret:story-agent/runtime:SUPABASE_CLOUD_KEY::" }
+        ],
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": { "awslogs-group": "/ecs/story-agent-ui", "awslogs-region": "<REGION>", "awslogs-stream-prefix": "ui" }
+        }
+      }
+    ]
+  }
+}

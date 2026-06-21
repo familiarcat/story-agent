@@ -19,6 +19,7 @@ import OpenAI from 'openai';
 import type { PromptTemplate } from './prompt-templates.js';
 import { getPromptTemplate } from './prompt-templates.js';
 import { promptArchive, calculateTokenCost, type PromptUsageRecord } from './prompt-archiver.js';
+import { quarkSelectModel, crewBaseTier } from './crew-team-assembly.js';
 
 type CrewLlmModelProfile = 'quality' | 'balanced' | 'cost_optimized';
 
@@ -48,19 +49,15 @@ function selectModelForCall(template: PromptTemplate): string {
   const profile = getCrewLlmModelProfile();
 
   if (provider === 'approved') {
-    const primary = getApprovedPrimaryModel();
-    const lowCost = getApprovedLowCostModel();
-
+    // QUARK is the PRIMARY selector: map the crew member's domain base tier to the cheapest
+    // verified-reachable model in MODEL_POOL (multi-provider — Anthropic is not the default).
+    // 'quality' forces the top model; 'balanced' bumps each role one capability tier.
     if (profile === 'quality') {
-      return primary;
+      return getApprovedPrimaryModel();
     }
-
-    if (profile === 'balanced') {
-      return ['picard', 'data', 'riker', 'worf', 'crusher'].includes(template.crewId) ? primary : lowCost;
-    }
-
-    // cost_optimized (Quark policy): keep critical roles on primary, route the rest to low-cost model.
-    return ['picard', 'data', 'worf'].includes(template.crewId) ? primary : lowCost;
+    const baseTier = crewBaseTier(template.crewId);
+    const tier = profile === 'balanced' ? Math.min(4, baseTier + 1) : baseTier;
+    return quarkSelectModel(tier).id;
   }
 
   if (provider === 'copilot') {

@@ -1,0 +1,19 @@
+# Story Agent — Next.js UI (dashboard + /chat) for AWS Fargate. Steady-state service.
+# syntax=docker/dockerfile:1
+
+FROM node:20-bookworm-slim AS base
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+
+FROM base AS build
+COPY . .
+RUN pnpm install --frozen-lockfile \
+ && pnpm --filter @story-agent/shared build \
+ && pnpm --filter @story-agent/ui build
+
+FROM base AS run
+ENV NODE_ENV=production PORT=3000
+COPY --from=build /app /app
+WORKDIR /app/packages/ui
+EXPOSE 3000
+CMD ["pnpm", "start"]

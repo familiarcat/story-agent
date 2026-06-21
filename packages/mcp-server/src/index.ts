@@ -14,6 +14,9 @@ import { registerStarshipTools } from './tools/starship-tools.js';
 import { registerCrewIntegrityTools } from './tools/crew-integrity-tools.js';
 import { CrewWebSocketServer } from './lib/websocket-server.js';
 import { startRagHttpServer } from './lib/rag-http-server.js';
+import { registerAhaTools } from './tools/aha-tools.js';
+import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
+import { startAgentHttpServer } from './agent-core/http-server.js';
 import { createHttpAuthMiddleware, reportMissingCredentialsAtStartup } from './lib/http-auth-middleware.js';
 
 const server = new McpServer({
@@ -30,6 +33,8 @@ registerCrewAutonomyTools(server);  // 🚀 Crew autonomy — personal tools for
 registerDocTools(server);
 registerCrewIntegrityTools(server);
 registerStarshipTools(server);
+registerAhaTools(server);  // 📋 Aha! — crew project/epic/story/sprint management via REST
+registerCrewMissionTools(server);  // 🧭 6-stage pipeline: Picard→Riker→Quark→crew→Quark→Picard
 
 async function main() {
   // Initialize async tool registrations
@@ -81,6 +86,7 @@ async function main() {
           registerDocTools(perRequestServer);
           registerCrewIntegrityTools(perRequestServer);
           registerStarshipTools(perRequestServer);
+          registerCrewMissionTools(perRequestServer);  // 🧭 mission pipeline over HTTP
 
           await perRequestServer.connect(httpTransport);
 
@@ -107,6 +113,13 @@ async function main() {
   if (process.env.STORY_AGENT_RAG_DISABLE !== '1') {
     const ragPort = parseInt(process.env.STORY_AGENT_RAG_PORT ?? '3102', 10) || 3102;
     startRagHttpServer(ragPort);
+  }
+
+  // ── Agent HTTP/SSE server (autonomous agent-core loop for all surfaces) ─────
+  // Enabled by setting STORY_AGENT_AGENT_PORT (e.g. 3103). Optional Bearer (AGENT_SERVICE_TOKEN).
+  if (process.env.STORY_AGENT_AGENT_PORT) {
+    const agentPort = parseInt(process.env.STORY_AGENT_AGENT_PORT, 10) || 3103;
+    startAgentHttpServer(agentPort);
   }
 
   // ── WebSocket server (optional, crew state broadcasting) ───────────────────

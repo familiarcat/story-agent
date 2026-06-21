@@ -15,3 +15,9 @@ packages/*/node_modules/
 
 # OS
 .DS_Store
+
+# Terraform local state & providers (never commit)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log

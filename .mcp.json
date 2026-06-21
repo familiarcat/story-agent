@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "aha": {
+      "type": "http",
+      "url": "https://familiarcat.use3.aha.io/api/v1/mcp"
+    }
+  }
+}

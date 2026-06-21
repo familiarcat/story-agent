@@ -40,18 +40,18 @@ export interface AhaSprintStory {
 
 function getConfig(): { domain: string; apiKey: string } {
   const cfg = vscode.workspace.getConfiguration('storyAgent');
-  const domain =
-    process.env.AHA_DOMAIN ??
-    cfg.get<string>('ahaDomain') ??
-    '';
-  const apiKey =
-    process.env.AHA_API_KEY ??
-    cfg.get<string>('ahaApiKey') ??
-    '';
+  // Resolution order: environment (AWS/SSM or terminal-launch) → VS Code settings (local Dock
+  // launch). First non-empty wins (empty strings are treated as unset, unlike `??`).
+  const pick = (...vals: Array<string | undefined>): string =>
+    vals.map(v => (v ?? '').trim()).find(v => v.length > 0) ?? '';
+
+  const domain = pick(process.env.AHA_DOMAIN, cfg.get<string>('ahaDomain'));
+  const apiKey = pick(process.env.AHA_API_KEY, process.env.AHA_API_TOKEN, cfg.get<string>('ahaApiKey'));
+
   if (!domain || !apiKey) {
     throw new Error(
-      'Aha credentials not configured. Set AHA_DOMAIN and AHA_API_KEY in your environment, ' +
-      'or in VS Code settings under "Story Agent".'
+      'Aha credentials not configured. Set AHA_DOMAIN + AHA_API_KEY (or AHA_API_TOKEN) in your ' +
+      'environment, or "Story Agent: Aha Api Key" / "Aha Domain" in VS Code settings.'
     );
   }
   return { domain, apiKey };

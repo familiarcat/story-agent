@@ -16,6 +16,7 @@
  */
 
 import { getDbClient } from '@story-agent/shared/db';
+import { buildCrewAhaPromptSection } from './crew-aha-roles.js';
 import {
   type CrewId,
   CREW_PERSONAS,
@@ -322,6 +323,7 @@ export async function buildEnrichedSystemPrompt(
   return buildPersonaSystemPrompt(crewId, {
     domainPromptExtension: [
       manifest.domainSystemPrompt,
+      buildCrewAhaPromptSection(crewId),
       manifest.selfImprovementNotes.length > 0
         ? `\n\n--- ACCUMULATED LEARNINGS (${manifest.selfImprovementNotes.length} mission debriefs) ---\n` +
           manifest.selfImprovementNotes.slice(-5).map(n => `• ${n}`).join('\n')

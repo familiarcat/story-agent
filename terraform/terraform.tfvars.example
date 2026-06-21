@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and fill in. Secrets (story-agent/aha, story-agent/runtime) must exist
+# in Secrets Manager first — bootstrap aha with `pnpm run aws-secrets:put`.
+region             = "us-east-2"
+vpc_id             = "vpc-xxxxxxxx"
+private_subnet_ids = ["subnet-aaaa", "subnet-bbbb"]
+public_subnet_ids  = ["subnet-cccc", "subnet-dddd"]
+mcp_image          = "<ACCOUNT>.dkr.ecr.us-east-2.amazonaws.com/story-agent-mcp:latest"
+ui_image           = "<ACCOUNT>.dkr.ecr.us-east-2.amazonaws.com/story-agent-ui:latest"
+# acm_certificate_arn = "arn:aws:acm:us-east-2:<ACCOUNT>:certificate/..."  # omit for HTTP:80

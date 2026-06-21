@@ -1,0 +1,29 @@
+# Story Agent — MCP server (crew backend) for AWS Fargate.
+# Runs the HTTP MCP transport + RAG read service (:3102) + WebSocket crew-state server.
+# Secrets are injected by the ECS task definition (see deploy/ecs-fargate-task-defs.json).
+# syntax=docker/dockerfile:1
+
+FROM node:20-bookworm-slim AS base
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+
+FROM base AS build
+COPY . .
+# @aws-sdk/client-secrets-manager is a declared dep of @story-agent/shared (used by
+# resolveAhaCredentials in SSOT mode), so the frozen-lockfile install brings it.
+RUN pnpm install --frozen-lockfile \
+ && pnpm --filter @story-agent/shared build \
+ && pnpm --filter @story-agent/mcp-server build
+
+FROM base AS run
+ENV NODE_ENV=production \
+    AWS_REGION=us-east-2 \
+    SUPABASE_MODE=live \
+    STORY_AGENT_HTTP_PORT=3101 \
+    STORY_AGENT_RAG_PORT=3102 \
+    STORY_AGENT_WS_PORT=8000
+COPY --from=build /app /app
+# 3101 HTTP MCP transport · 3102 RAG read service · 8000 WebSocket crew-state
+EXPOSE 3101 3102 8000
+# Health: GET /rag/health on 3102 (used by the ALB/ECS health check).
+CMD ["node", "packages/mcp-server/dist/src/index.js"]

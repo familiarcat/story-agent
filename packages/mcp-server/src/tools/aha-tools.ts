@@ -1,0 +1,179 @@
+/**
+ * Aha! crew tools — REST-API based (key-authenticated), the crew's autonomous lane into Aha!.
+ *
+ * Per the crew review: the Aha! remote MCP endpoint (/api/v1/mcp) requires OAuth and is the
+ * IDE/human assistant path; the crew automates Aha! via the REST API with AHA_API_KEY (no OAuth).
+ *
+ * Concept mapping: Product = project/workspace · Epic = epic · Feature = story ·
+ * Requirement = task · Release = sprint.
+ *
+ * WorfGate controls (from Worf's review): write operations require explicit `confirm: true`
+ * (otherwise return a dry-run preview), and every write is audit-logged.
+ */
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import { getCrewAhaMatrix, authorizeAhaWrite } from '../lib/crew-aha-roles.js';
+import { resolveAhaCredentials } from '@story-agent/shared/aha-credentials';
+import { executeAhaStoryWithMemory } from '../lib/crew-aha-mission.js';
+import { getRelevantObservationMemories } from '@story-agent/shared/db';
+import { gateAhaWrite } from '../lib/crew-aha-automode.js';
+
+async function aha(path: string, init?: RequestInit): Promise<any> {
+  // Single source of truth: AWS Secrets Manager → direct-Aha env fallback (see aha-credentials.ts).
+  const { domain: d, apiKey: k } = await resolveAhaCredentials();
+  const resp = await fetch(`https://${d}/api/v1/${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${k}`, 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(`Aha! ${resp.status}: ${text.slice(0, 300)}`);
+  return text ? JSON.parse(text) : {};
+}
+
+const ok = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] });
+const audit = (op: string, detail: Record<string, unknown>) =>
+  process.stderr.write(`[AHA-AUDIT] ${op} ${JSON.stringify(detail)}\n`);
+
+export function registerAhaTools(server: McpServer): void {
+  // ── Crew self-organization: who owns which Aha! capability, on which model tier ──
+  server.tool(
+    'aha:crew-assignments',
+    'Return the crew↔Aha! capability matrix: each member\'s Aha! focus, owned tools, leader/supporter tier, and the OpenRouter model they use (cost_optimized: leaders=quality, supporters=cheap). Crew calls this to self-organize Aha! work.',
+    {},
+    async () => ok(getCrewAhaMatrix()),
+  );
+
+  // ── Full mission loop: agree→RAG → governed Aha! write → result→RAG ──────────
+  server.tool(
+    'aha:execute-story',
+    'Run an agreed story through the governed loop: store the agreement to RAG memory, execute a verified+confirmed Aha! create (else dry-run), then store the result to RAG. This is how the crew uses Aha! as the PM system while remembering every decision + outcome.',
+    {
+      agentId: z.string().describe('Executing crew member (identity-verified), e.g. riker'),
+      releaseId: z.string().describe('Aha! release (sprint) id to create the story in'),
+      name: z.string().describe('Story (feature) name'),
+      description: z.string().optional(),
+      clientId: z.string().optional().describe('Client org for RAG memory isolation'),
+      confirm: z.boolean().optional().describe('true = live Aha! write; false/omitted = dry-run (still records to RAG)'),
+    },
+    async ({ agentId, releaseId, name, description, clientId, confirm }) =>
+      ok(await executeAhaStoryWithMemory({ executor: agentId, releaseId, story: { name, description }, clientId: clientId ?? null, confirm })),
+  );
+
+  // ── Crew learning: recall past Aha! interactions from RAG to inform new work ──
+  server.tool(
+    'aha:recall',
+    'Recall the crew\'s past Aha! interactions (agreed + executed stories) from RAG memory, so the crew can learn from prior decisions/outcomes and reuse what it knows about Aha! when planning new clients, projects, epics, or stories.',
+    {
+      query: z.string().describe('What to recall, e.g. "stories about crew skill registry" or "past Aha epics"'),
+      limit: z.number().optional(),
+      clientId: z.string().optional(),
+    },
+    async ({ query, limit, clientId }) => {
+      const mems = await getRelevantObservationMemories({ queryText: query, clientId: clientId ?? null, limit: (limit ?? 8) * 2 });
+      const aha = mems.filter(m => (m.tags ?? []).some(t => t.startsWith('aha') || t.startsWith('story-')));
+      return ok(aha.slice(0, limit ?? 8).map(m => ({
+        storyId: m.storyId, tags: m.tags, when: m.createdAt,
+        memory: (m.transcriptText ?? '').slice(0, 300),
+      })));
+    },
+  );
+
+  // ── READ (Resources analog) ────────────────────────────────────────────────
+  server.tool(
+    'aha:list-products',
+    'List Aha! products/workspaces (mapped to projects). Use to discover available reference prefixes.',
+    {},
+    async () => ok((await aha('products?per_page=50')).products?.map((p: any) => ({ name: p.name, prefix: p.reference_prefix, id: p.id })) ?? []),
+  );
+
+  server.tool(
+    'aha:list-epics',
+    'List epics in a product (by reference prefix, e.g. "PROD"). Epics group features/stories.',
+    { productPrefix: z.string().describe('Product reference prefix, e.g. PROD'), perPage: z.number().optional() },
+    async ({ productPrefix, perPage }) =>
+      ok((await aha(`products/${productPrefix}/epics?per_page=${perPage ?? 25}`)).epics?.map((e: any) => ({ ref: e.reference_num, name: e.name, status: e.workflow_status?.name })) ?? []),
+  );
+
+  server.tool(
+    'aha:list-features',
+    'List features (stories) in a product, optionally filtered by release. Features map to stories.',
+    { productPrefix: z.string(), releaseId: z.string().optional(), perPage: z.number().optional() },
+    async ({ productPrefix, releaseId, perPage }) => {
+      const base = releaseId ? `releases/${releaseId}/features` : `products/${productPrefix}/features`;
+      return ok((await aha(`${base}?per_page=${perPage ?? 25}`)).features?.map((f: any) => ({ ref: f.reference_num, name: f.name, status: f.workflow_status?.name, assignee: f.assigned_to_user?.name })) ?? []);
+    },
+  );
+
+  server.tool(
+    'aha:list-releases',
+    'List releases (sprints) in a product by reference prefix. Releases map to sprints.',
+    { productPrefix: z.string(), perPage: z.number().optional() },
+    async ({ productPrefix, perPage }) =>
+      ok((await aha(`products/${productPrefix}/releases?per_page=${perPage ?? 25}`)).releases?.map((r: any) => ({ id: r.id, name: r.name, released: r.released, release_date: r.release_date })) ?? []),
+  );
+
+  server.tool(
+    'aha:get-record',
+    'Retrieve an Aha! feature/requirement/epic by reference number (e.g. "PROD-123"). Use before planning work to align with product expectations.',
+    { reference: z.string().describe('Reference number, e.g. PROD-123') },
+    async ({ reference }) => {
+      // Try feature, then requirement, then epic.
+      for (const kind of ['features', 'requirements', 'epics']) {
+        try { return ok(await aha(`${kind}/${reference}`)); } catch { /* try next */ }
+      }
+      throw new Error(`No feature/requirement/epic found for ${reference}`);
+    },
+  );
+
+  // ── WRITE (Tools) — WorfGate-gated: dry-run unless confirm:true, always audited ──
+  server.tool(
+    'aha:create-feature',
+    'Create a feature (story) in a release. WorfGate: requires a verified agentId (write-owner) AND confirm:true. Without confirm, returns a dry-run preview after verifying identity.',
+    {
+      agentId: z.string().describe('Crew member performing the write (e.g. riker, worf, obrien) — verified against the Aha! role matrix'),
+      releaseId: z.string().describe('Target release (sprint) id'),
+      name: z.string(),
+      description: z.string().optional(),
+      confirm: z.boolean().optional().describe('true to execute (human-approved, or automated after agent verification)'),
+    },
+    async ({ agentId, releaseId, name, description, confirm }) => {
+      const authz = authorizeAhaWrite(agentId, 'aha:create-feature');
+      if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      // Auto-mode classification (crew governance): a draft feature create is AUTO.
+      const { proceed, classification } = gateAhaWrite({ verb: 'create', resource: 'feature', publishedState: 'draft', agentId }, confirm);
+      if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { releaseId, name, description }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('create-feature', { agentId, releaseId, name, decision: classification.decision });
+      const res = await aha(`releases/${releaseId}/features`, { method: 'POST', body: JSON.stringify({ feature: { name, description } }) });
+      return ok({ created: res.feature?.reference_num, name: res.feature?.name, by: agentId, autoMode: classification });
+    },
+  );
+
+  server.tool(
+    'aha:update-feature',
+    'Update a feature (story) by reference — name, description, or workflow status. WorfGate: requires a verified agentId (write-owner) AND confirm:true; else dry-run after identity check.',
+    {
+      agentId: z.string().describe('Crew member performing the write (e.g. riker, worf, obrien) — verified against the Aha! role matrix'),
+      reference: z.string().describe('Feature reference, e.g. PROD-123'),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      workflowStatus: z.string().optional().describe('Target workflow status name'),
+      confirm: z.boolean().optional(),
+    },
+    async ({ agentId, reference, name, description, workflowStatus, confirm }) => {
+      const authz = authorizeAhaWrite(agentId, 'aha:update-feature');
+      if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const feature: Record<string, unknown> = {};
+      if (name) feature.name = name;
+      if (description) feature.description = description;
+      if (workflowStatus) feature.workflow_status = workflowStatus;
+      // Auto-mode: status changes are stakeholder-sensitive → CONFIRM; plain field edits → AUTO.
+      const { proceed, classification } = gateAhaWrite({ verb: 'update', resource: 'feature', fieldsMutated: Object.keys(feature), agentId }, confirm);
+      if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, reference, wouldUpdate: feature, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('update-feature', { agentId, reference, fields: Object.keys(feature), decision: classification.decision });
+      const res = await aha(`features/${reference}`, { method: 'PUT', body: JSON.stringify({ feature }) });
+      return ok({ updated: res.feature?.reference_num, status: res.feature?.workflow_status?.name, by: agentId, autoMode: classification });
+    },
+  );
+}
