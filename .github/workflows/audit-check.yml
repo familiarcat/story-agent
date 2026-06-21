@@ -11,19 +11,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '22'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Run Security Audit Summary
-        run: npx ts-node scripts/check-recent-audits.ts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           WORFGATE_AUDIT_MAX: 100
           STORY_AGENT_PATH: ${{ github.workspace }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::notice::SUPABASE_URL not configured — skipping live WorfGate audit query (CI stays green)."
+            exit 0
+          fi
+          pnpm exec tsx scripts/check-recent-audits.ts

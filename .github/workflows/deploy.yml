@@ -30,6 +30,9 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Only run when the deploy repo vars are configured — otherwise skip cleanly
+    # (push-triggered runs no longer fail before AWS_DEPLOY_ROLE_ARN/AWS_REGION are set).
+    if: ${{ vars.AWS_REGION != '' && vars.AWS_DEPLOY_ROLE_ARN != '' }}
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
