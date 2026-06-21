@@ -214,6 +214,7 @@ export * from './client-scope.js';
 export * from './client-security-policy.js';
 export * from './client-registry.js';
 export * from './worfgate-credentials.js';
+export * from './worfgate-credential-providers.js';
 export interface StoryMission {
   story: AgileStory;
   sprint: AgileSprint | null;

@@ -20,6 +20,7 @@ import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
 import { startAgentHttpServer } from './agent-core/http-server.js';
 import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
+import { initWorfGateCredentialProviders } from '@story-agent/shared/worfgate-credential-providers';
 import { createHttpAuthMiddleware, reportMissingCredentialsAtStartup } from './lib/http-auth-middleware.js';
 
 const server = new McpServer({
@@ -47,6 +48,10 @@ async function main() {
 
   // Report any missing credentials at startup — especially Bayer-tier requirements.
   reportMissingCredentialsAtStartup();
+
+  // Register WorfGate external secret providers (Vault / AWS Secrets Manager) if configured.
+  const activeProviders = initWorfGateCredentialProviders();
+  process.stderr.write(`WorfGate credential providers: env${activeProviders.length ? ', ' + activeProviders.join(', ') : ''}\n`);
 
   // Hydrate dynamic client policies from Supabase so resolveClientPolicy (WorfGate/auth) sees
   // crew-onboarded clients. Best-effort — Bayer/familiarcat bootstrap works even if the DB is down.

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { credentialStatus, getCredentialAuditLog, CREW_CREDENTIAL_REGISTRY } from '@story-agent/shared/worfgate-credentials';
+import { credentialStatus, getCredentialAuditLog, CREW_CREDENTIAL_REGISTRY, listCredentialProviders } from '@story-agent/shared/worfgate-credentials';
 
 /**
  * WorfGate credential tools — Worf's owned skill surfaced to the crew.
@@ -28,6 +28,7 @@ export function registerWorfGateTools(server: McpServer): void {
           text: JSON.stringify({
             officer: 'worf',
             summary: `${available}/${status.length} brokered credentials present`,
+            providers: listCredentialProviders(),
             credentials: status,
             missingRequired: status.filter(s => s.required && !s.available).map(s => s.name),
           }, null, 2),

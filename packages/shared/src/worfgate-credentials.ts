@@ -84,47 +84,104 @@ export function getCredentialAuditLog(): CredentialAuditEntry[] {
   return [...credentialAuditLog];
 }
 
-/** Presence-only check — safe to expose; never returns the value. */
+// ── Pluggable secret providers ────────────────────────────────────────────────
+//
+// WorfGate is a FACADE: authorization + audit + Worf governance stay central, while resolution
+// walks a priority-ordered chain of providers. The env provider (~/.zshrc) is the default;
+// HashiCorp Vault, AWS Secrets Manager, or other backends register alongside it. The crew never
+// learns which backend served a secret — only that WorfGate brokered it.
+
+export interface CredentialProvider {
+  /** Identifier, e.g. 'env' | 'vault' | 'aws-secrets-manager'. */
+  name: string;
+  /** Lower = consulted first. env defaults to 100; put external vaults below to override. */
+  priority: number;
+  /** Whether this provider is configured/active in the current environment. */
+  isActive(): boolean;
+  /** Resolve a credential by name; return undefined if absent. */
+  get(name: string): Promise<string | undefined>;
+}
+
+const PROVIDERS: CredentialProvider[] = [];
+
+/** Register a secret provider (sorted by priority; lower first). */
+export function registerCredentialProvider(p: CredentialProvider): void {
+  const i = PROVIDERS.findIndex(x => x.name === p.name);
+  if (i >= 0) PROVIDERS.splice(i, 1);
+  PROVIDERS.push(p);
+  PROVIDERS.sort((a, b) => a.priority - b.priority);
+}
+
+/** Active providers in priority order (for status/inventory). */
+export function listCredentialProviders(): Array<{ name: string; priority: number; active: boolean }> {
+  return PROVIDERS.map(p => ({ name: p.name, priority: p.priority, active: p.isActive() }));
+}
+
+// Default provider: the process environment (loaded from ~/.zshrc / ~/.alexai-secrets).
+registerCredentialProvider({
+  name: 'env',
+  priority: 100,
+  isActive: () => true,
+  get: async (name: string) => process.env[name] || undefined,
+});
+
+/** Shared authorization gate (no audit, no resolution). */
+function checkAuthorization(name: string, operation: CredentialOperation, crewId: string): { authorized: boolean; reason: string } {
+  const spec = CREW_CREDENTIAL_REGISTRY[name];
+  if (!spec) return { authorized: false, reason: `'${name}' is not in the WorfGate credential registry` };
+  if (!spec.operations.includes(operation)) return { authorized: false, reason: `'${name}' is not permitted for operation '${operation}'` };
+  if (!AUTHORIZED_CREW.has(crewId)) return { authorized: false, reason: `crew member '${crewId}' is not authorized to broker credentials` };
+  return { authorized: true, reason: 'authorized' };
+}
+
+/** Presence-only check across the env (sync, no value). */
 export function worfGateHasCredential(name: string): boolean {
   return Boolean(process.env[name]);
 }
 
 /**
- * Resolve a credential through WorfGate for an authorized crew operation. Reads from the process
- * environment (loaded from ~/.zshrc), authorizes by crew identity, audits the access, and returns
- * the value ONLY to the calling code. Callers must NOT log the result; use redactCredential() to
- * serialize it safely.
+ * Resolve a credential through WorfGate (sync, ENV provider only — fast path for hot code).
+ * For the full provider chain (Vault / Secrets Manager), use resolveWorfGateCredentialAsync.
  */
 export function resolveWorfGateCredential(
   name: string,
   ctx: { operation: CredentialOperation; crewId?: string; clientId?: string | null },
 ): CredentialAccessResult {
   const crewId = (ctx.crewId || WORFGATE_OFFICER).toLowerCase();
-  const spec = CREW_CREDENTIAL_REGISTRY[name];
   const value = process.env[name];
   const available = Boolean(value);
-
-  const stamp = (authorized: boolean): void =>
-    audit({ timestamp: new Date().toISOString(), name, operation: ctx.operation, crewId, authorized, available });
-
-  if (!spec) {
-    stamp(false);
-    return { name, authorized: false, available, reason: `'${name}' is not in the WorfGate credential registry` };
-  }
-  if (!spec.operations.includes(ctx.operation)) {
-    stamp(false);
-    return { name, authorized: false, available, reason: `'${name}' is not permitted for operation '${ctx.operation}'` };
-  }
-  if (!AUTHORIZED_CREW.has(crewId)) {
-    stamp(false);
-    return { name, authorized: false, available, reason: `crew member '${crewId}' is not authorized to broker credentials` };
-  }
-
-  stamp(true);
-  if (!available) {
-    return { name, authorized: true, available: false, reason: `'${name}' is not present in the environment — add it to ~/.zshrc / ~/.alexai-secrets` };
-  }
+  const auth = checkAuthorization(name, ctx.operation, crewId);
+  audit({ timestamp: new Date().toISOString(), name, operation: ctx.operation, crewId, authorized: auth.authorized, available });
+  if (!auth.authorized) return { name, authorized: false, available, reason: auth.reason };
+  if (!available) return { name, authorized: true, available: false, reason: `'${name}' not present in env — add to ~/.zshrc / ~/.alexai-secrets, or configure a provider (Vault/Secrets Manager)` };
   return { name, authorized: true, available: true, value, reason: `resolved by WorfGate for ${crewId} (${ctx.operation})` };
+}
+
+/**
+ * Resolve a credential through WorfGate across the full provider chain (env → Vault → Secrets
+ * Manager → …). Authorizes by crew identity, audits, and returns the value + which provider served
+ * it ONLY to calling code. Use redactCredential() to serialize safely.
+ */
+export async function resolveWorfGateCredentialAsync(
+  name: string,
+  ctx: { operation: CredentialOperation; crewId?: string; clientId?: string | null },
+): Promise<CredentialAccessResult & { source?: string }> {
+  const crewId = (ctx.crewId || WORFGATE_OFFICER).toLowerCase();
+  const auth = checkAuthorization(name, ctx.operation, crewId);
+  if (!auth.authorized) {
+    audit({ timestamp: new Date().toISOString(), name, operation: ctx.operation, crewId, authorized: false, available: false });
+    return { name, authorized: false, available: false, reason: auth.reason };
+  }
+  for (const p of PROVIDERS.filter(x => x.isActive())) {
+    let value: string | undefined;
+    try { value = await p.get(name); } catch { value = undefined; }
+    if (value) {
+      audit({ timestamp: new Date().toISOString(), name, operation: ctx.operation, crewId, authorized: true, available: true });
+      return { name, authorized: true, available: true, value, source: p.name, reason: `resolved by WorfGate via '${p.name}' for ${crewId} (${ctx.operation})` };
+    }
+  }
+  audit({ timestamp: new Date().toISOString(), name, operation: ctx.operation, crewId, authorized: true, available: false });
+  return { name, authorized: true, available: false, reason: `'${name}' not found in any active provider (${PROVIDERS.filter(p => p.isActive()).map(p => p.name).join(', ')})` };
 }
 
 /** Safe serialization: strips the secret value, keeps the decision. */

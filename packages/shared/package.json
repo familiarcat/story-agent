@@ -25,6 +25,10 @@
       "import": "./dist/src/worfgate-credentials.js",
       "types": "./dist/src/worfgate-credentials.d.ts"
     },
+    "./worfgate-credential-providers": {
+      "import": "./dist/src/worfgate-credential-providers.js",
+      "types": "./dist/src/worfgate-credential-providers.d.ts"
+    },
     "./aha-credentials": {
       "import": "./dist/src/aha-credentials.js",
       "types": "./dist/src/aha-credentials.d.ts"
