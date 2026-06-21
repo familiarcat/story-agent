@@ -16,8 +16,9 @@ import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolCon
 import { gateLocalOp, type WorfTier } from './worfgate-local.js';
 
 export interface AgentEvent {
-  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation';
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry';
   text?: string;
+  attempt?: number;
   tool?: string;
   args?: unknown;
   tier?: WorfTier;
@@ -32,6 +33,8 @@ export interface RunAgentOptions {
   /** Capability tier for Quark's per-turn model pick (default 3 = advanced, cheap multi-provider). */
   tier?: number;
   maxIterations?: number;
+  /** Attempts per LLM call before surfacing the error (exponential backoff). Default 3. */
+  maxRetries?: number;
   /** Soft token budget; when exceeded the loop finalizes instead of continuing (Quark spend cap). */
   tokenBudget?: number;
   systemPrompt?: string;
@@ -70,6 +73,37 @@ function estCost(model: string, tin: number, tout: number): number {
   return (tin / 1e6) * ci + (tout / 1e6) * co;
 }
 
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+/** Is this LLM-call error worth retrying? (rate limits, 5xx, transient network). */
+export function isRetryable(err: any): boolean {
+  const status = err?.status ?? err?.response?.status;
+  if (status === 429 || (typeof status === 'number' && status >= 500)) return true;
+  const code = err?.code || err?.cause?.code || '';
+  return ['ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'EPIPE', 'ENOTFOUND', 'UND_ERR_SOCKET'].includes(code);
+}
+
+/**
+ * Run an OpenRouter completion with exponential backoff (PROD-11). Retries transient failures
+ * (429 / 5xx / network) up to `attempts`; re-throws non-retryable or exhausted errors so the
+ * loop surfaces them as an explicit error event rather than aborting silently.
+ */
+export async function callWithRetry<T>(fn: () => Promise<T>, attempts: number, emit: (e: AgentEvent) => void): Promise<T> {
+  let lastErr: any;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastErr = err;
+      if (attempt >= attempts || !isRetryable(err)) break;
+      const backoff = Math.min(8000, 400 * 2 ** (attempt - 1));
+      emit({ type: 'retry', attempt, text: `LLM call failed (${err?.status ?? err?.code ?? 'error'}); retry ${attempt}/${attempts - 1} in ${backoff}ms` });
+      await sleep(backoff);
+    }
+  }
+  throw lastErr;
+}
+
 /** Run the autonomous agent loop on a single user request. */
 export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}): Promise<AgentRunResult> {
   if (!OR_KEY) throw new Error('CREW_LLM_APPROVED_KEY not set — cannot reach OpenRouter.');
@@ -77,6 +111,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const workspace = opts.workspace || process.env.STORY_AGENT_WORKSPACE || process.cwd();
   const tools = opts.tools || AGENT_TOOLS;
   const maxIterations = opts.maxIterations ?? 25;
+  const maxRetries = opts.maxRetries ?? 3;
   const tokenBudget = opts.tokenBudget ?? 400_000;
   const emit = opts.onEvent ?? (() => {});
 
@@ -108,14 +143,28 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     const body: any = { model, messages, tools: openaiTools, tool_choice: 'auto', max_tokens: 1500 };
     if (model.startsWith('anthropic/')) body.provider = { order: ['Anthropic'], allow_fallbacks: true };
 
-    const resp: any = await client.chat.completions.create(body as any);
+    let resp: any;
+    try {
+      resp = await callWithRetry(() => client.chat.completions.create(body as any), maxRetries, emit);
+    } catch (err: any) {
+      // Exhausted retries / non-retryable → surface explicitly and finalize (never a silent abort).
+      result.finalText = `⚠️ Model call failed after ${maxRetries} attempt(s): ${err?.message || err}`;
+      emit({ type: 'error', text: result.finalText });
+      emit({ type: 'done', model, costUSD: result.totalCostUSD });
+      return result;
+    }
     const usage = resp.usage || {};
     result.totalTokens += (usage.prompt_tokens || 0) + (usage.completion_tokens || 0);
     result.totalCostUSD += estCost(model, usage.prompt_tokens || 0, usage.completion_tokens || 0);
 
     const choice = resp.choices?.[0];
     const msg = choice?.message;
-    if (!msg) { emit({ type: 'error', text: 'no message from model' }); break; }
+    if (!msg) {
+      // Empty completion — treat as a transient hiccup and retry the turn rather than aborting.
+      emit({ type: 'retry', text: 'empty completion; retrying turn' });
+      messages.push({ role: 'user', content: 'Your last response was empty. Continue the task or summarize if complete.' });
+      continue;
+    }
 
     messages.push(msg);
 
@@ -176,8 +225,13 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       result.budgetExceeded = true;
       emit({ type: 'text', text: `⚠️ Quark spend cap reached (${result.totalTokens} tokens) — finalizing.` });
       messages.push({ role: 'user', content: 'Token budget reached. Summarize what you have done and any remaining steps. Do not call more tools.' });
-      const fin: any = await client.chat.completions.create({ model, messages, max_tokens: 800 });
-      result.finalText = fin.choices?.[0]?.message?.content || '';
+      try {
+        const fin: any = await callWithRetry(() => client.chat.completions.create({ model, messages, max_tokens: 800 }), maxRetries, emit);
+        result.finalText = fin.choices?.[0]?.message?.content || '';
+      } catch (err: any) {
+        result.finalText = `⚠️ Budget-cap summary failed: ${err?.message || err}`;
+        emit({ type: 'error', text: result.finalText });
+      }
       emit({ type: 'done', model, costUSD: result.totalCostUSD });
       return result;
     }

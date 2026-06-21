@@ -82,6 +82,11 @@ export interface ClientSecurityPolicy {
   }>;
   /** SSM parameter paths that must be populated (Bayer/regulated tier only) */
   requiredSsmPaths?: string[];
+  /**
+   * Parent client in the org hierarchy (e.g. a client onboarded under the 'familiarcat' main user).
+   * null/undefined = a top-level org sitting directly under the root admin (Brady Georgen).
+   */
+  parentClientId?: string | null;
 }
 
 // ── BAYER — GOLD STANDARD (regulated tier) ───────────────────────────────────
@@ -347,6 +352,100 @@ export const DEFAULT_STANDARD_POLICY: ClientSecurityPolicy = {
   ],
 };
 
+// ── CLIENT ONBOARDING (repeatable process) ────────────────────────────────────
+//
+// Every new client is built through buildClientPolicy() so the security floor is
+// applied uniformly: WorfGate is ALWAYS enforced (hard), full audit + session
+// isolation are on, and regulated tier additionally forces SSM secrets + a
+// controlled-data hard block. You may raise the bar per client; you can never
+// drop below this floor (Bayer remains the ceiling).
+
+export interface ClientOnboardingSpec {
+  clientId: string;
+  clientName: string;
+  tier: SecurityTier;
+  /** GitHub org allowlisted for this client's outbound commits. */
+  githubOrg: string;
+  /** Parent client in the hierarchy (e.g. 'familiarcat'). null = top-level org. */
+  parentClientId?: string | null;
+  /** Extra controlled-data markers beyond the baseline set. */
+  controlledMarkers?: string[];
+  /** Force a hard block on controlled-data outbound (always true for regulated). */
+  controlledDataHardBlock?: boolean;
+  tierRationale?: string;
+}
+
+const BASELINE_CONTROLLED_MARKERS = ['confidential', 'internal use only', 'proprietary', 'secret', 'pii'];
+
+/** Build a complete, floor-compliant ClientSecurityPolicy from a minimal spec. */
+export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPolicy {
+  const regulated = spec.tier === 'regulated';
+  const secretSource: 'ssm' | 'env' | 'either' = regulated ? 'ssm' : 'either';
+  const hardBlock = spec.controlledDataHardBlock ?? regulated;
+
+  return {
+    clientId: spec.clientId.trim().toLowerCase(),
+    clientName: spec.clientName,
+    tier: spec.tier,
+    parentClientId: spec.parentClientId ?? null,
+    tierRationale:
+      spec.tierRationale ??
+      `${spec.tier} tier client onboarded under ${spec.parentClientId ?? 'root'}. WorfGate enforced; ` +
+        `measured against the Bayer regulated gold standard.`,
+    auth: {
+      requireBearerToken: true,
+      requireEntraIssuer: regulated,
+      requireSessionIsolation: true,
+      requireFullAuditTrail: true,
+      worfGateEnforce: true, // floor: WorfGate is always on for onboarded clients
+      controlledDataHardBlock: hardBlock,
+      requireSsmSecrets: regulated,
+      sessionTtlSeconds: regulated ? 3600 : 7200,
+    },
+    worfGate: {
+      enforceMode: 'hard', // floor: never advisory for a managed client
+      allowedGithubOrgs: [spec.githubOrg],
+      controlledMarkers: Array.from(new Set([...BASELINE_CONTROLLED_MARKERS, ...(spec.controlledMarkers ?? [])])),
+      allowControlledOutbound: false,
+    },
+    requiredEnvVars: [
+      { name: 'STORY_AGENT_AUTH_JWKS_URI', description: 'JWKS URI for token validation.', source: 'env', sensitive: false },
+      { name: 'STORY_AGENT_AUTH_AUDIENCE', description: `Expected aud claim for ${spec.clientName} tokens.`, source: 'env', sensitive: false },
+      { name: 'WORFGATE_ENFORCE', description: 'Must be "true".', source: 'env', sensitive: false },
+      { name: 'WORFGATE_ALLOWED_GITHUB_ORGS', description: `Must include "${spec.githubOrg}".`, source: 'env', sensitive: false },
+      { name: 'REDIS_URL', description: 'Redis for session isolation.', source: 'either', sensitive: true },
+      { name: 'SUPABASE_URL', description: 'Supabase project URL.', source: secretSource, sensitive: false },
+      { name: 'SUPABASE_KEY', description: 'Supabase service role key.', source: secretSource, sensitive: true },
+      { name: 'GITHUB_TOKEN', description: `GitHub PAT scoped to ${spec.githubOrg} org.`, source: secretSource, sensitive: true },
+    ],
+    requiredSsmPaths: regulated
+      ? [`/story-agent/${spec.clientId}/supabase-url`, `/story-agent/${spec.clientId}/supabase-key`, `/story-agent/${spec.clientId}/github-token`]
+      : undefined,
+  };
+}
+
+// Dynamic client cache — hydrated from Supabase (see client-registry.ts). resolveClientPolicy reads
+// this FIRST, so clients onboarded into the `clients` table resolve with no code change. The crew
+// maintains clients end-to-end via the DB; only Bayer (gold standard) + familiarcat (root org)
+// remain code bootstrap below.
+const DYNAMIC_CLIENT_CACHE: Record<string, ClientSecurityPolicy> = {};
+
+/** Put a policy into the in-memory cache (called after a DB hydrate or an onboard). */
+export function cacheClientPolicy(policy: ClientSecurityPolicy): void {
+  DYNAMIC_CLIENT_CACHE[policy.clientId.trim().toLowerCase()] = policy;
+}
+
+/** Clear the dynamic cache (e.g. before a fresh hydrate from the DB). */
+export function clearDynamicClientCache(): void {
+  for (const k of Object.keys(DYNAMIC_CLIENT_CACHE)) delete DYNAMIC_CLIENT_CACHE[k];
+}
+
+/** Look up a policy across the dynamic cache + static bootstrap, without falling back to a default. */
+export function lookupClientPolicy(clientId: string): ClientSecurityPolicy | undefined {
+  const k = clientId.trim().toLowerCase();
+  return DYNAMIC_CLIENT_CACHE[k] ?? CLIENT_POLICY_REGISTRY[k];
+}
+
 // ── CLIENT REGISTRY ───────────────────────────────────────────────────────────
 
 const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
@@ -446,70 +545,9 @@ const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
     ],
   },
 
-  // Jonah Corporation - Enterprise Tier
-  // Requires strong auth, WorfGate on, session isolation, but env vars acceptable.
-  'jonah-corp': {
-    clientId: 'jonah-corp',
-    clientName: 'Jonah Corporation',
-    tier: 'enterprise',
-    tierRationale:
-      'Enterprise client with strong auth requirements for internal applications. ' +
-      'Requires robust security but without regulated-tier GDPR/PHI obligations. ' +
-      'Env vars acceptable for secrets.',
-
-    auth: {
-      requireBearerToken: true,
-      requireEntraIssuer: false, // any OIDC issuer acceptable
-      requireSessionIsolation: true,
-      requireFullAuditTrail: true,
-      worfGateEnforce: true,
-      controlledDataHardBlock: false, // can be overridden per-deployment
-      requireSsmSecrets: false, // env vars acceptable
-      sessionTtlSeconds: 7200, // 2-hour session TTL
-    },
-
-    worfGate: {
-      enforceMode: 'hard',
-      allowedGithubOrgs: ['jonah-corp'],
-      controlledMarkers: [
-        'confidential',
-        'internal use only',
-        'proprietary',
-        'project plan',
-        'financial data',
-      ],
-      allowControlledOutbound: false,
-    },
-
-    requiredEnvVars: [
-      {
-        name: 'STORY_AGENT_AUTH_JWKS_URI',
-        description: 'JWKS URI for token validation (any OIDC provider).',
-        source: 'env',
-        sensitive: false,
-      },
-      {
-        name: 'STORY_AGENT_AUTH_AUDIENCE',
-        description: 'Expected aud claim for Jonah tokens.',
-        source: 'env',
-        sensitive: false,
-      },
-      { name: 'WORFGATE_ENFORCE', description: 'Must be "true".', source: 'env', sensitive: false },
-      {
-        name: 'WORFGATE_ALLOWED_GITHUB_ORGS',
-        description: 'Must include "jonah-corp".',
-        source: 'env',
-        sensitive: false,
-      },
-      { name: 'REDIS_URL', description: 'Redis for session isolation.', source: 'either', sensitive: true },
-      { name: 'SUPABASE_URL', description: 'Supabase project URL.', source: 'either', sensitive: false },
-      { name: 'SUPABASE_KEY', description: 'Supabase service role key.', source: 'either', sensitive: true },
-      { name: 'GITHUB_TOKEN', description: 'GitHub PAT scoped to jonah-corp org.', source: 'either', sensitive: true },
-    ],
-  },
-
-  // Add additional clients here. They are measured against BAYER_SECURITY_POLICY
-  // as the gold standard. Never lower the bar below Bayer.
+  // NOTE: onboarded clients (Jonah onward) are NOT hardcoded here — they live in the Supabase
+  // `clients` table and are hydrated into the dynamic cache at startup (see client-registry.ts).
+  // Only Bayer (gold standard) + familiarcat (root org) remain code bootstrap.
 };
 
 /**
@@ -521,7 +559,41 @@ const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
 export function resolveClientPolicy(clientId: string | null | undefined): ClientSecurityPolicy {
   if (!clientId) return DEFAULT_ENTERPRISE_POLICY;
   const normalized = clientId.trim().toLowerCase();
-  return CLIENT_POLICY_REGISTRY[normalized] ?? DEFAULT_ENTERPRISE_POLICY;
+  // DB-hydrated/onboarded clients take precedence, then the code bootstrap, then the enterprise floor.
+  return DYNAMIC_CLIENT_CACHE[normalized] ?? CLIENT_POLICY_REGISTRY[normalized] ?? DEFAULT_ENTERPRISE_POLICY;
+}
+
+/** All known client policies (code bootstrap + DB-hydrated). */
+export function listClientPolicies(): ClientSecurityPolicy[] {
+  const merged: Record<string, ClientSecurityPolicy> = { ...CLIENT_POLICY_REGISTRY, ...DYNAMIC_CLIENT_CACHE };
+  return Object.values(merged);
+}
+
+/** Direct children of a client in the hierarchy. */
+export function getClientChildren(clientId: string): ClientSecurityPolicy[] {
+  const k = clientId.trim().toLowerCase();
+  return listClientPolicies().filter(p => (p.parentClientId ?? null) === k);
+}
+
+export interface ClientHierarchyNode {
+  clientId: string;
+  clientName: string;
+  tier: SecurityTier;
+  worfGateEnforce: boolean;
+  children: ClientHierarchyNode[];
+}
+
+/** The full client hierarchy as a tree (top-level orgs sit directly under the root admin). */
+export function listClientHierarchy(): ClientHierarchyNode[] {
+  const all = listClientPolicies();
+  const build = (p: ClientSecurityPolicy): ClientHierarchyNode => ({
+    clientId: p.clientId,
+    clientName: p.clientName,
+    tier: p.tier,
+    worfGateEnforce: p.auth.worfGateEnforce,
+    children: all.filter(c => (c.parentClientId ?? null) === p.clientId).map(build),
+  });
+  return all.filter(p => !p.parentClientId).map(build);
 }
 
 /**

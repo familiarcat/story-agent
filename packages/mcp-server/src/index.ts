@@ -16,7 +16,9 @@ import { CrewWebSocketServer } from './lib/websocket-server.js';
 import { startRagHttpServer } from './lib/rag-http-server.js';
 import { registerAhaTools } from './tools/aha-tools.js';
 import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
+import { registerClientTools } from './tools/client-tools.js';
 import { startAgentHttpServer } from './agent-core/http-server.js';
+import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
 import { createHttpAuthMiddleware, reportMissingCredentialsAtStartup } from './lib/http-auth-middleware.js';
 
 const server = new McpServer({
@@ -35,6 +37,7 @@ registerCrewIntegrityTools(server);
 registerStarshipTools(server);
 registerAhaTools(server);  // 📋 Aha! — crew project/epic/story/sprint management via REST
 registerCrewMissionTools(server);  // 🧭 6-stage pipeline: Picard→Riker→Quark→crew→Quark→Picard
+registerClientTools(server);  // 👥 client onboarding + hierarchy (WorfGate-governed)
 
 async function main() {
   // Initialize async tool registrations
@@ -42,6 +45,15 @@ async function main() {
 
   // Report any missing credentials at startup — especially Bayer-tier requirements.
   reportMissingCredentialsAtStartup();
+
+  // Hydrate dynamic client policies from Supabase so resolveClientPolicy (WorfGate/auth) sees
+  // crew-onboarded clients. Best-effort — Bayer/familiarcat bootstrap works even if the DB is down.
+  try {
+    const { loaded } = await hydrateClientPolicies();
+    process.stderr.write(`Hydrated ${loaded} client policy/policies from Supabase.\n`);
+  } catch (e) {
+    process.stderr.write(`Client policy hydration skipped: ${e instanceof Error ? e.message : String(e)}\n`);
+  }
 
   // ── Stdio transport (VS Code / Claude Desktop / local use) ──────────────────
   const transport = new StdioServerTransport();
@@ -87,6 +99,7 @@ async function main() {
           registerCrewIntegrityTools(perRequestServer);
           registerStarshipTools(perRequestServer);
           registerCrewMissionTools(perRequestServer);  // 🧭 mission pipeline over HTTP
+          registerClientTools(perRequestServer);  // 👥 client onboarding over HTTP
 
           await perRequestServer.connect(httpTransport);
 

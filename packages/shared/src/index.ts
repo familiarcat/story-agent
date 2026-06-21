@@ -212,6 +212,7 @@ export interface SprintRituals {
 
 export * from './client-scope.js';
 export * from './client-security-policy.js';
+export * from './client-registry.js';
 export interface StoryMission {
   story: AgileStory;
   sprint: AgileSprint | null;

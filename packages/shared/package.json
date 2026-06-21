@@ -17,6 +17,10 @@
       "import": "./dist/src/client-security-policy.js",
       "types": "./dist/src/client-security-policy.d.ts"
     },
+    "./client-registry": {
+      "import": "./dist/src/client-registry.js",
+      "types": "./dist/src/client-registry.d.ts"
+    },
     "./aha-credentials": {
       "import": "./dist/src/aha-credentials.js",
       "types": "./dist/src/aha-credentials.d.ts"

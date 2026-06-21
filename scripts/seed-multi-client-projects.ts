@@ -33,10 +33,10 @@ async function main() {
 
   console.log('\n');
 
-  // 2. Seed Jonah's ToDo Application
+  // 2. Seed Jonah's ToDo Application (client nested under the familiarcat main user)
   await seedProject({
-    clientId: 'jonah-corp',
-    clientName: 'Jonah Corporation',
+    clientId: 'jonah',
+    clientName: 'Jonah',
     securityTier: 'enterprise',
     projectId: 'proj-jonah-todo',
     projectName: 'Jonah ToDo Application',
