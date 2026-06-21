@@ -2,8 +2,8 @@
  * Onboard a client into the MCP crew system — DYNAMICALLY (persists to Supabase `clients`,
  * caches for sync resolution, applies the WorfGate floor). Clients are data, not code.
  *
- * Requires the clients-table migration (supabase/20260621_clients_hierarchy_policy.sql) to be
- * applied first so the parent_client_id / policy columns exist.
+ * Requires the clients-table migration (supabase/migrations/20260621120000_clients_hierarchy_policy.sql)
+ * to be applied first (via `supabase db push`) so the parent_client_id / policy columns exist.
  *
  * Usage:
  *   npx tsx scripts/onboard-client.ts                    # seeds Jonah under familiarcat (default)
