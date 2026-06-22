@@ -16,7 +16,7 @@ import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolCon
 import { gateLocalOp, type WorfTier } from './worfgate-local.js';
 
 export interface AgentEvent {
-  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry';
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost';
   text?: string;
   attempt?: number;
   tool?: string;
@@ -37,6 +37,10 @@ export interface RunAgentOptions {
   maxRetries?: number;
   /** Soft token budget; when exceeded the loop finalizes instead of continuing (Quark spend cap). */
   tokenBudget?: number;
+  /** PROD-15: auto-escalate architecture/security/ambiguous tasks to the crew before looping (default true). */
+  autoEscalate?: boolean;
+  /** PROD-13: soft USD spend threshold — emits a 'cost' WorfGate-review event when crossed (does NOT hard-stop). */
+  reviewThresholdUSD?: number;
   systemPrompt?: string;
   ragRecall?: ToolContext['ragRecall'];
   crewDeliberate?: ToolContext['crewDeliberate'];
@@ -54,6 +58,20 @@ export interface AgentRunResult {
   totalTokens: number;
   escalated: boolean;
   budgetExceeded: boolean;
+  /** PROD-13 cost observatory — per-provider spend, burn rate, and whether the review threshold tripped. */
+  observatory: { perProvider: Record<string, number>; burnRatePerTurnUSD: number; reviewTriggered: boolean };
+}
+
+const ESCALATION_SIGNALS = ['architect', 'security', 'migration', 'refactor', 'privilege', 'multi-client', 'concurrency', 'rls', 'auth', 'schema design', 'breaking change', 'rollback'];
+
+/** PROD-15: should this request escalate to the full crew before the loop runs? */
+export function shouldEscalate(input: string): boolean {
+  const t = input.toLowerCase();
+  return ESCALATION_SIGNALS.some(k => t.includes(k)) || input.length > 600;
+}
+
+function providerOf(model: string): string {
+  return MODEL_POOL.find(m => m.id === model)?.provider ?? (model.split('/')[0] || 'unknown');
 }
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
@@ -113,6 +131,8 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const maxIterations = opts.maxIterations ?? 25;
   const maxRetries = opts.maxRetries ?? 3;
   const tokenBudget = opts.tokenBudget ?? 400_000;
+  const autoEscalate = opts.autoEscalate ?? true;
+  const reviewThresholdUSD = opts.reviewThresholdUSD;
   const emit = opts.onEvent ?? (() => {});
 
   const model = quarkSelectModel(opts.tier ?? 3).id;
@@ -126,6 +146,14 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const client = new OpenAI({ apiKey: OR_KEY, baseURL: OR_URL });
   const openaiTools = toOpenAITools(tools);
 
+  const perProvider: Record<string, number> = {};
+  const accrue = (tin: number, tout: number) => {
+    const c = estCost(model, tin, tout);
+    result.totalCostUSD += c;
+    result.totalTokens += tin + tout;
+    perProvider[providerOf(model)] = Number(((perProvider[providerOf(model)] ?? 0) + c).toFixed(6));
+  };
+
   const messages: any[] = [
     { role: 'system', content: (opts.systemPrompt || DEFAULT_SYSTEM) + `\n\nWorkspace: ${workspace}` },
     { role: 'user', content: userInput },
@@ -134,7 +162,19 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const result: AgentRunResult = {
     finalText: '', iterations: 0, toolCalls: [], model,
     totalCostUSD: 0, totalTokens: 0, escalated: false, budgetExceeded: false,
+    observatory: { perProvider, burnRatePerTurnUSD: 0, reviewTriggered: false },
   };
+
+  // PROD-15 auto-escalation: hard/ambiguous tasks consult the full crew BEFORE the loop, and the
+  // synthesized mission plan is injected as context so the fast loop executes a vetted plan.
+  if (autoEscalate && ctx.crewDeliberate && shouldEscalate(userInput)) {
+    emit({ type: 'escalation', text: 'complex/high-stakes task — escalating to the crew before execution' });
+    try {
+      const plan = await ctx.crewDeliberate(userInput);
+      result.escalated = true;
+      messages.push({ role: 'user', content: `The crew deliberated this task. Execute against their mission plan:\n\n${plan}` });
+    } catch { /* escalation is best-effort; proceed with the fast loop */ }
+  }
 
   for (let i = 0; i < maxIterations; i++) {
     result.iterations = i + 1;
@@ -154,8 +194,14 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       return result;
     }
     const usage = resp.usage || {};
-    result.totalTokens += (usage.prompt_tokens || 0) + (usage.completion_tokens || 0);
-    result.totalCostUSD += estCost(model, usage.prompt_tokens || 0, usage.completion_tokens || 0);
+    accrue(usage.prompt_tokens || 0, usage.completion_tokens || 0);
+    result.observatory.burnRatePerTurnUSD = Number((result.totalCostUSD / result.iterations).toFixed(6));
+
+    // PROD-13 cost observatory: soft spend cap → emit a WorfGate-review signal (does NOT hard-stop).
+    if (reviewThresholdUSD && result.totalCostUSD >= reviewThresholdUSD && !result.observatory.reviewTriggered) {
+      result.observatory.reviewTriggered = true;
+      emit({ type: 'cost', costUSD: result.totalCostUSD, text: `⚠️ spend $${result.totalCostUSD.toFixed(4)} crossed review threshold $${reviewThresholdUSD} — WorfGate review (continuing)` });
+    }
 
     const choice = resp.choices?.[0];
     const msg = choice?.message;

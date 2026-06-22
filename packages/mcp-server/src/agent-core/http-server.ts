@@ -26,6 +26,24 @@ async function readBody(req: IncomingMessage): Promise<any> {
   return raw ? JSON.parse(raw) : {};
 }
 
+// PROD-12: per-invocation audit of the /agent path (no inputs/secrets stored — metadata only).
+export interface AgentInvocationAudit {
+  timestamp: string;
+  clientId: string | null;
+  authorized: boolean;
+  inputChars: number;
+  workspace?: string;
+}
+const agentAudit: AgentInvocationAudit[] = [];
+const AGENT_AUDIT_MAX = 500;
+function recordAgentInvocation(e: AgentInvocationAudit): void {
+  agentAudit.push(e);
+  if (agentAudit.length > AGENT_AUDIT_MAX) agentAudit.splice(0, agentAudit.length - AGENT_AUDIT_MAX);
+}
+export function getAgentInvocationAudit(): AgentInvocationAudit[] {
+  return [...agentAudit];
+}
+
 export function startAgentHttpServer(port: number) {
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (req.method === 'GET' && req.url === '/agent/health') {
@@ -50,6 +68,9 @@ export function startAgentHttpServer(port: number) {
 
     const input = String(body.input ?? '').trim();
     if (!input) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'input_required' })); return; }
+
+    // PROD-12: audit every agent invocation (metadata only — never the input text or secrets).
+    recordAgentInvocation({ timestamp: new Date().toISOString(), clientId: body.clientId ?? null, authorized: true, inputChars: input.length, workspace: body.workspace });
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',

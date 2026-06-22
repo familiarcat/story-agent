@@ -86,6 +86,45 @@ const edit_file: AgentTool = {
   },
 };
 
+const apply_patch: AgentTool = {
+  name: 'apply_patch',
+  description: 'Apply multiple edits across one or more files ATOMICALLY (all-or-nothing): everything is validated in memory first, then written only if every edit is valid. Each edit replaces an exact, unique old_string in a file; an empty old_string creates/overwrites the file with new_string. Use for coherent multi-file changes (e.g. a refactor touching several files).',
+  schema: z.object({
+    edits: z.array(z.object({
+      path: z.string().describe('Target file (within the workspace).'),
+      old_string: z.string().describe('Exact text to replace (unique in the file). Empty = create/overwrite with new_string.'),
+      new_string: z.string().describe('Replacement / new content.'),
+    })).describe('Edits applied atomically, in order; multiple edits to the same file chain.'),
+  }),
+  handler: async (a, ctx) => {
+    const edits = (Array.isArray(a.edits) ? a.edits : []) as Array<{ path: string; old_string: string; new_string: string }>;
+    if (!edits.length) throw new Error('no edits provided');
+    const root = path.resolve(ctx.workspace);
+    const staged: Record<string, string> = {}; // path → final content (validated in memory)
+
+    for (const [i, e] of edits.entries()) {
+      // Path safety: every edit must stay inside the workspace (apply_patch carries nested paths
+      // the WorfGate path-clamp can't reach, so enforce here).
+      const abs = path.resolve(root, String(e.path));
+      if (abs !== root && !abs.startsWith(root + path.sep)) throw new Error(`edit ${i}: path escapes workspace: ${e.path}`);
+
+      if (e.old_string === '') { staged[abs] = String(e.new_string); continue; } // create/overwrite
+      const current = staged[abs] ?? await fs.readFile(abs, 'utf8').catch(() => { throw new Error(`edit ${i}: file not found: ${e.path}`); });
+      const count = current.split(e.old_string).length - 1;
+      if (count === 0) throw new Error(`edit ${i}: old_string not found in ${e.path}`);
+      if (count > 1) throw new Error(`edit ${i}: old_string occurs ${count}× in ${e.path} — must be unique`);
+      staged[abs] = current.replace(e.old_string, String(e.new_string));
+    }
+
+    // All valid → write everything (atomic at the batch level).
+    for (const [abs, content] of Object.entries(staged)) {
+      await fs.mkdir(path.dirname(abs), { recursive: true });
+      await fs.writeFile(abs, content, 'utf8');
+    }
+    return `applied ${edits.length} edit(s) across ${Object.keys(staged).length} file(s)`;
+  },
+};
+
 const list_dir: AgentTool = {
   name: 'list_dir',
   description: 'List the entries of a directory in the workspace (files and subdirectories).',
@@ -185,7 +224,7 @@ const crew_deliberate: AgentTool = {
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
-  read_file, write_file, edit_file, list_dir, search_code, run_shell, git_status, git_diff, rag_recall, crew_deliberate,
+  read_file, write_file, edit_file, apply_patch, list_dir, search_code, run_shell, git_status, git_diff, rag_recall, crew_deliberate,
 ];
 
 export const TOOLS_BY_NAME: Record<string, AgentTool> = Object.fromEntries(AGENT_TOOLS.map(t => [t.name, t]));

@@ -40,6 +40,16 @@ defineSkillTheory({
 });
 
 defineSkillTheory({
+  tool: 'apply_patch',
+  who: { owner: 'riker' },
+  what: { summary: 'Apply multiple edits across one or more files atomically (all-or-nothing).', capabilities: ['coherent multi-file refactor', 'atomic batch edit', 'create + edit in one shot'] },
+  when: { useWhen: ['A change spans several files and must land together', 'Refactors touching multiple modules'], avoidWhen: ['A single-file change (use edit_file)'], preconditions: ['Each old_string is unique in its file', 'All paths inside the workspace'] },
+  where: { scope: ['local-fs'], surfaces: ['cli', 'api', 'vscode', 'mcp'], sideEffects: 'local' },
+  why: { rationale: 'Validate everything in memory, then write — so a multi-file change never half-applies.', goalsServed: ['implementation', 'atomicity', 'reviewability'] },
+  how: { invocation: 'apply_patch({ edits: [{ path, old_string, new_string }] })', annotations: { title: 'Apply Patch', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }, output: 'Count of edits + files written (or an error with nothing written).' },
+});
+
+defineSkillTheory({
   tool: 'list_dir',
   who: { owner: 'data' },
   what: { summary: 'List directory entries in the workspace.', capabilities: ['discover structure'] },
@@ -143,6 +153,6 @@ defineSkillTheory({
 
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
-  'read_file', 'write_file', 'edit_file', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
+  'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
 ];
