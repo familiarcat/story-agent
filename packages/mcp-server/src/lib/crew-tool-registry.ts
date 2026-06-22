@@ -120,7 +120,7 @@ Cost Profile: ${tool.costProfile}
 Evaluate this tool for security risk. Consider:
 1. External network calls — data exfiltration risk
 2. Controlled data leakage — does this tool touch sa_* data?
-3. Policy compliance — Bayer Skyhigh enterprise policy constraints
+3. Policy compliance — Client Skyhigh enterprise policy constraints
 4. Supply chain risk — is the source trustworthy?
 5. Permission scope — what access does this tool require?
 

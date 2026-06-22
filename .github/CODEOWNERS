@@ -23,8 +23,8 @@ supabase/20260607_*                @familiarcat
 
 # Project-specific ownership
 
-# Bayer Pharmaceutical - Patient-Centric Trial Management System
-projects/bayer-pctms/**            @familiarcat
+# Client Pharmaceutical - Patient-Centric Trial Management System
+projects/client-pctms/**            @familiarcat
 
 # Template project (for new clients)
 projects/template-project/**       @familiarcat

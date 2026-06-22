@@ -14,7 +14,7 @@ export default function NewStoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const [repoFullName, setRepoFullName] = useState('bayer-int/product-profile-ui');
+  const [repoFullName, setRepoFullName] = useState('client-int/product-profile-ui');
   const [baseBranch, setBaseBranch] = useState('dev');
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [selectedReference, setSelectedReference] = useState('');

@@ -2,11 +2,11 @@
 -- Client-Scoped Memory Isolation
 -- ============================================================================
 -- Adds client_id to sa_observation_memories so each client's crew memories
--- are isolated. Bayer's memories never surface in a Retailer session and vice versa.
+-- are isolated. Client's memories never surface in a Retailer session and vice versa.
 --
 -- Isolation rule:
 --   - client_id IS NULL   → legacy/global memories, readable by all clients
---   - client_id = 'bayer-int'    → Bayer-only memories (regulated tier)
+--   - client_id = 'client-int'    → Client-only memories (regulated tier)
 --   - client_id = 'familiarcat'  → Retailer Rewards memories (enterprise tier)
 --
 -- New queries filter: client_id = $target OR client_id IS NULL
@@ -18,7 +18,7 @@ ALTER TABLE public.sa_observation_memories
   ADD COLUMN IF NOT EXISTS client_id TEXT REFERENCES sa_client_security_policies(client_id) ON DELETE SET NULL;
 
 COMMENT ON COLUMN public.sa_observation_memories.client_id IS
-  'Client org that owns this memory. NULL = legacy/global, readable by all. Non-null = scoped to that client only. bayer-int = regulated, familiarcat = enterprise.';
+  'Client org that owns this memory. NULL = legacy/global, readable by all. Non-null = scoped to that client only. client-int = regulated, familiarcat = enterprise.';
 
 CREATE INDEX IF NOT EXISTS idx_sa_observation_memories_client_id
   ON public.sa_observation_memories(client_id);
@@ -43,8 +43,8 @@ INSERT INTO sa_client_security_policies (
   'enterprise',
   'React CRA app tracking customer loyalty points and transaction history. ' ||
   'Handles PII-lite data (customer IDs, transaction amounts) with no regulated/GDPR/PHI obligations. ' ||
-  'Enterprise tier: below Bayer gold standard but above standard tier. ' ||
-  'Demonstrates that the security system has real tiering below the Bayer ceiling.',
+  'Enterprise tier: below Client gold standard but above standard tier. ' ||
+  'Demonstrates that the security system has real tiering below the Client ceiling.',
   '{
     "requireBearerToken": true,
     "requireEntraIssuer": false,
@@ -119,4 +119,4 @@ ORDER BY
   p.client_name;
 
 COMMENT ON VIEW sa_security_tier_summary IS
-  'Security tier comparison across all registered clients. Ordered: regulated (Bayer gold standard) → enterprise (familiarcat) → standard. Use this view to show how new clients compare against the Bayer ceiling.';
+  'Security tier comparison across all registered clients. Ordered: regulated (Client gold standard) → enterprise (familiarcat) → standard. Use this view to show how new clients compare against the Client ceiling.';

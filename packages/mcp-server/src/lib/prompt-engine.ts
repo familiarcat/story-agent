@@ -139,7 +139,7 @@ function generateDemoResponse(
     riker:
       'ANALYSIS:\nImplementation strategy is tactically sound. Resource allocation looks optimal.\n\nFINDINGS:\n1. Development phases are sequenced correctly\n2. Crew task distribution is balanced\n3. Fallback branches handle edge cases\n\nRECOMMENDATIONS:\n1. Add runbook for each fallback scenario\n2. Create operator playbooks\n3. Document decision tree\n\nCONFIDENCE: 0.85\nHAS_SECURITY_VETO: false',
     worf:
-      'ANALYSIS:\nSecurity posture requires hardening. Policy enforcement is critical.\n\nFINDINGS:\n1. Network isolation from external AI routes verified\n2. Approved endpoint configuration required\n3. Degraded mode fallback documented\n\nRECOMMENDATIONS:\n1. Use approved Bayer LLM endpoint only\n2. Require explicit downgrade to advisory mode when blocked\n3. Add security banner on degraded operation\n\nCONFIDENCE: 0.95\nHAS_SECURITY_VETO: true',
+      'ANALYSIS:\nSecurity posture requires hardening. Policy enforcement is critical.\n\nFINDINGS:\n1. Network isolation from external AI routes verified\n2. Approved endpoint configuration required\n3. Degraded mode fallback documented\n\nRECOMMENDATIONS:\n1. Use approved Client LLM endpoint only\n2. Require explicit downgrade to advisory mode when blocked\n3. Add security banner on degraded operation\n\nCONFIDENCE: 0.95\nHAS_SECURITY_VETO: true',
   };
 
   if (crewId === 'data' && template.category === 'architect' && template.id === 'data_architecture_validation' && String(variables.storyDescription ?? '').includes('#vscode:webview')) {

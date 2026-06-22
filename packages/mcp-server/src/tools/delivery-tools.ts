@@ -26,7 +26,7 @@ export function registerDeliveryTools(server: McpServer) {
       storyId:      z.string().describe('Aha story reference number e.g. STORY-123'),
       storyTitle:   z.string().describe('Story title for PR and tracking'),
       storyUrl:     z.string().describe('Full Aha story URL'),
-      repoFullName: z.string().describe('GitHub owner/name e.g. bayer-int/product-profile-ui'),
+      repoFullName: z.string().describe('GitHub owner/name e.g. client-int/product-profile-ui'),
       prTitle:      z.string().describe('PR title — should start with [STORY_ID]'),
       prBody:       z.string().describe('Full PR body markdown using the project PR template'),
       files: z.array(z.object({

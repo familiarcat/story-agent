@@ -2,7 +2,7 @@
  * GET /api/crew/security-tiers
  *
  * Returns the registered client security policies sorted by tier,
- * with Bayer (regulated / gold standard) first.
+ * with Client (regulated / gold standard) first.
  *
  * Uses the sa_security_tier_summary Supabase view introduced in
  * 20260607_client_memory_isolation.sql.
@@ -14,7 +14,7 @@
 import { NextResponse } from 'next/server';
 import { getDbClient } from '@story-agent/shared/db';
 import {
-  BAYER_SECURITY_POLICY,
+  CLIENT_SECURITY_POLICY,
   DEFAULT_ENTERPRISE_POLICY,
   resolveClientPolicy,
   validateClientCredentials,
@@ -23,7 +23,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 // Known registered clients — fallback when DB view isn't available
-const REGISTERED_CLIENTS = ['bayer-int', 'familiarcat'];
+const REGISTERED_CLIENTS = ['client-int', 'familiarcat'];
 
 export async function GET() {
   try {
@@ -44,15 +44,15 @@ export async function GET() {
           credentialsPresent: credReport.allPresent,
           missingCredentialCount: credReport.missingCredentials.length,
           missingCredentials: credReport.missingCredentials.map(c => c.name),
-          isGoldStandard: clientId === 'bayer-int',
+          isGoldStandard: clientId === 'client-int',
         };
       });
 
       return NextResponse.json({
         success: true,
         tiers: enriched,
-        goldStandardClientId: 'bayer-int',
-        note: 'All clients are measured against the Bayer (regulated) gold standard.',
+        goldStandardClientId: 'client-int',
+        note: 'All clients are measured against the Client (regulated) gold standard.',
       });
     }
 
@@ -80,34 +80,34 @@ export async function GET() {
         credentialsPresent: credReport.allPresent,
         missingCredentialCount: credReport.missingCredentials.length,
         missingCredentials: credReport.missingCredentials.map(c => c.name),
-        isGoldStandard: policy.clientId === 'bayer-int',
+        isGoldStandard: policy.clientId === 'client-int',
       };
     });
 
     return NextResponse.json({
       success: true,
       tiers,
-      goldStandardClientId: 'bayer-int',
+      goldStandardClientId: 'client-int',
       note: 'Database view not yet available — showing TypeScript registry. Run 20260607_client_memory_isolation.sql to enable memory counts.',
       source: 'typescript_registry',
     });
   } catch (err) {
-    // Last resort: hardcoded Bayer vs familiarcat comparison
-    const bayer = resolveClientPolicy('bayer-int');
+    // Last resort: hardcoded Client vs familiarcat comparison
+    const client = resolveClientPolicy('client-int');
     const retailer = resolveClientPolicy('familiarcat');
     return NextResponse.json({
       success: true,
-      tiers: [bayer, retailer].map(p => ({
+      tiers: [client, retailer].map(p => ({
         client_id: p.clientId,
         client_name: p.clientName,
         tier: p.tier,
         tier_rationale: p.tierRationale,
-        isGoldStandard: p.clientId === 'bayer-int',
+        isGoldStandard: p.clientId === 'client-int',
         credentialsPresent: false,
         missingCredentialCount: p.requiredEnvVars.length,
         missingCredentials: p.requiredEnvVars.map(v => v.name),
       })),
-      goldStandardClientId: 'bayer-int',
+      goldStandardClientId: 'client-int',
       source: 'static_fallback',
       error: err instanceof Error ? err.message : String(err),
     });

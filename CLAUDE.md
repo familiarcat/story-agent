@@ -53,7 +53,7 @@ substantive work onto the crew, which is the point.
 - Clients live in the Supabase `clients` table (+ RAG memory), hydrated into a sync cache at
   startup. Onboard via `onboardClient` ([client-registry.ts](packages/shared/src/client-registry.ts))
   or the `onboard_client` MCP tool — it applies the WorfGate floor + hierarchy parent.
-- Only **Bayer** (regulated gold standard) and **familiarcat** (root org) are code bootstrap.
+- Only **Client** (regulated gold standard) and **familiarcat** (root org) are code bootstrap.
   Everything else (e.g. **Jonah** under familiarcat) is a DB row.
 
 ## Skills / tools — every tool needs a 5W1H theory

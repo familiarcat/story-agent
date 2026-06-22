@@ -8,7 +8,7 @@ We use a **three-layer testing approach**:
 
 1. **Unit Tests** — Pure functions, no I/O, fast (< 1s), 100% deterministic
 2. **Integration Tests (Local)** — Mocked services (Supabase, approved LLM, HTTP), fast, no external deps
-3. **Integration Tests (CI/CD)** — Real services (Supabase in AWS, Bayer-approved LLM API, real provider APIs), slow, external deps
+3. **Integration Tests (CI/CD)** — Real services (Supabase in AWS, Client-approved LLM API, real provider APIs), slow, external deps
 
 ### Design Philosophy
 

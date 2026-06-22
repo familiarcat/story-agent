@@ -101,7 +101,7 @@ Dashboard: http://localhost:3000
 
 ```
 get_story(LADV-2627)
-  └─► create_story_branch(LADV-2627, bayer-int/product-profile-ui)
+  └─► create_story_branch(LADV-2627, client-int/product-profile-ui)
         └─► [agent implements changes locally, commits, pushes]
               └─► open_pull_request(LADV-2627, title, body)
                     └─► sync_pr_comments(LADV-2627)   ← repeat on each review round

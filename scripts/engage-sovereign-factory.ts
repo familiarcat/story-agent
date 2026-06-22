@@ -20,7 +20,7 @@ async function engage() {
   crewAutonomyManager.start();
 
   // 2. Discover pending missions for the project
-  const clientId = process.env.TARGET_CLIENT_ID || 'bayer-int';
+  const clientId = process.env.TARGET_CLIENT_ID || 'client-int';
   const db = await getDbClient();
   
   console.log(`[PICARD] Discovering pending missions for client: ${clientId}...`);

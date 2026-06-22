@@ -70,7 +70,7 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         if (!repoFullName) {
           stream.markdown(
             `## Observation Lounge — Step 2 of 3\n\nStory: \`${referenceNum}\`\n\n` +
-            `What is the target GitHub repository? (e.g. \`bayer-int/product-profile-ui\`)`
+            `What is the target GitHub repository? (e.g. \`client-int/product-profile-ui\`)`
           );
           return { metadata: { [META_CMD]: 'prepare-step2', [META_REF]: referenceNum } };
         }
@@ -158,7 +158,7 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
       const last = meta[META_CMD] as string | undefined;
 
       if (last === 'prepare-step1') return [{ prompt: '/prepare STORY-123', label: 'e.g. /prepare STORY-123', participant: PARTICIPANT_ID }];
-      if (last === 'prepare-step2' && ref) return [{ prompt: `/prepare ${ref} bayer-int/product-profile-ui`, label: `${ref} → specify repo`, participant: PARTICIPANT_ID }];
+      if (last === 'prepare-step2' && ref) return [{ prompt: `/prepare ${ref} client-int/product-profile-ui`, label: `${ref} → specify repo`, participant: PARTICIPANT_ID }];
       if (last === 'prepare-done' && ref) return [
         { prompt: '/dashboard', label: 'Open dashboard', participant: PARTICIPANT_ID },
         { prompt: `/status ${ref}`, label: `Check status of ${ref}`, participant: PARTICIPANT_ID },

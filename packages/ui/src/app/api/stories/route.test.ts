@@ -15,7 +15,7 @@ const sampleStory = {
   storyId: 'STORY-1',
   storyTitle: 'Sensitive integration',
   storyUrl: 'https://aha.io/features/STORY-1',
-  repoFullName: 'bayer-int/story-agent',
+  repoFullName: 'client-int/story-agent',
   branch: 'STORY-1',
   baseBranch: 'main',
   status: 'implementing',
@@ -26,7 +26,7 @@ const sampleStory = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   notes: 'contains controlled notes',
-  clientId: 'bayer-int',
+  clientId: 'client-int',
 };
 
 describe('/api/stories route policy', () => {
@@ -38,7 +38,7 @@ describe('/api/stories route policy', () => {
   });
 
   it('redacts controlled fields when includeControlled is requested without client scope', async () => {
-    const request = new NextRequest('http://localhost/api/stories?includeControlled=true&clientId=bayer-int');
+    const request = new NextRequest('http://localhost/api/stories?includeControlled=true&clientId=client-int');
     const response = await GET(request);
     const body = await response.json();
 
@@ -53,9 +53,9 @@ describe('/api/stories route policy', () => {
   });
 
   it('returns controlled fields when role and selected client are authorized', async () => {
-    const request = new NextRequest('http://localhost/api/stories?includeControlled=true&clientId=bayer-int', {
+    const request = new NextRequest('http://localhost/api/stories?includeControlled=true&clientId=client-int', {
       headers: {
-        'x-client-id': 'bayer-int',
+        'x-client-id': 'client-int',
         'x-client-role': 'client_delivery',
         'x-controlled-data-purpose': 'ui_population',
       },

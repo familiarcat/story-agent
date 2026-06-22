@@ -328,7 +328,7 @@ components:
       required: [referenceNum, repoFullName]
       properties:
         referenceNum: { type: string, example: LADV-2627 }
-        repoFullName: { type: string, example: bayer-int/product-profile-ui }
+        repoFullName: { type: string, example: client-int/product-profile-ui }
 
     UpdateStoryRequest:
       type: object

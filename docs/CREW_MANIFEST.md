@@ -385,8 +385,8 @@ await storeCrewPersonalMemory({
   memory_type: 'lesson_learned',
   title: 'RLS Composite Key Pattern for Multi-Tenant Systems',
   content: 'Discovered that org_id must be first column in composite keys...',
-  project_id: 'bayer-pctms',
-  task_id: 'BAYER-001',
+  project_id: 'client-pctms',
+  task_id: 'CLIENT-001',
   tags: ['rls', 'security', 'multi-tenant'],
 });
 

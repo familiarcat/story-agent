@@ -24,7 +24,7 @@ last_updated: "2026-06-07"
 **Verified**: Yes (Observation Lounge)
 
 **Implementation**:
-- ✅ `projects/bayer-pctms/` — Bayer Pharmaceutical PCTMS
+- ✅ `projects/client-pctms/` — Client Pharmaceutical PCTMS
 - ✅ `projects/acme-erp/` — Acme Corporation ERP (NEW)
 - ✅ `projects/healthtech-analytics/` — Healthcare Analytics (NEW)
 - ✅ `projects/fintech-blockchain/` — FinTech Blockchain (NEW)
@@ -59,7 +59,7 @@ last_updated: "2026-06-07"
 **Verified**: Yes (Observation Lounge)
 
 **Implementation**:
-- ✅ `projects/bayer-pctms/.env.example`
+- ✅ `projects/client-pctms/.env.example`
 - ✅ `projects/acme-erp/.env.example` (NEW)
 - ✅ `projects/healthtech-analytics/.env.example` (NEW)
 - ✅ `projects/fintech-blockchain/.env.example` (NEW)
@@ -144,7 +144,7 @@ last_updated: "2026-06-07"
 **Test Results**:
 ```
 ✅ npm run project:list
-   Output: Lists bayer-pctms, acme-erp, healthtech-analytics, fintech-blockchain
+   Output: Lists client-pctms, acme-erp, healthtech-analytics, fintech-blockchain
 ✅ npm run db:health-check
    Output: All connectivity checks passed, 8/8 tables found
 ✅ scripts working error-free
@@ -171,7 +171,7 @@ last_updated: "2026-06-07"
 - ✅ `COMPLETION_REPORT.md` — Session summary
 
 **Project Documentation**:
-- ✅ `projects/bayer-pctms/README.md` — Bayer project docs
+- ✅ `projects/client-pctms/README.md` — Client project docs
 - ✅ `projects/acme-erp/README.md` — Acme project docs (NEW)
 - ✅ `projects/healthtech-analytics/README.md` — HealthTech docs (NEW)
 - ✅ `projects/fintech-blockchain/README.md` — FinTech docs (NEW)

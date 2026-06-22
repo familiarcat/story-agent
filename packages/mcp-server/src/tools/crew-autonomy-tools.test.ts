@@ -104,12 +104,12 @@ describe('Crew Autonomy Tools', () => {
   });
 
   it('crew:list-clients fetches from clients table', async () => {
-    const mockClients = [{ id: 'client-1', name: 'Bayer' }];
+    const mockClients = [{ id: 'client-1', name: 'Client' }];
     const mockDb = await getDbClient();
     (mockDb.from as any)().select().order.mockResolvedValue({ data: mockClients, error: null });
 
     const result = await toolHandlers['crew:list-clients']({});
-    expect(result.content[0].text).toContain('Bayer');
+    expect(result.content[0].text).toContain('Client');
     expect(mockDb.from).toHaveBeenCalledWith('clients');
   });
 
@@ -119,7 +119,7 @@ describe('Crew Autonomy Tools', () => {
     // listActiveProjects chains .eq().eq() then `await query` — set the builder's result.
     (mockDb.from as any)().__result = { data: mockProjects, error: null };
 
-    const result = await toolHandlers['crew:list-active-projects']({ includeArchived: false, clientId: 'bayer' });
+    const result = await toolHandlers['crew:list-active-projects']({ includeArchived: false, clientId: 'client' });
     expect(result.content[0].text).toContain('PCTMS');
     expect(mockDb.from).toHaveBeenCalledWith('projects');
   });

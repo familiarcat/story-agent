@@ -1,7 +1,7 @@
 -- Make clients dynamic + hierarchical (crew-maintainable, end-to-end via Supabase).
 -- Extends the existing public.clients table with a parent link (org hierarchy) and the full
 -- WorfGate-governed security policy as JSONB, so resolveClientPolicy() can hydrate from the DB
--- instead of compiled-in constants. Bayer (gold standard) + familiarcat (root org) remain code
+-- instead of compiled-in constants. Client (gold standard) + familiarcat (root org) remain code
 -- bootstrap; every onboarded client (Jonah onward) is a row here.
 
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS parent_client_id TEXT;

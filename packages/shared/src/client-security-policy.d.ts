@@ -1,13 +1,13 @@
 /**
- * Client Security Policy — Bayer is the Gold Standard
+ * Client Security Policy — Client is the Gold Standard
  *
- * Bayer (bayer-int) is the hardest security client we support.
- * All new clients are measured against Bayer's policy tier.
- * If you build something that passes Bayer's security requirements,
+ * Client (client-int) is the hardest security client we support.
+ * All new clients are measured against Client's policy tier.
+ * If you build something that passes Client's security requirements,
  * it works for every client we'll ever onboard.
  *
  * Security tiers:
- *  - 'regulated'  → Bayer tier: Entra auth, SSM secrets, WorfGate always on,
+ *  - 'regulated'  → Client tier: Entra auth, SSM secrets, WorfGate always on,
  *                   user-session isolation, full audit trail, no controlled data leak.
  *  - 'enterprise' → Strong auth required, WorfGate on, session isolation,
  *                   env-var secrets acceptable.
@@ -70,10 +70,10 @@ export interface ClientSecurityPolicy {
         source: 'ssm' | 'env' | 'either';
         sensitive: boolean;
     }>;
-    /** SSM parameter paths that must be populated (Bayer/regulated tier only) */
+    /** SSM parameter paths that must be populated (Client/regulated tier only) */
     requiredSsmPaths?: string[];
 }
-export declare const BAYER_SECURITY_POLICY: ClientSecurityPolicy;
+export declare const CLIENT_SECURITY_POLICY: ClientSecurityPolicy;
 export declare const DEFAULT_ENTERPRISE_POLICY: ClientSecurityPolicy;
 export declare const DEFAULT_STANDARD_POLICY: ClientSecurityPolicy;
 /**
@@ -85,7 +85,7 @@ export declare const DEFAULT_STANDARD_POLICY: ClientSecurityPolicy;
 export declare function resolveClientPolicy(clientId: string | null | undefined): ClientSecurityPolicy;
 /**
  * Check whether a client requires Entra-issued tokens specifically.
- * Bayer requires Entra. Others may use any OIDC provider.
+ * Client requires Entra. Others may use any OIDC provider.
  */
 export declare function requiresEntraAuth(clientId: string | null | undefined): boolean;
 /**

@@ -71,7 +71,7 @@ export async function executeAhaStoryWithMemory(input: {
 
   // 2. EXECUTE (governed: identity + auto-mode classification + confirm)
   const authz = authorizeAhaWrite(input.executor, 'aha:create-feature');
-  const clientTier = (input.clientId ?? '').toLowerCase().includes('bayer') ? 'regulated' : 'enterprise';
+  const clientTier = (input.clientId ?? '').toLowerCase().includes('client') ? 'regulated' : 'enterprise';
   const { proceed, classification } = gateAhaWrite(
     { verb: 'create', resource: 'feature', publishedState: 'draft', agentId: input.executor, clientTier },
     input.confirm,

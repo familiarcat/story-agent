@@ -22,7 +22,7 @@ Each memory has a type that indicates its purpose:
 |------|---------|---------|
 | **insight** | A discovery or realization | "Database partitioning by date improves query speed 3x for time-series data" |
 | **lesson_learned** | Learning from experience or mistakes | "We implemented RLS incorrectly initially; the org_id must be composite key with id" |
-| **decision_note** | Rationale for architectural decisions | "We chose PostgreSQL JSONB over separate tables because schema flexibility was critical for Bayer" |
+| **decision_note** | Rationale for architectural decisions | "We chose PostgreSQL JSONB over separate tables because schema flexibility was critical for Client" |
 | **reminder** | Procedural reminder for future tasks | "Always add org_id column first when creating new multi-tenant table" |
 
 ## Storing a Memory
@@ -43,9 +43,9 @@ await storeCrewPersonalMemory({
     2. All tables have consistent org_id column name
     3. RLS policies check auth.jwt()->>'org_id' first
     
-    This pattern prevented org_id conflicts in Bayer project.
+    This pattern prevented org_id conflicts in Client project.
   `,
-  project_id: 'bayer-pctms',
+  project_id: 'client-pctms',
   tags: ['rls', 'security', 'multi-tenant', 'postgresql'],
   relates_to_crew: ['data', 'geordi'],  // Who else should know this
 });
@@ -78,11 +78,11 @@ import { getCrewMemoriesByProject } from '@story-agent/shared';
 // When starting work on new Pharma project, retrieve Worf's security learnings
 const pharma_insights = await getCrewMemoriesByProject('worf', 'pharma-trials', 20);
 
-// Apply Bayer's RLS patterns to Pharma project
+// Apply Client's RLS patterns to Pharma project
 pharma_insights
   .filter(m => m.tags.includes('rls'))
   .forEach(m => {
-    console.log(`📋 Applying Bayer learning to Pharma: ${m.title}`);
+    console.log(`📋 Applying Client learning to Pharma: ${m.title}`);
   });
 ```
 
@@ -134,7 +134,7 @@ similar.forEach(m => {
 
 ### Example 1: Worf's Security Learning Flow
 
-**Day 1 - Bayer Project (Implementing RLS)**
+**Day 1 - Client Project (Implementing RLS)**
 
 ```typescript
 // After discovering the RLS pattern
@@ -143,7 +143,7 @@ await storeCrewPersonalMemory({
   memory_type: 'lesson_learned',
   title: 'RLS Composite Key Pattern',
   content: 'Put org_id as first column in composite keys...',
-  project_id: 'bayer-pctms',
+  project_id: 'client-pctms',
   tags: ['rls', 'security'],
 });
 ```
@@ -152,15 +152,15 @@ await storeCrewPersonalMemory({
 
 ```typescript
 // When implementing RLS on new project
-const bayer_rls_patterns = await searchCrewPersonalMemories(
+const client_rls_patterns = await searchCrewPersonalMemories(
   'worf',
   'RLS composite key',
   5
 );
 
 // Apply the learned pattern
-console.log(`📚 Applying ${bayer_rls_patterns.length} RLS patterns from Bayer`);
-bayer_rls_patterns.forEach(m => {
+console.log(`📚 Applying ${client_rls_patterns.length} RLS patterns from Client`);
+client_rls_patterns.forEach(m => {
   console.log(`  • ${m.title}`);
 });
 
@@ -168,8 +168,8 @@ bayer_rls_patterns.forEach(m => {
 await storeCrewPersonalMemory({
   crew_id: 'worf',
   memory_type: 'decision_note',
-  title: 'Pharma RLS Implementation - Reused Bayer Pattern',
-  content: 'Successfully applied RLS composite key pattern from Bayer...',
+  title: 'Pharma RLS Implementation - Reused Client Pattern',
+  content: 'Successfully applied RLS composite key pattern from Client...',
   project_id: 'pharma-trials',
   tags: ['rls', 'security', 'pattern-reuse'],
 });
@@ -177,7 +177,7 @@ await storeCrewPersonalMemory({
 
 ### Example 2: Geordi's Performance Learning Across Projects
 
-**Bayer Project - Index Performance Optimization**
+**Client Project - Index Performance Optimization**
 
 ```typescript
 // After discovering index strategy
@@ -186,13 +186,13 @@ await storeCrewPersonalMemory({
   memory_type: 'insight',
   title: 'B-Tree vs GiST Index Performance for JSON Queries',
   content: `
-    B-Tree indexes are 5x faster than GiST for exact JSON queries on Bayer's
+    B-Tree indexes are 5x faster than GiST for exact JSON queries on Client's
     trial data schema. GiST better for range/containment queries.
     
     Baseline: 50ms query time with GiST
     Optimized: 10ms with B-Tree (80% improvement)
   `,
-  project_id: 'bayer-pctms',
+  project_id: 'client-pctms',
   tags: ['performance', 'indexes', 'json', 'postgresql'],
 });
 ```
@@ -203,9 +203,9 @@ await storeCrewPersonalMemory({
 // When new project starts
 const geordi_perf_tips = await getCrewMemoriesByProject('geordi', 'new-project');
 
-// Pharma project learns from Bayer's experience
+// Pharma project learns from Client's experience
 if (pharma_schema.hasJsonColumns()) {
-  console.log('🎯 Applying Bayer index strategy to new project');
+  console.log('🎯 Applying Client index strategy to new project');
   // Use B-Tree indexes immediately, skip GiST testing
 }
 ```
@@ -223,7 +223,7 @@ await storeCrewPersonalMemory({
   memory_type: 'lesson_learned',
   title: 'Edge Case Testing for Multi-Tenant Isolation',
   content: 'Found that testing org_id boundary conditions...',
-  project_id: 'bayer-pctms',
+  project_id: 'client-pctms',
   relates_to_crew: ['worf', 'troi'],  // References Worf's RLS learning
 });
 
@@ -342,7 +342,7 @@ Enable project-specific retrieval:
 // ✅ Always include project context
 await storeCrewPersonalMemory({
   crew_id: 'geordi',
-  project_id: 'bayer-pctms',  // Which project
+  project_id: 'client-pctms',  // Which project
   task_id: 'PCTMS-001',        // Which task
   memory_type: 'insight',
   // ...

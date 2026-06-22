@@ -10,7 +10,7 @@ export function registerRepoTools(server: McpServer) {
   server.tool(
     'resolve_repository',
     'Resolve a GitHub repository, detect whether it uses dev or main as base branch, and return repo metadata.',
-    { repoFullName: z.string().describe('GitHub repository in owner/name format e.g. bayer-int/product-profile-ui') },
+    { repoFullName: z.string().describe('GitHub repository in owner/name format e.g. client-int/product-profile-ui') },
     async ({ repoFullName }) => {
       const repo = await resolveRepository(repoFullName);
       return { content: [{ type: 'text' as const, text: JSON.stringify(repo, null, 2) }] };

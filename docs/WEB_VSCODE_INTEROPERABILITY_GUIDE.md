@@ -82,7 +82,7 @@ Manager → Developer → Manager (seamless context switching)
 ```
 DEVELOPER IN VSCode
 ├─ Cmd+Shift+P → storyAgent.executeStory
-├─ Enter story: "BAYER-001"
+├─ Enter story: "CLIENT-001"
 ├─ See crew assigned: Worf, Data, Geordi
 ├─ Execute story (Phase 1)
 │
@@ -166,7 +166,7 @@ STORY AGENT (Sidebar View)
 │  └─ ... (8 more)
 │
 └─ 📁 Project Structure
-   ├─ bayer-pctms/
+   ├─ client-pctms/
    ├─ pharma-trials/
    └─ acme-corp/
 ```
@@ -257,11 +257,11 @@ curl http://localhost:3000/api/crew/memories?crew=worf
 
 When switching between UIs:
 ```
-VSCode (Story: BAYER-001, Crew: Worf)
+VSCode (Story: CLIENT-001, Crew: Worf)
     ↓ "Open Dashboard"
-Web UI (Still viewing: BAYER-001, Crew: Worf)
+Web UI (Still viewing: CLIENT-001, Crew: Worf)
     ↓ "Edit in VSCode"
-VSCode (Back to: BAYER-001, Crew: Worf)
+VSCode (Back to: CLIENT-001, Crew: Worf)
 ```
 
 ### ✅ Shared Configuration
@@ -378,11 +378,11 @@ Full Access to Both
 ```bash
 # Start VSCode
 1. Open VSCode
-2. Execute story: BAYER-001
+2. Execute story: CLIENT-001
 3. Cmd+Click: Open Dashboard
 4. Web UI opens to: /dashboard (context preserved)
 5. Return to VSCode
-6. Story context still: BAYER-001
+6. Story context still: CLIENT-001
 ✅ PASS: Context preserved
 ```
 

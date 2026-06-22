@@ -7,7 +7,7 @@ import { getDbClient } from '../packages/shared/src/db.js';
  */
 async function verifyStoryPR() {
   const storyRef = 'PCTMS-001';
-  const clientId = process.env.TARGET_CLIENT_ID || 'bayer-int'; // Use TARGET_CLIENT_ID
+  const clientId = process.env.TARGET_CLIENT_ID || 'client-int'; // Use TARGET_CLIENT_ID
   console.log(`🔍 Querying 'stories' table for mission: ${storyRef}...`);
 
   const db = await getDbClient();

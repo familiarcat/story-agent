@@ -7,7 +7,7 @@ import { getDbClient } from '../packages/shared/src/db.js';
  */
 async function verifyMissionStorage() {
   const storyRef = 'PCTMS-001';
-  const clientId = process.env.TARGET_CLIENT_ID || 'bayer-int';
+  const clientId = process.env.TARGET_CLIENT_ID || 'client-int';
   console.log(`🔍 Searching sa_observation_memories for mission: ${storyRef}...`);
 
   const db = await getDbClient();

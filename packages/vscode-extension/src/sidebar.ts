@@ -191,7 +191,7 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
     <label for="refNum">Story Mission Input</label>
     <input id="refNum" type="text" placeholder="e.g. STORY-123 or full Aha URL" />
     <label for="repoName">Repository</label>
-    <input id="repoName" type="text" placeholder="e.g. bayer-int/product-profile-ui" />
+    <input id="repoName" type="text" placeholder="e.g. client-int/product-profile-ui" />
     <label for="branch">Target Branch</label>
     <input id="branch" type="text" placeholder="dev" value="dev" />
     <button class="btn btn-primary" onclick="launchInChat()">

@@ -65,7 +65,7 @@ const REDIS_RECENT_ALL_KEY = 'sa:memory:recent:all';
 const REDIS_SYNC_QUEUE_KEY = 'sa:memory:sync_queue';
 const REDACTED_VALUE = '[REDACTED_BY_WORFGATE]';
 const DEFAULT_CONTROLLED_MARKERS = [
-    'bayer',
+    'client',
     'confidential',
     'internal use only',
     'regulated',

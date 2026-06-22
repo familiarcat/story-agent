@@ -12,7 +12,7 @@ const sampleStory: StoryRecord = {
   storyId: 'STORY-100',
   storyTitle: 'Controlled data hydration',
   storyUrl: 'https://aha.io/features/STORY-100',
-  repoFullName: 'bayer-int/story-agent',
+  repoFullName: 'client-int/story-agent',
   branch: 'STORY-100',
   baseBranch: 'main',
   status: 'implementing',
@@ -23,7 +23,7 @@ const sampleStory: StoryRecord = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   notes: 'contains regulated references',
-  clientId: 'bayer-int',
+  clientId: 'client-int',
 };
 
 describe('client scope controlled-data policy', () => {
@@ -52,14 +52,14 @@ describe('client scope controlled-data policy', () => {
   it('downgrades to advisory mode when role is insufficient', () => {
     const context = buildClientAccessContext({
       includeControlled: true,
-      selectedClientId: 'bayer-int',
+      selectedClientId: 'client-int',
       clientRole: 'viewer',
       purpose: 'ui_story_detail',
     });
 
     const decision = evaluateControlledDataAccess({
       context,
-      requestedClientId: 'bayer-int',
+      requestedClientId: 'client-int',
     });
 
     expect(decision.allowed).toBe(false);
@@ -70,21 +70,21 @@ describe('client scope controlled-data policy', () => {
   it('emits audit trail metadata for approved access', () => {
     const context = buildClientAccessContext({
       includeControlled: true,
-      selectedClientId: 'bayer-int',
+      selectedClientId: 'client-int',
       clientRole: 'client_delivery',
       purpose: 'ui_story_detail',
     });
 
     const decision = evaluateControlledDataAccess({
       context,
-      requestedClientId: 'bayer-int',
+      requestedClientId: 'client-int',
     });
 
     expect(decision.allowed).toBe(true);
     expect(decision.audit.outcome).toBe('approved');
     expect(decision.audit.reason).toBe('approved');
-    expect(decision.audit.selectedClientId).toBe('bayer-int');
-    expect(decision.audit.requestedClientId).toBe('bayer-int');
+    expect(decision.audit.selectedClientId).toBe('client-int');
+    expect(decision.audit.requestedClientId).toBe('client-int');
     expect(typeof decision.audit.timestamp).toBe('string');
   });
 });

@@ -42,7 +42,7 @@ export function ClientScopeSelector({ title = 'Client Scope' }: ClientScopeSelec
           <input
             value={clientId}
             onChange={e => setClientId(e.target.value)}
-            placeholder="e.g. bayer-int"
+            placeholder="e.g. client-int"
             style={{ width: '100%', padding: '0.45rem 0.55rem' }}
           />
         </label>

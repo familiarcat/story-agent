@@ -575,7 +575,7 @@ CREATE TABLE sa_mission_debriefs (
 
 | Decision | Rationale | Authority |
 |---|---|---|
-| Approved LLM provider only | Bayer Skyhigh blocks OpenRouter; no external AI routes | Worf VETO |
+| Approved LLM provider only | Client Skyhigh blocks OpenRouter; no external AI routes | Worf VETO |
 | Memory Alpha canonical grounding | Prevents prompt drift; keeps crew identity stable | Picard |
 | Worf security pre-screening for all new tools | First-line defense before crew evaluation | Worf |
 | Quark cost_optimized profile as default | Minimize spend while preserving critical-role quality | Quark |

@@ -1,13 +1,13 @@
 /**
- * Client Security Policy — Bayer is the Gold Standard
+ * Client Security Policy — Client is the Gold Standard
  *
- * Bayer (bayer-int) is the hardest security client we support.
- * All new clients are measured against Bayer's policy tier.
- * If you build something that passes Bayer's security requirements,
+ * Client (client-int) is the hardest security client we support.
+ * All new clients are measured against Client's policy tier.
+ * If you build something that passes Client's security requirements,
  * it works for every client we'll ever onboard.
  *
  * Security tiers:
- *  - 'regulated'  → Bayer tier: Entra auth, SSM secrets, WorfGate always on,
+ *  - 'regulated'  → Client tier: Entra auth, SSM secrets, WorfGate always on,
  *                   user-session isolation, full audit trail, no controlled data leak.
  *  - 'enterprise' → Strong auth required, WorfGate on, session isolation,
  *                   env-var secrets acceptable.
@@ -80,7 +80,7 @@ export interface ClientSecurityPolicy {
     source: 'ssm' | 'env' | 'either';
     sensitive: boolean;
   }>;
-  /** SSM parameter paths that must be populated (Bayer/regulated tier only) */
+  /** SSM parameter paths that must be populated (Client/regulated tier only) */
   requiredSsmPaths?: string[];
   /**
    * Parent client in the org hierarchy (e.g. a client onboarded under the 'familiarcat' main user).
@@ -89,26 +89,26 @@ export interface ClientSecurityPolicy {
   parentClientId?: string | null;
 }
 
-// ── BAYER — GOLD STANDARD (regulated tier) ───────────────────────────────────
+// ── CLIENT — GOLD STANDARD (regulated tier) ───────────────────────────────────
 //
-// Bayer is a pharmaceutical / crop-science enterprise with:
+// Client is a pharmaceutical / crop-science enterprise with:
 //  - GDPR obligations (EU data, patient data, PHI adjacency)
 //  - Internal Entra (Azure AD) for all service auth
 //  - AWS SSM Parameter Store for secrets (no plaintext env vars in CI/CD)
 //  - Strict outbound controls — no customer data to GitHub without clearance
 //  - Every tool call audited with immutable trail
 //
-// Any security measure added for Bayer sets the ceiling. Future clients
-// that need less can relax individual requirements, but Bayer's policy
+// Any security measure added for Client sets the ceiling. Future clients
+// that need less can relax individual requirements, but Client's policy
 // is the baseline test for the system's security posture.
 
-export const BAYER_SECURITY_POLICY: ClientSecurityPolicy = {
-  clientId: 'bayer-int',
-  clientName: 'Bayer AG (Internal)',
+export const CLIENT_SECURITY_POLICY: ClientSecurityPolicy = {
+  clientId: 'client-int',
+  clientName: 'Client AG (Internal)',
   tier: 'regulated',
   tierRationale:
     'Pharmaceutical enterprise with GDPR obligations, PHI-adjacent data, and mandatory Entra auth. ' +
-    'Bayer is the hardest security client — all other clients are measured against this profile.',
+    'Client is the hardest security client — all other clients are measured against this profile.',
 
   auth: {
     requireBearerToken: true,
@@ -123,10 +123,10 @@ export const BAYER_SECURITY_POLICY: ClientSecurityPolicy = {
 
   worfGate: {
     enforceMode: 'hard',
-    allowedGithubOrgs: ['bayer-int'],
+    allowedGithubOrgs: ['client-int'],
     controlledMarkers: [
-      'bayer',
-      'bayer-int',
+      'client',
+      'client-int',
       'confidential',
       'internal use only',
       'regulated',
@@ -146,38 +146,38 @@ export const BAYER_SECURITY_POLICY: ClientSecurityPolicy = {
 
   requiredEnvVars: [
     {
-      name: 'BAYER_ENTRA_TENANT_ID',
-      description: 'Azure AD tenant ID for Bayer. Used to validate Bearer token issuer (iss claim).',
+      name: 'CLIENT_ENTRA_TENANT_ID',
+      description: 'Azure AD tenant ID for Client. Used to validate Bearer token issuer (iss claim).',
       source: 'ssm',
       sensitive: false,
     },
     {
-      name: 'BAYER_ENTRA_AUDIENCE',
-      description: 'Expected audience (aud claim) in Bayer Entra tokens — the app registration client ID.',
+      name: 'CLIENT_ENTRA_AUDIENCE',
+      description: 'Expected audience (aud claim) in Client Entra tokens — the app registration client ID.',
       source: 'ssm',
       sensitive: false,
     },
     {
-      name: 'BAYER_ENTRA_JWKS_URI',
-      description: 'JWKS URI for Bayer Entra tenant — used to verify token signatures without sharing secrets.',
+      name: 'CLIENT_ENTRA_JWKS_URI',
+      description: 'JWKS URI for Client Entra tenant — used to verify token signatures without sharing secrets.',
       source: 'ssm',
       sensitive: false,
     },
     {
       name: 'WORFGATE_ENFORCE',
-      description: 'Must be "true". WorfGate blocks all outbound controlled data. Hard requirement for Bayer tier.',
+      description: 'Must be "true". WorfGate blocks all outbound controlled data. Hard requirement for Client tier.',
       source: 'env',
       sensitive: false,
     },
     {
       name: 'WORFGATE_ALLOWED_GITHUB_ORGS',
-      description: 'Must include "bayer-int". Only commits targeting bayer-int repos are permitted.',
+      description: 'Must include "client-int". Only commits targeting client-int repos are permitted.',
       source: 'env',
       sensitive: false,
     },
     {
       name: 'WORFGATE_ALLOW_CONTROLLED',
-      description: 'Must be "false" for Bayer tier. Controlled data cannot leave the system.',
+      description: 'Must be "false" for Client tier. Controlled data cannot leave the system.',
       source: 'env',
       sensitive: false,
     },
@@ -201,20 +201,20 @@ export const BAYER_SECURITY_POLICY: ClientSecurityPolicy = {
     },
     {
       name: 'GITHUB_TOKEN',
-      description: 'GitHub PAT or GitHub App token scoped to bayer-int org. Required for branch/PR operations.',
+      description: 'GitHub PAT or GitHub App token scoped to client-int org. Required for branch/PR operations.',
       source: 'ssm',
       sensitive: true,
     },
   ],
 
   requiredSsmPaths: [
-    '/story-agent/bayer/entra-tenant-id',
-    '/story-agent/bayer/entra-audience',
-    '/story-agent/bayer/entra-jwks-uri',
-    '/story-agent/bayer/redis-url',
-    '/story-agent/bayer/supabase-url',
-    '/story-agent/bayer/supabase-key',
-    '/story-agent/bayer/github-token',
+    '/story-agent/client/entra-tenant-id',
+    '/story-agent/client/entra-audience',
+    '/story-agent/client/entra-jwks-uri',
+    '/story-agent/client/redis-url',
+    '/story-agent/client/supabase-url',
+    '/story-agent/client/supabase-key',
+    '/story-agent/client/github-token',
   ],
 };
 
@@ -358,7 +358,7 @@ export const DEFAULT_STANDARD_POLICY: ClientSecurityPolicy = {
 // applied uniformly: WorfGate is ALWAYS enforced (hard), full audit + session
 // isolation are on, and regulated tier additionally forces SSM secrets + a
 // controlled-data hard block. You may raise the bar per client; you can never
-// drop below this floor (Bayer remains the ceiling).
+// drop below this floor (Client remains the ceiling).
 
 export interface ClientOnboardingSpec {
   clientId: string;
@@ -391,7 +391,7 @@ export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPol
     tierRationale:
       spec.tierRationale ??
       `${spec.tier} tier client onboarded under ${spec.parentClientId ?? 'root'}. WorfGate enforced; ` +
-        `measured against the Bayer regulated gold standard.`,
+        `measured against the Client regulated gold standard.`,
     auth: {
       requireBearerToken: true,
       requireEntraIssuer: regulated,
@@ -426,7 +426,7 @@ export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPol
 
 // Dynamic client cache — hydrated from Supabase (see client-registry.ts). resolveClientPolicy reads
 // this FIRST, so clients onboarded into the `clients` table resolve with no code change. The crew
-// maintains clients end-to-end via the DB; only Bayer (gold standard) + familiarcat (root org)
+// maintains clients end-to-end via the DB; only Client (gold standard) + familiarcat (root org)
 // remain code bootstrap below.
 const DYNAMIC_CLIENT_CACHE: Record<string, ClientSecurityPolicy> = {};
 
@@ -449,7 +449,7 @@ export function lookupClientPolicy(clientId: string): ClientSecurityPolicy | und
 // ── CLIENT REGISTRY ───────────────────────────────────────────────────────────
 
 const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
-  'bayer-int': BAYER_SECURITY_POLICY,
+  'client-int': CLIENT_SECURITY_POLICY,
 
   // familiarcat / Retailer Rewards Program
   // React CRA app tracking customer loyalty points and transaction history.
@@ -463,7 +463,7 @@ const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
     tierRationale:
       'React app tracking customer loyalty points and transaction history. ' +
       'Handles PII-lite data (customer IDs, transaction amounts) with no regulated/GDPR/PHI obligations. ' +
-      'Enterprise tier is below Bayer gold standard but above standard tier.',
+      'Enterprise tier is below Client gold standard but above standard tier.',
 
     auth: {
       requireBearerToken: true,
@@ -547,7 +547,7 @@ const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
 
   // NOTE: onboarded clients (Jonah onward) are NOT hardcoded here — they live in the Supabase
   // `clients` table and are hydrated into the dynamic cache at startup (see client-registry.ts).
-  // Only Bayer (gold standard) + familiarcat (root org) remain code bootstrap.
+  // Only Client (gold standard) + familiarcat (root org) remain code bootstrap.
 };
 
 /**
@@ -598,7 +598,7 @@ export function listClientHierarchy(): ClientHierarchyNode[] {
 
 /**
  * Check whether a client requires Entra-issued tokens specifically.
- * Bayer requires Entra. Others may use any OIDC provider.
+ * Client requires Entra. Others may use any OIDC provider.
  */
 export function requiresEntraAuth(clientId: string | null | undefined): boolean {
   return resolveClientPolicy(clientId).auth.requireEntraIssuer;

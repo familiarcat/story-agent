@@ -3,7 +3,7 @@
 ## 🎬 Scenario Setup
 
 ### Client
-**Name**: Bayer Pharmaceutical Systems (Gold-Standard Tier)
+**Name**: Client Pharmaceutical Systems (Gold-Standard Tier)
 **Requirements**: Enterprise-grade multi-tenant platform for clinical trial data management with security, compliance, and performance requirements
 
 ### Project
@@ -178,7 +178,7 @@ Using the domain-driven crew coordination system:
 
 ### SCENE 1: Strategic Context & Mission Understanding
 
-**PICARD**: "Welcome to the observation lounge. We've been assigned a significant mission: establishing a secure, compliant clinical trial platform for Bayer. Seven critical tasks across multiple domains. How are we approaching this with autonomy?"
+**PICARD**: "Welcome to the observation lounge. We've been assigned a significant mission: establishing a secure, compliant clinical trial platform for Client. Seven critical tasks across multiple domains. How are we approaching this with autonomy?"
 
 **DATA**: "Captain, I've analyzed the domain routing. This mission activates 14 different domains across all 11 crew members. The architecture suggests we should begin with PCTMS-001 and PCTMS-002 in parallel — schema design and security architecture are coupled."
 

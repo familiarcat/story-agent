@@ -8,7 +8,7 @@ import { getDbClient } from '../packages/shared/src/db.js';
 async function verifyWorfGateAudit() {
   const operation = 'engage_sovereign_factory_delivery';
   const target = 'github';
-  const clientId = process.env.TARGET_CLIENT_ID || 'bayer-int';
+  const clientId = process.env.TARGET_CLIENT_ID || 'client-int';
 
   console.log(`🔍 Searching 'sa_security_audit' for WorfGate entry:`);
   console.log(`   Operation: ${operation}`);

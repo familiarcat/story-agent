@@ -56,4 +56,4 @@ async function verifyMissionMemoryContext(
 }
 
 // Example usage: Verify PCTMS-002 referenced PCTMS-001
-verifyMissionMemoryContext('PCTMS-002', process.env.TARGET_CLIENT_ID || 'bayer-int', process.env.TARGET_REPO_FULL_NAME || 'bayer-int/sovereign-todo', 'PCTMS-001').catch(console.error);
+verifyMissionMemoryContext('PCTMS-002', process.env.TARGET_CLIENT_ID || 'client-int', process.env.TARGET_REPO_FULL_NAME || 'client-int/sovereign-todo', 'PCTMS-001').catch(console.error);

@@ -5,27 +5,27 @@ async function main() {
   console.log('🚀 Seeding Multi-Client Projects for Sovereign Factory...');
   console.log('========================================================');
 
-  // 1. Seed Bayer's ToDo Application
+  // 1. Seed Client's ToDo Application
   await seedProject({
-    clientId: 'bayer-int',
-    clientName: 'Bayer Pharmaceuticals',
+    clientId: 'client-int',
+    clientName: 'Client Pharmaceuticals',
     securityTier: 'regulated',
-    projectId: 'proj-bayer-todo',
-    projectName: 'Bayer ToDo Application',
-    epicId: 'epic-bayer-todo-foundation',
-    epicName: 'ToDo App Foundation for Bayer',
-    repoFullName: 'bayer-int/sovereign-todo',
+    projectId: 'proj-client-todo',
+    projectName: 'Client ToDo Application',
+    epicId: 'epic-client-todo-foundation',
+    epicName: 'ToDo App Foundation for Client',
+    repoFullName: 'client-int/sovereign-todo',
     stories: [
       {
         ref: 'BPC-001',
-        title: 'Design ToDo Table Schema (Bayer)',
-        notes: 'Design the core tasks table for Bayer\'s ToDo application, enforcing multi-tenant RLS and PHI compliance.',
+        title: 'Design ToDo Table Schema (Client)',
+        notes: 'Design the core tasks table for Client\'s ToDo application, enforcing multi-tenant RLS and PHI compliance.',
         acceptanceCriteria: '1. Schema includes org_id. 2. RLS policies drafted for PHI. 3. Database constraints for status and due dates.',
       },
       {
         ref: 'BPC-002',
-        title: 'Implement RLS Policies for Tasks (Bayer)',
-        notes: 'Enforce org_id isolation on the tasks table with Bayer\'s regulated data policies.',
+        title: 'Implement RLS Policies for Tasks (Client)',
+        notes: 'Enforce org_id isolation on the tasks table with Client\'s regulated data policies.',
         acceptanceCriteria: '1. RLS policies prevent cross-tenant access. 2. PHI fields are protected. 3. Audit trail for RLS violations.',
       },
     ],

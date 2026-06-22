@@ -42,8 +42,8 @@ const DEMO_STORIES: HierarchicalStoryRecord[] = [
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 3600000).toISOString(),
     notes: null,
-    clientId: 'client-demo-bayer',
-    clientName: 'Bayer',
+    clientId: 'client-demo-client',
+    clientName: 'Client',
     projectId: 'project-trial-intake',
     projectName: 'Trial Intake Automation',
     sprintId: 'sprint-24',
@@ -65,8 +65,8 @@ const DEMO_STORIES: HierarchicalStoryRecord[] = [
     createdAt: new Date(Date.now() - 172800000).toISOString(),
     updatedAt: new Date(Date.now() - 7200000).toISOString(),
     notes: null,
-    clientId: 'client-demo-bayer',
-    clientName: 'Bayer',
+    clientId: 'client-demo-client',
+    clientName: 'Client',
     projectId: 'project-trial-intake',
     projectName: 'Trial Intake Automation',
     sprintId: 'sprint-24',
@@ -103,7 +103,7 @@ const CLIENT_SECURITY_PROFILES: Record<string, {
   dataPlane: string;
   notes: string;
 }> = {
-  Bayer: {
+  Client: {
     complianceMode: 'regulated',
     llmRoute: 'approved internal endpoint required',
     dataPlane: 'live Supabase fallback recommended',

@@ -66,7 +66,7 @@ npm run db:migrate
 3. `20260605_docs_knowledge_vectors.sql` — Docs/knowledge vector index
 4. `20260605_crew_memory_vectors.sql` — Memory vector index
 5. `20260606_crew_starship_tables.sql` — Crew personas, skills, tools, debriefs
-6. `20260607_client_security_policies.sql` — Security policies, Bayer seed
+6. `20260607_client_security_policies.sql` — Security policies, Client seed
 7. `20260607_client_memory_isolation.sql` — Client isolation, familiarcat seed
 
 ---

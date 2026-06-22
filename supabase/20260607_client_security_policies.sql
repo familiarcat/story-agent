@@ -4,12 +4,12 @@
 -- Run after 20260606_crew_starship_tables.sql
 --
 -- This migration:
---  1. Creates sa_client_security_policies — Bayer is the seed row (gold standard)
+--  1. Creates sa_client_security_policies — Client is the seed row (gold standard)
 --  2. Creates sa_mission_debriefs — full audit trail of crew missions
 --  3. Adds client_tier + initiated_by_project columns to sa_stories
 --
--- Bayer AG is the hardest security client (regulated tier).
--- All other clients are measured against Bayer's policy profile.
+-- Client AG is the hardest security client (regulated tier).
+-- All other clients are measured against Client's policy profile.
 
 -- ── Client Security Policies ─────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS sa_client_security_policies (
   client_id       TEXT NOT NULL UNIQUE,
   client_name     TEXT NOT NULL,
   -- Security tier: 'regulated' | 'enterprise' | 'standard'
-  -- Bayer is 'regulated'. New clients default to 'enterprise', never 'standard'.
+  -- Client is 'regulated'. New clients default to 'enterprise', never 'standard'.
   tier            TEXT NOT NULL DEFAULT 'enterprise'
     CHECK (tier IN ('regulated', 'enterprise', 'standard')),
   tier_rationale  TEXT NOT NULL,
@@ -63,7 +63,7 @@ DROP POLICY IF EXISTS "Service role full access" ON sa_client_security_policies;
 CREATE POLICY "Service role full access" ON sa_client_security_policies
   USING (auth.role() = 'service_role');
 
--- ── Bayer AG — Gold Standard Seed Row ────────────────────────────────────────
+-- ── Client AG — Gold Standard Seed Row ────────────────────────────────────────
 -- This row is the canonical definition of the regulated tier.
 -- Do NOT lower any requirement in this row without security review.
 
@@ -77,11 +77,11 @@ INSERT INTO sa_client_security_policies (
   required_credentials,
   required_ssm_paths
 ) VALUES (
-  'bayer-int',
-  'Bayer AG (Internal)',
+  'client-int',
+  'Client AG (Internal)',
   'regulated',
   'Pharmaceutical enterprise with GDPR obligations, PHI-adjacent data, and mandatory Entra auth. ' ||
-  'Bayer is the hardest security client — all other clients are measured against this profile.',
+  'Client is the hardest security client — all other clients are measured against this profile.',
   '{
     "requireBearerToken": true,
     "requireEntraIssuer": true,
@@ -94,34 +94,34 @@ INSERT INTO sa_client_security_policies (
   }'::jsonb,
   '{
     "enforceMode": "hard",
-    "allowedGithubOrgs": ["bayer-int"],
+    "allowedGithubOrgs": ["client-int"],
     "controlledMarkers": [
-      "bayer", "bayer-int", "confidential", "internal use only", "regulated",
+      "client", "client-int", "confidential", "internal use only", "regulated",
       "customer data", "patient", "phi", "pii", "secret", "proprietary",
       "pharmaceutical", "crop science", "gdpr", "restricted"
     ],
     "allowControlledOutbound": false
   }'::jsonb,
   '[
-    {"name": "BAYER_ENTRA_TENANT_ID",  "description": "Azure AD tenant ID for Bayer", "source": "ssm", "sensitive": false},
-    {"name": "BAYER_ENTRA_AUDIENCE",   "description": "Expected aud claim in Bayer Entra tokens", "source": "ssm", "sensitive": false},
-    {"name": "BAYER_ENTRA_JWKS_URI",   "description": "JWKS URI for Bayer Entra tenant signature verification", "source": "ssm", "sensitive": false},
+    {"name": "CLIENT_ENTRA_TENANT_ID",  "description": "Azure AD tenant ID for Client", "source": "ssm", "sensitive": false},
+    {"name": "CLIENT_ENTRA_AUDIENCE",   "description": "Expected aud claim in Client Entra tokens", "source": "ssm", "sensitive": false},
+    {"name": "CLIENT_ENTRA_JWKS_URI",   "description": "JWKS URI for Client Entra tenant signature verification", "source": "ssm", "sensitive": false},
     {"name": "WORFGATE_ENFORCE",       "description": "Must be true — WorfGate hard enforcement", "source": "env", "sensitive": false},
-    {"name": "WORFGATE_ALLOWED_GITHUB_ORGS", "description": "Must include bayer-int", "source": "env", "sensitive": false},
+    {"name": "WORFGATE_ALLOWED_GITHUB_ORGS", "description": "Must include client-int", "source": "env", "sensitive": false},
     {"name": "WORFGATE_ALLOW_CONTROLLED",    "description": "Must be false — controlled data blocked", "source": "env", "sensitive": false},
     {"name": "REDIS_URL",              "description": "Redis for per-session state isolation", "source": "ssm", "sensitive": true},
     {"name": "SUPABASE_URL",           "description": "Supabase project URL", "source": "ssm", "sensitive": false},
     {"name": "SUPABASE_KEY",           "description": "Supabase service role key", "source": "ssm", "sensitive": true},
-    {"name": "GITHUB_TOKEN",           "description": "GitHub PAT scoped to bayer-int org", "source": "ssm", "sensitive": true}
+    {"name": "GITHUB_TOKEN",           "description": "GitHub PAT scoped to client-int org", "source": "ssm", "sensitive": true}
   ]'::jsonb,
   ARRAY[
-    '/story-agent/bayer/entra-tenant-id',
-    '/story-agent/bayer/entra-audience',
-    '/story-agent/bayer/entra-jwks-uri',
-    '/story-agent/bayer/redis-url',
-    '/story-agent/bayer/supabase-url',
-    '/story-agent/bayer/supabase-key',
-    '/story-agent/bayer/github-token'
+    '/story-agent/client/entra-tenant-id',
+    '/story-agent/client/entra-audience',
+    '/story-agent/client/entra-jwks-uri',
+    '/story-agent/client/redis-url',
+    '/story-agent/client/supabase-url',
+    '/story-agent/client/supabase-key',
+    '/story-agent/client/github-token'
   ]
 ) ON CONFLICT (client_id) DO NOTHING;
 
@@ -227,7 +227,7 @@ ALTER TABLE sa_stories
   ADD COLUMN IF NOT EXISTS initiated_by_project TEXT DEFAULT 'story-agent';
 
 COMMENT ON COLUMN sa_stories.security_tier IS
-  'Security tier of the client that owns this story. regulated = Bayer gold standard.';
+  'Security tier of the client that owns this story. regulated = Client gold standard.';
 COMMENT ON COLUMN sa_stories.initiated_by_project IS
   'Which project created this story record: story-agent, cs-p3-material-investigation-agent, ai-enterprise-os, etc.';
 

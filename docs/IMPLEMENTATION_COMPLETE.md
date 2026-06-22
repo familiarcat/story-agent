@@ -49,7 +49,7 @@ await server.tool('crew:store-memory',
     memory_type: 'lesson_learned',
     title: 'RLS Composite Key Pattern',
     content: 'org_id must be first column...',
-    project_id: 'bayer-pctms',
+    project_id: 'client-pctms',
     tags: ['rls', 'security'],
   }
 );
@@ -139,8 +139,8 @@ Created complete crew memory management interface:
 ━━━━━━━━━━━━━━━━━━━━━━
 Full memory content with context
 Tags: #rls #security #multi-tenant
-📦 Project: bayer-pctms
-🎯 Task: BAYER-001
+📦 Project: client-pctms
+🎯 Task: CLIENT-001
 Date: June 7, 2026
 ```
 

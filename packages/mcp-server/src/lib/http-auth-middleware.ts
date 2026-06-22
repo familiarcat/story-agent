@@ -2,10 +2,10 @@
  * HTTP Auth Middleware — Story Agent MCP Server
  *
  * Validates inbound Bearer tokens for the StreamableHTTP MCP transport.
- * Enforces Bayer's security requirements as the gold standard.
+ * Enforces Client's security requirements as the gold standard.
  *
  * Token validation strategy per tier:
- *  - 'regulated' (Bayer): Entra JWKS verification — must have correct issuer,
+ *  - 'regulated' (Client): Entra JWKS verification — must have correct issuer,
  *    audience, and not be expired. JWK set fetched from tenant's well-known endpoint.
  *  - 'enterprise':        Any OIDC Bearer token — JWKS-verified via STORY_AGENT_AUTH_JWKS_URI.
  *  - 'standard':          API key or Bearer token — format check only, no signature verify.
@@ -16,7 +16,7 @@
  */
 
 import { createHash } from 'crypto';
-import { resolveClientPolicy, BAYER_SECURITY_POLICY, type ClientSecurityPolicy } from '@story-agent/shared/client-security-policy';
+import { resolveClientPolicy, CLIENT_SECURITY_POLICY, type ClientSecurityPolicy } from '@story-agent/shared/client-security-policy';
 
 // ── Token introspection (no crypto — just shape check for now) ─────────────────
 // NOTE: Full Entra JWKS verification requires a JWT library (e.g. `jose`).
@@ -113,25 +113,25 @@ function recordAudit(entry: AuthAuditEntry): void {
   }
 }
 
-// ── BAYER ENTRA VALIDATION ────────────────────────────────────────────────────
+// ── CLIENT ENTRA VALIDATION ────────────────────────────────────────────────────
 
-function validateBayerEntraToken(token: ParsedBearerToken): { ok: boolean; reason: string } {
+function validateClientEntraToken(token: ParsedBearerToken): { ok: boolean; reason: string } {
   if (!token.isJwt) {
-    return { ok: false, reason: 'bayer_tier_requires_jwt_bearer_token' };
+    return { ok: false, reason: 'client_tier_requires_jwt_bearer_token' };
   }
 
-  const tenantId = process.env['BAYER_ENTRA_TENANT_ID'];
-  const audience = process.env['BAYER_ENTRA_AUDIENCE'];
+  const tenantId = process.env['CLIENT_ENTRA_TENANT_ID'];
+  const audience = process.env['CLIENT_ENTRA_AUDIENCE'];
 
   if (!tenantId || !audience) {
     // Credentials missing — fail closed. This is a misconfiguration, not a client error.
     return {
       ok: false,
-      reason: 'missing_bayer_entra_credentials: BAYER_ENTRA_TENANT_ID or BAYER_ENTRA_AUDIENCE not configured',
+      reason: 'missing_client_entra_credentials: CLIENT_ENTRA_TENANT_ID or CLIENT_ENTRA_AUDIENCE not configured',
     };
   }
 
-  // Verify issuer contains the Bayer tenant ID
+  // Verify issuer contains the Client tenant ID
   const iss = token.payload?.['iss'];
   if (typeof iss !== 'string' || !iss.includes(tenantId)) {
     return {
@@ -158,11 +158,11 @@ function validateBayerEntraToken(token: ParsedBearerToken): { ok: boolean; reaso
   // NOTE: Cryptographic signature verification requires `jose` package.
   // Without it, we validate claims but not the signature.
   // Crew action: `pnpm add jose --filter @story-agent/mcp-server` then add JWKS verify here.
-  const jwksUri = process.env['BAYER_ENTRA_JWKS_URI'];
+  const jwksUri = process.env['CLIENT_ENTRA_JWKS_URI'];
   if (!jwksUri) {
     return {
       ok: false,
-      reason: 'missing_bayer_entra_credentials: BAYER_ENTRA_JWKS_URI not configured — cannot verify signature',
+      reason: 'missing_client_entra_credentials: CLIENT_ENTRA_JWKS_URI not configured — cannot verify signature',
     };
   }
 
@@ -236,7 +236,7 @@ export interface HttpRequestContext {
 /**
  * Validate an inbound HTTP MCP request.
  *
- * 1. Resolves the client's security policy (Bayer = regulated, others vary).
+ * 1. Resolves the client's security policy (Client = regulated, others vary).
  * 2. Validates the Bearer token according to tier requirements.
  * 3. Enforces `user-session-id` presence for session-isolation tiers.
  * 4. Records the decision to the in-memory audit log.
@@ -260,7 +260,7 @@ export function validateHttpRequest(ctx: HttpRequestContext): AuthValidationResu
     let tokenResult: { ok: boolean; reason: string };
 
     if (policy.tier === 'regulated') {
-      tokenResult = validateBayerEntraToken(token);
+      tokenResult = validateClientEntraToken(token);
     } else if (policy.tier === 'enterprise') {
       tokenResult = validateEnterpriseToken(token);
     } else {
@@ -354,27 +354,27 @@ export function createHttpAuthMiddleware() {
 // ── STARTUP CREDENTIAL CHECK ──────────────────────────────────────────────────
 
 /**
- * Run at MCP server startup. Logs a warning for any missing Bayer credentials.
- * Does NOT throw — the server starts, but Bayer-tier requests will be rejected
+ * Run at MCP server startup. Logs a warning for any missing Client credentials.
+ * Does NOT throw — the server starts, but Client-tier requests will be rejected
  * until credentials are configured.
  */
 export function reportMissingCredentialsAtStartup(): void {
-  const bayerPolicy = BAYER_SECURITY_POLICY;
-  const missing = bayerPolicy.requiredEnvVars.filter(req => {
+  const clientPolicy = CLIENT_SECURITY_POLICY;
+  const missing = clientPolicy.requiredEnvVars.filter(req => {
     const v = process.env[req.name];
     return !v || v.trim() === '';
   });
 
   if (missing.length === 0) {
-    process.stderr.write('[auth] ✅ All Bayer-tier credentials present.\n');
+    process.stderr.write('[auth] ✅ All Client-tier credentials present.\n');
     return;
   }
 
   process.stderr.write(
-    `[auth] ⚠️  Missing ${missing.length} credential(s) for Bayer-tier (regulated) security:\n`,
+    `[auth] ⚠️  Missing ${missing.length} credential(s) for Client-tier (regulated) security:\n`,
   );
   for (const m of missing) {
-    const ssmHint = bayerPolicy.requiredSsmPaths?.find(p =>
+    const ssmHint = clientPolicy.requiredSsmPaths?.find(p =>
       p.toLowerCase().includes(m.name.toLowerCase().replace(/_/g, '-')),
     );
     process.stderr.write(
@@ -382,7 +382,7 @@ export function reportMissingCredentialsAtStartup(): void {
     );
   }
   process.stderr.write(
-    '[auth]   Bayer-tier requests will be rejected until all credentials are configured.\n',
+    '[auth]   Client-tier requests will be rejected until all credentials are configured.\n',
   );
   process.stderr.write(
     '[auth]   See MISSING_CREDENTIALS.md for the complete inventory.\n',

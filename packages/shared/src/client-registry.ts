@@ -7,7 +7,7 @@
  *   listClientsFromDb()      — read the durable client records.
  *
  * resolveClientPolicy() (sync, used by WorfGate/auth hot paths) reads the cache this hydrates.
- * Bayer + familiarcat remain code bootstrap; everything else is a DB row.
+ * Client + familiarcat remain code bootstrap; everything else is a DB row.
  */
 import { getDbClient } from './db.js';
 import {
@@ -77,7 +77,7 @@ export async function onboardClient(
   const db = await getDbClient();
 
   // The clients.parent_client_id FK requires the parent to be a ROW. Code-bootstrap parents
-  // (e.g. familiarcat, bayer-int) have no row yet — persist the parent from its resolved policy
+  // (e.g. familiarcat, client-int) have no row yet — persist the parent from its resolved policy
   // first so the hierarchy FK is satisfied. Walks up so a whole bootstrap chain is materialized.
   if (policy.parentClientId) await ensureParentRow(db, policy.parentClientId, onboardedBy);
 

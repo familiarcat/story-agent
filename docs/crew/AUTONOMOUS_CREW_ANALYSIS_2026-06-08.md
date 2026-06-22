@@ -321,7 +321,7 @@ Checklist:
 
 **Security Strengths:**
 - ✅ WorfGate security framework implemented
-- ✅ Controlled data markers defined (bayer, confidential, proprietary, phi, pii, etc.)
+- ✅ Controlled data markers defined (client, confidential, proprietary, phi, pii, etc.)
 - ✅ Vault integration for secrets (CREW_LLM_APPROVED_URL, CREW_LLM_APPROVED_KEY)
 - ✅ Bearer token auth + Entra JWT support
 - ✅ RLS policies available (Supabase)
@@ -356,7 +356,7 @@ WORFGATE VALIDATION CHECKLIST
   └─ Blocks unapproved LLM endpoint calls
 
 ✅ WORFGATE_ALLOW_CONTROLLED=true
-  └─ Only Bayer-approved credentials allowed to approved_llm target
+  └─ Only Client-approved credentials allowed to approved_llm target
 
 ✅ CREW_LLM_APPROVED_URL=vault://...
   └─ Endpoint stored in vault (not hardcoded)

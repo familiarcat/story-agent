@@ -17,7 +17,7 @@ story-agent (monorepo)
 ├── scripts/                     # Shared utilities & tools
 ├── supabase/                    # Shared database schema & migrations
 ├── projects/                    # Client-specific projects (NEW)
-│   ├── bayer-pctms/            # Bayer Pharmaceutical project
+│   ├── client-pctms/            # Client Pharmaceutical project
 │   │   ├── .env                # Project credentials (not in git)
 │   │   ├── .env.example        # Template for .env
 │   │   ├── supabase/           # Project-specific migrations
@@ -45,7 +45,7 @@ story-agent (monorepo)
 - All crew members benefit from collective learning
 
 **Data Isolation via Supabase RLS**:
-- Each project has org_id (e.g., 'bayer', 'pharma')
+- Each project has org_id (e.g., 'client', 'pharma')
 - Row-level security enforces isolation
 - Multiple projects in same database, completely isolated
 - No code duplication needed
@@ -55,7 +55,7 @@ story-agent (monorepo)
 Each project in `projects/` has:
 
 ```
-projects/bayer-pctms/
+projects/client-pctms/
 ├── .env                        # Project credentials (NOT in git)
 ├── .env.example                # Template for developers
 ├── package.json                # Project-specific dependencies
@@ -78,11 +78,11 @@ File: `.github/CODEOWNERS`
 *                               @familiarcat
 
 # Project-specific ownership
-projects/bayer-pctms/**         @familiarcat
+projects/client-pctms/**         @familiarcat
 projects/pharma-trials/**       @familiarcat
 ```
 
-When a PR modifies `projects/bayer-pctms/`, GitHub automatically requests review from code owners.
+When a PR modifies `projects/client-pctms/`, GitHub automatically requests review from code owners.
 
 ### Supabase RLS (Row-Level Security)
 
@@ -91,12 +91,12 @@ Each project has `org_id` column for tenant isolation:
 ```sql
 -- Patient data scoped to organization
 SELECT * FROM sa_patients 
-WHERE org_id = 'bayer' AND user_org_id = auth.jwt()->>'org_id';
+WHERE org_id = 'client' AND user_org_id = auth.jwt()->>'org_id';
 ```
 
 Crew members authenticate with org_id:
 ```
-Token: { crew_id: 'worf', org_id: 'bayer', ... }
+Token: { crew_id: 'worf', org_id: 'client', ... }
 ```
 
 All queries automatically filtered by org_id via RLS.
@@ -106,11 +106,11 @@ All queries automatically filtered by org_id via RLS.
 Each project has `.env` file (NOT in git):
 
 ```bash
-# projects/bayer-pctms/.env
-PROJECT_ID=bayer-pctms
-SUPABASE_URL=https://...bayer...
-SUPABASE_KEY=...bayer...
-CLIENT_NAME="Bayer Pharmaceutical Systems"
+# projects/client-pctms/.env
+PROJECT_ID=client-pctms
+SUPABASE_URL=https://...client...
+SUPABASE_KEY=...client...
+CLIENT_NAME="Client Pharmaceutical Systems"
 PRIMARY_CREW="picard,data,riker,geordi,obrien,worf"
 ```
 
@@ -125,7 +125,7 @@ Each crew member stores personal memories in Supabase:
 Individual insights, lessons learned, and decision notes that crew members capture during task execution:
 
 - **Insights**: "This RLS pattern works better than..."
-- **Lessons Learned**: "We learned X on Bayer project"
+- **Lessons Learned**: "We learned X on Client project"
 - **Decision Notes**: "We chose Y because..."
 - **Reminders**: "Remember to check Z when..."
 
@@ -162,7 +162,7 @@ await storeCrewPersonalMemory({
   memory_type: 'lesson_learned',
   title: 'RLS Policy Pattern for Multi-Tenant Isolation',
   content: 'Discovered that adding org_id as first column...',
-  project_id: 'bayer-pctms',
+  project_id: 'client-pctms',
   tags: ['rls', 'security', 'multi-tenant'],
   relates_to_crew: ['data'],
 });
@@ -205,7 +205,7 @@ const memories = await searchCrewPersonalMemoriesByEmbedding(
 
 **By Project**:
 ```typescript
-const bayer_memories = await getCrewMemoriesByProject('geordi', 'bayer-pctms', 20);
+const client_memories = await getCrewMemoriesByProject('geordi', 'client-pctms', 20);
 ```
 
 ## 🎯 Project Management
@@ -220,9 +220,9 @@ Output:
 ```
 📊 Available Projects:
 
-  bayer-pctms
-    Name: Bayer Pharmaceutical - Patient-Centric Trial Management System
-    Client: Bayer Pharmaceutical Systems
+  client-pctms
+    Name: Client Pharmaceutical - Patient-Centric Trial Management System
+    Client: Client Pharmaceutical Systems
     Tier: gold-standard
 
   pharma-trials
@@ -234,7 +234,7 @@ Output:
 ### Select Active Project
 
 ```bash
-npm run project:select bayer-pctms
+npm run project:select client-pctms
 ```
 
 Stores selection in `.project-state.json` (not in git).
@@ -250,12 +250,12 @@ Shows current project configuration and crew assignments.
 ### View Crew Assignments
 
 ```bash
-npm run project:crew bayer-pctms
+npm run project:crew client-pctms
 ```
 
 Shows which crew members are assigned to each project:
 ```
-👥 Crew Assignments for bayer-pctms:
+👥 Crew Assignments for client-pctms:
 
   🔴 Primary Crew (Full Authority):
     • picard — Captain & Strategic Command
@@ -337,7 +337,7 @@ npm run db:auto-migrate  # Runs ACME-specific migrations
 ## 🎓 Crew Learning Flow
 
 1. **Crew executes Task on Project A**
-   - Worf designs RLS policy for 'bayer' org_id
+   - Worf designs RLS policy for 'client' org_id
    - Documents learning in personal memory
 
 2. **Personal Memory Stored**
@@ -345,7 +345,7 @@ npm run db:auto-migrate  # Runs ACME-specific migrations
    crew_id: 'worf'
    memory_type: 'lesson_learned'
    content: "RLS pattern: org_id as first column in composite key..."
-   project_id: 'bayer-pctms'
+   project_id: 'client-pctms'
    tags: ['rls', 'multi-tenant', 'security']
    ```
 
@@ -365,11 +365,11 @@ npm run db:auto-migrate  # Runs ACME-specific migrations
 Verify each project is properly isolated:
 
 ```bash
-# Connect to Bayer database
-SUPABASE_KEY=bayer-key node -e "
+# Connect to Client database
+SUPABASE_KEY=client-key node -e "
   import { searchDocumentation } from '@story-agent/shared';
   const docs = await searchDocumentation('test');
-  // Only sees Bayer data (org_id = 'bayer')
+  // Only sees Client data (org_id = 'client')
 "
 
 # Connect to Pharma database
@@ -377,7 +377,7 @@ SUPABASE_KEY=pharma-key node -e "
   import { searchDocumentation } from '@story-agent/shared';
   const docs = await searchDocumentation('test');
   // Only sees Pharma data (org_id = 'pharma')
-  // NO visibility to Bayer data
+  // NO visibility to Client data
 "
 ```
 
@@ -392,7 +392,7 @@ SUPABASE_KEY=pharma-key node -e "
      memory_type: 'lesson_learned',
      title: 'RLS Design Pattern',
      content: 'What I learned...',
-     project_id: 'bayer-pctms',
+     project_id: 'client-pctms',
      tags: ['security', 'rls'],
    });
    ```

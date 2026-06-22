@@ -1,6 +1,6 @@
-# Bayer Pharmaceutical — Patient-Centric Trial Management System
+# Client Pharmaceutical — Patient-Centric Trial Management System
 
-**Client**: Bayer Pharmaceutical Systems  
+**Client**: Client Pharmaceutical Systems  
 **Tier**: Gold-Standard  
 **Compliance**: PHI (Protected Health Information)  
 **Status**: Active  
@@ -59,9 +59,9 @@ cd story-agent
 
 ```bash
 # Copy configuration template
-cp projects/bayer-pctms/.env.example projects/bayer-pctms/.env
+cp projects/client-pctms/.env.example projects/client-pctms/.env
 
-# Fill in Bayer-specific credentials
+# Fill in Client-specific credentials
 # - SUPABASE_URL
 # - SUPABASE_KEY
 # - SLACK_WEBHOOK_URL (optional)
@@ -70,7 +70,7 @@ cp projects/bayer-pctms/.env.example projects/bayer-pctms/.env
 ### Step 3: Select Project
 
 ```bash
-npm run project:select bayer-pctms
+npm run project:select client-pctms
 npm run project:info
 ```
 
@@ -100,8 +100,8 @@ npm run ui                 # Start only dashboard
 ### Database
 
 ```bash
-npm run db:auto-migrate    # Apply migrations to Bayer database
-npm run db:health-check    # Check Bayer database health
+npm run db:auto-migrate    # Apply migrations to Client database
+npm run db:health-check    # Check Client database health
 npm run db:migrate:test    # Test migrations
 ```
 
@@ -123,10 +123,10 @@ npm run docs:refresh       # Refresh documentation index
 ## Project Structure
 
 ```
-projects/bayer-pctms/
+projects/client-pctms/
 ├── .env.example           # Configuration template
 ├── supabase/              # Database-specific configs
-│   └── migrations/        # Bayer-specific migrations
+│   └── migrations/        # Client-specific migrations
 ├── docs/                  # Project documentation
 │   ├── TECHNICAL_SPEC.md
 │   ├── DATA_MODEL.md
@@ -138,12 +138,12 @@ projects/bayer-pctms/
 
 ### Multi-Tenant Isolation
 
-All tables include `org_id = 'bayer'` column with RLS policies:
+All tables include `org_id = 'client'` column with RLS policies:
 
 ```sql
--- Only Bayer crew can access Bayer data
+-- Only Client crew can access Client data
 SELECT * FROM sa_trial_data
-WHERE org_id = 'bayer'
+WHERE org_id = 'client'
   AND user_org_id = auth.jwt()->>'org_id';
 ```
 
@@ -156,14 +156,14 @@ Each crew member stores learnings and insights:
 await storeCrewPersonalMemory({
   crew_id: 'worf',
   memory_type: 'lesson_learned',
-  title: 'Bayer RLS Implementation',
+  title: 'Client RLS Implementation',
   content: '...',
-  project_id: 'bayer-pctms',
+  project_id: 'client-pctms',
   tags: ['rls', 'security', 'multi-tenant'],
 });
 ```
 
-Future projects benefit from Bayer's learnings!
+Future projects benefit from Client's learnings!
 
 ## Compliance
 

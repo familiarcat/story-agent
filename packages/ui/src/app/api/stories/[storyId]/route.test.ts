@@ -13,7 +13,7 @@ const sampleStory = {
   storyId: 'STORY-11',
   storyTitle: 'Hydrate regulated story fields',
   storyUrl: 'https://aha.io/features/STORY-11',
-  repoFullName: 'bayer-int/story-agent',
+  repoFullName: 'client-int/story-agent',
   branch: 'STORY-11',
   baseBranch: 'main',
   status: 'implementing',
@@ -24,7 +24,7 @@ const sampleStory = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   notes: 'line one\n- line two',
-  clientId: 'bayer-int',
+  clientId: 'client-int',
 };
 
 describe('/api/stories/[storyId] route policy', () => {
@@ -47,7 +47,7 @@ describe('/api/stories/[storyId] route policy', () => {
   it('returns controlled payload when authorized client scope is present', async () => {
     const request = new NextRequest('http://localhost/api/stories/STORY-11?includeControlled=true', {
       headers: {
-        'x-client-id': 'bayer-int',
+        'x-client-id': 'client-int',
         'x-client-role': 'client_delivery',
         'x-controlled-data-purpose': 'ui_story_detail',
       },

@@ -57,7 +57,7 @@ const GLOBAL_FAST_MODE = (process.env.CREW_FAST_MODE ?? 'true').toLowerCase() ==
 
 // ── AUTH GATE ─────────────────────────────────────────────────────────────────
 // Validates the inbound request against the client's security policy.
-// Bayer-tier requires Entra Bearer token + user-session-id header.
+// Client-tier requires Entra Bearer token + user-session-id header.
 // Returns null if valid, or an error frame payload if invalid.
 
 interface AuthGateResult {
@@ -89,7 +89,7 @@ function evaluateAuthGate(request: Request, searchParams: URLSearchParams): Auth
     };
   }
 
-  // Session isolation required (Bayer tier)?
+  // Session isolation required (Client tier)?
   if (policy.auth.requireSessionIsolation && !request.headers.get('user-session-id')) {
     return {
       allowed: false,
@@ -100,8 +100,8 @@ function evaluateAuthGate(request: Request, searchParams: URLSearchParams): Auth
     };
   }
 
-  // WorfGate: scan inbound prompt for controlled data markers (Bayer tier)
-  // We block prompts that appear to contain data that should never leave Bayer's boundary.
+  // WorfGate: scan inbound prompt for controlled data markers (Client tier)
+  // We block prompts that appear to contain data that should never leave Client's boundary.
   // This guards against prompt-injection attacks that might exfiltrate PHI/PII.
   if (policy.worfGate.enforceMode === 'hard' && !policy.worfGate.allowControlledOutbound) {
     // Check will be applied per-prompt in the stream handler using the markers from the policy
@@ -197,7 +197,7 @@ export async function OPTIONS() {
 export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
 
-  // ── Auth gate (Bayer = hardest tier) ────────────────────────────────────────
+  // ── Auth gate (Client = hardest tier) ────────────────────────────────────────
   const authResult = evaluateAuthGate(request, searchParams);
   const { userSessionId, fastMode, clientId } = authResult;
 

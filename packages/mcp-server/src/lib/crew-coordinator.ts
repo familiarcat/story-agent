@@ -36,7 +36,7 @@ interface CrewOperationContext {
   acceptanceCriteria: string;
   /**
    * Client org that scopes memory retrieval.
-   * Pass 'bayer-int' for Bayer, 'familiarcat' for the Retailer Rewards project, etc.
+   * Pass 'client-int' for Client, 'familiarcat' for the Retailer Rewards project, etc.
    * When null, falls back to global/unscoped memories.
    */
   clientId?: string | null;

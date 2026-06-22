@@ -153,7 +153,7 @@ npm run test                   # Run all tests
 
 **Multi-client architecture**:
 - [docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md) — Multi-project structure
-- [projects/bayer-pctms/README.md](projects/bayer-pctms/README.md) — Example project setup
+- [projects/client-pctms/README.md](projects/client-pctms/README.md) — Example project setup
 
 **Crew personal memories**:
 - [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md) — Individual learning storage
@@ -244,7 +244,7 @@ story-agent/                           # Root monorepo
 │   ├── shared/                        # Shared TypeScript types & crew utilities
 │   └── vscode-extension/              # VS Code extension
 ├── projects/                          # Multi-client projects
-│   ├── bayer-pctms/                   # Bayer Pharmaceutical project
+│   ├── client-pctms/                   # Client Pharmaceutical project
 │   │   ├── .env.example               # Configuration template
 │   │   ├── README.md                  # Project setup
 │   │   └── supabase/                  # Project-specific migrations

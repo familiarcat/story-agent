@@ -249,9 +249,9 @@ Usage:
 
 Examples:
   npm run project:list
-  npm run project:select bayer-pctms
+  npm run project:select client-pctms
   npm run project:info
-  npm run project:crew bayer-pctms
+  npm run project:crew client-pctms
     `);
     break;
 }

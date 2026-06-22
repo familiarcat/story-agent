@@ -234,7 +234,7 @@ Blocker: Test suite does not exist. Cannot deploy crew autonomy without tests."
 
 **Findings:**
 1. ✅ **WorfGate framework implemented** — Security model defined
-2. ✅ **Controlled data markers configured** — bayer, confidential, anthropic-approved markers active
+2. ✅ **Controlled data markers configured** — client, confidential, anthropic-approved markers active
 3. ✅ **Vault credentials in place** — CREW_LLM_APPROVED_URL/KEY configured
 4. ⏳ **BLOCKER: WorfGate checks not integrated** — Security audit trail not captured for crew tool calls
 5. ⏳ **BLOCKER: No RLS policies created** — Supabase cannot enforce crew member data isolation

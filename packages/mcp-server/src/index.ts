@@ -50,7 +50,7 @@ async function main() {
   // Initialize async tool registrations
   await registerCrewMemoryTools(server);
 
-  // Report any missing credentials at startup — especially Bayer-tier requirements.
+  // Report any missing credentials at startup — especially Client-tier requirements.
   reportMissingCredentialsAtStartup();
 
   // Register WorfGate external secret providers (Vault / AWS Secrets Manager) if configured.
@@ -58,7 +58,7 @@ async function main() {
   process.stderr.write(`WorfGate credential providers: env${activeProviders.length ? ', ' + activeProviders.join(', ') : ''}\n`);
 
   // Hydrate dynamic client policies from Supabase so resolveClientPolicy (WorfGate/auth) sees
-  // crew-onboarded clients. Best-effort — Bayer/familiarcat bootstrap works even if the DB is down.
+  // crew-onboarded clients. Best-effort — Client/familiarcat bootstrap works even if the DB is down.
   try {
     const { loaded } = await hydrateClientPolicies();
     process.stderr.write(`Hydrated ${loaded} client policy/policies from Supabase.\n`);
@@ -73,7 +73,7 @@ async function main() {
 
   // ── HTTP MCP transport (cs-p3-agent / enterprise integration) ───────────────
   // Enabled by setting STORY_AGENT_HTTP_PORT. Requires Bearer token auth.
-  // Bayer-tier clients must present Entra JWT with correct tenant+audience.
+  // Client-tier clients must present Entra JWT with correct tenant+audience.
   if (process.env.STORY_AGENT_HTTP_PORT) {
     const httpPort = parseInt(process.env.STORY_AGENT_HTTP_PORT, 10) || 3101;
     const authMiddleware = createHttpAuthMiddleware();
@@ -130,7 +130,7 @@ async function main() {
         `story-agent MCP HTTP server listening on http://0.0.0.0:${httpPort}/mcp\n`,
       );
       process.stderr.write(
-        `  Auth: Bearer token required (Bayer-tier: Entra JWT). Set BAYER_ENTRA_TENANT_ID, BAYER_ENTRA_AUDIENCE, BAYER_ENTRA_JWKS_URI.\n`,
+        `  Auth: Bearer token required (Client-tier: Entra JWT). Set CLIENT_ENTRA_TENANT_ID, CLIENT_ENTRA_AUDIENCE, CLIENT_ENTRA_JWKS_URI.\n`,
       );
     });
   }

@@ -321,7 +321,7 @@ export default function ObservationLoungePage() {
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <Field label="Repository (owner/name)" col>
-              <input value={w.repoFullName} onChange={e => set('repoFullName', e.target.value)} placeholder="e.g. bayer-int/product-profile-ui" style={inputStyle} />
+              <input value={w.repoFullName} onChange={e => set('repoFullName', e.target.value)} placeholder="e.g. client-int/product-profile-ui" style={inputStyle} />
             </Field>
             <Field label="Target Branch">
               <input value={w.targetBranch} onChange={e => set('targetBranch', e.target.value)} placeholder="dev" style={inputStyle} />

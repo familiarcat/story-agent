@@ -29,8 +29,8 @@ const memoryId = await callMcpTool('crew:store-memory', {
   memory_type: 'lesson_learned',
   title: 'RLS Implementation Pattern',
   content: 'Successfully implemented RLS with org_id as composite key...',
-  project_id: 'bayer-pctms',
-  task_id: 'BAYER-001',
+  project_id: 'client-pctms',
+  task_id: 'CLIENT-001',
   tags: ['rls', 'security', 'multi-tenant'],
 });
 ```
@@ -158,7 +158,7 @@ Navigate to: `http://localhost:3000/crew/memories`
 ### Example: Find Worf's RLS Learnings
 
 1. **Select crew**: Choose "worf" from dropdown
-2. **View project**: Select "bayer-pctms" to focus on that project
+2. **View project**: Select "client-pctms" to focus on that project
 3. **Filter type**: Select "📚 Lesson Learned" to see lessons only
 4. **Search**: Type "RLS" to find security pattern memories
 5. **View**: Read Worf's insights and apply to new projects
@@ -197,7 +197,7 @@ curl "http://localhost:3000/api/crew/memories?crew=worf&limit=20"
       "memory_type": "lesson_learned",
       "title": "RLS Pattern",
       "content": "...",
-      "project_id": "bayer-pctms",
+      "project_id": "client-pctms",
       "tags": ["rls", "security"],
       "created_at": "2026-06-07T14:30:00Z"
     }
@@ -329,13 +329,13 @@ Manager uses dashboard to compare crew expertise:
 **Scenario**: Same schema pattern on new project
 
 ```typescript
-// Worf stores Bayer pattern
+// Worf stores Client pattern
 await store({
   crew_id: 'worf',
   memory_type: 'lesson_learned',
-  title: 'Bayer RLS Pattern',
+  title: 'Client RLS Pattern',
   content: '...',
-  project_id: 'bayer-pctms',
+  project_id: 'client-pctms',
   tags: ['rls', 'multi-tenant'],
 });
 
@@ -344,7 +344,7 @@ const patterns = await search({
   crew_id: 'worf',
   query: 'multi-tenant RLS implementation',
 });
-// Result: Find Bayer pattern!
+// Result: Find Client pattern!
 // Apply to Pharma immediately
 ```
 
@@ -376,7 +376,7 @@ const related = await search({
 
 ```bash
 # Use dashboard to view project retrospective
-# Navigate to: /crew/memories?project=bayer-pctms
+# Navigate to: /crew/memories?project=client-pctms
 
 # See all memories from that project
 # Understand what each crew member learned

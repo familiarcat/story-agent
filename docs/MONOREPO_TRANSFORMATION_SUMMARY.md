@@ -41,7 +41,7 @@ Multi-Client + Autonomous Learning
 **Try It**:
 ```bash
 npm run project:list              # See all projects
-npm run project:select bayer-pctms # Select a project
+npm run project:select client-pctms # Select a project
 npm run project:crew              # See crew assignments
 ```
 
@@ -57,13 +57,13 @@ npm run project:crew              # See crew assignments
 
 **Example**:
 ```typescript
-// Worf stores security learning from Bayer
+// Worf stores security learning from Client
 await storeCrewPersonalMemory({
   crew_id: 'worf',
   memory_type: 'lesson_learned',
   title: 'RLS Composite Key Pattern',
   content: 'Put org_id as first column...',
-  project_id: 'bayer-pctms',
+  project_id: 'client-pctms',
   tags: ['rls', 'security'],
 });
 
@@ -124,7 +124,7 @@ monorepo (story-agent)
 │  └─ Dashboard for managing stories, crew, projects
 │
 ├─ projects/
-│  ├─ bayer-pctms/         # Bayer Pharmaceutical project
+│  ├─ client-pctms/         # Client Pharmaceutical project
 │  │  ├─ .env              # Project credentials
 │  │  ├─ supabase/         # Project-specific migrations
 │  │  └─ docs/             # Project documentation
@@ -155,8 +155,8 @@ sa_crew_personal_memory (
   memory_type: 'lesson_learned',  -- insight|lesson_learned|decision_note|reminder
   title: 'RLS Composite Key Pattern',
   content: 'Full memory text...',
-  project_id: 'bayer-pctms', -- Which project
-  task_id: 'BAYER-001',      -- Which task
+  project_id: 'client-pctms', -- Which project
+  task_id: 'CLIENT-001',      -- Which task
   tags: ['rls', 'security'], -- Searchable tags
   embedding: <vector>,       -- For semantic search
   created_at: timestamp,
@@ -183,9 +183,9 @@ DOMAIN_REGISTRY = {
 ### Project Configuration
 
 ```env
-PROJECT_ID=bayer-pctms
-PROJECT_NAME="Bayer Pharmaceutical - PCTMS"
-CLIENT_NAME="Bayer Pharmaceutical Systems"
+PROJECT_ID=client-pctms
+PROJECT_NAME="Client Pharmaceutical - PCTMS"
+CLIENT_NAME="Client Pharmaceutical Systems"
 PRIMARY_CREW="picard,data,riker,geordi,obrien,worf"
 SECONDARY_CREW="troi,crusher,uhura"
 ADVISORY_CREW="quark,yar"
@@ -288,8 +288,8 @@ const previous_rls_work = await searchCrewPersonalMemories(
 
 | Project | RLS Time | Reason |
 |---------|----------|--------|
-| Project 1 (Bayer) | 2 weeks | Discovery & learning |
-| Project 2 (Pharma) | 2 days | Retrieve Bayer patterns |
+| Project 1 (Client) | 2 weeks | Discovery & learning |
+| Project 2 (Pharma) | 2 days | Retrieve Client patterns |
 | Project 3 (ACME) | 4 hours | Reuse both previous projects |
 | Project 4+ | 1 hour | Accumulated expertise |
 
@@ -298,7 +298,7 @@ const previous_rls_work = await searchCrewPersonalMemories(
 ### Files Created/Modified
 
 **New Files** (8):
-- `projects/bayer-pctms/` — Example project
+- `projects/client-pctms/` — Example project
 - `projects/template-project/` — Template for new projects
 - `.github/CODEOWNERS` — Access control
 - `scripts/project-management.mjs` — Project CLI
@@ -344,7 +344,7 @@ npm run db:auto-migrate
 
 # 2. Explore projects
 npm run project:list
-npm run project:select bayer-pctms
+npm run project:select client-pctms
 
 # 3. View crew assignments
 npm run project:crew
@@ -433,7 +433,7 @@ npm run project:crew <project-id>
 
 **Crew Memories**: See [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md)
 
-**Project Setup**: See [projects/bayer-pctms/README.md](projects/bayer-pctms/README.md)
+**Project Setup**: See [projects/client-pctms/README.md](projects/client-pctms/README.md)
 
 **Domain Routing**: See [docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md](docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md)
 

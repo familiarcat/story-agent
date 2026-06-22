@@ -119,7 +119,7 @@ export function registerStoryTools(server: McpServer) {
     ].join(' '),
     {
       referenceNum: z.string().describe('Aha story reference number (e.g. STORY-123)'),
-      repoFullName: z.string().optional().describe('GitHub owner/name if already known (e.g. bayer-int/product-profile-ui)'),
+      repoFullName: z.string().optional().describe('GitHub owner/name if already known (e.g. client-int/product-profile-ui)'),
       targetBranch: z.string().optional().describe('PR target branch if already known (e.g. dev)'),
       techStack: z.string().optional().describe('Tech stack hints (e.g. React, Redux, Express, Postgres)'),
       testPolicy: z.string().optional().describe('Test policy override (defaults to: run tests for changed files)'),
@@ -271,8 +271,8 @@ Follow the story-execution-master-template workflow.
       reviewers: z.string().optional().describe('Optional reviewer group or users'),
       includeDebate: z.boolean().optional().default(true).describe('If true, run Observation Lounge debate automatically'),
       clientId: z.string().optional().describe(
-        'Client org ID (e.g. "bayer-int", "familiarcat"). Scopes memory retrieval and storage to this client. ' +
-        'If omitted, inferred from repoFullName owner. Bayer = regulated tier, familiarcat = enterprise tier.'
+        'Client org ID (e.g. "client-int", "familiarcat"). Scopes memory retrieval and storage to this client. ' +
+        'If omitted, inferred from repoFullName owner. Client = regulated tier, familiarcat = enterprise tier.'
       ),
     },
     async ({ referenceNum, repoFullName, targetBranch, executionMode, techStack, testPolicy, reviewers, includeDebate, clientId }) => {

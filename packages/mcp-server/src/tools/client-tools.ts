@@ -27,7 +27,7 @@ export function registerClientTools(server: McpServer): void {
     {
       clientId: z.string().describe('Lowercase client identifier, e.g. "jonah".'),
       clientName: z.string().describe('Human-readable client name.'),
-      tier: z.enum(['regulated', 'enterprise', 'standard']).describe('Security tier (regulated = Bayer gold standard).'),
+      tier: z.enum(['regulated', 'enterprise', 'standard']).describe('Security tier (regulated = Client gold standard).'),
       githubOrg: z.string().describe('GitHub org allowlisted for this client\'s outbound commits.'),
       parentClientId: z.string().optional().describe('Parent client in the hierarchy, e.g. "familiarcat". Omit for top-level.'),
       controlledMarkers: z.array(z.string()).optional().describe('Extra controlled-data markers beyond the baseline.'),

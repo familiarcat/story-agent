@@ -506,7 +506,7 @@ export async function captainPicardAnalysis(context: CrewAgentContext) {
 - Loads `picard_strategic_command` template
 - Validates all required variables present
 - Substitutes `{{storyNum}}`, `{{storyName}}`, etc. into user prompt
-- Calls configured Bayer-approved provider (or demo fallback) with system + user prompt
+- Calls configured Client-approved provider (or demo fallback) with system + user prompt
 - Parses response for FINDINGS, RECOMMENDATIONS, CONFIDENCE
 - Calculates cost ($0.0042 for 1500 prompt + 200 completion tokens)
 - **Records full usage record in archive**

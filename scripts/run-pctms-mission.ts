@@ -15,8 +15,8 @@ async function main() {
 
   // Dynamically load the mission from the database
   const storyRef = 'PCTMS-001';
-  const clientId = 'bayer-int';
-  const repoFullName = 'bayer-int/sovereign-todo';
+  const clientId = 'client-int';
+  const repoFullName = 'client-int/sovereign-todo';
 
   console.log(`[PICARD] Retrieving mission context for ${storyRef} from database...`);
   const dbStoryRecord = await getStory(storyRef, clientId);
