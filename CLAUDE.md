@@ -50,11 +50,18 @@ substantive work onto the crew, which is the point.
 
 ## Clients — dynamic, never hardcoded
 
+**Model: familiarcat is the consultancy FIRM (system operator/root) → CLIENTS → PROJECTS → epics →
+stories → tasks** (sprints = time axis). Same hierarchy on both the security side (clients table)
+and the PM side (Aha) — see [docs/aha-nomenclature.md](docs/aha-nomenclature.md).
+
 - Clients live in the Supabase `clients` table (+ RAG memory), hydrated into a sync cache at
   startup. Onboard via `onboardClient` ([client-registry.ts](packages/shared/src/client-registry.ts))
-  or the `onboard_client` MCP tool — it applies the WorfGate floor + hierarchy parent.
-- Only **Client** (regulated gold standard) and **familiarcat** (root org) are code bootstrap.
-  Everything else (e.g. **Jonah** under familiarcat) is a DB row.
+  or the `onboard_client` MCP tool — it applies the WorfGate floor + `parent_client_id` hierarchy.
+- Only **familiarcat** (firm/root) and **client-int** (regulated gold-standard reference) are code
+  bootstrap. Every real client (e.g. **Jonah**, and **Bayer** if onboarded) is a DB row under the firm.
+  "Bayer" is no longer a hardcoded sample — it's just another client you can onboard like any other.
+- Aha nomenclature: Firm/Client/Project are nested Aha workspaces (products); Epic=epic, Story=feature,
+  Task=requirement, Sprint=release. Concept map lives in [crew-aha-roles.ts](packages/mcp-server/src/lib/crew-aha-roles.ts).
 
 ## Skills / tools — every tool needs a 5W1H theory
 
