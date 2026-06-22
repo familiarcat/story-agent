@@ -19,6 +19,7 @@ import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
 import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
 import { registerSkillTools } from './tools/skill-tools.js';
+import { applySkillAnnotations } from './lib/apply-skill-annotations.js';
 import { startAgentHttpServer } from './agent-core/http-server.js';
 import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
 import { initWorfGateCredentialProviders } from '@story-agent/shared/worfgate-credential-providers';
@@ -29,6 +30,7 @@ const server = new McpServer({
   version: '1.0.0',
 });
 
+applySkillAnnotations(server);  // 📚 inject 5W1H theory → MCP ToolAnnotations on every registration
 registerStoryTools(server);
 registerRepoTools(server);
 registerDeliveryTools(server);
@@ -98,6 +100,7 @@ async function main() {
             name: 'story-agent',
             version: '1.0.0',
           });
+          applySkillAnnotations(perRequestServer);  // 📚 theory → MCP annotations over HTTP
           registerStoryTools(perRequestServer);
           registerRepoTools(perRequestServer);
           registerDeliveryTools(perRequestServer);
