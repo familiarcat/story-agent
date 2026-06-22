@@ -134,6 +134,16 @@ export function evaluateWorfGateOutbound(input: {
     return { allowed: true, reasons: ['No controlled or structural markers detected'], detectedMarkers: [] };
   }
 
+  // HARD BLOCK (regulated / military-grade clients): controlled data NEVER leaves — not overridable
+  // by the WORFGATE_ALLOW_CONTROLLED flag, an allowControlledOutbound policy, or a GitHub-org allowlist.
+  if (policy.auth.controlledDataHardBlock && detectedMarkers.length > 0) {
+    return {
+      allowed: false,
+      reasons: [`Controlled-data HARD BLOCK (${policy.tier} tier '${policy.clientId}') — not overridable`],
+      detectedMarkers: [...detectedMarkers, ...structuralMarkers],
+    };
+  }
+
   if (policy.worfGate.allowControlledOutbound || allowControlledData()) {
     return {
       allowed: true,
