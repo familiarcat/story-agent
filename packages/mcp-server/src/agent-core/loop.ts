@@ -14,9 +14,11 @@ import OpenAI from 'openai';
 import { quarkSelectModel, MODEL_POOL } from '../lib/crew-team-assembly.js';
 import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
 import { gateLocalOp, type WorfTier } from './worfgate-local.js';
+import { getSkillTheory } from '@story-agent/shared/skill-theory';
+import '../lib/skill-theories.js'; // register tool theories so the lens can read them
 
 export interface AgentEvent {
-  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost';
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens';
   text?: string;
   attempt?: number;
   tool?: string;
@@ -41,6 +43,8 @@ export interface RunAgentOptions {
   autoEscalate?: boolean;
   /** PROD-13: soft USD spend threshold — emits a 'cost' WorfGate-review event when crossed (does NOT hard-stop). */
   reviewThresholdUSD?: number;
+  /** Layer-3: compose a focused tool lens for the task instead of exposing all tools (default true). */
+  composeLens?: boolean;
   systemPrompt?: string;
   ragRecall?: ToolContext['ragRecall'];
   crewDeliberate?: ToolContext['crewDeliberate'];
@@ -72,6 +76,49 @@ export function shouldEscalate(input: string): boolean {
 
 function providerOf(model: string): string {
   return MODEL_POOL.find(m => m.id === model)?.provider ?? (model.split('/')[0] || 'unknown');
+}
+
+// Always-available tools: orient (read/search/list) + escalate. The lens focuses everything else.
+const LENS_CORE = new Set(['read_file', 'list_dir', 'search_code', 'crew_deliberate']);
+// Intent → tool affinities (problem topology). The lens reads the request + each tool's 5W1H theory.
+const LENS_INTENTS: Array<{ re: RegExp; tools: string[] }> = [
+  { re: /\b(write|create|add|implement|scaffold|generate|new file)\b/, tools: ['write_file', 'edit_file', 'apply_patch'] },
+  { re: /\b(edit|change|modify|fix|refactor|update|rename|replace)\b/, tools: ['edit_file', 'apply_patch', 'read_file', 'write_file'] },
+  { re: /\b(multi[- ]?file|across files|several files|whole|codebase)\b/, tools: ['apply_patch', 'search_code'] },
+  { re: /\b(test|run|build|lint|install|exec|compile|npm|pnpm|python)\b/, tools: ['run_shell'] },
+  { re: /\b(commit|diff|branch|staged|git|status|push)\b/, tools: ['git_status', 'git_diff', 'run_shell'] },
+  { re: /\b(recall|remember|prior|previously|decided|before|history|precedent)\b/, tools: ['rag_recall'] },
+];
+
+export interface ComposedLens { lens: AgentTool[]; reason: string }
+
+/**
+ * PROD-15 / Symphonic-MCP Layer-3: compose a focused tool "lens" for the task from the 5W1H mesh,
+ * instead of exposing every tool every turn. Scores each tool by (a) overlap of request terms with
+ * its SkillTheory (capabilities/use-when/scope) + description, and (b) intent affinities. Core
+ * orient/escalate tools are always present; if too few match, fall back to the full mesh (never
+ * starve the agent). Returns the subset + a human-readable reason for the Symphony card.
+ */
+export function composeLens(input: string, tools: AgentTool[]): ComposedLens {
+  const t = input.toLowerCase();
+  const terms = Array.from(new Set(t.split(/[^a-z0-9]+/).filter(w => w.length > 3)));
+  const intentTools = new Set<string>();
+  for (const { re, tools: ts } of LENS_INTENTS) if (re.test(t)) ts.forEach(x => intentTools.add(x));
+
+  const scored = tools.map(tool => {
+    if (LENS_CORE.has(tool.name)) return { tool, score: 1000 };
+    const theory = getSkillTheory(tool.name);
+    const hay = [tool.description, theory?.what.summary, ...(theory?.what.capabilities ?? []), ...(theory?.when.useWhen ?? []), ...(theory?.where.scope ?? [])]
+      .filter(Boolean).join(' ').toLowerCase();
+    let score = terms.reduce((s, term) => s + (hay.includes(term) ? 1 : 0), 0);
+    if (intentTools.has(tool.name)) score += 3;
+    return { tool, score };
+  });
+
+  const selected = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+  if (selected.length < 4) return { lens: tools, reason: `broad task → full tool mesh (${tools.length})` };
+  const lens = selected.map(s => s.tool);
+  return { lens, reason: `composed ${lens.length}/${tools.length} tools: ${lens.map(t => t.name).join(', ')}` };
 }
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
@@ -144,7 +191,10 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   };
 
   const client = new OpenAI({ apiKey: OR_KEY, baseURL: OR_URL });
-  const openaiTools = toOpenAITools(tools);
+  // Layer-3 dynamic lens: focus the tool set on the task (self-composed from the 5W1H mesh).
+  const composed = (opts.composeLens ?? true) ? composeLens(userInput, tools) : { lens: tools, reason: `full mesh (${tools.length})` };
+  emit({ type: 'lens', text: composed.reason });
+  const openaiTools = toOpenAITools(composed.lens);
 
   const perProvider: Record<string, number> = {};
   const accrue = (tin: number, tout: number) => {

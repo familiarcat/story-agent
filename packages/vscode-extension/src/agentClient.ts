@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 
 interface AgentEvent {
-  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost';
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens';
   text?: string;
   tool?: string;
   args?: unknown;
@@ -108,6 +108,9 @@ export async function runAgentTurn(
       switch (e.type) {
         case 'model':
           stream.markdown(`\n_◇ model: \`${e.model}\` (Quark cost-optimized)_\n`);
+          break;
+        case 'lens':
+          stream.markdown(`_🔎 lens: ${e.text}_\n`); // Layer-3 dynamic tool composition
           break;
         case 'tool_call':
           toolCount++;
