@@ -31,13 +31,23 @@ variable "assign_public_ip" {
 }
 
 variable "mcp_image" {
-  description = "ECR image URI for the MCP server (docker/Dockerfile.mcp)"
+  # Data (Observation Lounge): for reproducible deploys, the CI deploy step pins by DIGEST
+  # (repo@sha256:…) — the digest is known only after `docker push`, so it's enforced there, not here.
+  description = "ECR image URI for the MCP server (docker/Dockerfile.mcp). CI pins by digest at deploy."
   type        = string
+  validation {
+    condition     = var.mcp_image == "" || can(regex("\\.dkr\\.ecr\\..+\\.amazonaws\\.com/.+(:.+|@sha256:[0-9a-f]{64})$", var.mcp_image))
+    error_message = "mcp_image must be a valid ECR URI (…/repo:tag or …/repo@sha256:<digest>)."
+  }
 }
 
 variable "ui_image" {
-  description = "ECR image URI for the Next.js UI (docker/Dockerfile.ui)"
+  description = "ECR image URI for the Next.js UI (docker/Dockerfile.ui). CI pins by digest at deploy."
   type        = string
+  validation {
+    condition     = var.ui_image == "" || can(regex("\\.dkr\\.ecr\\..+\\.amazonaws\\.com/.+(:.+|@sha256:[0-9a-f]{64})$", var.ui_image))
+    error_message = "ui_image must be a valid ECR URI (…/repo:tag or …/repo@sha256:<digest>)."
+  }
 }
 
 variable "aha_secret_name" {
@@ -71,4 +81,17 @@ variable "openrouter_model_cheap" {
 variable "tags" {
   type    = map(string)
   default = { Project = "story-agent", ManagedBy = "terraform" }
+}
+
+# Quark (Observation Lounge): cost guardrails so a WebSocket/autoscale spike can't surprise the bill.
+variable "monthly_budget_usd" {
+  description = "Monthly cost budget (USD). 0 disables the AWS Budgets alarm."
+  type        = number
+  default     = 0
+}
+
+variable "cost_alert_email" {
+  description = "Email to notify at 80%/100% of the monthly budget. Required if monthly_budget_usd > 0."
+  type        = string
+  default     = ""
 }

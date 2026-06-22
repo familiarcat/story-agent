@@ -48,7 +48,9 @@
     "aha:derive-backlog": "npx tsx scripts/derive-aha-backlog.ts",
     "aha:commit-backlog": "npx tsx scripts/aha-commit-backlog.ts",
     "db:push": "npx tsx scripts/worfgate-db-push.ts",
-    "db:push:dry": "npx tsx scripts/worfgate-db-push.ts --dry-run"
+    "db:push:dry": "npx tsx scripts/worfgate-db-push.ts --dry-run",
+    "tf": "npx tsx scripts/worfgate-terraform.ts",
+    "tf:plan": "npx tsx scripts/worfgate-terraform.ts plan"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

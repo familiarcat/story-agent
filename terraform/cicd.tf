@@ -36,10 +36,12 @@ data "aws_iam_policy_document" "github_assume" {
       variable = "token.actions.githubusercontent.com:aud"
       values   = ["sts.amazonaws.com"]
     }
+    # Worf (Observation Lounge): strict subject-claim matching — only the main branch may assume
+    # the deploy role. No wildcard `:*` (which would let any fork/branch/PR assume it).
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:*"]
+      values   = ["repo:${var.github_repo}:ref:refs/heads/main"]
     }
   }
 }
