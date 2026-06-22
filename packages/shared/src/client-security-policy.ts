@@ -87,6 +87,26 @@ export interface ClientSecurityPolicy {
    * null/undefined = a top-level org sitting directly under the root admin (Brady Georgen).
    */
   parentClientId?: string | null;
+  /** Scope profile — where this client sits on the security/complexity spectrum (crew-analyzable). */
+  profile?: ClientScopeProfile;
+}
+
+/**
+ * A client's place on the scope spectrum — from a highly-protected enterprise client (multi-cloud
+ * Vault/AWS/Azure, recursive security) down to a basic commercial site (login + a few entitlement
+ * tiers). Lets the crew reason across the gestalt of clients the system must serve.
+ */
+export interface ClientScopeProfile {
+  /** Identity/secret backends, e.g. ['vault','aws-secrets-manager','azure-entra','papi'] or ['basic-login']. */
+  authProviders: string[];
+  /** Number of human entitlement tiers beneath the client (0 = role-based / N/A). */
+  entitlementTiers: number;
+  /** Multi-layer/recursive security (regulated) vs a flat commercial posture. */
+  recursiveSecurity: boolean;
+  /** Commercial vs enterprise vs regulated/defense posture. */
+  scope: 'commercial' | 'enterprise' | 'regulated-defense';
+  /** One-line human summary of this client's profile. */
+  summary: string;
 }
 
 // ── CLIENT — GOLD STANDARD (regulated tier) ───────────────────────────────────
@@ -373,6 +393,8 @@ export interface ClientOnboardingSpec {
   /** Force a hard block on controlled-data outbound (always true for regulated). */
   controlledDataHardBlock?: boolean;
   tierRationale?: string;
+  /** Scope profile — auth providers, entitlement tiers, recursive security. Defaults by tier. */
+  profile?: ClientScopeProfile;
 }
 
 const BASELINE_CONTROLLED_MARKERS = ['confidential', 'internal use only', 'proprietary', 'secret', 'pii'];
@@ -382,6 +404,13 @@ export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPol
   const regulated = spec.tier === 'regulated';
   const secretSource: 'ssm' | 'env' | 'either' = regulated ? 'ssm' : 'either';
   const hardBlock = spec.controlledDataHardBlock ?? regulated;
+
+  // Sensible scope profile by tier when not specified.
+  const defaultProfile: ClientScopeProfile = regulated
+    ? { authProviders: ['vault', 'aws-secrets-manager', 'azure-entra', 'papi'], entitlementTiers: 0, recursiveSecurity: true, scope: 'regulated-defense', summary: `${spec.clientName}: regulated/defense — multi-cloud (Vault + AWS + Azure/Entra) + privileged API; recursive security, controlled-data hard block.` }
+    : spec.tier === 'enterprise'
+      ? { authProviders: ['oidc', 'aws-secrets-manager'], entitlementTiers: 3, recursiveSecurity: false, scope: 'enterprise', summary: `${spec.clientName}: enterprise — OIDC auth, env/SSM secrets, WorfGate on.` }
+      : { authProviders: ['basic-login'], entitlementTiers: 5, recursiveSecurity: false, scope: 'commercial', summary: `${spec.clientName}: commercial — basic user login, tiered entitlements.` };
 
   return {
     clientId: spec.clientId.trim().toLowerCase(),
@@ -421,6 +450,7 @@ export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPol
     requiredSsmPaths: regulated
       ? [`/story-agent/${spec.clientId}/supabase-url`, `/story-agent/${spec.clientId}/supabase-key`, `/story-agent/${spec.clientId}/github-token`]
       : undefined,
+    profile: spec.profile ?? defaultProfile,
   };
 }
 
