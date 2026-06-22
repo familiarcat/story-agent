@@ -115,7 +115,7 @@ function printInstructions() {
   console.log('📖 MANUAL EXECUTION (recommended now):');
   console.log('');
   console.log('  1. Go to Dashboard SQL Editor:');
-  console.log('     https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/sql/new');
+  console.log('     https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/sql/new');
   console.log('');
   console.log('  2. Copy/paste each migration file contents in order:');
   console.log('');

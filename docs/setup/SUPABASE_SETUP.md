@@ -12,7 +12,7 @@ This guide explains how to:
 All credentials should be in `~/.zshrc` (sourced automatically):
 
 ```bash
-export SUPABASE_URL="https://sqachwmzyuuyyyxekdxp.supabase.co"
+export SUPABASE_URL="https://rpkkkbufdwxmjaerbhbn.supabase.co"
 export SUPABASE_KEY="sb_secret_wEqrH91tGFOdDTruW4QsnA_Jt9w25V2"
 export SUPABASE_ACCESS_TOKEN="sbp_b3adfd8cab79d6fd9b0a5078d8692b9aca8b83c8"
 ```
@@ -36,7 +36,7 @@ This will show you the bootstrap SQL block if the RPC function doesn't exist yet
 ### What to do
 
 1. **Copy the entire SQL block** from the output
-2. **Go to:** https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/sql/new
+2. **Go to:** https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/sql/new
 3. **Paste** the SQL
 4. **Click RUN**
 
@@ -127,7 +127,7 @@ Node.js Script
     ↓
     curl (HTTPS) ← gets through firewall
     ↓
-Supabase REST API (@sqachwmzyuuyyyxekdxp.supabase.co/rest/v1)
+Supabase REST API (@rpkkkbufdwxmjaerbhbn.supabase.co/rest/v1)
     ↓
 RPC Function (public.execute_migration) ← created by bootstrap SQL
     ↓
@@ -153,7 +153,7 @@ Test the HTTPS connection with curl:
 source ~/.zshrc
 
 # Test REST API health
-curl -s https://sqachwmzyuuyyyxekdxp.supabase.co/rest/v1/ \
+curl -s https://rpkkkbufdwxmjaerbhbn.supabase.co/rest/v1/ \
   -H "apikey: $SUPABASE_KEY" | python3 -m json.tool | head -10
 
 # List migrations to be run

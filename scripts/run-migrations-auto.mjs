@@ -47,7 +47,7 @@ const BOOTSTRAP_SQL = `
 -- BOOTSTRAP: Execute Migrations RPC Function
 -- ============================================================================
 -- Paste this entire block once into: 
--- https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/sql/new
+-- https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/sql/new
 -- 
 -- This creates the RPC function that crew agents will use to execute migrations
 
@@ -150,7 +150,7 @@ function showBootstrapInstructions() {
   console.log('');
   console.log('STEP 1: Paste the bootstrap SQL below into the dashboard:');
   console.log('');
-  console.log('  URL: https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/sql/new');
+  console.log('  URL: https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/sql/new');
   console.log('');
   console.log('BOOTSTRAP SQL (copy everything between the lines):');
   console.log('');
@@ -213,7 +213,7 @@ function runMigrationsViaRpc() {
   console.log('✅ All migrations completed successfully!');
   console.log('');
   console.log('🎯 Next steps:');
-  console.log('  1. Verify tables: https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/editor');
+  console.log('  1. Verify tables: https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/editor');
   console.log('  2. Seed crew manifests: npm run crew:seed');
   console.log('  3. Run crew integrity check: npm run crew:check');
   console.log('');

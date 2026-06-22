@@ -24,7 +24,7 @@ Expected output:
 ║      Seeding Crew Baseline Memories → Supabase        ║
 ╚════════════════════════════════════════════════════════╝
 
-📍 Project: https://sqachwmzyuuyyyxekdxp.supabase.co
+📍 Project: https://rpkkkbufdwxmjaerbhbn.supabase.co
 📊 Crew members: 11
 
 ▶️  Seeding PICARD: Captain & Strategic Command
@@ -153,7 +153,7 @@ updated_at: "2025-01-15T10:30:00Z"
 
 ### Step 1: Check in Supabase Dashboard
 
-1. Go to: https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/editor
+1. Go to: https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/editor
 2. Click **sa_observation_memories** table
 3. Filter: `story_id LIKE "crew-baseline-%"`
 4. Expected: 11 rows (one per crew member)
@@ -163,7 +163,7 @@ updated_at: "2025-01-15T10:30:00Z"
 ```bash
 # From project root
 source ~/.zshrc
-curl -s -X GET "https://sqachwmzyuuyyyxekdxp.supabase.co/rest/v1/observation_memories?story_id=like.crew-baseline-%&select=id,story_id,crew_id,summary" \
+curl -s -X GET "https://rpkkkbufdwxmjaerbhbn.supabase.co/rest/v1/observation_memories?story_id=like.crew-baseline-%&select=id,story_id,crew_id,summary" \
   -H "apikey: $SUPABASE_KEY" | jq '.[] | {story_id, crew_id, summary}'
 ```
 
@@ -221,7 +221,7 @@ npm run crew:seed-memories
 ```bash
 # Create RPC function first
 npm run db:migrate  # Shows bootstrap SQL
-# Paste SQL into: https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/sql/new
+# Paste SQL into: https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/sql/new
 # Then run migrations again
 npm run db:migrate
 ```

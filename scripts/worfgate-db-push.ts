@@ -14,7 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { resolveWorfGateCredentialAsync } from '../packages/shared/src/worfgate-credentials.js';
 
-const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || 'sqachwmzyuuyyyxekdxp';
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || 'rpkkkbufdwxmjaerbhbn';
 const API = `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
 
 async function runSql(token: string, sql: string): Promise<{ ok: boolean; status: number; body: string }> {

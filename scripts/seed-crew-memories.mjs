@@ -97,7 +97,7 @@ async function seedCrewMemories() {
   console.log(`✅ Seeding complete: ${successCount} succeeded, ${failureCount} failed`);
   console.log('');
   console.log('🎯 Next steps:');
-  console.log('  1. Verify in dashboard: https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/editor');
+  console.log('  1. Verify in dashboard: https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/editor');
   console.log('     → Table: sa_observation_memories');
   console.log('     → Filter: story_id LIKE "crew-baseline-%"');
   console.log('');

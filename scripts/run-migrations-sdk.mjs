@@ -113,7 +113,7 @@ async function runMigrations() {
     console.error('⚠️  Note: Supabase SDK cannot execute arbitrary SQL via REST API for security reasons.');
     console.error('');
     console.error('WORKAROUND: Run migrations manually via the dashboard SQL editor:');
-    console.error('  → https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/sql/new');
+    console.error('  → https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/sql/new');
     console.error('');
     console.error('Migrations queued (copy/paste these in order):');
     for (let i = 0; i < MIGRATIONS.length; i++) {
@@ -148,7 +148,7 @@ async function runMigrations() {
   console.log('✅ Credentials validated');
   console.log('');
   console.log('📋 Next steps:');
-  console.log('  1. Open: https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/sql/new');
+  console.log('  1. Open: https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/sql/new');
   console.log('  2. Copy/paste each migration file in order (1-7)');
   console.log('  3. Click RUN after each migration');
   console.log('');

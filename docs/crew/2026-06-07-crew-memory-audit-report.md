@@ -74,7 +74,7 @@ last_updated: 2026-06-07
    - **Action**: Add database verification script to verify all tables exist
 
 6. **Environment-Specific Values Exposed**
-   - Supabase project ID visible in examples (e.g., `sqachwmzyuuyyyxekdxp`)
+   - Supabase project ID visible in examples (e.g., `rpkkkbufdwxmjaerbhbn`)
    - **Action**: Replace with `${SUPABASE_PROJECT_ID}` placeholders
 
 ---

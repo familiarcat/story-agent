@@ -6,9 +6,9 @@ dashboard paste. Files use the CLI's `<YYYYMMDDHHMMSS>_name.sql` timestamp conve
 ## One-time setup
 1. `brew upgrade supabase` (pin ≥ v2.107 so it matches `supabase/config.toml`).
 2. Add to `~/.alexai-secrets` (WorfGate secrets — never commit): `SUPABASE_ACCESS_TOKEN`, and the cloud DB password as `SUPABASE_DB_PASSWORD`.
-3. Link the cloud project (ref `sqachwmzyuuyyyxekdxp`):
+3. Link the cloud project (ref `rpkkkbufdwxmjaerbhbn`):
    ```bash
-   supabase link --project-ref sqachwmzyuuyyyxekdxp
+   supabase link --project-ref rpkkkbufdwxmjaerbhbn
    ```
 
 ## Apply migrations

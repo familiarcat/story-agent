@@ -5,7 +5,7 @@
 
 set -e
 
-PROJECT_REF="${SUPABASE_PROJECT_ID:-sqachwmzyuuyyyxekdxp}"
+PROJECT_REF="${SUPABASE_PROJECT_ID:-rpkkkbufdwxmjaerbhbn}"
 API_TOKEN="${SUPABASE_ACCESS_TOKEN}"
 MIGRATIONS_DIR="supabase"
 

@@ -131,7 +131,7 @@ console.log('2. Seed crew baseline memories:');
 console.log('   $ npm run crew:seed-memories');
 console.log('');
 console.log('3. Verify in Supabase dashboard:');
-console.log('   https://supabase.com/dashboard/project/sqachwmzyuuyyyxekdxp/editor');
+console.log('   https://supabase.com/dashboard/project/rpkkkbufdwxmjaerbhbn/editor');
 console.log('   → sa_observation_memories table');
 console.log('   → Filter: story_id LIKE "crew-baseline-%"');
 console.log('');

@@ -242,7 +242,7 @@ npm run db:health-check
 
 **Configuration** (in GitHub Secrets):
 ```
-SUPABASE_URL = https://sqachwmzyuuyyyxekdxp.supabase.co
+SUPABASE_URL = https://rpkkkbufdwxmjaerbhbn.supabase.co
 SUPABASE_SERVICE_ROLE_KEY = sb_secret_wEqrH91tGFOdDTruW4QsnA_Jt9w25V2
 SLACK_WEBHOOK_URL = https://hooks.slack.com/services/xxx
 ```
@@ -330,7 +330,7 @@ npm run db:auto-migrate
 npm run db:migrate:test
 
 # Check Supabase status
-curl -I https://sqachwmzyuuyyyxekdxp.supabase.co
+curl -I https://rpkkkbufdwxmjaerbhbn.supabase.co
 
 # If using corporate VPN, verify you're connected
 ```
