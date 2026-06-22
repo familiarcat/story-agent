@@ -8,13 +8,14 @@
 import * as vscode from 'vscode';
 
 interface AgentEvent {
-  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation';
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost';
   text?: string;
   tool?: string;
   args?: unknown;
   tier?: 'green' | 'yellow' | 'red';
   remediations?: string[];
   model?: string;
+  costUSD?: number;
   // done frame carries the full AgentRunResult
   finalText?: string;
   iterations?: number;
@@ -23,6 +24,7 @@ interface AgentEvent {
   totalTokens?: number;
   escalated?: boolean;
   budgetExceeded?: boolean;
+  observatory?: { perProvider?: Record<string, number>; burnRatePerTurnUSD?: number; reviewTriggered?: boolean };
 }
 
 const TIER_ICON: Record<string, string> = { green: '🟢', yellow: '🟡', red: '🔴' };
@@ -87,6 +89,7 @@ export async function runAgentTurn(
   let buffer = '';
   let result: AgentTurnResult = { ok: true };
   let toolCount = 0;
+  const posture = { green: 0, yellow: 0, red: 0 }; // WorfGate tally for the explainable feedback card
 
   while (true) {
     if (token.isCancellationRequested) { try { await reader.cancel(); } catch { /* ignore */ } break; }
@@ -112,10 +115,17 @@ export async function runAgentTurn(
           stream.markdown(`\n**→ ${e.tool}** \`${JSON.stringify(e.args).slice(0, 120)}\`\n`);
           break;
         case 'gate':
+          if (e.tier && e.tier in posture) posture[e.tier]++;
           stream.markdown(
             `&nbsp;&nbsp;⛨ WorfGate ${TIER_ICON[e.tier ?? ''] ?? ''} ${e.tier}` +
             (e.remediations?.length ? ` _(remediated: ${e.remediations.join('; ')})_` : '') + '\n',
           );
+          break;
+        case 'retry':
+          stream.markdown(`&nbsp;&nbsp;_↻ ${e.text}_\n`); // backoff/transient retry (PROD-11)
+          break;
+        case 'cost':
+          stream.markdown(`\n> 💰 **Cost review:** ${e.text}\n`); // soft spend cap → WorfGate review (PROD-13)
           break;
         case 'escalation':
           stream.markdown(`\n> 🔴 **Escalation:** ${e.text}\n`);
@@ -127,7 +137,7 @@ export async function runAgentTurn(
           stream.markdown(`\n⚠️ ${e.text}\n`);
           result.ok = false;
           break;
-        case 'done':
+        case 'done': {
           result = {
             ok: true,
             iterations: e.iterations,
@@ -135,12 +145,21 @@ export async function runAgentTurn(
             costUSD: e.totalCostUSD,
             escalated: e.escalated,
           };
+          // Symphony feedback card — the agent "shows its work": governance posture, cost, execution.
+          const obs = e.observatory ?? {};
+          const providerMix = Object.entries(obs.perProvider ?? {}).map(([p, c]) => `${p} $${(c as number).toFixed(4)}`).join(' · ');
+          const postureLine = `🟢 ${posture.green} · 🟡 ${posture.yellow} · 🔴 ${posture.red}`;
           stream.markdown(
-            `\n\n---\n_${e.model} · ${e.iterations} turns · ${e.toolCalls?.length ?? toolCount} tools · ` +
-            `~$${(e.totalCostUSD ?? 0).toFixed(5)} · ${e.totalTokens} tok` +
-            (e.escalated ? ' · escalated to crew' : '') + (e.budgetExceeded ? ' · budget-capped' : '') + '_\n',
+            `\n\n---\n### 🎼 Symphony\n` +
+            `- **Model** \`${e.model}\` · ${e.iterations} turns · ${e.toolCalls?.length ?? toolCount} tools\n` +
+            `- **WorfGate posture** ${postureLine}` + (e.escalated ? ' · escalated to crew' : '') + '\n' +
+            `- **Cost** ~$${(e.totalCostUSD ?? 0).toFixed(5)} · ${e.totalTokens} tok` +
+            (obs.burnRatePerTurnUSD ? ` · burn $${obs.burnRatePerTurnUSD.toFixed(5)}/turn` : '') +
+            (providerMix ? ` · ${providerMix}` : '') +
+            (obs.reviewTriggered ? ' · ⚠️ cost-review' : '') + (e.budgetExceeded ? ' · budget-capped' : '') + '\n',
           );
           break;
+        }
       }
     }
   }
