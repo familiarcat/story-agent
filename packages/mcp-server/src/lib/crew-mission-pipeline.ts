@@ -11,11 +11,17 @@
  * Anthropic is used only where Quark's tiering selects it (top-tier intake/plan, frontier members);
  * everything else runs on cheaper providers. Reuses assembleAndOptimize (Riker+Quark).
  */
-import { assembleAndOptimize, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
+import { assembleAndOptimize, quarkSelectModel, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
-const TOP_MODEL = process.env.CREW_LLM_APPROVED_MODEL || 'anthropic/claude-sonnet-4.6';
+// Cost-minimization (Claude Code informed the crew to lower costs): FRUGAL by default — Picard's
+// intake/synthesis bookends, the pipeline's cost driver, drop from a frontier model to the cheapest
+// adequate one (Quark tier-3 ≈ deepseek). Set CREW_FRUGAL=false for a heavy frontier synthesis run.
+const FRUGAL = process.env.CREW_FRUGAL !== 'false';
+const TOP_MODEL = FRUGAL
+  ? quarkSelectModel(3).id
+  : (process.env.CREW_LLM_APPROVED_MODEL || 'anthropic/claude-sonnet-4.6');
 
 function rate(model: string) {
   const m = MODEL_POOL.find(x => x.id === model);

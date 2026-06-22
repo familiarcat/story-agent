@@ -35,6 +35,10 @@ substantive work onto the crew, which is the point.
   unreachable slugs (e.g. `google/gemini-2.0-flash-001` was NOT reachable).
 - Anthropic-first provider routing (`provider: { order: ['Anthropic'] }`) ONLY for `anthropic/*`
   slugs (avoids stale Bedrock); never for other providers.
+- **Lower the crew's cost by default.** The mission pipeline runs FRUGAL (`CREW_FRUGAL`, default on):
+  even Picard's intake/synthesis bookends use the cheapest adequate model (Quark tier-3 ≈ deepseek),
+  not a frontier model — the pipeline's dominant cost. Set `CREW_FRUGAL=false` only for a deliberate
+  heavy-synthesis run. Keep deliberations terse + token-bounded. Cost over speed.
 
 ## Security — WorfGate (Worf owns it)
 

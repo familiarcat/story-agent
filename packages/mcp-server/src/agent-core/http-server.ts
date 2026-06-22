@@ -11,6 +11,12 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { runAgentLoop } from './loop.js';
 import { buildBridges } from './bridges.js';
+import { listClientHierarchy } from '@story-agent/shared/client-security-policy';
+import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
+import { credentialStatus, listCredentialProviders } from '@story-agent/shared/worfgate-credentials';
+import { listSkillTheories } from '@story-agent/shared/skill-theory';
+import '../lib/skill-theories.js';
+import '../lib/skill-theories-generated.js';
 
 function authOk(req: IncomingMessage): boolean {
   const token = process.env.AGENT_SERVICE_TOKEN;
@@ -49,6 +55,24 @@ export function startAgentHttpServer(port: number) {
     if (req.method === 'GET' && req.url === '/agent/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, service: 'story-agent-agent', port }));
+      return;
+    }
+    // Symphonic-MCP Layer-5 posture snapshot — firm/client/project hierarchy, WorfGate posture,
+    // tool-theory coverage, recent agent invocations. Presence/metadata only — never secret values.
+    if (req.method === 'GET' && req.url === '/symphony') {
+      try { await hydrateClientPolicies(); } catch { /* fall back to bootstrap */ }
+      const creds = credentialStatus();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        firm: 'familiarcat',
+        clients: listClientHierarchy(),
+        worfgate: {
+          providers: listCredentialProviders(),
+          credentials: { present: creds.filter(c => c.available).length, total: creds.length, missingRequired: creds.filter(c => c.required && !c.available).map(c => c.name) },
+        },
+        tools: { theorized: listSkillTheories().length },
+        recentInvocations: getAgentInvocationAudit().slice(-10),
+      }, null, 2));
       return;
     }
     if (req.method !== 'POST' || req.url !== '/agent') {

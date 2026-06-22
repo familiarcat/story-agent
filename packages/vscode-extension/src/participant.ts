@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { fetchAhaStory } from './aha';
 import { buildObservationLoungeBrief } from './brief';
 import { runAssistantTurn, resetSession } from './chatEngine';
-import { runAgentTurn } from './agentClient';
+import { runAgentTurn, renderSymphonyPanel } from './agentClient';
 
 const PARTICIPANT_ID = 'story-agent.agent';
 
@@ -115,6 +115,12 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         stream.markdown(`Checking status of \`${referenceNum}\`…\n\nThe dashboard shows full lifecycle status.\n`);
         stream.button({ command: 'story-agent.openDashboard', title: '$(browser) Open Dashboard' });
         return { metadata: { [META_CMD]: 'status', [META_REF]: referenceNum } };
+      }
+
+      // Layer-5 posture panel (/symphony) → live firm→client→project + WorfGate + tools snapshot.
+      if (cmd === 'symphony') {
+        await renderSymphonyPanel(stream);
+        return { metadata: { [META_CMD]: 'symphony' } };
       }
 
       // Autonomous agentic mode (/agent) → tool-calling loop over agent-core (CLI/API/VS Code share it).

@@ -29,6 +29,10 @@
             "description": "Autonomous agentic mode — the crew reads/edits files & runs commands via agent-core (WorfGate-governed, OpenRouter cost-optimized)"
           },
           {
+            "name": "symphony",
+            "description": "Show the live system posture — firm → client → project hierarchy, WorfGate credentials/providers, and tool-theory coverage"
+          },
+          {
             "name": "reset",
             "description": "Reset the session token budget meter"
           },

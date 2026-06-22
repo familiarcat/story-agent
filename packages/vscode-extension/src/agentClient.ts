@@ -29,10 +29,35 @@ interface AgentEvent {
 
 const TIER_ICON: Record<string, string> = { green: '🟢', yellow: '🟡', red: '🔴' };
 
-function agentUrl(): string {
+function agentBase(): string {
   const c = vscode.workspace.getConfiguration('storyAgent');
-  const base = c.get<string>('chat.agentServiceUrl') || process.env.STORY_AGENT_AGENT_URL || 'http://localhost:3103';
-  return base.replace(/\/$/, '') + '/agent';
+  return (c.get<string>('chat.agentServiceUrl') || process.env.STORY_AGENT_AGENT_URL || 'http://localhost:3103').replace(/\/$/, '');
+}
+function agentUrl(): string {
+  return agentBase() + '/agent';
+}
+
+/** Layer-5 posture panel — render the live firm→client→project + WorfGate + tool snapshot in chat. */
+export async function renderSymphonyPanel(stream: vscode.ChatResponseStream): Promise<void> {
+  let snap: any;
+  try {
+    const resp = await fetch(agentBase() + '/symphony');
+    if (!resp.ok) { stream.markdown(`⚠️ /symphony returned HTTP ${resp.status}.`); return; }
+    snap = await resp.json();
+  } catch {
+    stream.markdown(`⚠️ Could not reach the agent service. Start it: \`STORY_AGENT_AGENT_PORT=3103 pnpm --filter @story-agent/mcp-server start\`.`);
+    return;
+  }
+  const tree = (n: any, d = 0): string => `${'  '.repeat(d)}- **${n.clientName}** (\`${n.clientId}\`) · ${n.tier}${n.worfGateEnforce ? ' · ⛨' : ''}\n` + (n.children ?? []).map((c: any) => tree(c, d + 1)).join('');
+  const wg = snap.worfgate ?? {};
+  stream.markdown(
+    `## 🎼 Symphony — system posture\n\n` +
+    `**Firm:** ${snap.firm}\n\n**Clients & projects:**\n${(snap.clients ?? []).map((n: any) => tree(n)).join('')}\n` +
+    `**WorfGate:** providers ${(wg.providers ?? []).map((p: any) => p.name + (p.active ? '✓' : '')).join(' · ')} · ` +
+    `credentials ${wg.credentials?.present}/${wg.credentials?.total}` +
+    (wg.credentials?.missingRequired?.length ? ` · ⚠️ missing ${wg.credentials.missingRequired.join(', ')}` : '') + `\n\n` +
+    `**Tools:** ${snap.tools?.theorized} with 5W1H theories · **recent agent runs:** ${snap.recentInvocations?.length ?? 0}\n`,
+  );
 }
 
 function workspacePath(): string | undefined {
