@@ -107,6 +107,75 @@ export interface ClientScopeProfile {
   scope: 'commercial' | 'enterprise' | 'regulated-defense';
   /** One-line human summary of this client's profile. */
   summary: string;
+  /** Named, discrete security posture (config-over-code — see SECURITY_POSTURES). */
+  posture?: SecurityPosture;
+  /** Compliance frameworks this client must satisfy (crew web-researched gradient). */
+  complianceFrameworks?: string[];
+  /** Security topology — recursive (multi-layer) with a depth, or flat. */
+  topology?: { mode: 'recursive' | 'flat'; depth: number };
+  /** Entitlement model — discrete tier ceiling (boundaries are named, never interpolated). */
+  entitlementTier?: { max: number; extended: boolean };
+}
+
+/**
+ * Named security postures — the discrete calibration points across the client gradient (per the
+ * crew's gestalt ruling: "config-over-code; tier boundaries are discrete/named, not interpolated").
+ * A client picks a posture; buildClientPolicy derives auth + WorfGate config from it. Any new
+ * client between the poles selects the nearest posture rather than introducing a code branch.
+ */
+export type SecurityPosture = 'defense' | 'regulated' | 'industry-secret' | 'commercial';
+
+export interface SecurityPostureConfig {
+  scope: ClientScopeProfile['scope'];
+  authProviders: string[];
+  complianceFrameworks: string[];
+  topology: { mode: 'recursive' | 'flat'; depth: number };
+  entitlementTier: { max: number; extended: boolean };
+  recursiveSecurity: boolean;
+  controlledDataHardBlock: boolean;
+  requireSsmSecrets: boolean;
+  requireEntraIssuer: boolean;
+}
+
+export const SECURITY_POSTURES: Record<SecurityPosture, SecurityPostureConfig> = {
+  // Government / defense — highest. (FedRAMP/CMMC/ITAR; CUI/FCI.)
+  defense: {
+    scope: 'regulated-defense', authProviders: ['vault', 'aws-secrets-manager', 'azure-entra', 'papi'],
+    complianceFrameworks: ['FedRAMP', 'CMMC', 'NIST 800-171', 'NIST 800-53', 'ITAR'],
+    topology: { mode: 'recursive', depth: 3 }, entitlementTier: { max: 0, extended: false },
+    recursiveSecurity: true, controlledDataHardBlock: true, requireSsmSecrets: true, requireEntraIssuer: true,
+  },
+  // Regulated commercial — HIPAA/PCI-DSS/GDPR/SOC2/ISO27001.
+  regulated: {
+    scope: 'regulated-defense', authProviders: ['azure-entra', 'aws-secrets-manager'],
+    complianceFrameworks: ['HIPAA', 'PCI-DSS', 'GDPR', 'SOC2', 'ISO 27001'],
+    topology: { mode: 'recursive', depth: 2 }, entitlementTier: { max: 0, extended: false },
+    recursiveSecurity: true, controlledDataHardBlock: true, requireSsmSecrets: true, requireEntraIssuer: true,
+  },
+  // Commercial but industry-secret — trade secrets need NDAs + RBAC + export-logging (DTSA).
+  'industry-secret': {
+    scope: 'enterprise', authProviders: ['oidc', 'aws-secrets-manager'],
+    complianceFrameworks: ['Trade Secret (DTSA)', 'NDA', 'SOC2'],
+    topology: { mode: 'flat', depth: 1 }, entitlementTier: { max: 3, extended: false },
+    recursiveSecurity: false, controlledDataHardBlock: false, requireSsmSecrets: false, requireEntraIssuer: false,
+  },
+  // Basic commercial — RBAC role hierarchy + tiered entitlements.
+  commercial: {
+    scope: 'commercial', authProviders: ['basic-login'],
+    complianceFrameworks: [],
+    topology: { mode: 'flat', depth: 1 }, entitlementTier: { max: 5, extended: true },
+    recursiveSecurity: false, controlledDataHardBlock: false, requireSsmSecrets: false, requireEntraIssuer: false,
+  },
+};
+
+/** Resolve a named posture's discrete config. */
+export function getSecurityPosture(name: SecurityPosture): SecurityPostureConfig {
+  return SECURITY_POSTURES[name];
+}
+
+/** Default posture for a tier when none is specified. */
+export function defaultPostureForTier(tier: SecurityTier): SecurityPosture {
+  return tier === 'regulated' ? 'regulated' : tier === 'enterprise' ? 'industry-secret' : 'commercial';
 }
 
 // ── CLIENT — GOLD STANDARD (regulated tier) ───────────────────────────────────
@@ -393,7 +462,9 @@ export interface ClientOnboardingSpec {
   /** Force a hard block on controlled-data outbound (always true for regulated). */
   controlledDataHardBlock?: boolean;
   tierRationale?: string;
-  /** Scope profile — auth providers, entitlement tiers, recursive security. Defaults by tier. */
+  /** Named security posture — derives auth + WorfGate config (config-over-code). Defaults by tier. */
+  posture?: SecurityPosture;
+  /** Explicit scope profile override (else derived from the posture). */
   profile?: ClientScopeProfile;
 }
 
@@ -401,16 +472,25 @@ const BASELINE_CONTROLLED_MARKERS = ['confidential', 'internal use only', 'propr
 
 /** Build a complete, floor-compliant ClientSecurityPolicy from a minimal spec. */
 export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPolicy {
-  const regulated = spec.tier === 'regulated';
-  const secretSource: 'ssm' | 'env' | 'either' = regulated ? 'ssm' : 'either';
-  const hardBlock = spec.controlledDataHardBlock ?? regulated;
+  // Posture drives the discrete config (config-over-code). Pick the spec's posture, else default by tier.
+  const posture = spec.posture ?? defaultPostureForTier(spec.tier);
+  const pc = getSecurityPosture(posture);
+  const regulated = spec.tier === 'regulated' || pc.requireSsmSecrets;
+  const secretSource: 'ssm' | 'env' | 'either' = pc.requireSsmSecrets ? 'ssm' : 'either';
+  const hardBlock = spec.controlledDataHardBlock ?? pc.controlledDataHardBlock;
 
-  // Sensible scope profile by tier when not specified.
-  const defaultProfile: ClientScopeProfile = regulated
-    ? { authProviders: ['vault', 'aws-secrets-manager', 'azure-entra', 'papi'], entitlementTiers: 0, recursiveSecurity: true, scope: 'regulated-defense', summary: `${spec.clientName}: regulated/defense — multi-cloud (Vault + AWS + Azure/Entra) + privileged API; recursive security, controlled-data hard block.` }
-    : spec.tier === 'enterprise'
-      ? { authProviders: ['oidc', 'aws-secrets-manager'], entitlementTiers: 3, recursiveSecurity: false, scope: 'enterprise', summary: `${spec.clientName}: enterprise — OIDC auth, env/SSM secrets, WorfGate on.` }
-      : { authProviders: ['basic-login'], entitlementTiers: 5, recursiveSecurity: false, scope: 'commercial', summary: `${spec.clientName}: commercial — basic user login, tiered entitlements.` };
+  // Profile derived from the posture (explicit spec.profile overrides).
+  const defaultProfile: ClientScopeProfile = {
+    authProviders: pc.authProviders,
+    entitlementTiers: pc.entitlementTier.max,
+    recursiveSecurity: pc.recursiveSecurity,
+    scope: pc.scope,
+    posture,
+    complianceFrameworks: pc.complianceFrameworks,
+    topology: pc.topology,
+    entitlementTier: pc.entitlementTier,
+    summary: `${spec.clientName}: ${posture} posture — ${pc.scope}; ${pc.recursiveSecurity ? 'recursive' : 'flat'} security; entitlement tiers ≤${pc.entitlementTier.max}; frameworks: ${pc.complianceFrameworks.join(', ') || 'none'}.`,
+  };
 
   return {
     clientId: spec.clientId.trim().toLowerCase(),
@@ -423,12 +503,12 @@ export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPol
         `measured against the Client regulated gold standard.`,
     auth: {
       requireBearerToken: true,
-      requireEntraIssuer: regulated,
+      requireEntraIssuer: pc.requireEntraIssuer,
       requireSessionIsolation: true,
       requireFullAuditTrail: true,
       worfGateEnforce: true, // floor: WorfGate is always on for onboarded clients
       controlledDataHardBlock: hardBlock,
-      requireSsmSecrets: regulated,
+      requireSsmSecrets: pc.requireSsmSecrets,
       sessionTtlSeconds: regulated ? 3600 : 7200,
     },
     worfGate: {
