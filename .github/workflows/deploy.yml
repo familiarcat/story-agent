@@ -52,6 +52,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build & push MCP server image
+        id: build_mcp
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -63,6 +64,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build & push UI image
+        id: build_ui
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -77,9 +79,16 @@ jobs:
 
       - name: Terraform init + plan
         working-directory: terraform
+        # Pin the freshly-built images by DIGEST (Data's reproducibility rule) so the apply
+        # deploys exactly what CI built — never a mutable :latest.
+        env:
+          MCP_IMAGE: ${{ env.ECR_REGISTRY }}/story-agent-mcp@${{ steps.build_mcp.outputs.digest }}
+          UI_IMAGE: ${{ env.ECR_REGISTRY }}/story-agent-ui@${{ steps.build_ui.outputs.digest }}
         run: |
           terraform init -input=false
-          terraform plan -input=false -out=tfplan
+          terraform plan -input=false -out=tfplan \
+            -var "mcp_image=${MCP_IMAGE}" \
+            -var "ui_image=${UI_IMAGE}"
 
       - name: Terraform apply
         if: github.event.inputs.apply == 'true'
