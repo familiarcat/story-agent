@@ -35,7 +35,7 @@
     "client:onboard": "node scripts/client-onboard.mjs",
     "crew:seed": "CREW_LLM_PROVIDER=demo pnpm --filter @story-agent/mcp-server exec node --input-type=module -e \"import { seedAllCrewSkillManifests } from './dist/src/lib/crew-skill-system.js'; await seedAllCrewSkillManifests(); console.log('✅ Crew skill manifests seeded');\"",
     "crew:seed-memories": "node scripts/seed-crew-memories.mjs",
-    "crew:check": "CREW_LLM_PROVIDER=demo pnpm --filter @story-agent/mcp-server exec node --input-type=module -e \"import { generateCrewIntegrityReport } from './dist/src/lib/crew-integrity.js'; const report = await generateCrewIntegrityReport(); console.log(JSON.stringify(report, null, 2));\""  ,
+    "crew:check": "CREW_LLM_PROVIDER=demo pnpm --filter @story-agent/mcp-server exec node --input-type=module -e \"import { generateCrewIntegrityReport } from './dist/src/lib/crew-integrity.js'; const report = await generateCrewIntegrityReport(); console.log(JSON.stringify(report, null, 2));\"",
     "docs:ingest": "node scripts/ingest-docs-to-rag.mjs",
     "docs:ingest:dry": "node scripts/ingest-docs-to-rag.mjs --dry-run",
     "docs:ingest:fresh": "node scripts/ingest-docs-to-rag.mjs --fresh",
@@ -46,7 +46,9 @@
     "project:crew": "node scripts/project-management.mjs crew",
     "aws-secrets:put": "bash scripts/aws-secrets-put.sh",
     "aha:derive-backlog": "npx tsx scripts/derive-aha-backlog.ts",
-    "aha:commit-backlog": "npx tsx scripts/aha-commit-backlog.ts"
+    "aha:commit-backlog": "npx tsx scripts/aha-commit-backlog.ts",
+    "db:push": "tsx scripts/worfgate-db-push.ts",
+    "db:push:dry": "tsx scripts/worfgate-db-push.ts --dry-run"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",
