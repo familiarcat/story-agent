@@ -15,9 +15,11 @@ import {
   cacheClientPolicy,
   clearDynamicClientCache,
   lookupClientPolicy,
+  resolveClientPolicy,
   type ClientOnboardingSpec,
   type ClientSecurityPolicy,
 } from './client-security-policy.js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 interface ClientRow {
   id: string;
@@ -73,6 +75,19 @@ export async function onboardClient(
   }
 
   const db = await getDbClient();
+
+  // The clients.parent_client_id FK requires the parent to be a ROW. Code-bootstrap parents
+  // (e.g. familiarcat, bayer-int) have no row yet — persist the parent from its resolved policy
+  // first so the hierarchy FK is satisfied. Walks up so a whole bootstrap chain is materialized.
+  if (policy.parentClientId) await ensureParentRow(db, policy.parentClientId, onboardedBy);
+
+  await persistPolicyRow(db, policy, onboardedBy);
+  cacheClientPolicy(policy);
+  return policy;
+}
+
+/** Upsert a policy as a clients row. */
+async function persistPolicyRow(db: SupabaseClient, policy: ClientSecurityPolicy, onboardedBy: string): Promise<void> {
   const { error } = await db.from('clients').upsert({
     id: policy.clientId,
     name: policy.clientName,
@@ -82,10 +97,17 @@ export async function onboardClient(
     onboarded_by: onboardedBy,
     updated_at: new Date().toISOString(),
   });
-  if (error) throw new Error(`onboardClient persist failed: ${error.message}`);
+  if (error) throw new Error(`persist '${policy.clientId}' failed: ${error.message}`);
+}
 
-  cacheClientPolicy(policy);
-  return policy;
+/** Ensure a parent client has a DB row (materialize from its code/cache policy if missing). */
+async function ensureParentRow(db: SupabaseClient, parentId: string, onboardedBy: string): Promise<void> {
+  const { data } = await db.from('clients').select('id').eq('id', parentId).maybeSingle();
+  if (data) return; // already a row
+  const parentPolicy = lookupClientPolicy(parentId) ?? resolveClientPolicy(parentId);
+  if (parentPolicy.parentClientId) await ensureParentRow(db, parentPolicy.parentClientId, onboardedBy);
+  await persistPolicyRow(db, parentPolicy, `${onboardedBy} (auto-seeded parent)`);
+  cacheClientPolicy(parentPolicy);
 }
 
 /** Read durable client records (for hierarchy/admin views). */
