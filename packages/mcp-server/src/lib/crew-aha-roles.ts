@@ -94,7 +94,7 @@ export function buildCrewAhaPromptSection(crewId: string): string {
     `You have FULL Aha! read/write access (crew autonomy). Every crew member can read and write — the entire crew always debates together, and any member may act on the consensus in tandem.`,
     `Your debate specialty: ${role.ahaFocus}. ${role.responsibility}`,
     `Lean on your specialty tools: ${role.ahaTools.join(', ')} — but you may use any aha:* tool the decision requires.`,
-    `Hierarchy: familiarcat is the consultancy FIRM (top workspace). Under it are CLIENT workspaces (e.g. Jonah, Bayer); under each client are PROJECT workspaces (nested Aha products). Within a project — Epic=epic, Feature=story, Requirement=task, Release=sprint. So: Firm → Client → Project → Epic → Story → Task (Sprint = time axis).`,
+    `Hierarchy: familiarcat is the consultancy FIRM (top Aha workspace). Under it are CLIENT workspaces (Aha products, e.g. Jonah, Bayer). PROJECTS are Aha INITIATIVES within a client product (Aha caps product nesting at 2 levels, so projects are initiatives, not nested products). Within a project — Epic=epic, Feature=story, Requirement=task, Release=sprint. So: Firm → Client(product) → Project(initiative) → Epic → Story → Task (Sprint = time axis).`,
     `As a ${tier}, you run on the ${model} model for Aha! decisions (cost_optimized: leaders=quality, supporters=cheap).`,
     `Governance (not access restriction): every write requires confirm:true and is audited; coordinate via aha:crew-assignments.`,
   ].join('\n');
