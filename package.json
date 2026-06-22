@@ -47,8 +47,8 @@
     "aws-secrets:put": "bash scripts/aws-secrets-put.sh",
     "aha:derive-backlog": "npx tsx scripts/derive-aha-backlog.ts",
     "aha:commit-backlog": "npx tsx scripts/aha-commit-backlog.ts",
-    "db:push": "tsx scripts/worfgate-db-push.ts",
-    "db:push:dry": "tsx scripts/worfgate-db-push.ts --dry-run"
+    "db:push": "npx tsx scripts/worfgate-db-push.ts",
+    "db:push:dry": "npx tsx scripts/worfgate-db-push.ts --dry-run"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",
