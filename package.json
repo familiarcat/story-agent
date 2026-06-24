@@ -52,6 +52,8 @@
     "tf": "npx tsx scripts/worfgate-terraform.ts",
     "tf:plan": "npx tsx scripts/worfgate-terraform.ts plan",
     "deploy:bootstrap-oidc": "bash scripts/bootstrap-oidc.sh",
+    "deploy:auto": "npx tsx scripts/deploy-auto.ts",
+    "deploy:mission": "npx tsx scripts/deploy-automation-mission.ts",
     "activation:status": "npx tsx scripts/activation-status.ts"
   },
   "devDependencies": {
