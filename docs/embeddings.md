@@ -11,19 +11,23 @@ RAG texts) it is the cheapest *viable* option: ~$0.02/1M tokens ≈ pennies, rel
 A local model is "$0 marginal" only on paper — it needs a running service (another Fargate task +
 memory) to deploy and maintain, which costs more than the API at this scale.
 
-**Secrets are single-source** (WorfGate principle): the value lives ONCE in
-`~/.alexai-secrets/api-keys.env`; `~/.zshrc` `source`s that file into your env; WorfGate *reads* it
-from `process.env` (governed, audited, never copied). Set it in the secrets file only — never paste
-raw secrets into `~/.zshrc` itself.
+**No new key needed — it reuses your OpenRouter key.** OpenRouter serves `/embeddings`, so `embed()`
+reuses `CREW_LLM_APPROVED_KEY` (model `openai/text-embedding-3-small`) when no dedicated embeddings
+key is set. Real RAG is therefore **already active with zero new secret** — `embeddingSource()`=`api`.
+
+Provider precedence: `EMBEDDING_API_KEY` → `OPENAI_API_KEY` → **OpenRouter crew key** (default) → hash.
+Secrets stay single-source in `~/.alexai-secrets/api-keys.env` (sourced by `~/.zshrc`, read from
+`process.env` by WorfGate — never pasted into `~/.zshrc`, never copied).
 
 ```bash
-# add to ~/.alexai-secrets/api-keys.env  (gitignored; ~/.zshrc sources it — do NOT duplicate in ~/.zshrc)
-export EMBEDDING_API_KEY=sk-...                         # from https://platform.openai.com/api-keys
-# defaults (override only to change provider):
+# OPTIONAL overrides only (add to ~/.alexai-secrets/api-keys.env) — none required, OpenRouter is default:
+# export EMBEDDING_API_KEY=sk-...            # use a dedicated provider (e.g. an OpenAI key)
 # export EMBEDDING_API_URL=https://api.openai.com/v1
 # export EMBEDDING_MODEL=text-embedding-3-small
+# export EMBEDDING_DISABLE=true              # force the free SHA hash (zero embedding API cost)
 ```
-Then open a new shell (so `~/.zshrc` reloads) and `pnpm activation:status` flips RAG embeddings ❌ → ✅.
+Each RAG store/recall now makes one small embeddings call (~pennies/1M); `EMBEDDING_DISABLE=true`
+reverts to the free hash.
 
 ## When to switch to a local model
 

@@ -21,33 +21,60 @@ export function toEmbedding(text: string, dimension = EMBEDDING_DIMENSION): numb
   return vector;
 }
 
-/** Whether a real embeddings API is configured (else the deterministic hash fallback is used). */
+/** Resolve the embeddings provider: dedicated key → OpenAI key → reuse the OpenRouter crew key. */
+function embeddingProvider(): { key: string; url: string; model: string } | null {
+  if (process.env.EMBEDDING_DISABLE === 'true') return null; // force the free hash (cost control)
+  if (process.env.EMBEDDING_API_KEY) {
+    return {
+      key: process.env.EMBEDDING_API_KEY,
+      url: process.env.EMBEDDING_API_URL || 'https://api.openai.com/v1',
+      model: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
+    };
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return {
+      key: process.env.OPENAI_API_KEY,
+      url: process.env.EMBEDDING_API_URL || 'https://api.openai.com/v1',
+      model: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
+    };
+  }
+  // No dedicated embeddings key — reuse the OpenRouter crew key (it serves /embeddings). Zero new secret.
+  if (process.env.CREW_LLM_APPROVED_KEY) {
+    return {
+      key: process.env.CREW_LLM_APPROVED_KEY,
+      url: process.env.EMBEDDING_API_URL || process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1',
+      model: process.env.EMBEDDING_MODEL || 'openai/text-embedding-3-small',
+    };
+  }
+  return null;
+}
+
+/** Whether a real embeddings API is reachable (else the deterministic hash fallback is used). */
 export function embeddingSource(): 'api' | 'hash' {
-  return process.env.EMBEDDING_API_KEY || process.env.OPENAI_API_KEY ? 'api' : 'hash';
+  return embeddingProvider() ? 'api' : 'hash';
 }
 
 /**
- * Real, cost-optimized embedding with graceful fallback. When EMBEDDING_API_KEY (or OPENAI_API_KEY)
- * is set, calls an OpenAI-compatible /embeddings endpoint with the cheapest mainstream model
- * (text-embedding-3-small, ~$0.02/1M tokens), requesting `dimension` dims (Matryoshka) so the
- * vector stays the same width as the hash fallback — NO DB change needed. Any failure (or no key)
- * falls back to the deterministic SHA hash, so a write/recall never breaks on embeddings.
+ * Real, cost-optimized embedding with graceful fallback. Uses a dedicated embeddings key
+ * (EMBEDDING_API_KEY/OPENAI_API_KEY) if present, else REUSES the OpenRouter crew key
+ * (CREW_LLM_APPROVED_KEY) which serves embeddings — so real RAG works with NO new secret. Requests
+ * `dimension` dims (Matryoshka) and defensively slices, so the vector stays 64-wide (NO DB change).
+ * Any failure (or no provider) falls back to the deterministic SHA hash — a write/recall never breaks.
  */
 export async function embed(text: string, dimension = EMBEDDING_DIMENSION): Promise<number[]> {
-  const key = process.env.EMBEDDING_API_KEY || process.env.OPENAI_API_KEY;
-  if (!key) return toEmbedding(text, dimension);
-  const url = (process.env.EMBEDDING_API_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
-  const model = process.env.EMBEDDING_MODEL || 'text-embedding-3-small';
+  const p = embeddingProvider();
+  if (!p) return toEmbedding(text, dimension);
+  const url = p.url.replace(/\/$/, '');
   try {
     const resp = await fetch(`${url}/embeddings`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, input: text.slice(0, 8000), dimensions: dimension }),
+      headers: { Authorization: `Bearer ${p.key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: p.model, input: text.slice(0, 8000), dimensions: dimension }),
     });
     if (!resp.ok) throw new Error(`embeddings ${resp.status}`);
     const d: any = await resp.json();
     const v = d?.data?.[0]?.embedding;
-    if (Array.isArray(v) && v.length) return v as number[];
+    if (Array.isArray(v) && v.length) return v.length > dimension ? v.slice(0, dimension) : v;
     throw new Error('empty embedding');
   } catch {
     return toEmbedding(text, dimension); // graceful — never fail a write on embeddings

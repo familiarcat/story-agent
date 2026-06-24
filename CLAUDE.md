@@ -36,9 +36,10 @@ substantive work onto the crew, which is the point.
 - Anthropic-first provider routing (`provider: { order: ['Anthropic'] }`) ONLY for `anthropic/*`
   slugs (avoids stale Bedrock); never for other providers.
 - **Embeddings (RAG recall):** `embed()` ([embedding.ts](packages/shared/src/embedding.ts)) uses a real
-  embeddings model when `EMBEDDING_API_KEY` (or `OPENAI_API_KEY`) is set — cheapest mainstream default
-  `text-embedding-3-small` (~$0.02/1M), requested at 64-dim (Matryoshka) so no DB change; otherwise it
-  falls back to the deterministic SHA hash. Recall is client-side cosine, so activation is just the key.
+  model — **reusing the OpenRouter crew key by default** (`openai/text-embedding-3-small`, OpenRouter
+  serves `/embeddings`), so real RAG is active with NO new secret. Precedence: `EMBEDDING_API_KEY` →
+  `OPENAI_API_KEY` → OpenRouter key → SHA hash. 64-dim (Matryoshka + defensive slice) so no DB change.
+  `EMBEDDING_DISABLE=true` forces the free hash. See [docs/embeddings.md](docs/embeddings.md).
 - **Lower the crew's cost by default.** The mission pipeline runs FRUGAL (`CREW_FRUGAL`, default on):
   even Picard's intake/synthesis bookends use the cheapest adequate model (Quark tier-3 ≈ deepseek),
   not a frontier model — the pipeline's dominant cost. Set `CREW_FRUGAL=false` only for a deliberate
