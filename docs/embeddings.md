@@ -11,14 +11,19 @@ RAG texts) it is the cheapest *viable* option: ~$0.02/1M tokens ≈ pennies, rel
 A local model is "$0 marginal" only on paper — it needs a running service (another Fargate task +
 memory) to deploy and maintain, which costs more than the API at this scale.
 
+**Secrets are single-source** (WorfGate principle): the value lives ONCE in
+`~/.alexai-secrets/api-keys.env`; `~/.zshrc` `source`s that file into your env; WorfGate *reads* it
+from `process.env` (governed, audited, never copied). Set it in the secrets file only — never paste
+raw secrets into `~/.zshrc` itself.
+
 ```bash
-# ~/.alexai-secrets/api-keys.env  (WorfGate secrets — never commit)
+# add to ~/.alexai-secrets/api-keys.env  (gitignored; ~/.zshrc sources it — do NOT duplicate in ~/.zshrc)
 export EMBEDDING_API_KEY=sk-...                         # from https://platform.openai.com/api-keys
 # defaults (override only to change provider):
 # export EMBEDDING_API_URL=https://api.openai.com/v1
 # export EMBEDDING_MODEL=text-embedding-3-small
 ```
-Then `pnpm activation:status` flips RAG embeddings ❌ → ✅. No restart of design — recall upgrades live.
+Then open a new shell (so `~/.zshrc` reloads) and `pnpm activation:status` flips RAG embeddings ❌ → ✅.
 
 ## When to switch to a local model
 

@@ -34,9 +34,10 @@ for (const [name, what] of env) console.log(`  ${ok(worfGateHasCredential(name))
 const embOn = embeddingSource() === 'api';
 console.log(`\nRAG embeddings: ${ok(embOn)} ${embOn ? 'real model active' : 'hash fallback (recall is weak)'}`);
 if (!embOn) {
-  console.log('  → Get a key at https://platform.openai.com/api-keys, then add to ~/.alexai-secrets:');
-  console.log('      export EMBEDDING_API_KEY=sk-...        # cheapest: text-embedding-3-small (~$0.02/1M)');
-  console.log('    (or set OPENAI_API_KEY). No DB change — recall upgrades automatically.');
+  console.log('  → Get a key at https://platform.openai.com/api-keys, then add it ONCE to the secret store');
+  console.log('    (~/.zshrc already `source`s this file — do NOT also paste it into ~/.zshrc):');
+  console.log('      echo \'export EMBEDDING_API_KEY=sk-...\' >> ~/.alexai-secrets/api-keys.env   # cheapest: text-embedding-3-small');
+  console.log('    (or reuse an existing OPENAI_API_KEY). No DB change — recall upgrades automatically.');
 }
 
 // 3. CI/CD deploy repo variables (GitHub) — derive the non-secret ones
