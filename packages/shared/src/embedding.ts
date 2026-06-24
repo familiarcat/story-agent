@@ -21,6 +21,39 @@ export function toEmbedding(text: string, dimension = EMBEDDING_DIMENSION): numb
   return vector;
 }
 
+/** Whether a real embeddings API is configured (else the deterministic hash fallback is used). */
+export function embeddingSource(): 'api' | 'hash' {
+  return process.env.EMBEDDING_API_KEY || process.env.OPENAI_API_KEY ? 'api' : 'hash';
+}
+
+/**
+ * Real, cost-optimized embedding with graceful fallback. When EMBEDDING_API_KEY (or OPENAI_API_KEY)
+ * is set, calls an OpenAI-compatible /embeddings endpoint with the cheapest mainstream model
+ * (text-embedding-3-small, ~$0.02/1M tokens), requesting `dimension` dims (Matryoshka) so the
+ * vector stays the same width as the hash fallback — NO DB change needed. Any failure (or no key)
+ * falls back to the deterministic SHA hash, so a write/recall never breaks on embeddings.
+ */
+export async function embed(text: string, dimension = EMBEDDING_DIMENSION): Promise<number[]> {
+  const key = process.env.EMBEDDING_API_KEY || process.env.OPENAI_API_KEY;
+  if (!key) return toEmbedding(text, dimension);
+  const url = (process.env.EMBEDDING_API_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const model = process.env.EMBEDDING_MODEL || 'text-embedding-3-small';
+  try {
+    const resp = await fetch(`${url}/embeddings`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, input: text.slice(0, 8000), dimensions: dimension }),
+    });
+    if (!resp.ok) throw new Error(`embeddings ${resp.status}`);
+    const d: any = await resp.json();
+    const v = d?.data?.[0]?.embedding;
+    if (Array.isArray(v) && v.length) return v as number[];
+    throw new Error('empty embedding');
+  } catch {
+    return toEmbedding(text, dimension); // graceful — never fail a write on embeddings
+  }
+}
+
 /**
  * Serialize a number[] to Postgres vector literal: [x,y,z,...]
  */

@@ -1,7 +1,7 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { createClient as createRedisClient } from 'redis';
-import { toEmbedding, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION } from './embedding.js';
+import { toEmbedding, embed, embeddingSource, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION } from './embedding.js';
 import type {
   StoryRecord,
   PRComment,
@@ -284,7 +284,7 @@ function throwOnError<T>(result: { data: T | null; error: unknown }): T {
 }
 
 // Re-export for callers that need the utilities directly
-export { toEmbedding, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION };
+export { toEmbedding, embed, embeddingSource, toPgVector, parseVector, cosineSimilarity, EMBEDDING_DIMENSION };
 
 function hashText(text: string): string {
   return toEmbedding(text, 1).toString(); // SHA-256-based, kept for legacy compat
@@ -859,7 +859,7 @@ export async function storeObservationMemory(input: {
   const transcriptText = JSON.stringify(worfGate.transcript);
   // Include clientId in hash to prevent cross-client hash collisions
   const transcriptHash = hashText(`${input.clientId ?? 'global'}:${input.storyId}:${transcriptText}`);
-  const embedding = toEmbedding(transcriptText);
+  const embedding = await embed(transcriptText);
 
   const payload: ObservationMemoryPayload = {
     id: randomUUID(),
@@ -1003,7 +1003,7 @@ export async function getRelevantObservationMemories(input: {
 }): Promise<ObservationMemoryRecord[]> {
   const { queryText, storyId, clientId, limit = 5, candidatePool = 40 } = input;
   const candidates = await getRecentObservationMemories(candidatePool, storyId, clientId);
-  const queryEmbedding = toEmbedding(queryText);
+  const queryEmbedding = await embed(queryText);
 
   return candidates
     .map(memory => ({
