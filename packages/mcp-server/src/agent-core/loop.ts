@@ -45,6 +45,8 @@ export interface RunAgentOptions {
   reviewThresholdUSD?: number;
   /** Layer-3: compose a focused tool lens for the task instead of exposing all tools (default true). */
   composeLens?: boolean;
+  /** Layer-4 self-learning: persist an explainable feedback card for this run (RAG). */
+  recordFeedback?: (card: AgentFeedbackCard) => Promise<void> | void;
   systemPrompt?: string;
   ragRecall?: ToolContext['ragRecall'];
   crewDeliberate?: ToolContext['crewDeliberate'];
@@ -64,6 +66,21 @@ export interface AgentRunResult {
   budgetExceeded: boolean;
   /** PROD-13 cost observatory — per-provider spend, burn rate, and whether the review threshold tripped. */
   observatory: { perProvider: Record<string, number>; burnRatePerTurnUSD: number; reviewTriggered: boolean };
+}
+
+/** Layer-4 explainable feedback card — a durable, recallable record of one agent run. */
+export interface AgentFeedbackCard {
+  input: string;
+  model: string;
+  lens: string;
+  toolsUsed: string[];
+  posture: { green: number; yellow: number; red: number };
+  costUSD: number;
+  tokens: number;
+  iterations: number;
+  escalated: boolean;
+  outcome: string;
+  clientId: string | null;
 }
 
 const ESCALATION_SIGNALS = ['architect', 'security', 'migration', 'refactor', 'privilege', 'multi-client', 'concurrency', 'rls', 'auth', 'schema design', 'breaking change', 'rollback'];
@@ -215,6 +232,24 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     observatory: { perProvider, burnRatePerTurnUSD: 0, reviewTriggered: false },
   };
 
+  // Single completion path: persist the Layer-4 explainable feedback card (best-effort), emit done.
+  const finalize = async (): Promise<AgentRunResult> => {
+    if (opts.recordFeedback) {
+      const posture = { green: 0, yellow: 0, red: 0 };
+      for (const tc of result.toolCalls) if (tc.tier in posture) posture[tc.tier as keyof typeof posture]++;
+      try {
+        await opts.recordFeedback({
+          input: userInput.slice(0, 240), model, lens: composed.reason,
+          toolsUsed: result.toolCalls.map(t => t.tool), posture,
+          costUSD: result.totalCostUSD, tokens: result.totalTokens, iterations: result.iterations,
+          escalated: result.escalated, outcome: result.finalText.slice(0, 500), clientId: opts.clientId ?? null,
+        });
+      } catch { /* self-learning is best-effort — never fail the run on a memory write */ }
+    }
+    emit({ type: 'done', model, costUSD: result.totalCostUSD });
+    return result;
+  };
+
   // PROD-15 auto-escalation: hard/ambiguous tasks consult the full crew BEFORE the loop, and the
   // synthesized mission plan is injected as context so the fast loop executes a vetted plan.
   if (autoEscalate && ctx.crewDeliberate && shouldEscalate(userInput)) {
@@ -240,8 +275,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       // Exhausted retries / non-retryable → surface explicitly and finalize (never a silent abort).
       result.finalText = `⚠️ Model call failed after ${maxRetries} attempt(s): ${err?.message || err}`;
       emit({ type: 'error', text: result.finalText });
-      emit({ type: 'done', model, costUSD: result.totalCostUSD });
-      return result;
+      return await finalize();
     }
     const usage = resp.usage || {};
     accrue(usage.prompt_tokens || 0, usage.completion_tokens || 0);
@@ -268,8 +302,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     if (!toolCalls.length) {
       result.finalText = msg.content || '';
       emit({ type: 'text', text: result.finalText });
-      emit({ type: 'done', model, costUSD: result.totalCostUSD });
-      return result;
+      return await finalize();
     }
 
     if (msg.content) emit({ type: 'text', text: msg.content });
@@ -328,12 +361,10 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
         result.finalText = `⚠️ Budget-cap summary failed: ${err?.message || err}`;
         emit({ type: 'error', text: result.finalText });
       }
-      emit({ type: 'done', model, costUSD: result.totalCostUSD });
-      return result;
+      return await finalize();
     }
   }
 
   result.finalText = result.finalText || '(reached max iterations without a final summary)';
-  emit({ type: 'done', model, costUSD: result.totalCostUSD });
-  return result;
+  return await finalize();
 }
