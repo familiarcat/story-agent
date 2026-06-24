@@ -29,7 +29,10 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    # Native ARM64 runner: Fargate runs ARM64/Graviton (terraform/ecs.tf), so building on an
+    # amd64 runner forced slow QEMU emulation (5-10x). Building natively here removes emulation —
+    # dramatically fewer minutes — while keeping the cheaper Graviton runtime.
+    runs-on: ubuntu-24.04-arm
     # Only run when the deploy repo vars are configured — otherwise skip cleanly
     # (push-triggered runs no longer fail before AWS_DEPLOY_ROLE_ARN/AWS_REGION are set).
     if: ${{ vars.AWS_REGION != '' && vars.AWS_DEPLOY_ROLE_ARN != '' }}
