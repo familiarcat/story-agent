@@ -12,10 +12,10 @@ import { getCrewSkillManifest, getCrewSkillManifestHistory } from '@story-agent/
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { crewId: string } }
+  { params }: { params: Promise<{ crewId: string }> }
 ) {
   try {
-    const crewId = params.crewId as any;
+    const crewId = (await params).crewId as any;
     const includeHistory = request.nextUrl.searchParams.get('history') === 'true';
 
     const manifest = await getCrewSkillManifest(crewId);

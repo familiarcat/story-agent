@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface CrewMemory {
@@ -41,7 +41,7 @@ const MEMORY_TYPE_ICONS = {
   reminder: '⏰',
 };
 
-export default function CrewMemoriesPage() {
+function CrewMemoriesContent() {
   const searchParams = useSearchParams();
   const [selectedCrew, setSelectedCrew] = useState(searchParams.get('crew') || 'worf');
   const [selectedProject, setSelectedProject] = useState<string | null>(searchParams.get('project') || null);
@@ -325,5 +325,14 @@ export default function CrewMemoriesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary during prerender (Next 15).
+export default function CrewMemoriesPage() {
+  return (
+    <Suspense fallback={null}>
+      <CrewMemoriesContent />
+    </Suspense>
   );
 }

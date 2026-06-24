@@ -7,6 +7,7 @@ type ImportPayload = {
   referenceNum: string;
   repoFullName: string;
   baseBranch?: string;
+  clientId?: string;
 };
 
 export async function POST(request: Request) {
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     const agileStory = await getStory(body.referenceNum);
-    await upsertStory({
+    await upsertStory(body.clientId ?? 'familiarcat', {
       id: randomUUID(),
       storyId: agileStory.referenceNum,
       storyTitle: agileStory.name,
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       prUrl: null,
       prStatus: null,
       phase: 1,
+      acceptanceCriteria: '',
       notes: `Imported from agile provider (${agileStory.workflowStatus})`,
     });
 

@@ -18,11 +18,12 @@ export default async function StoryPage({
 }) {
   const { storyId } = await params;
   const query = await searchParams;
-  const record = await getStory(decodeURIComponent(storyId));
-  if (!record) notFound();
-
   const selectedClientId = typeof query.clientId === 'string' ? query.clientId : null;
   const selectedRole = typeof query.clientRole === 'string' ? query.clientRole : null;
+
+  // Client isolation: scope the lookup to the requesting client (firm root by default).
+  const record = await getStory(decodeURIComponent(storyId), selectedClientId ?? 'familiarcat');
+  if (!record) notFound();
   const includeControlled = query.includeControlled === '1';
 
   const decision = evaluateControlledDataAccess({

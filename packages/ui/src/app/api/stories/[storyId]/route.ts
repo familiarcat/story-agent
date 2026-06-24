@@ -51,14 +51,16 @@ export async function GET(
   { params }: { params: Promise<{ storyId: string }> }
 ) {
   const { storyId } = await params;
-  const record = await getStory(decodeURIComponent(storyId));
+  // Client isolation: scope the lookup to the requesting client (firm root by default).
+  const selectedClientId = request.headers.get('x-client-id');
+  const record = await getStory(decodeURIComponent(storyId), selectedClientId ?? 'familiarcat');
   if (!record) {
     return NextResponse.json({ error: 'Story not found' }, { status: 404 });
   }
 
   const includeControlled = request.nextUrl.searchParams.get('includeControlled') === 'true';
   const context = buildClientAccessContext({
-    selectedClientId: request.headers.get('x-client-id'),
+    selectedClientId,
     clientRole: request.headers.get('x-client-role'),
     purpose: request.headers.get('x-controlled-data-purpose'),
     includeControlled,
