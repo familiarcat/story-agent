@@ -16,9 +16,19 @@ npx tsx scripts/worfgate-terraform.ts apply -auto-approve \
   -target='aws_iam_role_policy.github_deploy'
 
 echo ""
-echo "✅ Done. Set these GitHub repo variables, then deploys run automatically via OIDC:"
-echo "   AWS_REGION         = us-east-2"
-echo "   ECR_REGISTRY       = <account>.dkr.ecr.us-east-2.amazonaws.com"
-echo -n "   AWS_DEPLOY_ROLE_ARN = "
-npx tsx scripts/worfgate-terraform.ts output -raw github_actions_role_arn || echo "(run: npx tsx scripts/worfgate-terraform.ts output github_actions_role_arn)"
+ARN="$(npx tsx scripts/worfgate-terraform.ts output -raw github_actions_role_arn 2>/dev/null || true)"
+REPO="${GITHUB_REPO:-familiarcat/story-agent}"
+if [ -n "$ARN" ]; then
+  echo "✅ Deploy role created: $ARN"
+  # Auto-set the remaining repo vars so CI runs via OIDC (AWS_REGION + ECR_REGISTRY may already be set).
+  ACCT="$(aws sts get-caller-identity --query Account --output text 2>/dev/null || true)"
+  gh variable set AWS_DEPLOY_ROLE_ARN --repo "$REPO" --body "$ARN" 2>/dev/null && echo "   set repo var AWS_DEPLOY_ROLE_ARN" || echo "   (set manually: gh variable set AWS_DEPLOY_ROLE_ARN --body $ARN)"
+  gh variable set AWS_REGION --repo "$REPO" --body "us-east-2" 2>/dev/null && echo "   set repo var AWS_REGION=us-east-2" || true
+  [ -n "$ACCT" ] && gh variable set ECR_REGISTRY --repo "$REPO" --body "${ACCT}.dkr.ecr.us-east-2.amazonaws.com" 2>/dev/null && echo "   set repo var ECR_REGISTRY" || true
+  echo ""
+  echo "🎉 CI deploy is now wired. Next: bootstrap secrets (pnpm run aws-secrets:put) then dispatch"
+  echo "   the deploy-fargate workflow with apply=true (billable) to create the Fargate stack."
+else
+  echo "⚠️ Could not read github_actions_role_arn output. Run: npx tsx scripts/worfgate-terraform.ts output github_actions_role_arn"
+fi
 echo ""
