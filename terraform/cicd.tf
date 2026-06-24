@@ -66,7 +66,8 @@ data "aws_iam_policy_document" "github_deploy" {
   }
   statement {
     sid       = "ReadSecrets"
-    actions   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+    # GetResourcePolicy is required by the terraform aws_secretsmanager_secret data source.
+    actions   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret", "secretsmanager:GetResourcePolicy"]
     resources = [data.aws_secretsmanager_secret.aha.arn, data.aws_secretsmanager_secret.runtime.arn]
   }
   statement {
