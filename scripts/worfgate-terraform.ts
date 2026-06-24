@@ -29,7 +29,8 @@ async function main() {
       console.error(`🛡️  WorfGate: ${name} unavailable — ${r.reason}`); process.exit(3);
     }
   }
-  console.log(`🛡️  WorfGate brokered AWS credentials for worf: ${brokered.join(', ')}`);
+  // Diagnostic → stderr, so `terraform output -raw` capture stays clean (stdout = terraform only).
+  console.error(`🛡️  WorfGate brokered AWS credentials for worf: ${brokered.join(', ')}`);
 
   // Don't let an ambient AWS_PROFILE override the brokered static keys.
   delete env.AWS_PROFILE;

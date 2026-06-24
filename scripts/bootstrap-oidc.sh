@@ -16,7 +16,8 @@ npx tsx scripts/worfgate-terraform.ts apply -auto-approve \
   -target='aws_iam_role_policy.github_deploy'
 
 echo ""
-ARN="$(npx tsx scripts/worfgate-terraform.ts output -raw github_actions_role_arn 2>/dev/null || true)"
+# Extract ONLY the arn:... token, so a stray diagnostic line can never pollute the repo var.
+ARN="$(npx tsx scripts/worfgate-terraform.ts output -raw github_actions_role_arn 2>/dev/null | grep -oE 'arn:aws:iam::[0-9]+:role/[A-Za-z0-9_+=,.@/-]+' | head -1 || true)"
 REPO="${GITHUB_REPO:-familiarcat/story-agent}"
 if [ -n "$ARN" ]; then
   echo "✅ Deploy role created: $ARN"
