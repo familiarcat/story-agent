@@ -8,8 +8,8 @@ output "ecs_cluster" {
 }
 
 output "redis_endpoint" {
-  description = "Put rediss://<this>:6379 into the story-agent/runtime secret as REDIS_URL"
-  value       = try(aws_elasticache_serverless_cache.redis.endpoint[0].address, null)
+  description = "Put redis://<this>:6379 into the story-agent/runtime secret as REDIS_URL"
+  value       = try(aws_elasticache_replication_group.redis.primary_endpoint_address, null)
 }
 
 output "mcp_service" {

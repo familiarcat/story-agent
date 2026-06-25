@@ -92,8 +92,9 @@ resource "aws_ecs_service" "mcp" {
     container_port   = 8000
   }
   service_registries {
+    # A-record discovery (servicediscovery.tf uses type=A), so no port here — port is SRV-only.
+    # The UI connects to the resolved task IP on the known MCP port (3102).
     registry_arn = aws_service_discovery_service.mcp.arn
-    port         = 3102
   }
   health_check_grace_period_seconds = 60
   depends_on                        = [aws_lb_listener.main]

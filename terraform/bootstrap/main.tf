@@ -119,6 +119,17 @@ data "aws_iam_policy_document" "github_deploy" {
     actions   = ["iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:PassRole", "iam:AttachRolePolicy", "iam:DetachRolePolicy", "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies", "iam:TagRole"]
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.name}-*"]
   }
+  # Application Auto Scaling needs to create its service-linked role on first use.
+  statement {
+    sid       = "CreateServiceLinkedRoles"
+    actions   = ["iam:CreateServiceLinkedRole"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:AWSServiceName"
+      values   = ["ecs.application-autoscaling.amazonaws.com", "elasticache.amazonaws.com"]
+    }
+  }
   # Remote state backend access (S3 + DynamoDB lock) — so CI can read/write shared state.
   statement {
     sid       = "TerraformStateBackend"
