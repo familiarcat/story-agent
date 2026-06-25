@@ -115,6 +115,6 @@ resource "aws_lb_listener_rule" "mcp_agent" {
     target_group_arn = aws_lb_target_group.mcp_http.arn # agent routes are served on the 3101 server
   }
   condition {
-    path_pattern { values = ["/agent", "/agent/*", "/symphony", "/chat", "/cost"] }
+    path_pattern { values = ["/agent", "/agent/*", "/symphony", "/chat", "/cost", "/learnings"] }
   }
 }

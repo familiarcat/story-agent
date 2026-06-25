@@ -82,6 +82,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     label: 'RAG / Memory', icon: 'database', children: [
+      { label: 'Crew learnings (self-learning)', icon: 'lightbulb', path: '/learnings', tooltip: 'Feedback cards from past agent runs' },
       { label: 'Crew memories', icon: 'history', path: '/crew' },
       { label: 'Chat (RAG-grounded)', icon: 'comment-discussion', path: '/chat' },
     ],

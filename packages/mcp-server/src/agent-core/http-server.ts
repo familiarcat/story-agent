@@ -17,6 +17,7 @@ import { listClientHierarchy } from '@story-agent/shared/client-security-policy'
 import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
 import { credentialStatus, listCredentialProviders } from '@story-agent/shared/worfgate-credentials';
 import { listSkillTheories } from '@story-agent/shared/skill-theory';
+import { getRecentObservationMemories } from '@story-agent/shared/db';
 import '../lib/skill-theories.js';
 import '../lib/skill-theories-generated.js';
 
@@ -62,7 +63,7 @@ export function getAgentInvocationAudit(): AgentInvocationAudit[] {
 export async function handleAgentRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   if (await handleChatRequest(req, res)) return true; // canonical Quark-optimized /chat
   const url = (req.url || '').split('?')[0];
-  if (!(url === '/agent' || url === '/agent/' || url === '/agent/health' || url === '/symphony' || url === '/cost')) return false;
+  if (!(url === '/agent' || url === '/agent/' || url === '/agent/health' || url === '/symphony' || url === '/cost' || url === '/learnings')) return false;
   await serveAgent(req, res, url);
   return true;
 }
@@ -90,6 +91,28 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
     if (req.method === 'GET' && url === '/cost') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(costSummary(), null, 2));
+      return;
+    }
+    // Self-learning — recent agent-run feedback cards (the crew's learnings from past autonomous runs).
+    if (req.method === 'GET' && url === '/learnings') {
+      let cards: any[] = [];
+      try {
+        const mems = await getRecentObservationMemories(20, 'agent-run');
+        cards = mems.map((m) => {
+          const ev = (m.transcript?.rounds?.[0]?.entries?.[0]?.evidence ?? []) as string[];
+          const pick = (p: string) => ev.find((e) => e.startsWith(p))?.slice(p.length) ?? '';
+          return {
+            timestamp: m.createdAt,
+            input: m.transcript?.rounds?.[0]?.entries?.[0]?.statement?.slice(0, 200) ?? '',
+            outcome: m.transcript?.consensusSummary ?? '',
+            model: pick('model:'),
+            tools: pick('tools:'),
+            clientId: m.clientId ?? null,
+          };
+        });
+      } catch { /* RAG optional */ }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ count: cards.length, cards }, null, 2));
       return;
     }
     // Symphonic-MCP Layer-5 posture snapshot — firm/client/project hierarchy, WorfGate posture,
