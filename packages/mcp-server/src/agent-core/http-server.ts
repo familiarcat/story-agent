@@ -79,7 +79,7 @@ export function startAgentHttpServer(port: number) {
 }
 
 async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string, port?: number): Promise<void> {
-  {
+  try {
     if (req.method === 'GET' && url === '/agent/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, service: 'story-agent-agent', port }));
@@ -149,5 +149,12 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
     } finally {
       res.end();
     }
+  } catch (err: any) {
+    // Never let an agent/symphony/chat request reject the async HTTP handler — an unhandled
+    // rejection crashes the Node process (exit 1) and fails the ECS deployment.
+    try {
+      if (!res.headersSent) { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: err?.message || 'agent_error' })); }
+      else res.end();
+    } catch { /* response already torn down */ }
   }
 }

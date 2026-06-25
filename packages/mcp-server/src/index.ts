@@ -1,4 +1,14 @@
 import 'dotenv/config';
+
+// Resilience: a stray promise rejection from an HTTP request must NOT exit the process (Node ≥15
+// exits on unhandledRejection → ECS task dies → deployment fails). Log and keep serving.
+process.on('unhandledRejection', (reason) => {
+  process.stderr.write(`[resilience] unhandledRejection: ${reason instanceof Error ? reason.stack : String(reason)}\n`);
+});
+process.on('uncaughtException', (err) => {
+  process.stderr.write(`[resilience] uncaughtException: ${err?.stack || String(err)}\n`);
+});
+
 import { createServer as createHTTPServer } from 'http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
