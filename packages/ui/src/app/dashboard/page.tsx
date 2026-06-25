@@ -283,8 +283,10 @@ export default async function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {stories.map(s => (
-                <tr key={s.storyId}>
+              {stories.map((s, i) => (
+                // Unique key: DB id (UUID, always present) → Aha storyId → row index. storyId can be
+                // null on DB rows, which made the key non-unique/undefined (React key warning).
+                <tr key={s.id ?? s.storyId ?? `story-${i}`}>
                   <td style={{ fontWeight: 600 }}>{s.clientName ?? inferClientName(s.repoFullName)}</td>
                   <td>{s.projectName ?? inferProjectName(s.repoFullName)}</td>
                   <td>{s.sprintName ?? 'Unscheduled'}</td>
