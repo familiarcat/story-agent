@@ -52,3 +52,19 @@ To re-run the crew deliberation and refresh the RAG runbook memory:
 ```bash
 zsh -ic 'pnpm deploy:mission'
 ```
+
+## Live cloud endpoints (single source of truth)
+
+The deployed crew (Fargate) serves the agent-core endpoints via the ALB, backed by the same cloud
+Supabase RAG — so local and cloud share one crew + memory.
+
+- Base: `http://story-agent-alb-651393427.us-east-2.elb.amazonaws.com`
+- `GET /symphony` — posture · `POST /chat` — canonical Quark chat · `POST /agent` — autonomous loop · `/mcp`,`/rag`,`/ws`
+
+Point the surfaces at cloud (both auto-fall-back to local if unreachable):
+- **VS Code:** set in `.vscode/settings.json` → `storyAgent.chat.agentServiceUrl` (done for this repo).
+- **Web UI:** launch with `STORY_AGENT_AGENT_URL=<ALB base>` so `/api/chat` proxies to the cloud crew.
+
+Ops note (Fargate vCPU quota = 2): MCP/UI use stop-before-start (`min-healthy=0`, AZ-rebalancing off)
++ a 60s WS drain so a rolling deploy fits the quota. After the pending quota increase lands, raise
+min-healthy and bump MCP back to 2 vCPU for zero-downtime rollouts.

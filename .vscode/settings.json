@@ -1,0 +1,5 @@
+{
+  "// story-agent": "Point the VS Code assistant at the DEPLOYED crew (single source of truth: cloud agent-core + cloud RAG). The extension tries this first, then falls back to the local loop (localhost:3103) automatically — so you keep working if the cloud is mid-deploy.",
+  "storyAgent.chat.agentServiceUrl": "http://story-agent-alb-651393427.us-east-2.elb.amazonaws.com",
+  "storyAgent.dashboardUrl": "http://localhost:3000"
+}
