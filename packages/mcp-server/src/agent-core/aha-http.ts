@@ -34,17 +34,50 @@ async function listProducts(): Promise<any[]> {
   return products;
 }
 
-/** Serve GET /aha/products. Returns true if it handled the request. */
+// Read-only proxy cache for arbitrary Aha GET paths (per-path TTL). Lets every surface read Aha
+// through the single resolved key without each holding it. Constrained to GET + the Aha host.
+const rawCache = new Map<string, { at: number; data: any }>();
+// Only resource-ish paths (no host override, no scheme) — read-only GET, scoped to the Aha domain.
+const SAFE_PATH = /^[A-Za-z0-9/_\-.]+(\?[A-Za-z0-9/_\-.=&%]*)?$/;
+
+/** Serve GET /aha/products and GET /aha/raw?path=<aha-api-path>. Returns true if handled. */
 export async function handleAhaRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
-  const url = (req.url || '').split('?')[0];
-  if (!(req.method === 'GET' && url === '/aha/products')) return false;
-  try {
-    const products = await listProducts();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ products, cachedAt: cache?.at ?? null }));
-  } catch (e: any) {
-    res.writeHead(502, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: e?.message || 'aha_unavailable' }));
+  const [path, qs] = (req.url || '').split('?');
+  if (req.method !== 'GET') return false;
+
+  if (path === '/aha/products') {
+    try {
+      const products = await listProducts();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ products, cachedAt: cache?.at ?? null }));
+    } catch (e: any) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e?.message || 'aha_unavailable' }));
+    }
+    return true;
   }
-  return true;
+
+  if (path === '/aha/raw') {
+    const params = new URLSearchParams(qs || '');
+    const ahaPath = params.get('path') || '';
+    if (!ahaPath || !SAFE_PATH.test(ahaPath) || ahaPath.includes('..')) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'invalid_path' }));
+      return true;
+    }
+    try {
+      const cached = rawCache.get(ahaPath);
+      let data: any;
+      if (cached && Date.now() - cached.at < TTL_MS) data = cached.data;
+      else { data = await aha(ahaPath); rawCache.set(ahaPath, { at: Date.now(), data }); }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+    } catch (e: any) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e?.message || 'aha_unavailable' }));
+    }
+    return true;
+  }
+
+  return false;
 }

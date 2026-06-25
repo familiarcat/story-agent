@@ -61,27 +61,12 @@ export async function fetchAhaStory(
   referenceNum: string,
   token?: vscode.CancellationToken
 ): Promise<AhaStory> {
-  const { domain, apiKey } = getConfig();
   const id = referenceNum.includes('/')
     ? referenceNum.split('/').pop()!
     : referenceNum;
 
-  const controller = new AbortController();
-  token?.onCancellationRequested(() => controller.abort());
-
-  const res = await fetch(`https://${domain}/api/v1/features/${id}`, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-    },
-    signal: controller.signal,
-  });
-
-  if (!res.ok) {
-    throw new Error(`Aha API ${res.status}: ${await res.text()}`);
-  }
-
-  const data = (await res.json()) as Record<string, unknown>;
+  // Single-source proxy (cached) with direct-REST fallback.
+  const data = (await ahaGet(`features/${id}`)) as Record<string, unknown>;
   const f = data.feature as Record<string, unknown>;
 
   const description =
@@ -114,6 +99,23 @@ function agentBases(): string[] {
   const configured = (vscode.workspace.getConfiguration('storyAgent').get<string>('chat.agentServiceUrl') || process.env.STORY_AGENT_AGENT_URL || '').replace(/\/$/, '');
   const local = 'http://localhost:3103';
   return configured && configured !== local ? [configured, local] : [local];
+}
+
+/**
+ * GET an Aha API path through the crew server's read-only proxy (/aha/raw, single source + cache),
+ * falling back to direct Aha REST with the local key if the brain is unreachable.
+ */
+async function ahaGet(path: string): Promise<any> {
+  for (const base of agentBases()) {
+    try {
+      const r = await fetch(`${base}/aha/raw?path=${encodeURIComponent(path)}`);
+      if (r.ok) { const d: any = await r.json(); if (d && !d.error) return d; }
+    } catch { /* fall through */ }
+  }
+  const { domain, apiKey } = getConfig();
+  const r = await fetch(`https://${domain}/api/v1/${path}`, { headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`Aha API ${r.status}: ${await r.text()}`);
+  return r.json();
 }
 
 export async function listAhaProjects(): Promise<AhaProject[]> {
@@ -169,19 +171,7 @@ export async function getProjectHierarchy(projectId: string): Promise<{
   unreleasedStories: AhaStory[];
   statusesUsed: string[];
 }> {
-  const { domain, apiKey } = getConfig();
-  const res = await fetch(`https://${domain}/api/v1/products/${projectId}`, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Aha API ${res.status}: ${await res.text()}`);
-  }
-
-  const data = (await res.json()) as Record<string, unknown>;
+  const data = (await ahaGet(`products/${projectId}`)) as Record<string, unknown>;
   const p = data.product as Record<string, unknown>;
 
   const project: AhaProject = {
@@ -191,43 +181,15 @@ export async function getProjectHierarchy(projectId: string): Promise<{
     url: p.url as string,
   };
 
-  // Fetch releases
-  const releasesRes = await fetch(
-    `https://${domain}/api/v1/products/${projectId}/releases?per_page=50`,
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: 'application/json',
-      },
-    }
-  );
-
-  if (!releasesRes.ok) {
-    throw new Error(`Aha API ${releasesRes.status}: ${await releasesRes.text()}`);
-  }
-
-  const releasesData = (await releasesRes.json()) as Record<string, unknown>;
+  // Fetch releases (via the single-source proxy)
+  const releasesData = (await ahaGet(`products/${projectId}/releases?per_page=50`)) as Record<string, unknown>;
   const releases = (releasesData.releases as Record<string, unknown>[] | undefined) ?? [];
 
   // Map releases with their stories
   const releasesWithStories = await Promise.all(
     releases.map(async (r) => {
       const releaseId = r.id as string;
-      const storiesRes = await fetch(
-        `https://${domain}/api/v1/releases/${releaseId}/features?per_page=100`,
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            Accept: 'application/json',
-          },
-        }
-      );
-
-      if (!storiesRes.ok) {
-        throw new Error(`Aha API ${storiesRes.status}: ${await storiesRes.text()}`);
-      }
-
-      const storiesData = (await storiesRes.json()) as Record<string, unknown>;
+      const storiesData = (await ahaGet(`releases/${releaseId}/features?per_page=100`)) as Record<string, unknown>;
       const features = (storiesData.features as Record<string, unknown>[] | undefined) ?? [];
 
       const stories: AhaSprintStory[] = features.map((f) => ({
@@ -264,22 +226,8 @@ export async function getProjectHierarchy(projectId: string): Promise<{
     })
   );
 
-  // Fetch all stories to find unreleased ones
-  const allStoriesRes = await fetch(
-    `https://${domain}/api/v1/products/${projectId}/features?per_page=100`,
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: 'application/json',
-      },
-    }
-  );
-
-  if (!allStoriesRes.ok) {
-    throw new Error(`Aha API ${allStoriesRes.status}: ${await allStoriesRes.text()}`);
-  }
-
-  const allStoriesData = (await allStoriesRes.json()) as Record<string, unknown>;
+  // Fetch all stories to find unreleased ones (via the single-source proxy)
+  const allStoriesData = (await ahaGet(`products/${projectId}/features?per_page=100`)) as Record<string, unknown>;
   const allFeatures = (allStoriesData.features as Record<string, unknown>[] | undefined) ?? [];
   const releasedIds = new Set(
     releasesWithStories.flatMap((r) =>
