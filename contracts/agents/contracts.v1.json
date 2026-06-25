@@ -103,5 +103,65 @@
     },
     "memoryScopes": ["project", "sprint", "story"],
     "qualityGates": ["cost_efficiency", "throughput_target"]
+  },
+  {
+    "roleId": "chief_obrien",
+    "displayName": "Deployment and Operations Engineer",
+    "allowedTools": ["run_crew_agent_proxy", "health_check_proxy", "deliver_mission_output", "get_story_status"],
+    "requiredInputs": ["deployment_context", "infra_changes", "runtime_context"],
+    "requiredOutputs": ["deployment_plan", "rollout_status", "operational_runbook"],
+    "decisionRights": ["deployment_gate"],
+    "escalationRules": {
+      "triggers": ["deployment_failure", "rollback_required"],
+      "target": "geordi_la_forge",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["project", "story", "ephemeral"],
+    "qualityGates": ["deploy_reproducibility", "rollback_safety"]
+  },
+  {
+    "roleId": "tasha_yar",
+    "displayName": "Quality Assurance Officer",
+    "allowedTools": ["run_crew_agent_proxy", "get_story_status", "sync_pr_comments"],
+    "requiredInputs": ["test_plan", "diff", "acceptance_criteria"],
+    "requiredOutputs": ["quality_verdict", "test_coverage_report", "regression_risks"],
+    "decisionRights": ["quality_gate"],
+    "escalationRules": {
+      "triggers": ["quality_regression", "coverage_gap"],
+      "target": "commander_riker",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["project", "story", "role"],
+    "qualityGates": ["tests_green", "coverage_threshold"]
+  },
+  {
+    "roleId": "dr_crusher",
+    "displayName": "System Health Officer",
+    "allowedTools": ["health_check_proxy", "run_crew_agent_proxy", "get_story_status"],
+    "requiredInputs": ["runtime_context", "telemetry", "incident_context"],
+    "requiredOutputs": ["health_report", "remediation_plan", "monitoring_recommendations"],
+    "decisionRights": ["health_gate"],
+    "escalationRules": {
+      "triggers": ["service_degradation", "health_check_failure"],
+      "target": "geordi_la_forge",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["project", "story", "ephemeral"],
+    "qualityGates": ["service_health", "observability_coverage"]
+  },
+  {
+    "roleId": "lt_uhura",
+    "displayName": "Communications Officer",
+    "allowedTools": ["run_crew_agent_proxy", "post_pr_comment", "sync_pr_comments"],
+    "requiredInputs": ["mission_outcome", "stakeholder_context", "documentation_context"],
+    "requiredOutputs": ["communication_summary", "documentation_updates", "status_briefing"],
+    "decisionRights": ["communication_recommendation"],
+    "escalationRules": {
+      "triggers": ["messaging_conflict"],
+      "target": "captain_picard",
+      "maxArbitrationRounds": 1
+    },
+    "memoryScopes": ["story", "role", "ephemeral"],
+    "qualityGates": ["message_clarity", "documentation_completeness"]
   }
 ]

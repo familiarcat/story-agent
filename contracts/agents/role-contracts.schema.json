@@ -24,7 +24,11 @@
         "geordi_la_forge",
         "lt_worf",
         "counselor_troi",
-        "quark"
+        "quark",
+        "chief_obrien",
+        "tasha_yar",
+        "dr_crusher",
+        "lt_uhura"
       ]
     },
     "displayName": { "type": "string" },
