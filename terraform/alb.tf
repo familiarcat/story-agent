@@ -107,14 +107,28 @@ resource "aws_lb_listener_rule" "mcp_ws" {
   }
 }
 
+# Agent-core HTTP routes → mcp_http TG (served on the 3101 server). Split across two rules because
+# an ALB path-pattern condition allows at most 5 values.
 resource "aws_lb_listener_rule" "mcp_agent" {
   listener_arn = aws_lb_listener.main.arn
   priority     = 8
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.mcp_http.arn # agent routes are served on the 3101 server
+    target_group_arn = aws_lb_target_group.mcp_http.arn
   }
   condition {
-    path_pattern { values = ["/agent", "/agent/*", "/symphony", "/chat", "/cost", "/learnings", "/aha/*"] }
+    path_pattern { values = ["/agent", "/agent/*", "/symphony", "/chat", "/cost"] }
+  }
+}
+
+resource "aws_lb_listener_rule" "mcp_agent2" {
+  listener_arn = aws_lb_listener.main.arn
+  priority     = 7
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.mcp_http.arn
+  }
+  condition {
+    path_pattern { values = ["/learnings", "/aha/*"] }
   }
 }
