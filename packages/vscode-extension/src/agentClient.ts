@@ -73,6 +73,39 @@ function workspacePath(): string | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
+export interface ChatTurnResult { ok: boolean; model?: string; costUSD?: number; }
+
+/**
+ * Canonical chat turn — routes a natural-language message to the Story Agent crew brain (/chat),
+ * whose model is chosen by QUARK (quarkSelectModel). This is the optimized default selection; tries
+ * the configured/cloud endpoint then the local loop (local↔cloud stagger). Returns ok:false if the
+ * brain is unreachable so the caller can fall back to the in-editor token-optimizing assistant.
+ */
+export async function runChatTurn(
+  message: string,
+  stream: vscode.ChatResponseStream,
+  token: vscode.CancellationToken,
+): Promise<ChatTurnResult> {
+  const c = vscode.workspace.getConfiguration('storyAgent');
+  const clientId = process.env.STORY_AGENT_CLIENT_ID || c.get<string>('chat.clientId') || null;
+  for (const base of agentCandidates()) {
+    try {
+      const resp = await fetch(base + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, clientId }),
+      });
+      if (!resp.ok) continue;
+      const d: any = await resp.json();
+      if (token.isCancellationRequested) return { ok: true };
+      stream.markdown(`${d.answer ?? ''}\n\n`);
+      stream.markdown(`_◇ ${d.model} · tier ${d.tier} · $${(d.costUSD ?? 0).toFixed(5)} (Quark-optimized)_`);
+      return { ok: true, model: d.model, costUSD: d.costUSD };
+    } catch { /* try next candidate */ }
+  }
+  return { ok: false };
+}
+
 export interface AgentTurnResult {
   ok: boolean;
   iterations?: number;

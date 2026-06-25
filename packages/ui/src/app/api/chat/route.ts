@@ -65,6 +65,24 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'message (string) required' }, { status: 400 });
   }
 
+  // Canonical path: route to the Story Agent crew brain (/chat), whose model is chosen by QUARK
+  // (quarkSelectModel) — the single optimized selection. Falls back to local routing if unreachable.
+  const AGENT_CHAT = (process.env.STORY_AGENT_AGENT_URL || 'http://localhost:3103').replace(/\/$/, '') + '/chat';
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 60000);
+    const a = await fetch(AGENT_CHAT, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }), signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (a.ok) {
+      const d: any = await a.json();
+      const meta = { model: d.model, tier: String(d.tier), provider: d.provider ?? 'openrouter', tokensIn: d.tokensIn ?? 0, tokensOut: d.tokensOut ?? 0, costUSD: d.costUSD ?? 0, sources: d.sources ?? [] };
+      return new Response(`${d.answer ?? ''}${META}${JSON.stringify(meta)}`, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
+  } catch { /* agent brain unreachable — fall back to local cost-optimized routing below */ }
+
   const tier = classify(message);
   const model = (!PROFILE || PROFILE === 'quality_first') ? QUALITY : (tier === 'simple' ? CHEAP : QUALITY);
   const ctx = await ragContext(message);

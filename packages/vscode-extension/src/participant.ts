@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { fetchAhaStory } from './aha';
 import { buildObservationLoungeBrief } from './brief';
 import { runAssistantTurn, resetSession } from './chatEngine';
-import { runAgentTurn, renderSymphonyPanel } from './agentClient';
+import { runAgentTurn, renderSymphonyPanel, runChatTurn } from './agentClient';
 import { gatherChatContext } from './contextProvider';
 
 const PARTICIPANT_ID = 'story-agent.agent';
@@ -165,7 +165,12 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
       if (cmd === 'ask' || prompt.length > 0) {
         const actx = await gatherChatContext(request, token);
         if (actx.note) stream.markdown(`${actx.note}\n\n`);
-        const result = await runAssistantTurn(actx.contextBlock + (actx.prompt || prompt), stream, token, context.globalState);
+        const msg = actx.contextBlock + (actx.prompt || prompt);
+        // Default to the canonical crew brain (/chat → Quark-optimized model selection); fall back to
+        // the in-editor token-optimizing assistant if the brain is unreachable.
+        const chat = await runChatTurn(msg, stream, token);
+        if (chat.ok) return { metadata: { [META_CMD]: 'ask', model: chat.model } };
+        const result = await runAssistantTurn(msg, stream, token, context.globalState);
         return { metadata: { [META_CMD]: 'ask', tier: result.tier, cached: result.cached } };
       }
 

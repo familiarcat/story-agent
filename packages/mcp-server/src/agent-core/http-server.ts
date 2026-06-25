@@ -9,6 +9,7 @@
  * extension becomes a thin client instead of re-implementing the loop.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
+import { handleChatRequest } from './chat.js';
 import { runAgentLoop } from './loop.js';
 import { buildBridges } from './bridges.js';
 import { listClientHierarchy } from '@story-agent/shared/client-security-policy';
@@ -58,6 +59,7 @@ export function getAgentInvocationAudit(): AgentInvocationAudit[] {
  * replacement (crew deploy-optimization finding).
  */
 export async function handleAgentRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (await handleChatRequest(req, res)) return true; // canonical Quark-optimized /chat
   const url = (req.url || '').split('?')[0];
   if (!(url === '/agent' || url === '/agent/' || url === '/agent/health' || url === '/symphony')) return false;
   await serveAgent(req, res, url);
@@ -66,6 +68,7 @@ export async function handleAgentRequest(req: IncomingMessage, res: ServerRespon
 
 export function startAgentHttpServer(port: number) {
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (await handleChatRequest(req, res)) return; // canonical Quark-optimized /chat
     await serveAgent(req, res, (req.url || '').split('?')[0], port);
   });
 
