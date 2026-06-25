@@ -71,23 +71,52 @@ export default function ChatPage() {
 
   const sessionCost = turns.reduce((s, t) => s + (t.meta?.costUSD ?? 0), 0);
 
+  // Lightweight, dependency-free markdown: fenced code blocks + inline code. Keeps a code assistant
+  // readable without pulling in a renderer.
+  function renderText(text: string) {
+    const parts = text.split(/(```[\s\S]*?```)/g);
+    return parts.map((part, i) => {
+      const fence = part.match(/^```(\w*)\n?([\s\S]*?)```$/);
+      if (fence) {
+        return (
+          <pre key={i} style={{ background: '#0f172a', color: '#e2e8f0', padding: '0.75rem', borderRadius: 6, overflowX: 'auto', fontSize: '0.82rem', margin: '0.5rem 0' }}>
+            <code>{fence[2].replace(/\n$/, '')}</code>
+          </pre>
+        );
+      }
+      const inline = part.split(/(`[^`]+`)/g).map((seg, j) =>
+        seg.startsWith('`') && seg.endsWith('`')
+          ? <code key={j} style={{ background: '#eef2ff', padding: '0 4px', borderRadius: 3, fontSize: '0.85em' }}>{seg.slice(1, -1)}</code>
+          : <span key={j}>{seg}</span>
+      );
+      return <span key={i} style={{ whiteSpace: 'pre-wrap' }}>{inline}</span>;
+    });
+  }
+
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🖖 Story Agent — Crew Assistant</h1>
-        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>OpenRouter · cost-optimized · session ~${sessionCost.toFixed(4)}</span>
+        <span style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: '0.8rem', color: '#6b7280' }}>
+          OpenRouter · Quark-optimized · session ~${sessionCost.toFixed(4)}
+          {turns.length > 0 && (
+            <button onClick={() => setTurns([])} disabled={busy} style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', borderRadius: 6, border: '1px solid #d1d5db', background: 'white', cursor: busy ? 'default' : 'pointer' }}>
+              + New chat
+            </button>
+          )}
+        </span>
       </header>
 
       <div ref={scrollRef} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem', height: '60vh', overflowY: 'auto', background: '#fafafa' }}>
         {turns.length === 0 && (
-          <p style={{ color: '#9ca3af' }}>Ask anything. Simple questions route to the cheap model ({'haiku'}); complex ones to the quality model (sonnet). Crew memory + docs are injected when relevant.</p>
+          <p style={{ color: '#9ca3af' }}>Ask anything. Quark routes each turn to the cheapest adequate model on OpenRouter (simple → tier-3 like DeepSeek; complex → tier-4). Crew RAG memory is injected when relevant. The model + cost shows under each reply.</p>
         )}
         {turns.map((t, i) => (
           <div key={i} style={{ marginBottom: '1rem' }}>
             <div style={{ fontWeight: 600, fontSize: '0.8rem', color: t.role === 'user' ? '#2563eb' : '#059669' }}>
               {t.role === 'user' ? 'You' : 'Crew'}
             </div>
-            <div style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem', lineHeight: 1.5 }}>{t.text || (busy && i === turns.length - 1 ? '…' : '')}</div>
+            <div style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{t.text ? renderText(t.text) : (busy && i === turns.length - 1 ? '…' : '')}</div>
             {t.meta && (
               <div style={{ marginTop: 6, fontSize: '0.72rem', color: '#6b7280', fontFamily: 'ui-monospace, monospace' }}>
                 🤖 {t.meta.model} · {t.meta.provider} · {t.meta.tier} route · ↑{t.meta.tokensIn} ↓{t.meta.tokensOut} tok · ~${t.meta.costUSD.toFixed(4)}
