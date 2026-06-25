@@ -81,6 +81,11 @@ resource "aws_ecs_service" "mcp" {
   task_definition = aws_ecs_task_definition.mcp.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  # Stop-before-start so a rolling update fits the default Fargate vCPU quota of 2 (UI 1 + MCP 1).
+  # Without this, ECS wants old+new MCP + UI = 3 vCPU during rollout and can't place the new task.
+  # Brief MCP swap downtime is acceptable; raise min-healthy once the vCPU quota increase lands.
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [aws_security_group.service.id]
