@@ -84,6 +84,9 @@ resource "aws_ecs_service" "mcp" {
   # Brief MCP swap downtime is acceptable; raise min-healthy once the vCPU quota increase lands.
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
+  # AZ rebalancing requires maxPercent > 100; we run a single task within a vCPU quota of 2, so disable
+  # it and keep stop-before-start (maxPercent=100).
+  availability_zone_rebalancing = "DISABLED"
   # Fail-fast: ECS auto-rolls-back a deployment whose tasks never reach steady state (crew resilience).
   deployment_circuit_breaker {
     enable   = true
@@ -156,6 +159,7 @@ resource "aws_ecs_service" "ui" {
   launch_type     = "FARGATE"
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
+  availability_zone_rebalancing      = "DISABLED"
   deployment_circuit_breaker {
     enable   = true
     rollback = true
