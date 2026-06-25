@@ -114,16 +114,23 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with: { terraform_version: "1.5.7" }  # match the admin's local version (no state-format drift)
 
-      - name: Resolve image refs (built digest, else current :latest)
+      - name: Resolve image refs (built digest, else REUSE the currently-deployed image)
         id: img
+        # Crew quota=2 fix (O'Brien #12): on infra-only deploys (no build), reuse the EXACT image
+        # already on the live task definition — NOT :latest — so the task def doesn't change, ECS
+        # doesn't roll a new task, and there's no vCPU contention. Only a real image change rolls
+        # (then stop-before-start fits quota=2).
         run: |
           MCP_DIGEST="${{ needs.build_mcp.outputs.digest }}"
           UI_DIGEST="${{ needs.build_ui.outputs.digest }}"
-          if [ -n "$MCP_DIGEST" ]; then echo "mcp=${ECR_REGISTRY}/story-agent-mcp@${MCP_DIGEST}" >> "$GITHUB_OUTPUT"
-          else echo "mcp=${ECR_REGISTRY}/story-agent-mcp:latest" >> "$GITHUB_OUTPUT"; fi
-          if [ -n "$UI_DIGEST" ]; then echo "ui=${ECR_REGISTRY}/story-agent-ui@${UI_DIGEST}" >> "$GITHUB_OUTPUT"
-          else echo "ui=${ECR_REGISTRY}/story-agent-ui:latest" >> "$GITHUB_OUTPUT"; fi
-          echo "MCP → $(grep mcp= "$GITHUB_OUTPUT")"; echo "UI → $(grep ui= "$GITHUB_OUTPUT")"
+          cur() { aws ecs describe-task-definition --task-definition "$1" --region "$AWS_REGION" \
+                    --query 'taskDefinition.containerDefinitions[0].image' --output text 2>/dev/null; }
+          if [ -n "$MCP_DIGEST" ]; then MCP="${ECR_REGISTRY}/story-agent-mcp@${MCP_DIGEST}"
+          else MCP="$(cur story-agent-mcp)"; [ -z "$MCP" ] || [ "$MCP" = "None" ] && MCP="${ECR_REGISTRY}/story-agent-mcp:latest"; fi
+          if [ -n "$UI_DIGEST" ]; then UI="${ECR_REGISTRY}/story-agent-ui@${UI_DIGEST}"
+          else UI="$(cur story-agent-ui)"; [ -z "$UI" ] || [ "$UI" = "None" ] && UI="${ECR_REGISTRY}/story-agent-ui:latest"; fi
+          echo "mcp=$MCP" >> "$GITHUB_OUTPUT"; echo "ui=$UI" >> "$GITHUB_OUTPUT"
+          echo "MCP → $MCP"; echo "UI → $UI"
 
       - name: Terraform init + plan
         working-directory: terraform

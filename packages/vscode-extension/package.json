@@ -122,16 +122,13 @@
           "name": "Navigate"
         },
         {
+          "id": "storyAgent.projectStructure",
+          "name": "Aha — Products, Releases & Stories"
+        },
+        {
           "type": "webview",
           "id": "story-agent.sidebar",
           "name": "Story Agent"
-        }
-      ],
-      "explorer": [
-        {
-          "id": "storyAgent.projectStructure",
-          "name": "Aha Project Structure",
-          "when": "workspaceFolder"
         }
       ]
     },
