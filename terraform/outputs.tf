@@ -1,6 +1,11 @@
 output "alb_dns_name" {
-  description = "Public ALB DNS — UI at /, MCP at /mcp + /rag, WebSocket at /ws"
+  description = "Public ALB DNS — UI at /, MCP at /mcp + /rag, WebSocket at /ws, agent at /agent"
   value       = aws_lb.main.dns_name
+}
+
+output "agent_endpoint_url" {
+  description = "Set as VS Code setting storyAgent.chat.agentServiceUrl to use the deployed crew"
+  value       = "http://${aws_lb.main.dns_name}/agent"
 }
 
 output "ecs_cluster" {

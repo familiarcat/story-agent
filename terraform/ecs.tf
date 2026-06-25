@@ -38,6 +38,7 @@ resource "aws_ecs_task_definition" "mcp" {
       { containerPort = 3101, protocol = "tcp", name = "http-mcp" },
       { containerPort = 3102, protocol = "tcp", name = "rag" },
       { containerPort = 8000, protocol = "tcp", name = "ws" },
+      { containerPort = 3103, protocol = "tcp", name = "agent" },
     ]
     environment = [
       { name = "SUPABASE_MODE", value = "live" },
@@ -51,6 +52,7 @@ resource "aws_ecs_task_definition" "mcp" {
       { name = "STORY_AGENT_HTTP_PORT", value = "3101" },
       { name = "STORY_AGENT_RAG_PORT", value = "3102" },
       { name = "STORY_AGENT_WS_PORT", value = "8000" },
+      { name = "STORY_AGENT_AGENT_PORT", value = "3103" }, # starts the agent-core /agent SSE loop
     ]
     secrets = concat(local.runtime_secrets, [
       { name = "REDIS_URL", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:REDIS_URL::" },
@@ -93,6 +95,11 @@ resource "aws_ecs_service" "mcp" {
     target_group_arn = aws_lb_target_group.mcp_ws.arn
     container_name   = "mcp"
     container_port   = 8000
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.mcp_agent.arn
+    container_name   = "mcp"
+    container_port   = 3103
   }
   service_registries {
     # A-record discovery (servicediscovery.tf uses type=A), so no port here — port is SRV-only.
