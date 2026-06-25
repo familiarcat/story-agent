@@ -4,10 +4,20 @@ import { StorySidebarProvider } from './sidebar';
 import { StoryExecutionPanel } from './panels/StoryExecutionPanel';
 import { CrewCopilotProvider } from './providers/CrewCopilotProvider';
 import { AhaProjectStructureProvider } from './providers/AhaProjectStructureProvider';
+import { NavigationTreeProvider } from './providers/NavigationTreeProvider';
 import { connectProviderInteractive } from './oauth';
+
+function dashboardBase(): string {
+  return vscode.workspace.getConfiguration('storyAgent').get<string>('dashboardUrl') ?? 'http://localhost:3000';
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   // ── Tree Data Providers ──────────────────────────────────────────────────
+  // Unified navigation tree (UI-unification plan §1): all primary objects in one place.
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('storyAgent.navigation', new NavigationTreeProvider())
+  );
+
   const crewCopilotProvider = new CrewCopilotProvider();
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('storyAgent.crewCopilot', crewCopilotProvider)
@@ -50,6 +60,16 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.commands.executeCommand(
         'workbench.view.extension.story-agent-sidebar'
       );
+    }),
+
+    // Navigation-tree leaves → open the chat participant with a prefilled query.
+    vscode.commands.registerCommand('story-agent.runChatCommand', (query: string) => {
+      vscode.commands.executeCommand('workbench.action.chat.open', { query });
+    }),
+
+    // Navigation-tree leaves → open a specific dashboard page.
+    vscode.commands.registerCommand('story-agent.openDashboardPath', (path: string) => {
+      vscode.env.openExternal(vscode.Uri.parse(`${dashboardBase()}${path}`));
     }),
 
     // New crew-related commands

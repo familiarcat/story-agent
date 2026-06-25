@@ -3,6 +3,7 @@ import { fetchAhaStory } from './aha';
 import { buildObservationLoungeBrief } from './brief';
 import { runAssistantTurn, resetSession } from './chatEngine';
 import { runAgentTurn, renderSymphonyPanel } from './agentClient';
+import { gatherChatContext } from './contextProvider';
 
 const PARTICIPANT_ID = 'story-agent.agent';
 
@@ -126,10 +127,12 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
       // Autonomous agentic mode (/agent) → tool-calling loop over agent-core (CLI/API/VS Code share it).
       if (cmd === 'agent') {
         if (!prompt.length) {
-          stream.markdown('Describe a task for the autonomous crew, e.g. `/agent fix the failing test in src/foo.ts and run the suite`.');
+          stream.markdown('Describe a task for the autonomous crew, e.g. `/agent fix the failing test in src/foo.ts and run the suite`. Attach files or add `codebase: <query>` for context.');
           return { metadata: { [META_CMD]: 'agent-missing' } };
         }
-        const result = await runAgentTurn(prompt, stream, token);
+        const ctx = await gatherChatContext(request, token);
+        if (ctx.note) stream.markdown(`${ctx.note}\n\n`);
+        const result = await runAgentTurn(ctx.contextBlock + (ctx.prompt || prompt), stream, token);
         return { metadata: { [META_CMD]: 'agent', escalated: result.escalated } };
       }
 
@@ -140,7 +143,9 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
           stream.markdown('Describe what to plan, e.g. `/plan add pagination to the stories API and update the dashboard`.');
           return { metadata: { [META_CMD]: 'plan-missing' } };
         }
-        const planPrompt = `PLAN MODE — do NOT edit files or run mutating commands. Read the codebase as needed and produce a concise, ordered implementation plan (numbered steps, files to touch, risks) for:\n\n${prompt}`;
+        const pctx = await gatherChatContext(request, token);
+        if (pctx.note) stream.markdown(`${pctx.note}\n\n`);
+        const planPrompt = `${pctx.contextBlock}PLAN MODE — do NOT edit files or run mutating commands. Read the codebase as needed and produce a concise, ordered implementation plan (numbered steps, files to touch, risks) for:\n\n${pctx.prompt || prompt}`;
         const result = await runAgentTurn(planPrompt, stream, token);
         stream.button({ command: 'story-agent.openObservationLounge', title: '$(eye) Open Observation Lounge' });
         return { metadata: { [META_CMD]: 'plan', escalated: result.escalated } };
@@ -156,7 +161,9 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
 
       // Free-form chat (/ask or any non-command prompt) → token-optimizing assistant (single-shot)
       if (cmd === 'ask' || prompt.length > 0) {
-        const result = await runAssistantTurn(prompt, stream, token, context.globalState);
+        const actx = await gatherChatContext(request, token);
+        if (actx.note) stream.markdown(`${actx.note}\n\n`);
+        const result = await runAssistantTurn(actx.contextBlock + (actx.prompt || prompt), stream, token, context.globalState);
         return { metadata: { [META_CMD]: 'ask', tier: result.tier, cached: result.cached } };
       }
 

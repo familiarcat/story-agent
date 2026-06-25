@@ -113,6 +113,10 @@
     "views": {
       "story-agent-sidebar": [
         {
+          "id": "storyAgent.navigation",
+          "name": "Navigate"
+        },
+        {
           "type": "webview",
           "id": "story-agent.sidebar",
           "name": "Story Agent"
