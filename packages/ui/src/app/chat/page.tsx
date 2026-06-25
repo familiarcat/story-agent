@@ -31,13 +31,18 @@ export default function ChatPage() {
     if (!message || busy) return;
     setInput('');
     setBusy(true);
+    // Multi-turn: send recent conversation so the crew chat has memory.
+    const history = turns
+      .filter(t => t.text)
+      .slice(-8)
+      .map(t => ({ role: t.role, content: t.text }));
     setTurns(t => [...t, { role: 'user', text: message }, { role: 'assistant', text: '' }]);
 
     try {
       const resp = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, history }),
       });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));

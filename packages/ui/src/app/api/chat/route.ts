@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   if (!OR_KEY) {
     return Response.json({ error: 'OpenRouter not configured (CREW_LLM_APPROVED_KEY missing in the UI server env). Launch the UI from a shell with the crew env.' }, { status: 503 });
   }
-  const { message } = await req.json().catch(() => ({ message: '' }));
+  const { message, history } = await req.json().catch(() => ({ message: '' }));
   if (!message || typeof message !== 'string') {
     return Response.json({ error: 'message (string) required' }, { status: 400 });
   }
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     const t = setTimeout(() => ctrl.abort(), 60000);
     const a = await fetch(AGENT_CHAT, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }), signal: ctrl.signal,
+      body: JSON.stringify({ message, history }), signal: ctrl.signal,
     });
     clearTimeout(t);
     if (a.ok) {

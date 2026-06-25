@@ -42,6 +42,14 @@ export async function handleChatRequest(req: IncomingMessage, res: ServerRespons
   const message = String(body.message ?? body.input ?? '').trim();
   if (!message) { json(400, { error: 'message_required' }); return true; }
 
+  // Multi-turn memory: accept prior turns (capped) so the chat is conversational, not single-shot.
+  const history: Array<{ role: string; content: string }> = Array.isArray(body.history)
+    ? body.history
+        .filter((m: any) => (m?.role === 'user' || m?.role === 'assistant') && typeof m?.content === 'string')
+        .slice(-8)
+        .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 4000) }))
+    : [];
+
   const tier = classifyTier(message);
   const picked = quarkSelectModel(tier);        // QUARK: cheapest adequate model at/above the tier
   const clientId = body.clientId ?? null;
@@ -53,6 +61,7 @@ export async function handleChatRequest(req: IncomingMessage, res: ServerRespons
   const messages = [
     { role: 'system', content: 'You are the Story Agent crew assistant (OpenRouter, Quark cost-optimized). Be concise and token-efficient: answer directly, prefer short code over prose. Use CONTEXT when relevant.' },
     ...(hasCtx ? [{ role: 'system', content: `CONTEXT (crew RAG memory):\n${context}` }] : []),
+    ...history,
     { role: 'user', content: message },
   ];
 
