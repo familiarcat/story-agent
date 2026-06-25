@@ -10,6 +10,7 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { handleChatRequest } from './chat.js';
+import { recordCost, costSummary } from './cost-ledger.js';
 import { runAgentLoop } from './loop.js';
 import { buildBridges } from './bridges.js';
 import { listClientHierarchy } from '@story-agent/shared/client-security-policy';
@@ -61,7 +62,7 @@ export function getAgentInvocationAudit(): AgentInvocationAudit[] {
 export async function handleAgentRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   if (await handleChatRequest(req, res)) return true; // canonical Quark-optimized /chat
   const url = (req.url || '').split('?')[0];
-  if (!(url === '/agent' || url === '/agent/' || url === '/agent/health' || url === '/symphony')) return false;
+  if (!(url === '/agent' || url === '/agent/' || url === '/agent/health' || url === '/symphony' || url === '/cost')) return false;
   await serveAgent(req, res, url);
   return true;
 }
@@ -83,6 +84,12 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
     if (req.method === 'GET' && url === '/agent/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, service: 'story-agent-agent', port }));
+      return;
+    }
+    // Cost Observatory — aggregate spend by provider/model + savings vs an Anthropic-frontier baseline.
+    if (req.method === 'GET' && url === '/cost') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(costSummary(), null, 2));
       return;
     }
     // Symphonic-MCP Layer-5 posture snapshot — firm/client/project hierarchy, WorfGate posture,
@@ -143,6 +150,10 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
         ...buildBridges(clientId),
         onEvent: (e) => send(e),
       });
+      try {
+        const tt = (result as any).totalTokens ?? 0;
+        recordCost({ timestamp: new Date().toISOString(), surface: 'agent', model: (result as any).model ?? 'unknown', provider: ((result as any).model ?? '').split('/')[0] || 'openrouter', tokensIn: Math.round(tt / 2), tokensOut: Math.round(tt / 2), costUSD: (result as any).totalCostUSD ?? 0 });
+      } catch { /* ledger best-effort */ }
       send(result, 'done');
     } catch (e: any) {
       send({ type: 'error', text: e?.message || String(e) }, 'error');

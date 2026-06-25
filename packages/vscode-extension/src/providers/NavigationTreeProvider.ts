@@ -71,7 +71,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     label: 'Cost (Quark)', icon: 'graph', children: [
-      { label: 'Cost & routing', icon: 'dashboard', path: '/dashboard' },
+      { label: 'Cost Observatory', icon: 'dashboard', path: '/cost', tooltip: 'Spend by model + savings vs Anthropic baseline' },
       { label: 'Posture snapshot (/symphony)', icon: 'pulse', chat: '@story-agent /symphony' },
     ],
   },

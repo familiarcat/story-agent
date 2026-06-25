@@ -9,6 +9,7 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { quarkSelectModel } from '../lib/crew-team-assembly.js';
 import { buildBridges } from './bridges.js';
+import { recordCost } from './cost-ledger.js';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
@@ -77,6 +78,7 @@ export async function handleChatRequest(req: IncomingMessage, res: ServerRespons
     const usage = d?.usage ?? {};
     const tokensIn = usage.prompt_tokens ?? 0, tokensOut = usage.completion_tokens ?? 0;
     const costUSD = (tokensIn / 1e6) * (picked.costIn ?? 0) + (tokensOut / 1e6) * (picked.costOut ?? 0);
+    recordCost({ timestamp: new Date().toISOString(), surface: 'chat', model: picked.id, provider: picked.provider, tokensIn, tokensOut, costUSD });
     json(200, {
       answer, model: picked.id, provider: picked.provider, tier,
       tokensIn, tokensOut, costUSD: Number(costUSD.toFixed(6)),
