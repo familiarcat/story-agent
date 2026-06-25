@@ -50,16 +50,41 @@ export function getAgentInvocationAudit(): AgentInvocationAudit[] {
   return [...agentAudit];
 }
 
+/**
+ * Handle an agent-core HTTP request (/agent, /symphony, /agent/health). Returns true if it served
+ * the request, false if the route isn't ours (so a host server can fall through to its own routes).
+ * This lets the agent endpoint be mounted on the EXISTING MCP HTTP server (port 3101) — no separate
+ * container port / target group / ECS load_balancer block, which would force a slow service
+ * replacement (crew deploy-optimization finding).
+ */
+export async function handleAgentRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  const url = (req.url || '').split('?')[0];
+  if (!(url === '/agent' || url === '/agent/' || url === '/agent/health' || url === '/symphony')) return false;
+  await serveAgent(req, res, url);
+  return true;
+}
+
 export function startAgentHttpServer(port: number) {
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-    if (req.method === 'GET' && req.url === '/agent/health') {
+    await serveAgent(req, res, (req.url || '').split('?')[0], port);
+  });
+
+  server.listen(port, '0.0.0.0', () => {
+    process.stderr.write(`story-agent Agent HTTP server listening on http://0.0.0.0:${port}/agent\n`);
+  });
+  return server;
+}
+
+async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string, port?: number): Promise<void> {
+  {
+    if (req.method === 'GET' && url === '/agent/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true, service: 'story-agent-agent', port }));
       return;
     }
     // Symphonic-MCP Layer-5 posture snapshot — firm/client/project hierarchy, WorfGate posture,
     // tool-theory coverage, recent agent invocations. Presence/metadata only — never secret values.
-    if (req.method === 'GET' && req.url === '/symphony') {
+    if (req.method === 'GET' && url === '/symphony') {
       try { await hydrateClientPolicies(); } catch { /* fall back to bootstrap */ }
       const creds = credentialStatus();
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -75,7 +100,7 @@ export function startAgentHttpServer(port: number) {
       }, null, 2));
       return;
     }
-    if (req.method !== 'POST' || req.url !== '/agent') {
+    if (req.method !== 'POST' || (url !== '/agent' && url !== '/agent/')) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'not_found' }));
       return;
@@ -121,10 +146,5 @@ export function startAgentHttpServer(port: number) {
     } finally {
       res.end();
     }
-  });
-
-  server.listen(port, '0.0.0.0', () => {
-    process.stderr.write(`story-agent Agent HTTP server listening on http://0.0.0.0:${port}/agent\n`);
-  });
-  return server;
+  }
 }

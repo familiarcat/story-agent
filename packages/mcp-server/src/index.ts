@@ -20,7 +20,7 @@ import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
 import { registerSkillTools } from './tools/skill-tools.js';
 import { applySkillAnnotations } from './lib/apply-skill-annotations.js';
-import { startAgentHttpServer } from './agent-core/http-server.js';
+import { startAgentHttpServer, handleAgentRequest } from './agent-core/http-server.js';
 import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
 import { initWorfGateCredentialProviders } from '@story-agent/shared/worfgate-credential-providers';
 import { createHttpAuthMiddleware, reportMissingCredentialsAtStartup } from './lib/http-auth-middleware.js';
@@ -78,7 +78,12 @@ async function main() {
     const httpPort = parseInt(process.env.STORY_AGENT_HTTP_PORT, 10) || 3101;
     const authMiddleware = createHttpAuthMiddleware();
 
-    const httpServer = createHTTPServer((req, res) => {
+    const httpServer = createHTTPServer(async (req, res) => {
+      // Mount the agent-core endpoint (/agent SSE, /symphony) on the SAME port as MCP so the deployed
+      // crew is reachable via the existing target group — no extra container port / ECS service
+      // replacement (crew deploy-optimization finding). Falls through to /mcp if not an agent route.
+      if (await handleAgentRequest(req, res)) return;
+
       // Only expose the /mcp endpoint
       if (req.url !== '/mcp' && req.url !== '/mcp/') {
         res.writeHead(404, { 'Content-Type': 'application/json' });

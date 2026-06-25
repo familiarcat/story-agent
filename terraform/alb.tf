@@ -63,24 +63,9 @@ resource "aws_lb_target_group" "mcp_ws" {
   }
 }
 
-# Agent-core SSE endpoint — :3103 (the autonomous /agent loop + /symphony posture). Exposing this
-# lets the VS Code extension / CLI point at the DEPLOYED crew (single source of truth) instead of a
-# local process. SSE is long-lived, so a long deregistration delay + the ALB's 300s idle timeout.
-resource "aws_lb_target_group" "mcp_agent" {
-  name                 = "${local.name}-mcp-agent"
-  port                 = 3103
-  protocol             = "HTTP"
-  vpc_id               = var.vpc_id
-  target_type          = "ip"
-  deregistration_delay = 300
-  health_check {
-    port     = "3103"
-    path     = "/symphony"
-    matcher  = "200"
-    interval = 30
-    timeout  = 5
-  }
-}
+# Agent-core SSE endpoint (/agent + /symphony) is mounted on the SAME MCP HTTP server (port 3101)
+# as /mcp — so it reuses the existing mcp_http target group. No separate target group, container
+# port, or ECS load_balancer block → no slow ECS service replacement (crew deploy-optimization).
 
 # Listener — HTTPS if a cert is provided, else HTTP:80.
 resource "aws_lb_listener" "main" {
@@ -125,7 +110,7 @@ resource "aws_lb_listener_rule" "mcp_agent" {
   priority     = 8
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.mcp_agent.arn
+    target_group_arn = aws_lb_target_group.mcp_http.arn # agent routes are served on the 3101 server
   }
   condition {
     path_pattern { values = ["/agent", "/agent/*", "/symphony"] }

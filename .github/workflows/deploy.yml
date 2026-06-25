@@ -1,12 +1,9 @@
 name: deploy-fargate
 
-# Terraform + Docker CI/CD for the Story Agent crew backend.
-# Build → push to ECR → terraform apply. Runs in CI (no Claude/Anthropic cost — the crew's
-# OpenRouter LLM usage is the runtime path; this pipeline is pure infra).
-#
-# Setup (one-time): create an IAM OIDC role for GitHub Actions and set repo variables:
-#   AWS_DEPLOY_ROLE_ARN, AWS_REGION (us-east-2), ECR_REGISTRY (<acct>.dkr.ecr.<region>.amazonaws.com)
-# Secrets story-agent/aha + story-agent/runtime must already exist (pnpm run aws-secrets:put).
+# Staggered Terraform + Docker CI/CD (crew deploy-optimization plan).
+#   detect → (build_mcp ‖ build_ui, only if app changed) → deploy (resilient apply)
+# Infra-only changes SKIP the image builds entirely (the slow part) and reuse the live :latest images,
+# so UI/infra iteration isn't blocked by a full rebuild. Native ARM64 runners (Graviton, no QEMU).
 
 on:
   workflow_dispatch:
@@ -28,34 +25,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
-    # Native ARM64 runner: Fargate runs ARM64/Graviton (terraform/ecs.tf), so building on an
-    # amd64 runner forced slow QEMU emulation (5-10x). Building natively here removes emulation —
-    # dramatically fewer minutes — while keeping the cheaper Graviton runtime.
-    runs-on: ubuntu-24.04-arm
-    # Only run when the deploy repo vars are configured — otherwise skip cleanly
-    # (push-triggered runs no longer fail before AWS_DEPLOY_ROLE_ARN/AWS_REGION are set).
+  # ── Decide what changed: app code (→ rebuild images) vs infra-only (→ skip builds) ──────────────
+  detect:
+    runs-on: ubuntu-latest
     if: ${{ vars.AWS_REGION != '' && vars.AWS_DEPLOY_ROLE_ARN != '' }}
-    env:
-      AWS_REGION: ${{ vars.AWS_REGION }}
-      ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+    outputs:
+      app: ${{ steps.f.outputs.app }}
+      infra: ${{ steps.f.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - id: f
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "app=true"  >> "$GITHUB_OUTPUT"; echo "infra=true" >> "$GITHUB_OUTPUT"
+            echo "manual dispatch → full deploy"; exit 0
+          fi
+          BASE="${{ github.event.before }}"
+          CH=$(git diff --name-only "$BASE" "${{ github.sha }}" 2>/dev/null || git diff --name-only HEAD^ HEAD)
+          echo "changed files:"; echo "$CH"
+          echo "$CH" | grep -qE '^(packages|docker)/'                 && echo "app=true"   >> "$GITHUB_OUTPUT" || echo "app=false"   >> "$GITHUB_OUTPUT"
+          echo "$CH" | grep -qE '^(terraform/|\.github/workflows/deploy\.yml)' && echo "infra=true" >> "$GITHUB_OUTPUT" || echo "infra=false" >> "$GITHUB_OUTPUT"
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build & push MCP server image
-        id: build_mcp
+  build_mcp:
+    needs: detect
+    if: ${{ needs.detect.outputs.app == 'true' }}
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      digest: ${{ steps.b.outputs.digest }}
+    env: { ECR_REGISTRY: "${{ vars.ECR_REGISTRY }}" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: { role-to-assume: "${{ vars.AWS_DEPLOY_ROLE_ARN }}", aws-region: "${{ vars.AWS_REGION }}" }
+      - uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - id: b
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -66,8 +71,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build & push UI image
-        id: build_ui
+  build_ui:
+    needs: detect
+    if: ${{ needs.detect.outputs.app == 'true' }}
+    runs-on: ubuntu-24.04-arm
+    outputs:
+      digest: ${{ steps.b.outputs.digest }}
+    env: { ECR_REGISTRY: "${{ vars.ECR_REGISTRY }}" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: { role-to-assume: "${{ vars.AWS_DEPLOY_ROLE_ARN }}", aws-region: "${{ vars.AWS_REGION }}" }
+      - uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - id: b
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -78,26 +95,45 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  deploy:
+    needs: [detect, build_mcp, build_ui]
+    # Run when something changed and builds (if any) didn't fail. Skipped builds are fine (infra-only).
+    if: >-
+      ${{ always()
+        && (needs.detect.outputs.app == 'true' || needs.detect.outputs.infra == 'true')
+        && needs.build_mcp.result != 'failure'
+        && needs.build_ui.result != 'failure' }}
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with: { role-to-assume: "${{ vars.AWS_DEPLOY_ROLE_ARN }}", aws-region: "${{ vars.AWS_REGION }}" }
       - uses: hashicorp/setup-terraform@v3
-        with:
-          # Pin to the admin's local version so the shared S3 state never gets format-upgraded
-          # out from under a 1.5.7 local apply (Yar/O'Brien: avoid version drift on shared state).
-          terraform_version: "1.5.7"
+        with: { terraform_version: "1.5.7" }  # match the admin's local version (no state-format drift)
+
+      - name: Resolve image refs (built digest, else current :latest)
+        id: img
+        run: |
+          MCP_DIGEST="${{ needs.build_mcp.outputs.digest }}"
+          UI_DIGEST="${{ needs.build_ui.outputs.digest }}"
+          if [ -n "$MCP_DIGEST" ]; then echo "mcp=${ECR_REGISTRY}/story-agent-mcp@${MCP_DIGEST}" >> "$GITHUB_OUTPUT"
+          else echo "mcp=${ECR_REGISTRY}/story-agent-mcp:latest" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "$UI_DIGEST" ]; then echo "ui=${ECR_REGISTRY}/story-agent-ui@${UI_DIGEST}" >> "$GITHUB_OUTPUT"
+          else echo "ui=${ECR_REGISTRY}/story-agent-ui:latest" >> "$GITHUB_OUTPUT"; fi
+          echo "MCP → $(grep mcp= "$GITHUB_OUTPUT")"; echo "UI → $(grep ui= "$GITHUB_OUTPUT")"
 
       - name: Terraform init + plan
         working-directory: terraform
-        # Pin the freshly-built images by DIGEST (Data's reproducibility rule) so the apply
-        # deploys exactly what CI built — never a mutable :latest.
-        env:
-          MCP_IMAGE: ${{ env.ECR_REGISTRY }}/story-agent-mcp@${{ steps.build_mcp.outputs.digest }}
-          UI_IMAGE: ${{ env.ECR_REGISTRY }}/story-agent-ui@${{ steps.build_ui.outputs.digest }}
         run: |
           terraform init -input=false
           terraform plan -input=false -out=tfplan \
-            -var "mcp_image=${MCP_IMAGE}" \
-            -var "ui_image=${UI_IMAGE}"
+            -var "mcp_image=${{ steps.img.outputs.mcp }}" \
+            -var "ui_image=${{ steps.img.outputs.ui }}"
 
       - name: Terraform apply
-        if: github.event.inputs.apply == 'true'
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true' }}
         working-directory: terraform
         run: terraform apply -input=false -auto-approve tfplan

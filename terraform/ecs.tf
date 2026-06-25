@@ -35,10 +35,9 @@ resource "aws_ecs_task_definition" "mcp" {
     image     = var.mcp_image
     essential = true
     portMappings = [
-      { containerPort = 3101, protocol = "tcp", name = "http-mcp" },
+      { containerPort = 3101, protocol = "tcp", name = "http-mcp" }, # also serves /agent + /symphony
       { containerPort = 3102, protocol = "tcp", name = "rag" },
       { containerPort = 8000, protocol = "tcp", name = "ws" },
-      { containerPort = 3103, protocol = "tcp", name = "agent" },
     ]
     environment = [
       { name = "SUPABASE_MODE", value = "live" },
@@ -49,10 +48,9 @@ resource "aws_ecs_task_definition" "mcp" {
       { name = "CREW_LLM_APPROVED_MODEL_CHEAP", value = var.openrouter_model_cheap },
       { name = "AWS_AHA_SECRET_ID", value = var.aha_secret_name },
       { name = "AWS_REGION", value = var.region },
-      { name = "STORY_AGENT_HTTP_PORT", value = "3101" },
+      { name = "STORY_AGENT_HTTP_PORT", value = "3101" }, # serves /mcp AND /agent + /symphony
       { name = "STORY_AGENT_RAG_PORT", value = "3102" },
       { name = "STORY_AGENT_WS_PORT", value = "8000" },
-      { name = "STORY_AGENT_AGENT_PORT", value = "3103" }, # starts the agent-core /agent SSE loop
     ]
     secrets = concat(local.runtime_secrets, [
       { name = "REDIS_URL", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:REDIS_URL::" },
@@ -86,6 +84,11 @@ resource "aws_ecs_service" "mcp" {
   # Brief MCP swap downtime is acceptable; raise min-healthy once the vCPU quota increase lands.
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
+  # Fail-fast: ECS auto-rolls-back a deployment whose tasks never reach steady state (crew resilience).
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [aws_security_group.service.id]
@@ -100,11 +103,6 @@ resource "aws_ecs_service" "mcp" {
     target_group_arn = aws_lb_target_group.mcp_ws.arn
     container_name   = "mcp"
     container_port   = 8000
-  }
-  load_balancer {
-    target_group_arn = aws_lb_target_group.mcp_agent.arn
-    container_name   = "mcp"
-    container_port   = 3103
   }
   service_registries {
     # A-record discovery (servicediscovery.tf uses type=A), so no port here — port is SRV-only.
@@ -156,6 +154,12 @@ resource "aws_ecs_service" "ui" {
   task_definition = aws_ecs_task_definition.ui.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [aws_security_group.service.id]

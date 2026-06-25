@@ -29,12 +29,21 @@ interface AgentEvent {
 
 const TIER_ICON: Record<string, string> = { green: '🟢', yellow: '🟡', red: '🔴' };
 
+const LOCAL_AGENT = 'http://localhost:3103';
+
 function agentBase(): string {
   const c = vscode.workspace.getConfiguration('storyAgent');
-  return (c.get<string>('chat.agentServiceUrl') || process.env.STORY_AGENT_AGENT_URL || 'http://localhost:3103').replace(/\/$/, '');
+  return (c.get<string>('chat.agentServiceUrl') || process.env.STORY_AGENT_AGENT_URL || LOCAL_AGENT).replace(/\/$/, '');
 }
-function agentUrl(): string {
-  return agentBase() + '/agent';
+
+/**
+ * Ordered agent endpoints to try: the configured/cloud URL first, then always the local loop.
+ * This is the local↔cloud "stagger" — you keep vibing against localhost while the Fargate crew
+ * deploys/syncs; once the cloud endpoint is reachable it's preferred (single source of truth).
+ */
+function agentCandidates(): string[] {
+  const primary = agentBase();
+  return primary === LOCAL_AGENT ? [LOCAL_AGENT] : [primary, LOCAL_AGENT];
 }
 
 /** Layer-5 posture panel — render the live firm→client→project + WorfGate + tool snapshot in chat. */
@@ -78,31 +87,39 @@ export async function runAgentTurn(
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken,
 ): Promise<AgentTurnResult> {
-  const url = agentUrl();
   const c = vscode.workspace.getConfiguration('storyAgent');
   const authToken = process.env.AGENT_SERVICE_TOKEN || c.get<string>('chat.agentServiceToken');
   const clientId = process.env.STORY_AGENT_CLIENT_ID || c.get<string>('chat.clientId') || null;
 
   stream.progress('Engaging the autonomous crew (agent-core)…');
 
-  let resp: Response;
-  try {
-    resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      },
-      body: JSON.stringify({ input: prompt, workspace: workspacePath(), clientId }),
-    });
-  } catch (e) {
+  // Try the configured/cloud endpoint, then fall back to the local loop (local↔cloud stagger).
+  const candidates = agentCandidates();
+  let resp: Response | undefined;
+  let usedBase = '';
+  for (const base of candidates) {
+    try {
+      resp = await fetch(base + '/agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ input: prompt, workspace: workspacePath(), clientId }),
+      });
+      usedBase = base;
+      break;
+    } catch { /* try the next candidate */ }
+  }
+  if (!resp) {
     stream.markdown(
-      `⚠️ Could not reach the agent service at \`${url}\`.\n\n` +
-      'Start the MCP server with the agent endpoint enabled:\n\n' +
+      `⚠️ Could not reach the agent service (tried: ${candidates.join(', ')}).\n\n` +
+      'Start the local crew, or set `storyAgent.chat.agentServiceUrl` to the deployed endpoint:\n\n' +
       '```bash\nSTORY_AGENT_AGENT_PORT=3103 pnpm --filter @story-agent/mcp-server start\n```\n',
     );
     return { ok: false };
   }
+  if (usedBase !== candidates[0]) stream.markdown(`_↪ primary endpoint unreachable — using local crew at ${usedBase}_\n`);
 
   if (!resp.ok || !resp.body) {
     stream.markdown(`⚠️ Agent service returned HTTP ${resp.status}.`);
