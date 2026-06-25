@@ -52,6 +52,9 @@
     "tf": "npx tsx scripts/worfgate-terraform.ts",
     "tf:plan": "npx tsx scripts/worfgate-terraform.ts plan",
     "deploy:bootstrap-oidc": "bash scripts/bootstrap-oidc.sh",
+    "deploy:backend": "bash scripts/setup-tf-backend.sh",
+    "deploy:cleanup-orphans": "bash scripts/cleanup-orphaned-stack.sh",
+    "deploy:cleanup-orphans:apply": "bash scripts/cleanup-orphaned-stack.sh --apply",
     "deploy:auto": "npx tsx scripts/deploy-auto.ts",
     "deploy:mission": "npx tsx scripts/deploy-automation-mission.ts",
     "activation:status": "npx tsx scripts/activation-status.ts"

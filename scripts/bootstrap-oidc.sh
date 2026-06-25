@@ -9,15 +9,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "🛡️  Bootstrapping GitHub OIDC provider + deploy role (targeted, non-billable)…"
-npx tsx scripts/worfgate-terraform.ts apply -auto-approve \
-  -target='aws_iam_openid_connect_provider.github[0]' \
-  -target='aws_iam_role.github_actions' \
-  -target='aws_iam_role_policy.github_deploy'
+# The OIDC provider + deploy role live in terraform/bootstrap with their OWN local state
+# (Observation Lounge architecture: admin-only, never touched by CI). Full apply of that dir.
+BOOT="--dir terraform/bootstrap"
+echo "🛡️  Bootstrapping GitHub OIDC provider + deploy role (terraform/bootstrap, non-billable)…"
+npx tsx scripts/worfgate-terraform.ts $BOOT init -input=false
+npx tsx scripts/worfgate-terraform.ts $BOOT apply -auto-approve
 
 echo ""
 # Extract ONLY the arn:... token, so a stray diagnostic line can never pollute the repo var.
-ARN="$(npx tsx scripts/worfgate-terraform.ts output -raw github_actions_role_arn 2>/dev/null | grep -oE 'arn:aws:iam::[0-9]+:role/[A-Za-z0-9_+=,.@/-]+' | head -1 || true)"
+ARN="$(npx tsx scripts/worfgate-terraform.ts $BOOT output -raw github_actions_role_arn 2>/dev/null | grep -oE 'arn:aws:iam::[0-9]+:role/[A-Za-z0-9_+=,.@/-]+' | head -1 || true)"
 REPO="${GITHUB_REPO:-familiarcat/story-agent}"
 if [ -n "$ARN" ]; then
   echo "✅ Deploy role created: $ARN"

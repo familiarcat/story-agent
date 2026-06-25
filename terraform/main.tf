@@ -6,6 +6,16 @@ terraform {
       version = ">= 5.40"
     }
   }
+  # Remote state (Observation Lounge architecture, O'Brien/Geordi): shared by local admin + CI so
+  # state is never ephemeral (no more orphaned resources). Bucket + lock table are created
+  # out-of-band by scripts/setup-tf-backend.sh (they can't live in the state they back).
+  backend "s3" {
+    bucket         = "tf-state-860268930466-us-east-2"
+    key            = "story-agent/main.tfstate"
+    region         = "us-east-2"
+    dynamodb_table = "tf-locks"
+    encrypt        = true
+  }
 }
 
 provider "aws" {

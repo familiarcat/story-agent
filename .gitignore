@@ -21,3 +21,8 @@ packages/*/node_modules/
 *.tfstate
 *.tfstate.*
 crash.log
+
+# Bootstrap module local state (admin-only, never committed)
+terraform/bootstrap/.terraform/
+terraform/bootstrap/*.tfstate*
+terraform/.terraform/

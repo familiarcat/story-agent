@@ -1,5 +1,39 @@
-# GitHub Actions OIDC → AWS deploy role (codifies the CI/CD trust for .github/workflows/deploy.yml).
-# Set var.github_repo = "owner/repo". Output github_actions_role_arn → set as repo var AWS_DEPLOY_ROLE_ARN.
+# ── Bootstrap state (admin-only) — Observation Lounge architecture (Data/Geordi) ────────────────
+# The GitHub OIDC provider + deploy role are PREREQUISITES for CI to authenticate, so they cannot
+# live in the CI-managed state (chicken-and-egg). They live here in their OWN LOCAL state, applied
+# only by an admin via scripts/worfgate-terraform.ts (WorfGate-brokered). CI never refreshes or
+# recreates them — it only ASSUMES the role this module outputs.
+#
+# Apply (admin, rare):  npx tsx scripts/worfgate-terraform.ts -chdir-bootstrap apply
+# Output github_actions_role_arn → GitHub repo var AWS_DEPLOY_ROLE_ARN.
+
+terraform {
+  required_version = ">= 1.5"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.40"
+    }
+  }
+  # Local state by design — admin-only, not shared with CI.
+}
+
+provider "aws" {
+  region = var.region
+  default_tags { tags = var.tags }
+}
+
+data "aws_caller_identity" "current" {}
+
+variable "region" {
+  type    = string
+  default = "us-east-2"
+}
+
+variable "project" {
+  type    = string
+  default = "story-agent"
+}
 
 variable "github_repo" {
   description = "GitHub repo allowed to assume the deploy role, e.g. familiarcat/story-agent"
@@ -11,6 +45,17 @@ variable "create_github_oidc_provider" {
   description = "Create the GitHub OIDC provider. Set false if the account already has one."
   type        = bool
   default     = true
+}
+
+variable "tags" {
+  type    = map(string)
+  default = { Project = "story-agent", ManagedBy = "terraform" }
+}
+
+locals {
+  name = var.project
+  # Wildcard for this project's secrets — admin-scoped; avoids a data source (and GetResourcePolicy).
+  secret_arn_pattern = "arn:aws:secretsmanager:${var.region}:${data.aws_caller_identity.current.account_id}:secret:${var.project}/*"
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
@@ -36,8 +81,7 @@ data "aws_iam_policy_document" "github_assume" {
       variable = "token.actions.githubusercontent.com:aud"
       values   = ["sts.amazonaws.com"]
     }
-    # Worf (Observation Lounge): strict subject-claim matching — only the main branch may assume
-    # the deploy role. No wildcard `:*` (which would let any fork/branch/PR assume it).
+    # Worf: strict subject-claim — only the main branch may assume the deploy role (no wildcard).
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
@@ -51,8 +95,8 @@ resource "aws_iam_role" "github_actions" {
   assume_role_policy = data.aws_iam_policy_document.github_assume.json
 }
 
-# Deploy permissions: ECR push, ECS/ALB/ElastiCache/ServiceDiscovery/autoscaling/logs, read secrets,
-# and IAM management scoped to this project's roles (terraform creates the task/exec roles).
+# Deploy permissions: ECR push, ECS/ALB/ElastiCache/ServiceDiscovery/Route53/autoscaling/logs,
+# read this project's secrets, S3+DynamoDB for the remote state backend, and project-scoped IAM.
 data "aws_iam_policy_document" "github_deploy" {
   statement {
     sid       = "EcrPush"
@@ -61,20 +105,33 @@ data "aws_iam_policy_document" "github_deploy" {
   }
   statement {
     sid       = "DeployServices"
-    # route53:* is required: aws_service_discovery_private_dns_namespace creates a Route53 hosted zone.
+    # route53:* — aws_service_discovery_private_dns_namespace creates a Route53 hosted zone.
     actions   = ["ecs:*", "elasticloadbalancing:*", "elasticache:*", "servicediscovery:*", "route53:*", "application-autoscaling:*", "logs:*", "ec2:Describe*", "ec2:CreateSecurityGroup", "ec2:AuthorizeSecurityGroup*", "ec2:RevokeSecurityGroup*", "ec2:CreateTags", "ec2:DeleteSecurityGroup", "ec2:ModifySecurityGroupRules"]
     resources = ["*"]
   }
   statement {
     sid       = "ReadSecrets"
-    # GetResourcePolicy is required by the terraform aws_secretsmanager_secret data source.
     actions   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret", "secretsmanager:GetResourcePolicy"]
-    resources = [data.aws_secretsmanager_secret.aha.arn, data.aws_secretsmanager_secret.runtime.arn]
+    resources = [local.secret_arn_pattern]
   }
   statement {
     sid       = "ManageProjectIamRoles"
     actions   = ["iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:PassRole", "iam:AttachRolePolicy", "iam:DetachRolePolicy", "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:GetRolePolicy", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies", "iam:TagRole"]
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.name}-*"]
+  }
+  # Remote state backend access (S3 + DynamoDB lock) — so CI can read/write shared state.
+  statement {
+    sid       = "TerraformStateBackend"
+    actions   = ["s3:ListBucket", "s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    resources = [
+      "arn:aws:s3:::tf-state-${data.aws_caller_identity.current.account_id}-${var.region}",
+      "arn:aws:s3:::tf-state-${data.aws_caller_identity.current.account_id}-${var.region}/*",
+    ]
+  }
+  statement {
+    sid       = "TerraformStateLock"
+    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
+    resources = ["arn:aws:dynamodb:${var.region}:${data.aws_caller_identity.current.account_id}:table/tf-locks"]
   }
 }
 

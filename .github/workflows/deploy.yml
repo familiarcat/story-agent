@@ -79,6 +79,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - uses: hashicorp/setup-terraform@v3
+        with:
+          # Pin to the admin's local version so the shared S3 state never gets format-upgraded
+          # out from under a 1.5.7 local apply (Yar/O'Brien: avoid version drift on shared state).
+          terraform_version: "1.5.7"
 
       - name: Terraform init + plan
         working-directory: terraform

@@ -16,8 +16,12 @@ import { resolveWorfGateCredentialAsync } from '../packages/shared/src/worfgate-
 const AWS_CREDS = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'AWS_SESSION_TOKEN'] as const;
 
 async function main() {
-  const args = process.argv.slice(2);
-  if (!args.length) { console.error('Usage: worfgate-terraform.ts <init|validate|plan|apply|...>'); process.exit(2); }
+  let args = process.argv.slice(2);
+  // Optional: `--dir <path>` selects the terraform config dir (default `terraform`; use
+  // `terraform/bootstrap` for the admin-only bootstrap state). Must precede terraform args.
+  let dir = 'terraform';
+  if (args[0] === '--dir') { dir = args[1]; args = args.slice(2); }
+  if (!args.length) { console.error('Usage: worfgate-terraform.ts [--dir <path>] <init|validate|plan|apply|...>'); process.exit(2); }
 
   const env: Record<string, string> = { ...process.env } as Record<string, string>;
   const brokered: string[] = [];
@@ -35,7 +39,7 @@ async function main() {
   // Don't let an ambient AWS_PROFILE override the brokered static keys.
   delete env.AWS_PROFILE;
 
-  const tf = spawn('terraform', [`-chdir=terraform`, ...args], { stdio: 'inherit', env });
+  const tf = spawn('terraform', [`-chdir=${dir}`, ...args], { stdio: 'inherit', env });
   tf.on('close', (code) => process.exit(code ?? 1));
 }
 
