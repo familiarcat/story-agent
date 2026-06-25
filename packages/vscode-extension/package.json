@@ -66,6 +66,11 @@
         "icon": "$(diff)"
       },
       {
+        "command": "story-agent.inlineChat",
+        "title": "Story Agent: Inline Chat (ask about selection)",
+        "icon": "$(comment)"
+      },
+      {
         "command": "story-agent.refreshAhaTree",
         "title": "Story Agent: Refresh Aha Tree",
         "icon": "$(refresh)"
@@ -156,8 +161,23 @@
           "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
           "group": "inline"
         }
+      ],
+      "editor/context": [
+        {
+          "command": "story-agent.inlineChat",
+          "when": "editorTextFocus",
+          "group": "navigation@1"
+        }
       ]
     },
+    "keybindings": [
+      {
+        "command": "story-agent.inlineChat",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "editorTextFocus && !editorReadonly"
+      }
+    ],
     "configuration": {
       "title": "Story Agent",
       "properties": {

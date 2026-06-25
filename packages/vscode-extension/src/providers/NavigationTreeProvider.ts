@@ -45,6 +45,7 @@ const SECTIONS: NavSection[] = [
       { label: 'Plan a task (/plan)', icon: 'checklist', chat: '@story-agent /plan ', tooltip: 'Ordered plan, no edits' },
       { label: 'Review changes (/review)', icon: 'git-pull-request', chat: '@story-agent /review', tooltip: 'Read-only review of the working diff' },
       { label: 'Diff review (accept/reject per file)', icon: 'diff', command: 'story-agent.reviewChanges', tooltip: 'Inspect & revert the agent\'s edits per file' },
+      { label: 'Inline chat (Ctrl+I on a selection)', icon: 'comment', command: 'story-agent.inlineChat', tooltip: 'Ask about the selected code — Quark-optimized' },
     ],
   },
   {

@@ -73,6 +73,27 @@ function workspacePath(): string | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
+export interface ChatOnceResult { ok: boolean; answer?: string; model?: string; tier?: number; costUSD?: number; }
+
+/**
+ * One-shot canonical chat (no stream) — POSTs to the crew brain /chat (Quark-optimized model),
+ * trying the configured/cloud endpoint then the local loop. Used by inline chat (Ctrl+I).
+ */
+export async function chatOnce(message: string, clientId?: string | null): Promise<ChatOnceResult> {
+  for (const base of agentCandidates()) {
+    try {
+      const resp = await fetch(base + '/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, clientId: clientId ?? null }),
+      });
+      if (!resp.ok) continue;
+      const d: any = await resp.json();
+      return { ok: true, answer: d.answer, model: d.model, tier: d.tier, costUSD: d.costUSD };
+    } catch { /* next candidate */ }
+  }
+  return { ok: false };
+}
+
 export interface ChatTurnResult { ok: boolean; model?: string; costUSD?: number; }
 
 /**

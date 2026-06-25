@@ -6,6 +6,7 @@ import { CrewCopilotProvider } from './providers/CrewCopilotProvider';
 import { AhaProjectStructureProvider } from './providers/AhaProjectStructureProvider';
 import { NavigationTreeProvider } from './providers/NavigationTreeProvider';
 import { registerReviewChanges } from './reviewChanges';
+import { registerInlineChat } from './inlineChat';
 import { connectProviderInteractive } from './oauth';
 
 function dashboardBase(): string {
@@ -31,6 +32,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ── Multi-file diff review UI (per-file accept/reject) ───────────────────
   registerReviewChanges(context);
+
+  // ── Inline chat (Ctrl+I) over the canonical Quark /chat ──────────────────
+  registerInlineChat(context);
 
   // ── Sidebar webview ──────────────────────────────────────────────────────
   const sidebarProvider = new StorySidebarProvider(context);
