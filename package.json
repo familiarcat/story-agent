@@ -21,6 +21,7 @@
     "check": "pnpm run typecheck && pnpm run build",
     "ext:package": "pnpm --filter story-agent-vscode package",
     "ext:install-local": "code --install-extension packages/vscode-extension/story-agent-vscode-1.0.0.vsix --force",
+    "web:dev:clean": "rm -rf packages/ui/.next && pnpm --filter @story-agent/ui dev",
     "web:build-local": "pnpm --filter @story-agent/ui build",
     "web:start-local": "cd packages/ui && node_modules/.bin/next start -p 3000",
     "bridge:view": "pnpm run ui",

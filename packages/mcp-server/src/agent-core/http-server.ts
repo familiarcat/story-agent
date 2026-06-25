@@ -11,6 +11,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { handleChatRequest } from './chat.js';
 import { recordCost, costSummary } from './cost-ledger.js';
+import { handleAhaRequest } from './aha-http.js';
 import { runAgentLoop } from './loop.js';
 import { buildBridges } from './bridges.js';
 import { listClientHierarchy } from '@story-agent/shared/client-security-policy';
@@ -62,6 +63,7 @@ export function getAgentInvocationAudit(): AgentInvocationAudit[] {
  */
 export async function handleAgentRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   if (await handleChatRequest(req, res)) return true; // canonical Quark-optimized /chat
+  if (await handleAhaRequest(req, res)) return true;  // Aha products (single source, cached)
   const url = (req.url || '').split('?')[0];
   if (!(url === '/agent' || url === '/agent/' || url === '/agent/health' || url === '/symphony' || url === '/cost' || url === '/learnings')) return false;
   await serveAgent(req, res, url);
@@ -71,6 +73,7 @@ export async function handleAgentRequest(req: IncomingMessage, res: ServerRespon
 export function startAgentHttpServer(port: number) {
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     if (await handleChatRequest(req, res)) return; // canonical Quark-optimized /chat
+    if (await handleAhaRequest(req, res)) return;  // Aha products (single source, cached)
     await serveAgent(req, res, (req.url || '').split('?')[0], port);
   });
 

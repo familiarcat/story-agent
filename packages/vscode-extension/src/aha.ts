@@ -109,7 +109,28 @@ export async function fetchAhaStory(
   };
 }
 
+/** Crew server base for Aha (single source) — configured/cloud, then local loop. */
+function agentBases(): string[] {
+  const configured = (vscode.workspace.getConfiguration('storyAgent').get<string>('chat.agentServiceUrl') || process.env.STORY_AGENT_AGENT_URL || '').replace(/\/$/, '');
+  const local = 'http://localhost:3103';
+  return configured && configured !== local ? [configured, local] : [local];
+}
+
 export async function listAhaProjects(): Promise<AhaProject[]> {
+  // Single source: prefer the crew server's cached /aha/products (no per-client key needed); fall
+  // back to direct Aha REST if the brain is unreachable or Aha isn't configured there.
+  for (const base of agentBases()) {
+    try {
+      const r = await fetch(base + '/aha/products');
+      if (r.ok) {
+        const d: any = await r.json();
+        if (Array.isArray(d.products) && d.products.length) {
+          return d.products.map((p: any) => ({ id: String(p.id), name: p.name, referencePrefix: p.referencePrefix ?? null, url: p.url ?? '' }));
+        }
+      }
+    } catch { /* fall through to direct REST */ }
+  }
+
   const { domain, apiKey } = getConfig();
   const res = await fetch(`https://${domain}/api/v1/products?per_page=100`, {
     headers: {
