@@ -48,7 +48,9 @@ resource "aws_lb_target_group" "mcp_ws" {
   protocol             = "HTTP"
   vpc_id               = var.vpc_id
   target_type          = "ip"
-  deregistration_delay = 600 # let an active mission's WS drain (≥ mission length)
+  # 60s (was 600): under a Fargate vCPU quota of 2, a 10-min WS drain pins the old MCP task's vCPU and
+  # starves the new task during a deploy (deadlock). Short drain keeps stop-before-start within quota.
+  deregistration_delay = 60
   stickiness {
     type            = "lb_cookie"
     enabled         = true
@@ -113,6 +115,6 @@ resource "aws_lb_listener_rule" "mcp_agent" {
     target_group_arn = aws_lb_target_group.mcp_http.arn # agent routes are served on the 3101 server
   }
   condition {
-    path_pattern { values = ["/agent", "/agent/*", "/symphony"] }
+    path_pattern { values = ["/agent", "/agent/*", "/symphony", "/chat"] }
   }
 }
