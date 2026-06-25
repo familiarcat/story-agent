@@ -19,8 +19,11 @@ resource "aws_ecs_task_definition" "mcp" {
   family                   = "${local.name}-mcp"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "2048"
-  memory                   = "4096"
+  # 1 vCPU so UI(1) + MCP(1) fit the default Fargate vCPU quota of 2. Bump back to 2048 once the
+  # quota increase (requested via Service Quotas, L-3032A538) is approved; missions are
+  # OpenRouter-API-bound, not local-CPU-bound, so 1 vCPU / 2 GB is adequate at baseline.
+  cpu                      = "1024"
+  memory                   = "2048"
   execution_role_arn       = aws_iam_role.execution.arn
   task_role_arn            = aws_iam_role.task.arn
   runtime_platform {
