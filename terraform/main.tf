@@ -124,7 +124,7 @@ resource "aws_security_group" "service" {
     security_groups = [aws_security_group.alb.id]
   }
   ingress {
-    description = "intra-service (UI→MCP RAG, etc.)"
+    description = "intra-service (UI to MCP RAG, etc.)"
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"

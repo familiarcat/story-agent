@@ -61,7 +61,8 @@ data "aws_iam_policy_document" "github_deploy" {
   }
   statement {
     sid       = "DeployServices"
-    actions   = ["ecs:*", "elasticloadbalancing:*", "elasticache:*", "servicediscovery:*", "application-autoscaling:*", "logs:*", "ec2:Describe*", "ec2:CreateSecurityGroup", "ec2:AuthorizeSecurityGroup*", "ec2:RevokeSecurityGroup*", "ec2:CreateTags", "ec2:DeleteSecurityGroup", "ec2:ModifySecurityGroupRules"]
+    # route53:* is required: aws_service_discovery_private_dns_namespace creates a Route53 hosted zone.
+    actions   = ["ecs:*", "elasticloadbalancing:*", "elasticache:*", "servicediscovery:*", "route53:*", "application-autoscaling:*", "logs:*", "ec2:Describe*", "ec2:CreateSecurityGroup", "ec2:AuthorizeSecurityGroup*", "ec2:RevokeSecurityGroup*", "ec2:CreateTags", "ec2:DeleteSecurityGroup", "ec2:ModifySecurityGroupRules"]
     resources = ["*"]
   }
   statement {
