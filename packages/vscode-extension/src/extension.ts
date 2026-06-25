@@ -5,6 +5,7 @@ import { StoryExecutionPanel } from './panels/StoryExecutionPanel';
 import { CrewCopilotProvider } from './providers/CrewCopilotProvider';
 import { AhaProjectStructureProvider } from './providers/AhaProjectStructureProvider';
 import { NavigationTreeProvider } from './providers/NavigationTreeProvider';
+import { registerReviewChanges } from './reviewChanges';
 import { connectProviderInteractive } from './oauth';
 
 function dashboardBase(): string {
@@ -27,6 +28,9 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('storyAgent.projectStructure', projectStructureProvider)
   );
+
+  // ── Multi-file diff review UI (per-file accept/reject) ───────────────────
+  registerReviewChanges(context);
 
   // ── Sidebar webview ──────────────────────────────────────────────────────
   const sidebarProvider = new StorySidebarProvider(context);

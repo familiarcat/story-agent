@@ -10,9 +10,10 @@ import * as vscode from 'vscode';
 interface NavLeaf {
   label: string;
   icon: string;
-  /** Chat query to run (opens @story-agent with this), OR a dashboard path to open. */
+  /** Chat query to run (opens @story-agent with this), OR a dashboard path, OR a command id. */
   chat?: string;
   path?: string;
+  command?: string;
   tooltip?: string;
 }
 interface NavSection {
@@ -43,6 +44,7 @@ const SECTIONS: NavSection[] = [
       { label: 'Autonomous task (/agent)', icon: 'run-all', chat: '@story-agent /agent ', tooltip: 'Agentic loop: read/edit/run over OpenRouter' },
       { label: 'Plan a task (/plan)', icon: 'checklist', chat: '@story-agent /plan ', tooltip: 'Ordered plan, no edits' },
       { label: 'Review changes (/review)', icon: 'git-pull-request', chat: '@story-agent /review', tooltip: 'Read-only review of the working diff' },
+      { label: 'Diff review (accept/reject per file)', icon: 'diff', command: 'story-agent.reviewChanges', tooltip: 'Inspect & revert the agent\'s edits per file' },
     ],
   },
   {
@@ -102,6 +104,8 @@ export class NavigationTreeProvider implements vscode.TreeDataProvider<Node> {
       item.command = { command: 'story-agent.runChatCommand', title: leaf.label, arguments: [leaf.chat] };
     } else if (leaf.path) {
       item.command = { command: 'story-agent.openDashboardPath', title: leaf.label, arguments: [leaf.path] };
+    } else if (leaf.command) {
+      item.command = { command: leaf.command, title: leaf.label };
     }
     return item;
   }

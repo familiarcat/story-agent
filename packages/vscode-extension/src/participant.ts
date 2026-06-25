@@ -133,6 +133,8 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         const ctx = await gatherChatContext(request, token);
         if (ctx.note) stream.markdown(`${ctx.note}\n\n`);
         const result = await runAgentTurn(ctx.contextBlock + (ctx.prompt || prompt), stream, token);
+        // Multi-file diff review: let the user inspect / revert the agent's edits per file.
+        stream.button({ command: 'story-agent.reviewChanges', title: '$(diff) Review changes (accept/reject per file)' });
         return { metadata: { [META_CMD]: 'agent', escalated: result.escalated } };
       }
 

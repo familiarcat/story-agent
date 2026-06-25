@@ -61,6 +61,11 @@
     ],
     "commands": [
       {
+        "command": "story-agent.reviewChanges",
+        "title": "Story Agent: Review Changes (accept/reject per file)",
+        "icon": "$(diff)"
+      },
+      {
         "command": "story-agent.openDashboard",
         "title": "Story Agent: Open Dashboard",
         "icon": "$(browser)"
