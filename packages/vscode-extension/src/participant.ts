@@ -28,6 +28,21 @@ function extractRepo(text: string): string | undefined {
   return m && !m[1].startsWith('.') ? m[1] : undefined;
 }
 
+/** Flatten VS Code ChatContext.history into {role,content} turns for the /chat brain (last 8). */
+function extractChatHistory(ctx: vscode.ChatContext): Array<{ role: string; content: string }> {
+  const out: Array<{ role: string; content: string }> = [];
+  for (const turn of ctx.history ?? []) {
+    if (turn instanceof vscode.ChatRequestTurn) {
+      if (turn.prompt?.trim()) out.push({ role: 'user', content: turn.prompt.trim().slice(0, 4000) });
+    } else if (turn instanceof vscode.ChatResponseTurn) {
+      const text = turn.response
+        .map((p: any) => (p?.value?.value ?? p?.value ?? '')).filter((s: any) => typeof s === 'string').join('');
+      if (text.trim()) out.push({ role: 'assistant', content: text.trim().slice(0, 4000) });
+    }
+  }
+  return out.slice(-8);
+}
+
 const META_REF = 'referenceNum';
 const META_REPO = 'repoFullName';
 const META_CMD = 'lastCommand';
@@ -37,7 +52,7 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
     PARTICIPANT_ID,
     async (
       request: vscode.ChatRequest,
-      _ctx: vscode.ChatContext,
+      chatCtx: vscode.ChatContext,
       stream: vscode.ChatResponseStream,
       token: vscode.CancellationToken
     ): Promise<vscode.ChatResult | void> => {
@@ -166,9 +181,11 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         const actx = await gatherChatContext(request, token);
         if (actx.note) stream.markdown(`${actx.note}\n\n`);
         const msg = actx.contextBlock + (actx.prompt || prompt);
+        // Multi-turn: pass recent conversation from the chat session so the brain has memory.
+        const history = extractChatHistory(chatCtx);
         // Default to the canonical crew brain (/chat → Quark-optimized model selection); fall back to
         // the in-editor token-optimizing assistant if the brain is unreachable.
-        const chat = await runChatTurn(msg, stream, token);
+        const chat = await runChatTurn(msg, stream, token, history);
         if (chat.ok) return { metadata: { [META_CMD]: 'ask', model: chat.model } };
         const result = await runAssistantTurn(msg, stream, token, context.globalState);
         return { metadata: { [META_CMD]: 'ask', tier: result.tier, cached: result.cached } };

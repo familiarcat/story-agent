@@ -106,6 +106,7 @@ export async function runChatTurn(
   message: string,
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken,
+  history?: Array<{ role: string; content: string }>,
 ): Promise<ChatTurnResult> {
   const c = vscode.workspace.getConfiguration('storyAgent');
   const clientId = process.env.STORY_AGENT_CLIENT_ID || c.get<string>('chat.clientId') || null;
@@ -114,7 +115,7 @@ export async function runChatTurn(
       const resp = await fetch(base + '/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, clientId }),
+        body: JSON.stringify({ message, clientId, history: history ?? [] }),
       });
       if (!resp.ok) continue;
       const d: any = await resp.json();
