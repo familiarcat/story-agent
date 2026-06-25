@@ -133,6 +133,27 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         return { metadata: { [META_CMD]: 'agent', escalated: result.escalated } };
       }
 
+      // Plan mode (/plan) → agent-core proposes an ordered plan, no file edits. Parity with
+      // Claude Code / Copilot "plan" so you review before executing.
+      if (cmd === 'plan') {
+        if (!prompt.length) {
+          stream.markdown('Describe what to plan, e.g. `/plan add pagination to the stories API and update the dashboard`.');
+          return { metadata: { [META_CMD]: 'plan-missing' } };
+        }
+        const planPrompt = `PLAN MODE — do NOT edit files or run mutating commands. Read the codebase as needed and produce a concise, ordered implementation plan (numbered steps, files to touch, risks) for:\n\n${prompt}`;
+        const result = await runAgentTurn(planPrompt, stream, token);
+        stream.button({ command: 'story-agent.openObservationLounge', title: '$(eye) Open Observation Lounge' });
+        return { metadata: { [META_CMD]: 'plan', escalated: result.escalated } };
+      }
+
+      // Review mode (/review) → agent-core reviews the working diff, read-only.
+      if (cmd === 'review') {
+        const focus = prompt.length ? `\n\nFocus areas: ${prompt}` : '';
+        const reviewPrompt = `CODE REVIEW — read-only. Run git_status and git_diff to inspect the current working changes, then review them for bugs, security issues, and clarity. Do NOT edit files.${focus}`;
+        const result = await runAgentTurn(reviewPrompt, stream, token);
+        return { metadata: { [META_CMD]: 'review', escalated: result.escalated } };
+      }
+
       // Free-form chat (/ask or any non-command prompt) → token-optimizing assistant (single-shot)
       if (cmd === 'ask' || prompt.length > 0) {
         const result = await runAssistantTurn(prompt, stream, token, context.globalState);
@@ -146,6 +167,9 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         `| Command | What it does |\n|---|---|\n` +
         `| _(just type)_ | Chat with the assistant — simple turns use a cheap model, complex turns a capable one |\n` +
         `| \`/ask <question>\` | Same as typing — explicit chat |\n` +
+        `| \`/agent <task>\` | Autonomous mode — reads/edits files & runs commands via agent-core |\n` +
+        `| \`/plan <task>\` | Plan mode — ordered plan, no edits (review before executing) |\n` +
+        `| \`/review\` | Review the current working changes (git diff), read-only |\n` +
         `| \`/reset\` | Reset the session token budget meter |\n` +
         `| \`/prepare STORY-####\` | Load story mission from Aha, generate Observation Lounge brief |\n` +
         `| \`/status STORY-####\` | Check tracked story status |\n` +
@@ -170,6 +194,7 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         { prompt: `/status ${ref}`, label: `Check status of ${ref}`, participant: PARTICIPANT_ID },
       ];
       if (last === 'status' && ref) return [{ prompt: repo ? `/prepare ${ref} ${repo}` : `/prepare ${ref}`, label: `Prepare ${ref}`, participant: PARTICIPANT_ID }];
+      if (last === 'plan') return [{ prompt: '/agent ', label: '$(play) Execute this plan with /agent', participant: PARTICIPANT_ID }];
       if (last === 'help') return [
         { prompt: '/prepare STORY-123', label: '/prepare — start a story mission', participant: PARTICIPANT_ID },
         { prompt: '/dashboard', label: '/dashboard — open web UI', participant: PARTICIPANT_ID },
