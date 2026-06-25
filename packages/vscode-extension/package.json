@@ -66,6 +66,16 @@
         "icon": "$(diff)"
       },
       {
+        "command": "story-agent.refreshAhaTree",
+        "title": "Story Agent: Refresh Aha Tree",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "story-agent.prepareAhaStory",
+        "title": "Prepare with crew (/prepare)",
+        "icon": "$(rocket)"
+      },
+      {
         "command": "story-agent.openDashboard",
         "title": "Story Agent: Open Dashboard",
         "icon": "$(browser)"
@@ -129,6 +139,22 @@
           "type": "webview",
           "id": "story-agent.sidebar",
           "name": "Story Agent"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "story-agent.refreshAhaTree",
+          "when": "view == storyAgent.projectStructure",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "story-agent.prepareAhaStory",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
+          "group": "inline"
         }
       ]
     },

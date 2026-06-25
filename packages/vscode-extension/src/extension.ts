@@ -139,6 +139,14 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.env.openExternal(vscode.Uri.parse(url));
     }),
 
+    // Aha tree → refresh, and "Prepare with crew" (story → /prepare mission flow, crew Aha-nav plan).
+    vscode.commands.registerCommand('story-agent.refreshAhaTree', () => projectStructureProvider.refresh()),
+    vscode.commands.registerCommand('story-agent.prepareAhaStory', (item: any) => {
+      const ref = item?.story?.referenceNum;
+      if (!ref) { vscode.window.showWarningMessage('No Aha reference on this item.'); return; }
+      vscode.commands.executeCommand('workbench.action.chat.open', { query: `@story-agent /prepare ${ref}` });
+    }),
+
     vscode.commands.registerCommand(
       'story-agent.copyToClipboard',
       async (text: string) => {
