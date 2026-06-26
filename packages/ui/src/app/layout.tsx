@@ -13,6 +13,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <nav style={{ padding: '1rem 2rem', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>Story Agent</span>
           <a href="/dashboard" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>Dashboard</a>
+          <a href="/agent" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem', fontWeight: 600 }}>🛠️ Agent Workspace</a>
+          <a href="/chat" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>💬 Chat</a>
           <a href="/sprint" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>Sprint Board</a>
           <a href="/crew/memories" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>👥 Crew Memories</a>
           <a href="/story/new" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>+ New Story</a>
