@@ -1,0 +1,387 @@
+openapi: 3.1.0
+info:
+  title: Story Agent — Crew Server API
+  version: 1.0.0
+  description: >
+    The live HTTP surface of the Story Agent crew server (agent-core). This is the SINGLE SOURCE the
+    web UI, the VS Code extension, and external clients consume. Every endpoint runs on a
+    Quark-selected OpenRouter model; local file/shell operations pass the WorfGate green/yellow/red
+    governor.
+
+
+    Reconciliation note: this spec documents what is ACTUALLY running (`x-status: live`). The earlier
+    `specs/openapi.v1.yaml` describes an aspirational `/v1/*` resource API (projects, stories,
+    missions, conflicts) that is design-time only; those paths are summarized here under
+    `x-status: planned` and remain detailed in that file until implemented.
+servers:
+  - url: https://story-agent-alb-651393427.us-east-2.elb.amazonaws.com
+    description: Deployed crew brain (Fargate, behind the ALB)
+  - url: http://localhost:3103
+    description: Local crew server (STORY_AGENT_AGENT_PORT=3103)
+security: []
+tags:
+  - name: agent
+    description: The Claude-Code-grade agentic coding loop.
+  - name: chat
+    description: Single-shot crew chat.
+  - name: observability
+    description: Cost ledger, self-learning, crew hierarchy, health.
+  - name: aha
+    description: Aha! project-management proxy (single source, cached).
+paths:
+  /agent:
+    post:
+      tags: [agent]
+      summary: Run the agentic coding loop (SSE)
+      operationId: runAgent
+      x-status: live
+      x-owner: geordi
+      description: >
+        Runs agent-core's tool-calling loop (read_file, write_file, edit_file, apply_patch, list_dir,
+        search_code, run_shell, git_status, git_diff, rag_recall, crew_deliberate) on a Quark-selected
+        OpenRouter model. Responds with a `text/event-stream` of typed events (see AgentEvent). Local
+        mutations are governed by WorfGate; `gate` events report the green/yellow/red decision.
+      security:
+        - AgentServiceToken: []
+        - []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentRequest' }
+            example: { input: "List the files in packages/shared/src and summarize delegation-router.ts", tier: 3 }
+      responses:
+        '200':
+          description: Server-Sent Events stream of agent loop events.
+          content:
+            text/event-stream:
+              x-sse:
+                eventSchema: { $ref: '#/components/schemas/AgentEvent' }
+                terminalEvent: done
+              schema: { $ref: '#/components/schemas/AgentEvent' }
+              example: |
+                data: {"type":"model","model":"deepseek/deepseek-chat"}
+
+                data: {"type":"tool_call","tool":"list_dir","args":{"path":"packages/shared/src"}}
+
+                data: {"type":"gate","tool":"list_dir","tier":"green","remediations":[]}
+
+                data: {"type":"tool_result","tool":"list_dir","text":"delegation-router.ts\n...","tier":"green"}
+
+                event: done
+                data: {"finalText":"There are 24 files.","model":"deepseek/deepseek-chat","totalCostUSD":0.0021}
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /agent/health:
+    get:
+      tags: [observability]
+      summary: Liveness probe
+      operationId: agentHealth
+      x-status: live
+      responses:
+        '200':
+          description: Service is up.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+              example: { ok: true, service: story-agent-agent, port: 3103 }
+  /chat:
+    post:
+      tags: [chat]
+      summary: Single-shot crew chat
+      operationId: chat
+      x-status: live
+      x-owner: troi
+      description: One crew reply on the cheapest adequate OpenRouter model, with the model + cost echoed back.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatRequest' }
+            example: { message: "What does the crew think about caching?", history: [] }
+      responses:
+        '200':
+          description: The crew's answer plus routing/cost metadata.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatResponse' }
+              example:
+                answer: "hello there"
+                model: deepseek/deepseek-chat
+                provider: DeepSeek
+                tier: 3
+                tokensIn: 47
+                tokensOut: 3
+                costUSD: 0.000014
+                sources: []
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /cost:
+    get:
+      tags: [observability]
+      summary: Cost ledger (Quark spend + savings vs an Anthropic baseline)
+      operationId: getCost
+      x-status: live
+      x-owner: quark
+      responses:
+        '200':
+          description: Aggregate spend, per-provider/per-model breakdown, and savings vs a frontier baseline.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CostLedger' }
+              example:
+                turns: 1
+                totalUSD: 0.001979
+                tokensIn: 3587
+                tokensOut: 3587
+                perProvider: { deepseek: { costUSD: 0.001979, turns: 1 } }
+                perModel: { "deepseek/deepseek-chat": { costUSD: 0.001979, turns: 1 } }
+                baseline: { model: anthropic/claude-sonnet-4.6, wouldCostUSD: 0.064566, savedUSD: 0.062587 }
+  /learnings:
+    get:
+      tags: [observability]
+      summary: Crew self-learning cards (recent agent outcomes)
+      operationId: getLearnings
+      x-status: live
+      responses:
+        '200':
+          description: Recent input→outcome learning cards from the agent loop.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Learnings' }
+  /symphony:
+    get:
+      tags: [observability]
+      summary: Firm → client → project hierarchy (with WorfGate posture)
+      operationId: getSymphony
+      x-status: live
+      responses:
+        '200':
+          description: The firm root and its nested clients/projects.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Symphony' }
+  /aha/products:
+    get:
+      tags: [aha]
+      summary: Aha products (cached, single source)
+      operationId: ahaProducts
+      x-status: live
+      x-owner: data
+      responses:
+        '200':
+          description: The Aha products list, served from the crew's resolved key with a short TTL cache.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AhaProducts' }
+  /aha/raw:
+    get:
+      tags: [aha]
+      summary: Read-only Aha REST proxy (cached)
+      operationId: ahaRaw
+      x-status: live
+      x-owner: data
+      description: >
+        Proxies a GET to `https://<aha-domain>/api/v1/<path>` using the crew's resolved key, with a
+        per-path TTL cache. Path is validated (GET-only, safe characters, no traversal) and scoped to
+        the Aha host. Returns the raw Aha JSON unchanged.
+      parameters:
+        - name: path
+          in: query
+          required: true
+          description: An Aha API resource path (e.g. `products/PROD/releases?per_page=50`). Validated server-side.
+          schema: { type: string, pattern: '^[A-Za-z0-9/_\-.]+(\?[A-Za-z0-9/_\-.=&%]*)?$' }
+      responses:
+        '200':
+          description: Raw Aha API JSON (passthrough).
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  # ── Aspirational resource API (design-time; see specs/openapi.v1.yaml) ──────────────────────────
+  /v1/projects:
+    x-status: planned
+    description: Planned REST resource API (projects/stories/sprints/missions/conflicts). Detailed in specs/openapi.v1.yaml; not yet implemented on the crew server.
+components:
+  securitySchemes:
+    AgentServiceToken:
+      type: http
+      scheme: bearer
+      description: >
+        Optional service token (env AGENT_SERVICE_TOKEN). When the server is configured with a token,
+        `/agent` requires `Authorization: Bearer <token>`; when unset (local dev), it is open.
+  responses:
+    BadRequest:
+      description: Malformed request (e.g. missing `input`, bad JSON, invalid `path`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: input_required }
+    Unauthorized:
+      description: Missing/invalid bearer token when a service token is configured.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: unauthorized }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+    Health:
+      type: object
+      properties:
+        ok: { type: boolean }
+        service: { type: string }
+        port: { type: integer }
+      required: [ok, service]
+    AgentRequest:
+      type: object
+      properties:
+        input: { type: string, description: The coding task / instruction. }
+        workspace: { type: string, description: Optional workspace root; clamped into the repo by WorfGate. }
+        clientId: { type: [string, "null"], description: Client scope for isolation/audit. }
+        tier: { type: integer, minimum: 1, maximum: 4, description: Optional capability-tier hint for Quark. }
+      required: [input]
+    AgentEvent:
+      description: One Server-Sent Event from the agent loop. Discriminated by `type`.
+      oneOf:
+        - { $ref: '#/components/schemas/EvModel' }
+        - { $ref: '#/components/schemas/EvText' }
+        - { $ref: '#/components/schemas/EvToolCall' }
+        - { $ref: '#/components/schemas/EvGate' }
+        - { $ref: '#/components/schemas/EvToolResult' }
+        - { $ref: '#/components/schemas/EvCost' }
+        - { $ref: '#/components/schemas/EvSimpleText' }
+        - { $ref: '#/components/schemas/EvDone' }
+    EvModel:
+      type: object
+      properties: { type: { const: model }, model: { type: string } }
+      required: [type, model]
+    EvText:
+      type: object
+      properties: { type: { const: text }, text: { type: string } }
+      required: [type, text]
+    EvToolCall:
+      type: object
+      properties: { type: { const: tool_call }, tool: { type: string }, args: {} }
+      required: [type, tool]
+    EvGate:
+      type: object
+      description: WorfGate governance decision for a tool call.
+      properties:
+        type: { const: gate }
+        tool: { type: string }
+        tier: { type: string, enum: [green, yellow, red] }
+        remediations: { type: array, items: { type: string } }
+      required: [type, tool, tier]
+    EvToolResult:
+      type: object
+      properties:
+        type: { const: tool_result }
+        tool: { type: string }
+        text: { type: string }
+        tier: { type: string }
+      required: [type, tool, text]
+    EvCost:
+      type: object
+      properties: { type: { const: cost }, costUSD: { type: number }, text: { type: string } }
+      required: [type]
+    EvSimpleText:
+      type: object
+      description: lens / escalation / retry / error — short status lines.
+      properties:
+        type: { type: string, enum: [lens, escalation, retry, error] }
+        text: { type: string }
+        tool: { type: string }
+      required: [type, text]
+    EvDone:
+      type: object
+      description: Terminal event (also delivered as `event: done`). Carries the loop result.
+      properties:
+        type: { const: done }
+        finalText: { type: string }
+        model: { type: string }
+        totalCostUSD: { type: number }
+      required: [model]
+    ChatRequest:
+      type: object
+      properties:
+        message: { type: string }
+        history:
+          type: array
+          items:
+            type: object
+            properties: { role: { type: string, enum: [user, assistant] }, content: { type: string } }
+      required: [message]
+    ChatResponse:
+      type: object
+      properties:
+        answer: { type: string }
+        model: { type: string }
+        provider: { type: string }
+        tier: { type: integer }
+        tokensIn: { type: integer }
+        tokensOut: { type: integer }
+        costUSD: { type: number }
+        sources: { type: array, items: { type: string } }
+      required: [answer, model, provider, tier, costUSD]
+    CostLedger:
+      type: object
+      properties:
+        turns: { type: integer }
+        totalUSD: { type: number }
+        tokensIn: { type: integer }
+        tokensOut: { type: integer }
+        perProvider:
+          type: object
+          additionalProperties:
+            type: object
+            properties: { costUSD: { type: number }, turns: { type: integer } }
+        perModel:
+          type: object
+          additionalProperties:
+            type: object
+            properties: { costUSD: { type: number }, turns: { type: integer } }
+        baseline:
+          type: object
+          properties:
+            model: { type: string }
+            wouldCostUSD: { type: number }
+            savedUSD: { type: number }
+            savingsPct: { type: number }
+      required: [turns, totalUSD, baseline]
+    Learnings:
+      type: object
+      properties:
+        count: { type: integer }
+        cards:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp: { type: string, format: date-time }
+              input: { type: string }
+              outcome: { type: string }
+      required: [count, cards]
+    Symphony:
+      type: object
+      properties:
+        firm: { type: string }
+        clients: { type: array, items: { $ref: '#/components/schemas/ClientNode' } }
+      required: [firm, clients]
+    ClientNode:
+      type: object
+      properties:
+        clientId: { type: string }
+        clientName: { type: string }
+        tier: { type: string }
+        worfGateEnforce: { type: boolean }
+        children: { type: array, items: { $ref: '#/components/schemas/ClientNode' } }
+      required: [clientId, clientName]
+    AhaProducts:
+      type: object
+      properties:
+        products: { type: array, items: { type: object, additionalProperties: true } }
+        cachedAt: { type: [number, "null"] }
+      required: [products]
