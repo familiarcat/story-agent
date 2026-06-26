@@ -26,8 +26,14 @@ resource "aws_elasticache_replication_group" "redis" {
   # change. Worf: rotate the token on enablement; REDIS_URL is never logged (db.ts swallows connection
   # errors, diagnostics expose only a bool).
   transit_encryption_enabled = var.redis_transit_encryption
-  auth_token                 = var.redis_transit_encryption ? var.redis_auth_token : null
+  transit_encryption_mode    = var.redis_transit_encryption ? var.redis_transit_mode : null
+  # Empty token → null (no AUTH): TLS-in-transit alone closes the interception threat inside the
+  # private SG; AUTH is an optional second factor supplied via TF_VAR_redis_auth_token.
+  auth_token                 = (var.redis_transit_encryption && var.redis_auth_token != "") ? var.redis_auth_token : null
   automatic_failover_enabled = false
+  # Required by ElastiCache to modify transit encryption (and applies other changes now, not in the
+  # weekly maintenance window — correct for a single-node cache where deferred changes surprise).
+  apply_immediately = true
 }
 
 # NOTE: after apply, put rediss://:<auth_token>@<endpoint>:6379 into the story-agent/runtime secret (REDIS_URL):

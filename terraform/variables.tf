@@ -69,9 +69,9 @@ variable "acm_certificate_arn" {
 }
 
 variable "redis_transit_encryption" {
-  description = "Enable ElastiCache TLS-in-transit + AUTH. OFF by default: turning it ON forces a cluster REPLACEMENT (downtime), so flip it ONLY during the Redis TLS cutover maintenance window (docs/runbooks/redis-tls-cutover.md), together with redis_auth_token. Keeping it off lets normal CI deploys plan/apply without touching Redis."
+  description = "Enable ElastiCache TLS-in-transit. Default TRUE since the 2026-06-26 cutover (enabled in-place, mode=preferred) — keeping the default ON means normal CI deploys preserve encryption instead of reverting it. node-redis negotiates TLS from the rediss:// scheme in REDIS_URL."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "redis_auth_token" {
@@ -79,6 +79,12 @@ variable "redis_auth_token" {
   type        = string
   default     = ""
   sensitive   = true
+}
+
+variable "redis_transit_mode" {
+  description = "ElastiCache transit-encryption mode when enabling on an existing cluster. AWS requires the migration to go 'preferred' (TLS allowed AND plaintext still accepted — zero dropped connections) BEFORE 'required' (plaintext rejected). Start preferred, flip to required after REDIS_URL is rediss:// and the service has rolled."
+  type        = string
+  default     = "preferred"
 }
 
 variable "openrouter_model" {
