@@ -1,0 +1,12 @@
+# Spectral ruleset — the frugal anti-rot check for the OpenAPI spec(s).
+# The v1 spec rotted because nothing validated it; this fails CI on structural errors while
+# treating documentation-style nits as warnings (so style never blocks a deploy).
+extends: ["spectral:oas"]
+rules:
+  info-contact: off
+  info-license: off
+  oas3-unused-component: off
+  operation-tag-defined: warn
+  operation-operationId: warn
+  operation-description: warn
+  operation-singular-tag: off

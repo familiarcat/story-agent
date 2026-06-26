@@ -43,7 +43,7 @@ paths:
         mutations are governed by WorfGate; `gate` events report the green/yellow/red decision.
       security:
         - AgentServiceToken: []
-        - []
+        - {}
       requestBody:
         required: true
         content:
@@ -55,21 +55,19 @@ paths:
           description: Server-Sent Events stream of agent loop events.
           content:
             text/event-stream:
+              # The event stream is a sequence of AgentEvent objects (one per `data:` line). A sample
+              # transcript lives in x-sse.sample (a vendor extension, so it isn't schema-validated as
+              # a single AgentEvent — an SSE stream is many events, which OpenAPI can't model directly).
               x-sse:
                 eventSchema: { $ref: '#/components/schemas/AgentEvent' }
                 terminalEvent: done
+                sample:
+                  - 'data: {"type":"model","model":"deepseek/deepseek-chat"}'
+                  - 'data: {"type":"tool_call","tool":"list_dir","args":{"path":"packages/shared/src"}}'
+                  - 'data: {"type":"gate","tool":"list_dir","tier":"green","remediations":[]}'
+                  - 'data: {"type":"tool_result","tool":"list_dir","text":"...","tier":"green"}'
+                  - 'event: done / data: {"finalText":"There are 24 files.","model":"deepseek/deepseek-chat","totalCostUSD":0.0021}'
               schema: { $ref: '#/components/schemas/AgentEvent' }
-              example: |
-                data: {"type":"model","model":"deepseek/deepseek-chat"}
-
-                data: {"type":"tool_call","tool":"list_dir","args":{"path":"packages/shared/src"}}
-
-                data: {"type":"gate","tool":"list_dir","tier":"green","remediations":[]}
-
-                data: {"type":"tool_result","tool":"list_dir","text":"delegation-router.ts\n...","tier":"green"}
-
-                event: done
-                data: {"finalText":"There are 24 files.","model":"deepseek/deepseek-chat","totalCostUSD":0.0021}
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /agent/health:
@@ -297,7 +295,7 @@ components:
       required: [type, text]
     EvDone:
       type: object
-      description: Terminal event (also delivered as `event: done`). Carries the loop result.
+      description: "Terminal event (also delivered as the done SSE event); carries the loop result."
       properties:
         type: { const: done }
         finalText: { type: string }
