@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { color, tier as TIER_COLOR, font } from '@/lib/tokens';
+import { parseSSEFrame, cumulativeCost, sanitizeError, isDiff, safeJson } from './transcript';
 
 /**
  * Agent Workspace — a Claude-Code-grade coding loop in the browser, running entirely on the
@@ -23,8 +25,6 @@ type Ev =
   | { kind: 'retry'; text: string }
   | { kind: 'done'; model?: string; costUSD?: number; text?: string }
   | { kind: 'error'; text: string };
-
-const TIER_COLOR: Record<string, string> = { green: '#059669', yellow: '#d97706', red: '#dc2626' };
 
 export default function AgentPage() {
   const [events, setEvents] = useState<Ev[]>([]);
@@ -53,11 +53,10 @@ export default function AgentPage() {
 
   function handleFrame(eventName: string | null, data: any) {
     if (!data) return;
+    // Running cost is SET-wise (cost/done carry cumulative spend) — one reducer for every frame.
+    setSessionCost(prev => cumulativeCost(prev, { eventName, data }));
     // The final `event: done` payload is the loop RESULT (finalText/totalCostUSD/model).
     if (eventName === 'done') {
-      // totalCostUSD is the final cumulative spend — SET it (don't add) so it can't double-count a
-      // value a prior 'cost' frame already reflected.
-      if (typeof data.totalCostUSD === 'number') setSessionCost(data.totalCostUSD);
       pushEv({ kind: 'done', model: data.model, costUSD: data.totalCostUSD, text: data.finalText });
       return;
     }
@@ -68,8 +67,7 @@ export default function AgentPage() {
       case 'tool_call': pushEv({ kind: 'tool_call', tool: data.tool, args: data.args }); break;
       case 'gate': pushEv({ kind: 'gate', tool: data.tool, tier: data.tier, remediations: data.remediations, needsApproval: data.needsApproval, approvalId: data.approvalId }); break;
       case 'tool_result': pushEv({ kind: 'tool_result', tool: data.tool, text: data.text, tier: data.tier }); break;
-      // 'cost' carries the cumulative spend at a review-threshold crossing → reflect it live in the header.
-      case 'cost': if (typeof data.costUSD === 'number') setSessionCost(data.costUSD); pushEv({ kind: 'cost', costUSD: data.costUSD, text: data.text }); break;
+      case 'cost': pushEv({ kind: 'cost', costUSD: data.costUSD, text: data.text }); break;
       case 'escalation': pushEv({ kind: 'escalation', tool: data.tool, text: data.text }); break;
       case 'retry': pushEv({ kind: 'retry', text: data.text }); break;
       case 'error': pushEv({ kind: 'error', text: data.text }); break;
@@ -110,14 +108,8 @@ export default function AgentPage() {
         const blocks = buf.split('\n\n');
         buf = blocks.pop() ?? '';
         for (const block of blocks) {
-          let eventName: string | null = null;
-          const dataLines: string[] = [];
-          for (const line of block.split('\n')) {
-            if (line.startsWith('event:')) eventName = line.slice(6).trim();
-            else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
-          }
-          if (!dataLines.length) continue;
-          try { handleFrame(eventName, JSON.parse(dataLines.join('\n'))); } catch { /* skip partial */ }
+          const frame = parseSSEFrame(block);
+          if (frame) handleFrame(frame.eventName, frame.data);
         }
       }
     } catch (e: any) {
@@ -128,10 +120,10 @@ export default function AgentPage() {
   }
 
   return (
-    <main style={{ maxWidth: 880, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
+    <main style={{ maxWidth: 880, margin: '0 auto', padding: '1.5rem', fontFamily: font.sans }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.4rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🛠️ Story Agent — Agent Workspace</h1>
-        <span style={{ fontSize: '0.8rem', color: '#6b7280', fontFamily: 'ui-monospace, monospace' }}>
+        <span style={{ fontSize: '0.8rem', color: color.muted, fontFamily: font.mono }}>
           {model ? `🤖 ${model}` : 'OpenRouter · Quark-selected'} · session ~${sessionCost.toFixed(4)}
         </span>
       </header>
@@ -169,7 +161,7 @@ export default function AgentPage() {
 }
 
 function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'approve' | 'deny'>; onApprove: (id: string, d: 'approve' | 'deny') => void }) {
-  const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace', fontSize: '0.8rem' };
+  const mono: React.CSSProperties = { fontFamily: font.mono, fontSize: '0.8rem' };
   switch (e.kind) {
     case 'user':
       return <Block label="You" color="#2563eb"><div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{e.text}</div></Block>;
@@ -187,7 +179,7 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
         </div>
       );
     case 'gate': {
-      const c = TIER_COLOR[e.tier] ?? '#6b7280';
+      const c = TIER_COLOR[e.tier as keyof typeof TIER_COLOR] ?? color.muted;
       const icon = e.tier === 'green' ? '🟢' : e.tier === 'yellow' ? '🟡' : e.tier === 'red' ? '🔴' : '⚪';
       const decision = e.approvalId ? decided[e.approvalId] : undefined;
       return (
@@ -231,7 +223,7 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
       );
     case 'error':
       return (
-        <div role="alert" style={{ margin: '0.4rem 0', padding: '0.6rem 0.8rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: '0.85rem', lineHeight: 1.5 }}>
+        <div role="alert" style={{ margin: '0.4rem 0', padding: '0.6rem 0.8rem', background: color.errBg, border: `1px solid ${color.errBorder}`, borderRadius: 6, color: color.errText, fontSize: '0.85rem', lineHeight: 1.5 }}>
           ⚠️ <strong>Error:</strong> {sanitizeError(e.text)}
         </div>
       );
@@ -249,32 +241,8 @@ function Block({ label, color, children }: { label: string; color: string; child
   );
 }
 
-function safeJson(v: unknown): string {
-  try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2); } catch { return String(v); }
-}
-
-/**
- * Surface a clean, human-readable error to the browser (Yar/Troi): take the first meaningful line,
- * strip absolute filesystem paths (which can leak internals/usernames) and stack frames, and cap the
- * length. Full detail stays server-side in the agent audit/logs.
- */
-function sanitizeError(text: string): string {
-  if (!text || !text.trim()) return 'Something went wrong. Please try again.';
-  const firstLine = text.split('\n').find(l => l.trim() && !/^\s*at\s/.test(l)) ?? text;
-  return firstLine
-    .replace(/\/(?:Users|home|var|opt|private|tmp)\/[^\s)'"]+/g, '<path>')
-    .trim()
-    .slice(0, 300);
-}
-
-function btn(color: string): React.CSSProperties {
-  return { marginLeft: 6, padding: '1px 8px', fontSize: '0.72rem', borderRadius: 5, border: `1px solid ${color}`, background: 'white', color, cursor: 'pointer' };
-}
-
-/** Heuristic: does this tool result look like a unified diff worth colorizing? */
-function isDiff(tool: string, text: string): boolean {
-  if (/git_diff|apply_patch/.test(tool)) return /^[-+@]|^diff |^@@/m.test(text);
-  return /^@@.*@@/m.test(text) && /^[-+]/m.test(text);
+function btn(c: string): React.CSSProperties {
+  return { marginLeft: 6, padding: '1px 8px', fontSize: '0.72rem', borderRadius: 5, border: `1px solid ${c}`, background: 'white', color: c, cursor: 'pointer' };
 }
 
 /** Render a unified diff with colored add/remove lines. */
