@@ -55,7 +55,9 @@ export default function AgentPage() {
     if (!data) return;
     // The final `event: done` payload is the loop RESULT (finalText/totalCostUSD/model).
     if (eventName === 'done') {
-      if (typeof data.totalCostUSD === 'number') setSessionCost(c => c + data.totalCostUSD);
+      // totalCostUSD is the final cumulative spend — SET it (don't add) so it can't double-count a
+      // value a prior 'cost' frame already reflected.
+      if (typeof data.totalCostUSD === 'number') setSessionCost(data.totalCostUSD);
       pushEv({ kind: 'done', model: data.model, costUSD: data.totalCostUSD, text: data.finalText });
       return;
     }
@@ -66,11 +68,12 @@ export default function AgentPage() {
       case 'tool_call': pushEv({ kind: 'tool_call', tool: data.tool, args: data.args }); break;
       case 'gate': pushEv({ kind: 'gate', tool: data.tool, tier: data.tier, remediations: data.remediations, needsApproval: data.needsApproval, approvalId: data.approvalId }); break;
       case 'tool_result': pushEv({ kind: 'tool_result', tool: data.tool, text: data.text, tier: data.tier }); break;
-      case 'cost': if (typeof data.costUSD === 'number') setSessionCost(c => c + 0); pushEv({ kind: 'cost', costUSD: data.costUSD, text: data.text }); break;
+      // 'cost' carries the cumulative spend at a review-threshold crossing → reflect it live in the header.
+      case 'cost': if (typeof data.costUSD === 'number') setSessionCost(data.costUSD); pushEv({ kind: 'cost', costUSD: data.costUSD, text: data.text }); break;
       case 'escalation': pushEv({ kind: 'escalation', tool: data.tool, text: data.text }); break;
       case 'retry': pushEv({ kind: 'retry', text: data.text }); break;
-      case 'done': if (typeof data.costUSD === 'number') setSessionCost(c => c + data.costUSD); pushEv({ kind: 'done', model: data.model, costUSD: data.costUSD }); break;
       case 'error': pushEv({ kind: 'error', text: data.text }); break;
+      // NOTE: 'done' is a NAMED SSE event (handled above), never a data.type — no case needed here.
       default: break;
     }
   }
@@ -227,7 +230,11 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
         </div>
       );
     case 'error':
-      return <div style={{ ...mono, color: '#dc2626', margin: '0.3rem 0' }}>⚠️ {e.text}</div>;
+      return (
+        <div role="alert" style={{ margin: '0.4rem 0', padding: '0.6rem 0.8rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: '0.85rem', lineHeight: 1.5 }}>
+          ⚠️ <strong>Error:</strong> {sanitizeError(e.text)}
+        </div>
+      );
     default:
       return null;
   }
@@ -244,6 +251,20 @@ function Block({ label, color, children }: { label: string; color: string; child
 
 function safeJson(v: unknown): string {
   try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2); } catch { return String(v); }
+}
+
+/**
+ * Surface a clean, human-readable error to the browser (Yar/Troi): take the first meaningful line,
+ * strip absolute filesystem paths (which can leak internals/usernames) and stack frames, and cap the
+ * length. Full detail stays server-side in the agent audit/logs.
+ */
+function sanitizeError(text: string): string {
+  if (!text || !text.trim()) return 'Something went wrong. Please try again.';
+  const firstLine = text.split('\n').find(l => l.trim() && !/^\s*at\s/.test(l)) ?? text;
+  return firstLine
+    .replace(/\/(?:Users|home|var|opt|private|tmp)\/[^\s)'"]+/g, '<path>')
+    .trim()
+    .slice(0, 300);
 }
 
 function btn(color: string): React.CSSProperties {
