@@ -30,4 +30,5 @@ console.log('OBS '+obs.id+' emb='+embeddingSource());
 const m=await storeCrewPersonalMemory({crew_id:'quark',memory_type:'decision_note',title:'How to actually cut Claude Code cost via the OpenRouter/Quark crew (delegation vs proxy)',content:r.missionPlan,tags:['cost','claude-code','openrouter','proxy'],relates_to_crew:['picard','geordi','riker','worf','troi','data']});
 console.log('MEM '+m);
 console.log('COST $'+r.efficiency.totalCostUSD+' topModel='+r.topModel);
+process.exit(0); // work done — exit promptly instead of hanging on open DB/socket handles
 })().catch(e=>{console.error('ERR',e?.message||e);process.exit(1);});
