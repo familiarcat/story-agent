@@ -114,6 +114,10 @@ export function gateLocalOp(
     return { tier: 'yellow', args, proceed: true, reasons: ['bounded mutation'], remediations };
   }
 
-  // Unknown tool → treat as yellow (proceed) but flag for the audit trail.
-  return { tier: 'yellow', args, proceed: true, reasons: [`unclassified tool ${tool}`], remediations };
+  // Unknown/unclassified tool → deny-by-default (red, withhold) and escalate for review, rather
+  // than auto-running as a bounded mutation. A browser-driven request can name a tool the governor
+  // doesn't recognize; defaulting such tools to yellow would let an unvetted op proceed. Worf's
+  // security review (docs/security/browser-agent-review-2026-06-26.md, finding #3) requires explicit
+  // classification before an op runs.
+  return { tier: 'red', args, proceed: false, reasons: [`unclassified tool ${tool} — defaulting to red (deny-by-default)`], remediations };
 }
