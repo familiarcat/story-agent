@@ -71,7 +71,7 @@ export interface TeamPlan { issue: string; complex: boolean; team: TeamMember[];
  * RIKER assembles a team for the issue (skill/tool match), then QUARK optimizes the model per member.
  * Picard is always included to arbitrate; specialists join when the issue touches their domain.
  */
-export function assembleAndOptimize(issue: string): TeamPlan {
+export function assembleAndOptimize(issue: string, maxTier: 1 | 2 | 3 | 4 = 4): TeamPlan {
   const text = issue.toLowerCase();
   const complex = COMPLEX.some(k => text.includes(k)) || issue.length > 400;
 
@@ -82,7 +82,8 @@ export function assembleAndOptimize(issue: string): TeamPlan {
 
   const providerMix: Record<string, number> = {};
   const team: TeamMember[] = selected.map(c => {
-    const capabilityTier = Math.min(4, c.baseTier + (complex ? 1 : 0));
+    // maxTier lets a FRUGAL caller cap deliberation at tier-3 (deepseek) — no frontier escalation.
+    const capabilityTier = Math.min(maxTier, c.baseTier + (complex ? 1 : 0)) as 1 | 2 | 3 | 4;
     const m = quarkSelectModel(capabilityTier);
     providerMix[m.provider] = (providerMix[m.provider] ?? 0) + 1;
     return {

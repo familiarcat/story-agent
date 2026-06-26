@@ -39,11 +39,21 @@ async function call(model: string, system: string, user: string, maxTokens = 220
     usage: { include: true },
   };
   if (model.startsWith('anthropic/')) body.provider = { order: ['Anthropic'], allow_fallbacks: true };
-  const resp = await fetch(`${OR_URL}/chat/completions`, {
-    method: 'POST', headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const d: any = await resp.json();
+  // Hard per-call timeout so one slow/hung provider can't stall the whole pipeline for minutes.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), Number(process.env.CREW_CALL_TIMEOUT_MS || 60000));
+  let d: any;
+  try {
+    const resp = await fetch(`${OR_URL}/chat/completions`, {
+      method: 'POST', headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body), signal: ctrl.signal,
+    });
+    d = await resp.json();
+  } catch (e: any) {
+    d = { error: { message: e?.name === 'AbortError' ? 'call timed out' : (e?.message || 'call failed') } };
+  } finally {
+    clearTimeout(timer);
+  }
   const tin = d.usage?.prompt_tokens ?? 0, tout = d.usage?.completion_tokens ?? 0;
   return { text: (d.choices?.[0]?.message?.content || d.error?.message || '').trim(), model: d.model || model, tokensIn: tin, tokensOut: tout, costUSD: costOf(model, tin, tout) };
 }
@@ -68,8 +78,9 @@ export async function runMissionPipeline(nlInput: string): Promise<MissionPipeli
   ledger.push(intake);
   const goals = intake.text;
 
-  // 2 + 3. RIKER assembles + QUARK optimizes models (deterministic engine).
-  const plan = assembleAndOptimize(goals + '\n' + nlInput);
+  // 2 + 3. RIKER assembles + QUARK optimizes models (deterministic engine). FRUGAL caps officer
+  // deliberation at tier-3 (deepseek) — no frontier escalation, the prior run's cost+latency driver.
+  const plan = assembleAndOptimize(goals + '\n' + nlInput, FRUGAL ? 3 : 4);
 
   // 4. CREW executes — each member contributes on their Quark-assigned model (lounge style).
   const contributions = await Promise.all(plan.team.map(async (m) => {
