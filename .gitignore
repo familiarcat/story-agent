@@ -26,3 +26,6 @@ crash.log
 terraform/bootstrap/.terraform/
 terraform/bootstrap/*.tfstate*
 terraform/.terraform/
+
+# delegation router runtime audit log
+.claude/delegation-audit.jsonl

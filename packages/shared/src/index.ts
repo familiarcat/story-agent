@@ -621,3 +621,8 @@ export { routeTaskToCrew, getPrimaryCrewForTask, generateCrewBriefing, validateC
 // ── Crew Baseline Knowledge ─────────────────────────────────────────────────
 
 export { CREW_BASELINE_MEMORIES } from './lib/crew-baseline-memories.js';
+
+// ── Delegation Router (reusable complexity/cost scorer) ──────────────────────
+
+export { scoreDelegation } from './delegation-router.js';
+export type { DelegationDecision, DelegationOptions, Route, DelegateMode, TokenRate } from './delegation-router.js';
