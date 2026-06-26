@@ -19,21 +19,23 @@ resource "aws_elasticache_replication_group" "redis" {
   security_group_ids         = [aws_security_group.redis.id]
   at_rest_encryption_enabled = true
   # TLS-in-transit + AUTH (crew infra-integration #2, Worf): the approval pub/sub carries operator
-  # decisions, so encrypt the channel even inside the private SG. node-redis auto-negotiates TLS from
-  # the rediss:// scheme; the auth_token rides in the URL. GATED behind redis_transit_encryption
-  # (default OFF) because enabling it on an existing cluster forces REPLACEMENT (downtime) — so it's a
-  # deliberate maintenance-window cutover (docs/runbooks/redis-tls-cutover.md), not a normal-deploy
-  # change. Worf: rotate the token on enablement; REDIS_URL is never logged (db.ts swallows connection
-  # errors, diagnostics expose only a bool).
+  # decisions, so encrypt + authenticate the channel even inside the private SG. Enabled in-place on
+  # 2026-06-26 (no replacement) via mode=preferred, then hardened to mode=required (plaintext rejected).
+  # node-redis auto-negotiates TLS from the rediss:// scheme; the auth_token rides in the URL.
+  # REDIS_URL is never logged (db.ts swallows connection errors, diagnostics expose only a bool).
   transit_encryption_enabled = var.redis_transit_encryption
   transit_encryption_mode    = var.redis_transit_encryption ? var.redis_transit_mode : null
-  # Empty token → null (no AUTH): TLS-in-transit alone closes the interception threat inside the
-  # private SG; AUTH is an optional second factor supplied via TF_VAR_redis_auth_token.
-  auth_token                 = (var.redis_transit_encryption && var.redis_auth_token != "") ? var.redis_auth_token : null
+  # auth_token is managed OUT-OF-BAND (see ignore_changes below) — never a terraform/CI var.
   automatic_failover_enabled = false
   # Required by ElastiCache to modify transit encryption (and applies other changes now, not in the
   # weekly maintenance window — correct for a single-node cache where deferred changes surprise).
   apply_immediately = true
+
+  lifecycle {
+    # The Redis AUTH token is set out-of-band (aws CLI) + mirrored into the REDIS_URL secret, so it
+    # stays out of terraform state/vars/CI. Ignore it here so normal deploys never try to remove it.
+    ignore_changes = [auth_token]
+  }
 }
 
 # NOTE: after apply, put rediss://:<auth_token>@<endpoint>:6379 into the story-agent/runtime secret (REDIS_URL):

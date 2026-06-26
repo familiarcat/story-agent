@@ -74,18 +74,16 @@ variable "redis_transit_encryption" {
   default     = true
 }
 
-variable "redis_auth_token" {
-  description = "Redis AUTH token, used only when redis_transit_encryption=true (16-128 printable chars). Supply via TF_VAR_redis_auth_token — NEVER commit (WorfGate secrets principle). Must match the token embedded in the REDIS_URL secret: rediss://:<token>@<endpoint>:6379"
+variable "redis_transit_mode" {
+  description = "ElastiCache transit-encryption mode. Default 'required' (plaintext rejected) — the hardened end state since the 2026-06-26 cutover. NOTE: to enable TLS on a NEW-from-plaintext existing cluster you must first apply with 'preferred' (TLS allowed AND plaintext still accepted, zero dropped connections), then flip to 'required'; a brand-new encrypted cluster can be created as 'required' directly."
   type        = string
-  default     = ""
-  sensitive   = true
+  default     = "required"
 }
 
-variable "redis_transit_mode" {
-  description = "ElastiCache transit-encryption mode when enabling on an existing cluster. AWS requires the migration to go 'preferred' (TLS allowed AND plaintext still accepted — zero dropped connections) BEFORE 'required' (plaintext rejected). Start preferred, flip to required after REDIS_URL is rediss:// and the service has rolled."
-  type        = string
-  default     = "preferred"
-}
+# Redis AUTH token is intentionally NOT a terraform variable: it is managed OUT-OF-BAND (aws
+# elasticache modify-replication-group --auth-token --auth-token-update-strategy SET) and mirrored
+# into the story-agent/runtime REDIS_URL secret, so the secret never passes through terraform vars or
+# CI. The redis resource uses lifecycle.ignore_changes = [auth_token] so deploys don't revert it.
 
 variable "openrouter_model" {
   type    = string
