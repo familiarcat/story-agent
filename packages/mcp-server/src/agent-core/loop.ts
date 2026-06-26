@@ -11,6 +11,7 @@
  * LLM transport: OpenRouter chat/completions with function calling. Anthropic is a pool member.
  */
 import OpenAI from 'openai';
+import { randomUUID } from 'node:crypto';
 import { quarkSelectModel, MODEL_POOL } from '../lib/crew-team-assembly.js';
 import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
 import { gateLocalOp, type WorfTier } from './worfgate-local.js';
@@ -27,6 +28,9 @@ export interface AgentEvent {
   remediations?: string[];
   model?: string;
   costUSD?: number;
+  /** Interactive approval (opt-in): set on a gate event when the loop is awaiting an operator decision. */
+  needsApproval?: boolean;
+  approvalId?: string;
 }
 
 export interface RunAgentOptions {
@@ -53,6 +57,10 @@ export interface RunAgentOptions {
   /** Stream events (model picks, tool calls, gate decisions, text) to the surface. */
   onEvent?: (e: AgentEvent) => void;
   tools?: AgentTool[];
+  /** Wave-2 interactive approvals (opt-in): pause yellow/red ops for an explicit operator decision. */
+  requireApproval?: boolean;
+  /** Resolver the surface wires to a back-channel; returns 'approve' | 'deny' for a pending gate. */
+  requestApproval?: (info: { approvalId: string; tool: string; tier: WorfTier; remediations: string[]; args: unknown }) => Promise<'approve' | 'deny'>;
 }
 
 export interface AgentRunResult {
@@ -327,12 +335,28 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
         const gate = gateLocalOp(name, parsed, workspace);
         tier = gate.tier;
         remediations = gate.remediations;
-        emit({ type: 'gate', tool: name, tier, remediations });
+
+        // Wave-2 interactive approval (opt-in): pause a proceed-able yellow/red op for an explicit
+        // operator decision via the surface's back-channel. Default-off ⇒ existing behavior unchanged.
+        const needsApproval = !!(opts.requireApproval && opts.requestApproval && gate.proceed && (tier === 'yellow' || tier === 'red'));
+        const approvalId = needsApproval ? randomUUID() : undefined;
+        emit({ type: 'gate', tool: name, tier, remediations, needsApproval, approvalId });
+
+        let denied = false;
+        if (needsApproval && approvalId) {
+          const decision = await opts.requestApproval!({ approvalId, tool: name, tier, remediations, args: gate.args });
+          denied = decision === 'deny';
+        }
+
         if (!gate.proceed) {
           // Red + not remediable → escalate to the crew rather than silently dropping.
           output = `WorfGate RED — operation withheld pending crew review: ${gate.reasons.join('; ')}`;
           ok = false;
           result.escalated = true;
+          emit({ type: 'escalation', tool: name, text: output });
+        } else if (denied) {
+          output = `WorfGate — operation denied by operator: ${name}`;
+          ok = false;
           emit({ type: 'escalation', tool: name, text: output });
         } else {
           if (name === 'crew_deliberate') result.escalated = true;

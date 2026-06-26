@@ -16,7 +16,7 @@ type Ev =
   | { kind: 'lens'; text: string }
   | { kind: 'text'; text: string }
   | { kind: 'tool_call'; tool: string; args: unknown }
-  | { kind: 'gate'; tool: string; tier: string; remediations?: string[] }
+  | { kind: 'gate'; tool: string; tier: string; remediations?: string[]; needsApproval?: boolean; approvalId?: string }
   | { kind: 'tool_result'; tool: string; text: string; tier?: string }
   | { kind: 'cost'; costUSD: number; text?: string }
   | { kind: 'escalation'; tool?: string; text: string }
@@ -32,7 +32,19 @@ export default function AgentPage() {
   const [busy, setBusy] = useState(false);
   const [model, setModel] = useState<string | null>(null);
   const [sessionCost, setSessionCost] = useState(0);
+  const [decided, setDecided] = useState<Record<string, 'approve' | 'deny'>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  async function approve(id: string, decision: 'approve' | 'deny') {
+    setDecided(d => ({ ...d, [id]: decision }));
+    try {
+      await fetch('/api/agent/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, decision }),
+      });
+    } catch { /* the loop auto-denies on timeout if this fails */ }
+  }
 
   function pushEv(e: Ev) {
     setEvents(prev => [...prev, e]);
@@ -52,7 +64,7 @@ export default function AgentPage() {
       case 'lens': pushEv({ kind: 'lens', text: data.text }); break;
       case 'text': pushEv({ kind: 'text', text: data.text }); break;
       case 'tool_call': pushEv({ kind: 'tool_call', tool: data.tool, args: data.args }); break;
-      case 'gate': pushEv({ kind: 'gate', tool: data.tool, tier: data.tier, remediations: data.remediations }); break;
+      case 'gate': pushEv({ kind: 'gate', tool: data.tool, tier: data.tier, remediations: data.remediations, needsApproval: data.needsApproval, approvalId: data.approvalId }); break;
       case 'tool_result': pushEv({ kind: 'tool_result', tool: data.tool, text: data.text, tier: data.tier }); break;
       case 'cost': if (typeof data.costUSD === 'number') setSessionCost(c => c + 0); pushEv({ kind: 'cost', costUSD: data.costUSD, text: data.text }); break;
       case 'escalation': pushEv({ kind: 'escalation', tool: data.tool, text: data.text }); break;
@@ -71,12 +83,13 @@ export default function AgentPage() {
     setModel(null);
     setEvents([{ kind: 'user', text: task }]);
     setSessionCost(0);
+    setDecided({});
 
     try {
       const resp = await fetch('/api/agent/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: task }),
+        body: JSON.stringify({ input: task, requireApproval: true }),
       });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
@@ -131,7 +144,7 @@ export default function AgentPage() {
             or “Add a comment to the top of README.md”. Quark picks the model; you watch the tool loop run live.
           </p>
         )}
-        {events.map((e, i) => <EventRow key={i} e={e} />)}
+        {events.map((e, i) => <EventRow key={i} e={e} decided={decided} onApprove={approve} />)}
         {busy && <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>…working</div>}
       </div>
 
@@ -152,7 +165,7 @@ export default function AgentPage() {
   );
 }
 
-function EventRow({ e }: { e: Ev }) {
+function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'approve' | 'deny'>; onApprove: (id: string, d: 'approve' | 'deny') => void }) {
   const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace', fontSize: '0.8rem' };
   switch (e.kind) {
     case 'user':
@@ -173,18 +186,31 @@ function EventRow({ e }: { e: Ev }) {
     case 'gate': {
       const c = TIER_COLOR[e.tier] ?? '#6b7280';
       const icon = e.tier === 'green' ? '🟢' : e.tier === 'yellow' ? '🟡' : e.tier === 'red' ? '🔴' : '⚪';
+      const decision = e.approvalId ? decided[e.approvalId] : undefined;
       return (
         <div style={{ ...mono, margin: '0.3rem 0', color: c }}>
           {icon} WorfGate [{e.tier}] {e.tool}
           {e.remediations?.length ? <span style={{ color: '#6b7280' }}> — {e.remediations.join('; ')}</span> : null}
+          {e.needsApproval && e.approvalId && (
+            decision
+              ? <span style={{ marginLeft: 8, color: decision === 'approve' ? '#059669' : '#dc2626' }}>
+                  {decision === 'approve' ? '✓ approved' : '✗ denied'}
+                </span>
+              : <span style={{ marginLeft: 8 }}>
+                  <button onClick={() => onApprove(e.approvalId!, 'approve')} style={btn('#059669')}>Approve</button>
+                  <button onClick={() => onApprove(e.approvalId!, 'deny')} style={btn('#dc2626')}>Deny</button>
+                </span>
+          )}
         </div>
       );
     }
     case 'tool_result':
       return (
-        <div style={{ margin: '0.2rem 0 0.5rem', padding: '0.5rem 0.7rem', background: '#f3f4f6', borderRadius: 6, borderLeft: '3px solid #9ca3af', maxHeight: 240, overflow: 'auto' }}>
+        <div style={{ margin: '0.2rem 0 0.5rem', padding: '0.5rem 0.7rem', background: '#f3f4f6', borderRadius: 6, borderLeft: '3px solid #9ca3af', maxHeight: 280, overflow: 'auto' }}>
           <div style={{ ...mono, color: '#6b7280', marginBottom: 4 }}>⮑ {e.tool} result</div>
-          <pre style={{ ...mono, margin: 0, whiteSpace: 'pre-wrap', color: '#111827' }}>{e.text}</pre>
+          {isDiff(e.tool, e.text)
+            ? <DiffView text={e.text} mono={mono} />
+            : <pre style={{ ...mono, margin: 0, whiteSpace: 'pre-wrap', color: '#111827' }}>{e.text}</pre>}
         </div>
       );
     case 'cost':
@@ -218,4 +244,32 @@ function Block({ label, color, children }: { label: string; color: string; child
 
 function safeJson(v: unknown): string {
   try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2); } catch { return String(v); }
+}
+
+function btn(color: string): React.CSSProperties {
+  return { marginLeft: 6, padding: '1px 8px', fontSize: '0.72rem', borderRadius: 5, border: `1px solid ${color}`, background: 'white', color, cursor: 'pointer' };
+}
+
+/** Heuristic: does this tool result look like a unified diff worth colorizing? */
+function isDiff(tool: string, text: string): boolean {
+  if (/git_diff|apply_patch/.test(tool)) return /^[-+@]|^diff |^@@/m.test(text);
+  return /^@@.*@@/m.test(text) && /^[-+]/m.test(text);
+}
+
+/** Render a unified diff with colored add/remove lines. */
+function DiffView({ text, mono }: { text: string; mono: React.CSSProperties }) {
+  const lines = text.split('\n');
+  const colorFor = (l: string) =>
+    l.startsWith('+') && !l.startsWith('+++') ? { bg: '#e6ffed', fg: '#03543f' }
+    : l.startsWith('-') && !l.startsWith('---') ? { bg: '#ffeef0', fg: '#86181d' }
+    : l.startsWith('@@') ? { bg: '#f1f8ff', fg: '#005cc5' }
+    : { bg: 'transparent', fg: '#374151' };
+  return (
+    <pre style={{ ...mono, margin: 0 }}>
+      {lines.map((l, i) => {
+        const c = colorFor(l);
+        return <div key={i} style={{ background: c.bg, color: c.fg, whiteSpace: 'pre-wrap' }}>{l || ' '}</div>;
+      })}
+    </pre>
+  );
 }

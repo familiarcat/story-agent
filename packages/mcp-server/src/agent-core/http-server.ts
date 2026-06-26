@@ -54,6 +54,13 @@ export function getAgentInvocationAudit(): AgentInvocationAudit[] {
   return [...agentAudit];
 }
 
+// Wave-2 interactive approvals: a pending-decision registry keyed by approvalId. The SSE /agent
+// stream emits a gate with an approvalId; the browser POSTs /agent/approve to resolve it.
+// NOTE: in-process — works for single-instance / sticky-routed deploys; multi-task Fargate would
+// need a shared store (Redis) so the approve POST reaches the task holding the stream.
+const pendingApprovals = new Map<string, (d: 'approve' | 'deny') => void>();
+const APPROVAL_TIMEOUT_MS = Number(process.env.AGENT_APPROVAL_TIMEOUT_MS || 180_000);
+
 /**
  * Handle an agent-core HTTP request (/agent, /symphony, /agent/health). Returns true if it served
  * the request, false if the route isn't ours (so a host server can fall through to its own routes).
@@ -65,7 +72,7 @@ export async function handleAgentRequest(req: IncomingMessage, res: ServerRespon
   if (await handleChatRequest(req, res)) return true; // canonical Quark-optimized /chat
   if (await handleAhaRequest(req, res)) return true;  // Aha products (single source, cached)
   const url = (req.url || '').split('?')[0];
-  if (!(url === '/agent' || url === '/agent/' || url === '/agent/health' || url === '/symphony' || url === '/cost' || url === '/learnings')) return false;
+  if (!(url === '/agent' || url === '/agent/' || url === '/agent/approve' || url === '/agent/health' || url === '/symphony' || url === '/cost' || url === '/learnings')) return false;
   await serveAgent(req, res, url);
   return true;
 }
@@ -136,6 +143,21 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
       }, null, 2));
       return;
     }
+    // Back-channel for interactive approvals: resolve a pending gate decision.
+    if (req.method === 'POST' && url === '/agent/approve') {
+      let abody: any;
+      try { abody = await readBody(req); }
+      catch { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'bad_json' })); return; }
+      const id = String(abody.id ?? '');
+      const decision: 'approve' | 'deny' = abody.decision === 'approve' ? 'approve' : 'deny';
+      const resolver = pendingApprovals.get(id);
+      if (!resolver) { res.writeHead(404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'no_pending_approval' })); return; }
+      resolver(decision);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, id, decision }));
+      return;
+    }
+
     if (req.method !== 'POST' || (url !== '/agent' && url !== '/agent/')) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'not_found' }));
@@ -175,6 +197,13 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
         tier: body.tier,
         ...buildBridges(clientId),
         onEvent: (e) => send(e),
+        requireApproval: body.requireApproval === true,
+        // Register a resolver keyed by approvalId; the browser's POST /agent/approve resolves it.
+        // Auto-deny after a timeout so a closed tab can never hang the loop forever.
+        requestApproval: ({ approvalId }) => new Promise<'approve' | 'deny'>((resolve) => {
+          const timer = setTimeout(() => { pendingApprovals.delete(approvalId); resolve('deny'); }, APPROVAL_TIMEOUT_MS);
+          pendingApprovals.set(approvalId, (d) => { clearTimeout(timer); pendingApprovals.delete(approvalId); resolve(d); });
+        }),
       });
       try {
         const tt = (result as any).totalTokens ?? 0;
