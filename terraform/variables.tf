@@ -68,6 +68,12 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
+variable "redis_auth_token" {
+  description = "Redis AUTH token for transit-encrypted ElastiCache (16-128 printable chars). Supply via TF_VAR_redis_auth_token — NEVER commit (WorfGate secrets principle). Must match the token embedded in the REDIS_URL secret: rediss://:<token>@<endpoint>:6379"
+  type        = string
+  sensitive   = true
+}
+
 variable "openrouter_model" {
   type    = string
   default = "anthropic/claude-sonnet-4.6"

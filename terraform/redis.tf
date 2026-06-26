@@ -18,10 +18,16 @@ resource "aws_elasticache_replication_group" "redis" {
   subnet_group_name          = aws_elasticache_subnet_group.redis.name
   security_group_ids         = [aws_security_group.redis.id]
   at_rest_encryption_enabled = true
-  # Plaintext within the private redis SG (only ECS tasks reach it) → simple redis:// for the client.
-  transit_encryption_enabled = false
+  # TLS-in-transit + AUTH (crew infra-integration #2, Worf): the approval pub/sub carries operator
+  # decisions, so encrypt the channel even inside the private SG. node-redis auto-negotiates TLS from
+  # the rediss:// scheme; the auth_token rides in the URL. Enabling these on an existing cluster forces
+  # REPLACEMENT (downtime) — cut over in a maintenance window (stand up the encrypted group, validate
+  # the WorfGate handoff with mock approval traffic, then switch REDIS_URL). Worf: rotate the token on
+  # enablement; REDIS_URL is never logged (db.ts swallows connection errors, diagnostics expose only a bool).
+  transit_encryption_enabled = true
+  auth_token                 = var.redis_auth_token
   automatic_failover_enabled = false
 }
 
-# NOTE: after apply, put redis://<endpoint>:6379 into the story-agent/runtime secret (REDIS_URL):
-#   redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379
+# NOTE: after apply, put rediss://:<auth_token>@<endpoint>:6379 into the story-agent/runtime secret (REDIS_URL):
+#   rediss://:${var.redis_auth_token}@${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379
