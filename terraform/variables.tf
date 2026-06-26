@@ -68,9 +68,16 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
+variable "redis_transit_encryption" {
+  description = "Enable ElastiCache TLS-in-transit + AUTH. OFF by default: turning it ON forces a cluster REPLACEMENT (downtime), so flip it ONLY during the Redis TLS cutover maintenance window (docs/runbooks/redis-tls-cutover.md), together with redis_auth_token. Keeping it off lets normal CI deploys plan/apply without touching Redis."
+  type        = bool
+  default     = false
+}
+
 variable "redis_auth_token" {
-  description = "Redis AUTH token for transit-encrypted ElastiCache (16-128 printable chars). Supply via TF_VAR_redis_auth_token — NEVER commit (WorfGate secrets principle). Must match the token embedded in the REDIS_URL secret: rediss://:<token>@<endpoint>:6379"
+  description = "Redis AUTH token, used only when redis_transit_encryption=true (16-128 printable chars). Supply via TF_VAR_redis_auth_token — NEVER commit (WorfGate secrets principle). Must match the token embedded in the REDIS_URL secret: rediss://:<token>@<endpoint>:6379"
   type        = string
+  default     = ""
   sensitive   = true
 }
 

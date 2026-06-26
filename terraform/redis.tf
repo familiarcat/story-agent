@@ -20,12 +20,13 @@ resource "aws_elasticache_replication_group" "redis" {
   at_rest_encryption_enabled = true
   # TLS-in-transit + AUTH (crew infra-integration #2, Worf): the approval pub/sub carries operator
   # decisions, so encrypt the channel even inside the private SG. node-redis auto-negotiates TLS from
-  # the rediss:// scheme; the auth_token rides in the URL. Enabling these on an existing cluster forces
-  # REPLACEMENT (downtime) — cut over in a maintenance window (stand up the encrypted group, validate
-  # the WorfGate handoff with mock approval traffic, then switch REDIS_URL). Worf: rotate the token on
-  # enablement; REDIS_URL is never logged (db.ts swallows connection errors, diagnostics expose only a bool).
-  transit_encryption_enabled = true
-  auth_token                 = var.redis_auth_token
+  # the rediss:// scheme; the auth_token rides in the URL. GATED behind redis_transit_encryption
+  # (default OFF) because enabling it on an existing cluster forces REPLACEMENT (downtime) — so it's a
+  # deliberate maintenance-window cutover (docs/runbooks/redis-tls-cutover.md), not a normal-deploy
+  # change. Worf: rotate the token on enablement; REDIS_URL is never logged (db.ts swallows connection
+  # errors, diagnostics expose only a bool).
+  transit_encryption_enabled = var.redis_transit_encryption
+  auth_token                 = var.redis_transit_encryption ? var.redis_auth_token : null
   automatic_failover_enabled = false
 }
 

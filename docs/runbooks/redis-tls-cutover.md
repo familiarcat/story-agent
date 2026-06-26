@@ -33,10 +33,15 @@ Keep this value — it must also go into the `REDIS_URL` secret (step 4). Do **n
 
 ## 2. Plan + apply (replacement)
 
+TLS is gated behind `redis_transit_encryption` (default OFF) so normal deploys never touch Redis.
+Flip it ON only here, with the token:
+
 ```bash
 cd terraform
 terraform init -input=false
-terraform plan  -input=false -out=redis-tls.plan      # expect: aws_elasticache_replication_group.redis must be replaced
+terraform plan  -input=false -out=redis-tls.plan \
+  -var "redis_transit_encryption=true" \
+  -var "redis_auth_token=${TF_VAR_redis_auth_token}"   # expect: aws_elasticache_replication_group.redis must be replaced
 terraform apply redis-tls.plan
 ```
 
