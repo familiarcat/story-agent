@@ -19,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a href="/crew/memories" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>👥 Crew Memories</a>
           <a href="/story/new" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>+ New Story</a>
           <a href="/observation-lounge" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>Observation Lounge</a>
+          <a href="/docs" style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.95rem' }}>📜 API Docs</a>
           <a href="/dashboard" style={{ color: '#6b7280', textDecoration: 'none', marginLeft: 'auto', fontSize: '0.85rem' }}>
             v1.0.0
           </a>
