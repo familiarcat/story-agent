@@ -36,4 +36,4 @@ async function launchMaintenanceMission() {
   await runObservationLoungeSession({ sessionLabel: 'Dependency Health Retrospective' });
 }
 
-launchMaintenanceMission().catch(console.error);
+launchMaintenanceMission().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });

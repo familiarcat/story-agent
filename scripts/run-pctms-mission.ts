@@ -71,7 +71,7 @@ async function main() {
   console.log('✨ Mission complete. The crew has successfully designed the schema and persisted learnings.');
 }
 
-main().catch(err => {
+main().then(() => process.exit(0)).catch(err => {
   console.error('❌ Mission Failed:', err);
   process.exit(1);
 });

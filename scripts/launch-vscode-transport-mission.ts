@@ -50,4 +50,4 @@ async function launchVsCodeTransportMission() {
   await runObservationLoungeSession({ sessionLabel: 'VSCODE-CLI-002 Retrospective' });
 }
 
-launchVsCodeTransportMission().catch(console.error);
+launchVsCodeTransportMission().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });

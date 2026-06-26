@@ -26,4 +26,5 @@ const obs=await storeObservationMemory({storyId:'aha-navigation',source:'mcp',tr
 console.log('OBS '+obs.id+' emb='+embeddingSource());
 const m=await storeCrewPersonalMemory({crew_id:'data',memory_type:'decision_note',title:'Aha! organized into the UI navigation tree (dynamic, tool-fed)',content:r.missionPlan,tags:['aha','navigation','vscode'],relates_to_crew:['geordi','worf','riker','troi','quark','picard']});
 console.log('MEM '+m);
+process.exit(0); // clean exit — work done; don't hang on open DB/socket handles
 })().catch(e=>{console.error('ERR',e?.message||e);process.exit(1);});

@@ -116,4 +116,4 @@ async function main() {
   console.log(`\n✔ Unification deliberated + recorded. Synthesizing the architecture doc next.\n`);
 }
 
-main().catch((err) => { console.error('Mission failed:', err); process.exit(1); });
+main().then(() => process.exit(0)).catch((err) => { console.error('Mission failed:', err); process.exit(1); });

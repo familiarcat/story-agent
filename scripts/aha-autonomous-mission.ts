@@ -78,4 +78,4 @@ async function main() {
   // Emit a machine-readable line for Phase B.
   console.log('\nWRITE_PLAN_JSON=' + JSON.stringify(plan));
 }
-main().catch(e => { console.error(e); process.exit(1); });
+main().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });

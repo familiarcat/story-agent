@@ -155,4 +155,4 @@ async function main() {
   console.log(`\n✔ Deployment process deliberated, automated (scripts/deploy-auto.ts), and recorded to RAG.\n`);
 }
 
-main().catch((err) => { console.error('Deployment mission failed:', err); process.exit(1); });
+main().then(() => process.exit(0)).catch((err) => { console.error('Deployment mission failed:', err); process.exit(1); });

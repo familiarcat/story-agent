@@ -16,4 +16,5 @@ const obs=await storeObservationMemory({storyId:'next-build',source:'mcp',transc
 console.log('OBS '+obs.id+' emb='+embeddingSource());
 const m=await storeCrewPersonalMemory({crew_id:'picard',memory_type:'decision_note',title:'Next-build priority (post-v1)',content:r.missionPlan,tags:['roadmap','prioritization'],relates_to_crew:['data','geordi','troi','riker','quark']});
 console.log('MEM '+m);
+process.exit(0); // clean exit — work done; don't hang on open handles
 })().catch(e=>{console.error('ERR',e?.message||e);process.exit(1);});

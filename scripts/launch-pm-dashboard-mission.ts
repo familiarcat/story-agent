@@ -59,4 +59,4 @@ async function launchPmDashboardMission() {
   await runObservationLoungeSession({ sessionLabel: 'BRIDGE-UI-003 Retrospective' });
 }
 
-launchPmDashboardMission().catch(console.error);
+launchPmDashboardMission().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });

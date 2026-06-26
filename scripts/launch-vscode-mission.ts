@@ -48,4 +48,4 @@ async function launchVsCodeMission() {
   console.log(`📝 [BRIDGE] Commit Message: ${result.summary?.commitMessage}`);
 }
 
-launchVsCodeMission().catch(console.error);
+launchVsCodeMission().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });

@@ -13,4 +13,5 @@ const obs=await storeObservationMemory({storyId:'deploy-optimization',source:'mc
 console.log('OBS '+obs.id+' emb='+embeddingSource());
 const m=await storeCrewPersonalMemory({crew_id:'obrien',memory_type:'decision_note',title:'Staggered/optimized Fargate deploy plan',content:r.missionPlan,tags:['deployment','cicd','optimization'],relates_to_crew:['geordi','data','quark','worf','picard']});
 console.log('MEM '+m);
+process.exit(0); // clean exit — work done; don't hang on open handles
 })().catch(e=>{console.error('ERR',e?.message||e);process.exit(1);});

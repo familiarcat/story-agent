@@ -13,4 +13,5 @@ const obs=await storeObservationMemory({storyId:'vscode-v1-featureset',source:'m
 console.log('OBS '+obs.id+' embeddings='+embeddingSource());
 const m=await storeCrewPersonalMemory({crew_id:'geordi',memory_type:'decision_note',title:'VS Code extension v1 feature set (replace Claude Code daily driver)',content:r.missionPlan,tags:['vscode','v1','parity'],relates_to_crew:['troi','data','riker','quark','picard']});
 console.log('MEM '+m);
+process.exit(0); // clean exit — work done; don't hang on open handles
 })().catch(e=>{console.error('ERR',e?.message||e);process.exit(1);});

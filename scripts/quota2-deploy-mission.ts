@@ -23,4 +23,5 @@ const obs=await storeObservationMemory({storyId:'quota2-deploy',source:'mcp',tra
 console.log('OBS '+obs.id+' emb='+embeddingSource());
 const m=await storeCrewPersonalMemory({crew_id:'obrien',memory_type:'lesson_learned',title:'Deploy within Fargate vCPU quota=2 (digest-reuse on infra-only + stop-before-start)',content:r.missionPlan,tags:['deployment','fargate','quota'],relates_to_crew:['geordi','data','quark','worf','picard']});
 console.log('MEM '+m);
+process.exit(0); // clean exit — work done; don't hang on open handles
 })().catch(e=>{console.error('ERR',e?.message||e);process.exit(1);});
