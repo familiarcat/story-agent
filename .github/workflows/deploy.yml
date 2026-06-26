@@ -144,3 +144,19 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true' }}
         working-directory: terraform
         run: terraform apply -input=false -auto-approve tfplan
+
+      # Standing guarantee for the live approval channel: assert the ElastiCache cluster still has
+      # TLS-in-transit + required mode + AUTH (the 2026-06-26 hardening). Read-only; runs every deploy.
+      - name: Verify Redis security posture (live)
+        run: |
+          read -r TRANSIT MODE AUTH <<< "$(aws elasticache describe-replication-groups \
+            --replication-group-id story-agent-redis --region "$AWS_REGION" \
+            --query 'ReplicationGroups[0].[TransitEncryptionEnabled,TransitEncryptionMode,AuthTokenEnabled]' \
+            --output text)"
+          echo "Redis posture → transit=$TRANSIT mode=$MODE auth=$AUTH"
+          if [ "$TRANSIT" = "True" ] && [ "$MODE" = "required" ] && [ "$AUTH" = "True" ]; then
+            echo "::notice::Redis security posture verified (TLS required + AUTH)."
+          else
+            echo "::error::Redis security posture regressed — want transit=True mode=required auth=True"
+            exit 1
+          fi

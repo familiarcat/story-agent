@@ -1,0 +1,50 @@
+name: integration-tests
+
+# Standing guarantee for the approval pub/sub path that gates real file/shell mutations.
+# Runs the approval-registry integration test against a REAL Redis (service container) on every push
+# to main — proving the cross-connection round-trip (awaitApproval subscribes on a duplicated
+# connection, resolveApproval publishes; the same path that crosses two Fargate tasks) still works.
+#
+# NOTE: this uses a CI Redis container, NOT the live ElastiCache cluster — that cluster is in a private
+# subnet unreachable from GitHub-hosted runners. The live cluster's TLS/AUTH/required posture is
+# asserted separately in deploy.yml (Verify Redis security posture). The pub/sub LOGIC is transport-
+# agnostic, so a plaintext container validates the code while the deploy job validates the live config.
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/**", ".github/workflows/integration-tests.yml"]
+  workflow_dispatch:
+
+jobs:
+  approval-pubsub:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build shared (cross-package imports resolve to dist)
+        run: pnpm --filter @story-agent/shared run build
+      - name: Approval pub/sub round-trip (real Redis)
+        env:
+          REDIS_URL: redis://localhost:6379
+          RUN_MODE: integration
+        run: pnpm --filter @story-agent/mcp-server exec vitest run src/agent-core/approval-registry.integration.test.ts
