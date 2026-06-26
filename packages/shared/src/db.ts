@@ -278,6 +278,11 @@ async function redis(): Promise<any> {
   }
 }
 
+/** Public accessor for the optional shared Redis client (null when REDIS_URL is unset/unreachable). */
+export async function getRedis(): Promise<any | null> {
+  return redis();
+}
+
 function throwOnError<T>(result: { data: T | null; error: unknown }): T {
   if (result.error) throw new Error(JSON.stringify(result.error));
   return result.data as T;
