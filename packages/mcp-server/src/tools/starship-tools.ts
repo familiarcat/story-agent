@@ -30,6 +30,7 @@ import {
   type ToolCategory,
   type CostProfile,
 } from '../lib/crew-tool-registry.js';
+import { discoverMcpForRole, recallTaughtTools } from '../lib/mcp-discovery.js';
 import {
   getPersona,
   CREW_PERSONAS,
@@ -192,6 +193,53 @@ export function registerStarshipTools(server: McpServer): void {
             securityClearance: result.tool.securityClearance,
           }, null, 2),
         }],
+      };
+    }
+  );
+
+  // ── DISCOVER MCP TOOLS (per-role, official registry → eval → teach crew) ───
+
+  server.tool(
+    'discover_mcp_tools',
+    'A crew member dynamically DISCOVERS MCP servers relevant to its ROLE from the official MCP registry (registry.modelcontextprotocol.io), runs each through the crew evaluation pipeline (Worf security → Quark cost → specialist votes → Picard), and TEACHES the crew about approved tools by writing a crew-wide tool-card to RAG. Discovered servers are catalogued + human-gated — never auto-executed.',
+    {
+      crewId: z.enum(['picard', 'data', 'riker', 'geordi', 'obrien', 'worf', 'yar', 'troi', 'crusher', 'uhura', 'quark']),
+      task: z.string().describe('The task or capability gap driving discovery (keywords are searched against the registry)'),
+      limit: z.number().optional().default(10).describe('Max registry candidates to fetch'),
+      evaluateTop: z.number().optional().default(2).describe('How many top candidates to run through the full crew evaluation'),
+    },
+    async (args) => {
+      const r = await discoverMcpForRole(args.crewId as CrewId, args.task, { limit: args.limit, evaluateTop: args.evaluateTop });
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            crewId: r.crewId,
+            query: r.query,
+            roleCategories: r.categories,
+            candidates: r.candidates,
+            evaluated: r.evaluated.map((e) => ({ name: e.tool.name, decision: e.finalDecision, approved: e.approved, securityClearance: e.tool.securityClearance })),
+            taughtCrewWide: r.taught,
+            note: 'Approved tools are catalogued + taught crew-wide. Execution stays human-gated (autoExecute=false).',
+          }, null, 2),
+        }],
+      };
+    }
+  );
+
+  // ── RECALL TAUGHT TOOLS (peer-taught tool-cards from crew-wide RAG) ─────────
+
+  server.tool(
+    'recall_taught_tools',
+    'Recall peer-taught MCP tool-cards relevant to a task from crew-wide RAG — how a crew member learns a tool another member already found and taught. Returns tool-card summaries (name, capabilities, how-to-invoke, risk/cost). Execution remains human-gated.',
+    {
+      query: z.string().describe('Task or capability to find taught tools for'),
+      limit: z.number().optional().default(5),
+    },
+    async (args) => {
+      const cards = await recallTaughtTools(args.query, args.limit);
+      return {
+        content: [{ type: 'text', text: cards.length ? cards.join('\n\n---\n\n') : '(no peer-taught tools recalled for this query)' }],
       };
     }
   );

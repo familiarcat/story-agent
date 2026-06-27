@@ -6,7 +6,12 @@ import {
   inferCategory,
   deriveCapabilities,
   registryServerToProposal,
+  buildToolCard,
+  validateToolCard,
+  toolCardStoryId,
+  toolCardText,
 } from './mcp-discovery.js';
+import type { ToolRecord } from './crew-tool-registry.js';
 
 const sample: McpRegistryServer = {
   name: 'io.github.acme/sql-explorer',
@@ -112,5 +117,53 @@ describe('deriveCapabilities', () => {
     const caps = deriveCapabilities(sample);
     expect(caps).toContain('query');
     expect(caps.length).toBeLessThanOrEqual(8);
+  });
+});
+
+const approvedTool: ToolRecord = {
+  name: 'io.github.acme/sql-explorer',
+  description: 'Query Postgres over MCP',
+  category: 'database',
+  capabilities: ['query', 'schema'],
+  endpoint: 'https://mcp.acme.dev/sql',
+  sourceReference: 'npm:sql-explorer',
+  qualityScore: 0.8,
+  costProfile: 'free',
+  securityClearance: 'approved',
+  status: 'approved',
+  worfVeto: false,
+  crewVotes: {},
+  crewEvaluationNotes: {},
+  metadata: {},
+};
+
+describe('tool-card teaching (crew-wide shared understanding)', () => {
+  it('buildToolCard derives risk/cost tiers and always human-gates execution', () => {
+    const card = buildToolCard(approvedTool, 'data', '2026-06-27T00:00:00Z');
+    expect(card.owningRole).toBe('data');
+    expect(card.autoExecute).toBe(false);
+    expect(card.riskTier).toBe('low'); // approved clearance
+    expect(card.costTier).toBe('low'); // free
+    expect(card.invocation).toContain('Human-gated');
+    expect(card.endpoint).toBe('https://mcp.acme.dev/sql');
+  });
+  it('maps review clearance + paid cost to higher tiers', () => {
+    const card = buildToolCard({ ...approvedTool, securityClearance: 'review', costProfile: 'paid' }, 'worf', 'now');
+    expect(card.riskTier).toBe('medium');
+    expect(card.costTier).toBe('high');
+  });
+  it('validateToolCard rejects auto-execute or missing fields', () => {
+    expect(validateToolCard(buildToolCard(approvedTool, 'data', 'now')).ok).toBe(true);
+    expect(validateToolCard({ name: 'x', category: 'database', capabilities: ['q'], owningRole: 'data', autoExecute: true as any }).ok).toBe(false);
+    expect(validateToolCard({ name: 'x' }).ok).toBe(false);
+  });
+  it('toolCardStoryId is deterministic (dedup on re-teach)', () => {
+    expect(toolCardStoryId('acme/x')).toBe('tool-card:acme/x');
+  });
+  it('toolCardText embeds the key recall fields', () => {
+    const text = toolCardText(buildToolCard(approvedTool, 'data', 'now'));
+    expect(text).toContain('TOOL-CARD');
+    expect(text).toContain('owner=data');
+    expect(text).toContain('Capabilities:');
   });
 });

@@ -151,8 +151,31 @@ defineSkillTheory({
   how: { invocation: 'run_crew_mission_pipeline({ input, clientId?, store? })', annotations: { title: 'Run Crew Mission Pipeline', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'goals, team, contributions, efficiency, mission plan (stored to RAG).' },
 });
 
+// ── dynamic MCP discovery + crew tool-teaching ────────────────────────────────
+
+defineSkillTheory({
+  tool: 'discover_mcp_tools',
+  who: { owner: 'data' },
+  what: { summary: 'A crew member discovers role-relevant MCP servers from the official registry, evaluates them through the crew pipeline, and teaches approved ones crew-wide.', capabilities: ['search the official MCP registry by role', 'run Worf→Quark→specialist→Picard evaluation', 'write a crew-wide tool-card to RAG'] },
+  when: { useWhen: ['A task needs a capability the crew lacks', 'Expanding a role\'s toolset'], avoidWhen: ['A peer may already have taught this tool — recall_taught_tools first'], preconditions: ['Network reachable to the MCP registry'] },
+  where: { scope: ['rag', 'crew', 'llm'], surfaces: ['cli', 'api', 'vscode', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'The crew self-extends capability instead of waiting for static tool additions; discovery is catalog-only and execution stays human-gated.', goalsServed: ['capability growth', 'shared understanding'] },
+  how: { invocation: 'discover_mcp_tools({ crewId, task, limit?, evaluateTop? })', annotations: { title: 'Discover MCP Tools', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, output: 'Evaluated candidates + names taught crew-wide. Approved servers are NOT auto-executed.' },
+});
+
+defineSkillTheory({
+  tool: 'recall_taught_tools',
+  who: { owner: 'uhura' },
+  what: { summary: 'Recall peer-taught MCP tool-cards relevant to a task from crew-wide RAG.', capabilities: ['embedding recall over the tool-card corpus', 'learn what a peer already found'] },
+  when: { useWhen: ['Before discovering, to reuse a peer\'s find', 'Picking a tool for a task'] },
+  where: { scope: ['rag'], surfaces: ['cli', 'api', 'vscode', 'mcp'], sideEffects: 'none' },
+  why: { rationale: 'Shared crew understanding — a tool one member found is usable by all without re-discovery.', goalsServed: ['shared understanding', 'cost efficiency'] },
+  how: { invocation: 'recall_taught_tools({ query, limit? })', annotations: { title: 'Recall Taught Tools', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Tool-card summaries (execution remains human-gated).' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
+  'discover_mcp_tools', 'recall_taught_tools',
 ];
