@@ -32,22 +32,24 @@ export function buildBridges(
     // rag_recall can surface "we did a similar task before, here's how it went" on future runs.
     recordFeedback: async (card) => {
       const postureLine = `WorfGate 🟢${card.posture.green}/🟡${card.posture.yellow}/🔴${card.posture.red}`;
+      // Self-healing: a stalled run is recorded as a "stall card" so the crew can RESEARCH recurring
+      // stalls and propose a fix themselves (recall via the 'stall' tag).
       await storeObservationMemory({
-        storyId: 'agent-run',
+        storyId: card.stalled ? 'agent-stall' : 'agent-run',
         clientId,
         source: 'mcp',
         transcript: {
           rounds: [{
-            title: 'Agent run',
-            entries: [{ speakerId: 'agent-core', position: 'support', statement: card.input, evidence: [`model:${card.model}`, `lens:${card.lens}`, `tools:${card.toolsUsed.join(',')}`] }],
+            title: card.stalled ? 'Agent run (STALL detected + self-nudged)' : 'Agent run',
+            entries: [{ speakerId: 'agent-core', position: 'support', statement: card.input, evidence: [`model:${card.model}`, `lens:${card.lens}`, `tools:${card.toolsUsed.join(',')}`, `stalled:${card.stalled}`] }],
           }],
-          consensusSummary: `${card.outcome} — ${postureLine}, ${card.iterations} turns, ${card.toolsUsed.length} tools, ~$${card.costUSD.toFixed(5)}${card.escalated ? ', escalated' : ''}.`,
-          unresolvedRisks: [],
+          consensusSummary: `${card.outcome} — ${postureLine}, ${card.iterations} turns, ${card.toolsUsed.length} tools, ~$${card.costUSD.toFixed(5)}${card.escalated ? ', escalated' : ''}${card.stalled ? ', STALLED→nudged' : ''}.`,
+          unresolvedRisks: card.stalled ? ['finish/iterate stall: model produced text with 0 tool calls on an actionable task'] : [],
           finalDecision: 'approved',
           actionItems: card.toolsUsed,
         },
-        missionReference: 'agent-run',
-        tags: ['agent-run', 'feedback-card', 'self-learning', card.model, clientId ?? 'global'],
+        missionReference: card.stalled ? 'agent-stall' : 'agent-run',
+        tags: ['agent-run', 'feedback-card', 'self-learning', card.model, clientId ?? 'global', ...(card.stalled ? ['stall'] : [])],
       });
     },
   };

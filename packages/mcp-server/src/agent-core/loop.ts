@@ -19,7 +19,7 @@ import { getSkillTheory } from '@story-agent/shared/skill-theory';
 import '../lib/skill-theories.js'; // register tool theories so the lens can read them
 
 export interface AgentEvent {
-  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens';
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens' | 'stall';
   text?: string;
   attempt?: number;
   tool?: string;
@@ -39,6 +39,8 @@ export interface RunAgentOptions {
   /** Capability tier for Quark's per-turn model pick (default 3 = advanced, cheap multi-provider). */
   tier?: number;
   maxIterations?: number;
+  /** Self-healing: max corrective nudges when the model stalls (text, 0 tools) on an actionable task. Default 2. */
+  maxNudges?: number;
   /** Attempts per LLM call before surfacing the error (exponential backoff). Default 3. */
   maxRetries?: number;
   /** Soft token budget; when exceeded the loop finalizes instead of continuing (Quark spend cap). */
@@ -72,6 +74,8 @@ export interface AgentRunResult {
   totalTokens: number;
   escalated: boolean;
   budgetExceeded: boolean;
+  /** Self-healing: the loop detected a finish/iterate stall (0 tool calls on an actionable task) and nudged. */
+  stalled: boolean;
   /** PROD-13 cost observatory — per-provider spend, burn rate, and whether the review threshold tripped. */
   observatory: { perProvider: Record<string, number>; burnRatePerTurnUSD: number; reviewTriggered: boolean };
 }
@@ -87,6 +91,7 @@ export interface AgentFeedbackCard {
   tokens: number;
   iterations: number;
   escalated: boolean;
+  stalled: boolean;
   outcome: string;
   clientId: string | null;
 }
@@ -97,6 +102,12 @@ const ESCALATION_SIGNALS = ['architect', 'security', 'migration', 'refactor', 'p
 export function shouldEscalate(input: string): boolean {
   const t = input.toLowerCase();
   return ESCALATION_SIGNALS.some(k => t.includes(k)) || input.length > 600;
+}
+
+const ACTION_VERBS = /\b(edit|create|write|add|implement|fix|replace|update|run|build|refactor|rename|delete|remove|convert|map|reskin|apply|scaffold|generate|install|commit|patch)\b/;
+/** Self-healing: does this task imply tool use? Used to detect a "described a plan but called 0 tools" stall. */
+export function looksActionable(input: string): boolean {
+  return ACTION_VERBS.test(input.toLowerCase());
 }
 
 function providerOf(model: string): string {
@@ -202,6 +213,8 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const tools = opts.tools || AGENT_TOOLS;
   const maxIterations = opts.maxIterations ?? 25;
   const maxRetries = opts.maxRetries ?? 3;
+  const maxNudges = opts.maxNudges ?? 2;
+  let nudges = 0; // self-healing: corrective nudges spent when the model stalls (text, 0 tools)
   const tokenBudget = opts.tokenBudget ?? 400_000;
   const autoEscalate = opts.autoEscalate ?? true;
   const reviewThresholdUSD = opts.reviewThresholdUSD;
@@ -236,7 +249,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
 
   const result: AgentRunResult = {
     finalText: '', iterations: 0, toolCalls: [], model,
-    totalCostUSD: 0, totalTokens: 0, escalated: false, budgetExceeded: false,
+    totalCostUSD: 0, totalTokens: 0, escalated: false, budgetExceeded: false, stalled: false,
     observatory: { perProvider, burnRatePerTurnUSD: 0, reviewTriggered: false },
   };
 
@@ -250,7 +263,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
           input: userInput.slice(0, 240), model, lens: composed.reason,
           toolsUsed: result.toolCalls.map(t => t.tool), posture,
           costUSD: result.totalCostUSD, tokens: result.totalTokens, iterations: result.iterations,
-          escalated: result.escalated, outcome: result.finalText.slice(0, 500), clientId: opts.clientId ?? null,
+          escalated: result.escalated, stalled: result.stalled, outcome: result.finalText.slice(0, 500), clientId: opts.clientId ?? null,
         });
       } catch { /* self-learning is best-effort — never fail the run on a memory write */ }
     }
@@ -308,6 +321,19 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
 
     const toolCalls = msg.tool_calls || [];
     if (!toolCalls.length) {
+      // Self-healing stall detection: the observed failure is the model replying with TEXT and calling
+      // 0 tools on an ACTIONABLE task (often right after auto-escalation injected a plan) — so the loop
+      // would finalize having done nothing. Detect that, record it, and nudge it to actually execute,
+      // bounded by maxNudges. A genuine answer/complete task (not actionable, or "DONE") still finalizes.
+      const saidDone = /\bDONE\b/.test(msg.content || '');
+      const stalling = looksActionable(userInput) && result.toolCalls.length === 0 && !saidDone && nudges < maxNudges;
+      if (stalling) {
+        nudges++;
+        result.stalled = true;
+        emit({ type: 'stall', attempt: nudges, text: `stall: described a plan but called 0 tools (nudge ${nudges}/${maxNudges}) — directing execution` });
+        messages.push({ role: 'user', content: 'You replied with text but called NO tools. Do not just describe the plan — perform it NOW by calling the appropriate tools (read_file/edit_file/write_file/apply_patch/run_shell/etc.). If the task is genuinely already complete, reply with the single word DONE.' });
+        continue;
+      }
       result.finalText = msg.content || '';
       emit({ type: 'text', text: result.finalText });
       return await finalize();

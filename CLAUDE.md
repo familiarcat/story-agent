@@ -26,6 +26,14 @@ analysis, deliberation, and planning. Concretely:
 A `CLAUDE.md` cannot change which model *this session* runs on — but following the above shifts the
 substantive work onto the crew, which is the point.
 
+**Crew-first execution (default — minimize direct Anthropic tokens).** When the crew is reachable,
+DEFAULT to running authoring/analysis on it (the agent-core loop or `runMissionPipeline`), not in this
+Anthropic session. Anthropic's role is ORCHESTRATION ONLY: dispatch → verify (build/test) → finish the
+final mile only if the loop stalls. Editing/analyzing directly in-session is the exception (loop
+unavailable, or a ≤few-line deterministic fix the loop stalled on) — call it out when you do it. See
+the live-feedback + ask-first approval + self-healing-stall methodology in
+[docs/crew-live-feedback-and-approvals.md](docs/crew-live-feedback-and-approvals.md).
+
 ## Crew memory recall (read BEFORE any NL prompt)
 
 **Every Claude Code or Story Agent natural-language prompt must RECALL crew RAG memory before acting,

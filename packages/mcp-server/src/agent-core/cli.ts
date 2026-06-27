@@ -32,6 +32,7 @@ function printEvent(e: AgentEvent) {
     case 'gate': process.stderr.write(C.dim(`  ⛨ WorfGate ${tierColor(e.tier)}`) + (e.remediations?.length ? C.yellow(` [${e.remediations.join('; ')}]`) : '') + '\n'); break;
     case 'tool_result': process.stderr.write(C.dim(`  ✓ ${e.tool}\n`)); break;
     case 'escalation': process.stderr.write(C.red(`  ⚑ escalation: ${e.text}\n`)); break;
+    case 'stall': process.stderr.write(C.yellow(`  ↻ ${e.text}\n`)); break;
     case 'text': if (e.text?.trim()) process.stdout.write(e.text + '\n'); break;
   }
 }
