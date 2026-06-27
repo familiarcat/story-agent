@@ -173,9 +173,19 @@ defineSkillTheory({
   how: { invocation: 'recall_taught_tools({ query, limit? })', annotations: { title: 'Recall Taught Tools', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Tool-card summaries (execution remains human-gated).' },
 });
 
+defineSkillTheory({
+  tool: 'crew_research_stalls',
+  who: { owner: 'data' },
+  what: { summary: 'Recall agent-core stall cards and convene the crew to research the pattern + propose a loop fix.', capabilities: ['recall stall cards from RAG', 'crew deliberation on the failure pattern', 'store a loop-fix proposal to RAG'] },
+  when: { useWhen: ['Stalls have been recorded and recur', 'Periodic self-healing review'], avoidWhen: ['No stall cards exist yet'] },
+  where: { scope: ['rag', 'crew', 'llm'], surfaces: ['cli', 'api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Closes the self-healing loop — the crew investigates and fixes its own finish/iterate stalls instead of waiting for a human.', goalsServed: ['reliability', 'autonomy', 'self-improvement'] },
+  how: { invocation: 'crew_research_stalls({ limit? })', annotations: { title: 'Crew Research Stalls', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'Stall count + the crew-proposed loop fix (also stored to RAG).' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
-  'discover_mcp_tools', 'recall_taught_tools',
+  'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls',
 ];

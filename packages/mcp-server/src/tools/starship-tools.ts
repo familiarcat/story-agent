@@ -31,6 +31,7 @@ import {
   type CostProfile,
 } from '../lib/crew-tool-registry.js';
 import { discoverMcpForRole, recallTaughtTools } from '../lib/mcp-discovery.js';
+import { researchStalls } from '../lib/stall-research.js';
 import {
   getPersona,
   CREW_PERSONAS,
@@ -240,6 +241,27 @@ export function registerStarshipTools(server: McpServer): void {
       const cards = await recallTaughtTools(args.query, args.limit);
       return {
         content: [{ type: 'text', text: cards.length ? cards.join('\n\n---\n\n') : '(no peer-taught tools recalled for this query)' }],
+      };
+    }
+  );
+
+  // ── CREW RESEARCH STALLS (self-healing research loop) ──────────────────────
+
+  server.tool(
+    'crew_research_stalls',
+    'Recall agent-core STALL cards from RAG (finish/iterate stalls the loop self-nudged through) and convene the crew to research the recurring pattern + propose a concrete loop fix. Stores the research back to RAG. Closes the self-healing loop: the crew investigates and fixes its own stalls.',
+    {
+      limit: z.number().optional().default(50).describe('Max stall cards to analyze'),
+    },
+    async (args) => {
+      const r = await researchStalls({ limit: args.limit });
+      return {
+        content: [{
+          type: 'text',
+          text: r.stallCount === 0
+            ? 'No stall cards in RAG — the loop has not recorded a finish/iterate stall to research.'
+            : JSON.stringify({ stallCount: r.stallCount, topModel: r.topModel, costUSD: r.costUSD, proposal: r.proposal }, null, 2),
+        }],
       };
     }
   );
