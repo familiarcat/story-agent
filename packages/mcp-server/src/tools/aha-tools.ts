@@ -20,6 +20,7 @@ import { gateAhaWrite } from '../lib/crew-aha-automode.js';
 import { syncCrewResultToAha } from '../lib/crew-aha-sync.js';
 import { getAhaStory } from '../lib/aha.js';
 import { ahaRefToBranchName, branchCreateCommand } from '../lib/git-aha-branching.js';
+import { startStoryWithBranch } from '../lib/crew-story-lifecycle.js';
 
 async function aha(path: string, init?: RequestInit): Promise<any> {
   // Single source of truth: AWS Secrets Manager → direct-Aha env fallback (see aha-credentials.ts).
@@ -217,5 +218,21 @@ export function registerAhaTools(server: McpServer): void {
       const branch = ahaRefToBranchName({ ref, name: title, kind });
       return ok({ ref, kind, branch, base, command: branchCreateCommand(branch, base), note: 'Run via agent-core run_shell (WorfGate-gated); never force-push or rewrite main.' });
     },
+  );
+
+  // ── START STORY (Aha story + matching git branch, in sync) ─────────────────
+  server.tool(
+    'crew_start_story',
+    'Start a unit of work end-to-end in sync: create an Aha! story AND its matching git branch (story/<REF>-<slug>, from main, no switch, never force). WorfGate-gated: dry-run unless confirm:true; the Aha write is identity-verified + audited + RAG-remembered. Keeps git and the backlog in lockstep.',
+    {
+      name: z.string().describe('Story title'),
+      description: z.string().optional(),
+      releaseId: z.string().describe('Aha! release (sprint) to create the story in'),
+      executor: z.enum(['picard', 'data', 'riker', 'geordi', 'obrien', 'worf', 'yar', 'troi', 'crusher', 'uhura', 'quark']).optional().default('riker'),
+      push: z.boolean().optional().describe('also push the new branch to origin'),
+      confirm: z.boolean().optional().describe('true = create story + branch; false/omitted = dry-run'),
+    },
+    async ({ name, description, releaseId, executor, push, confirm }) =>
+      ok(await startStoryWithBranch({ name, description, releaseId, executor, push, confirm })),
   );
 }

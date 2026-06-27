@@ -194,6 +194,16 @@ defineSkillTheory({
 });
 
 defineSkillTheory({
+  tool: 'crew_start_story',
+  who: { owner: 'riker' },
+  what: { summary: 'Create an Aha story AND its matching git branch in one gated step (keeps git ↔ backlog in sync).', capabilities: ['gated Aha story create', 'matching story/<REF>-<slug> branch from main (no switch, never force)', 'optional push'] },
+  when: { useWhen: ['Starting a new unit of work that should be tracked + branched'], avoidWhen: ['Work that should stay on main'], preconditions: ['A target release', 'AHA credentials resolve'] },
+  where: { scope: ['aha', 'git', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'One action keeps the Aha story and the git branch in lockstep from the start — no drift between the PM system and the repo.', goalsServed: ['traceability', 'automation', 'sync'] },
+  how: { invocation: 'crew_start_story({ name, releaseId, description?, executor?, push?, confirm? })', annotations: { title: 'Crew Start Story', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, output: 'The created Aha ref + branch (dry-run unless confirm:true).' },
+});
+
+defineSkillTheory({
   tool: 'aha_branch_for_story',
   who: { owner: 'riker' },
   what: { summary: 'Derive a git branch name from an Aha story/task so branches mirror the backlog.', capabilities: ['story/<REF>-<slug> branch naming', 'from-main create command (never force)'] },
@@ -207,5 +217,5 @@ defineSkillTheory({
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
-  'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story',
+  'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story', 'crew_start_story',
 ];
