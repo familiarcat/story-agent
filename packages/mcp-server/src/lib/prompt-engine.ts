@@ -425,6 +425,14 @@ export async function executePromptEngineCall(
     return { reasoning: responseText, findings: [responseText], recommendations: [], confidence: 0.9, hasSecurityVeto: false };
   }
 
+  // Normalize description/storyDescription aliases — most templates (and all callers) use
+  // `storyDescription`, but a few (worf, troi) require/substitute `description`. Provide BOTH so
+  // requiredVariables validation AND {{description}}/{{storyDescription}} substitution work regardless.
+  // (Fixes submit_tool_for_evaluation's Worf screen + the per-crew persona/eval calls.)
+  const v = variables as Record<string, unknown>;
+  if (v.storyDescription != null && v.description == null) v.description = v.storyDescription;
+  if (v.description != null && v.storyDescription == null) v.storyDescription = v.description;
+
   // Validate required variables
   const missingVars = template.requiredVariables.filter(v => !variables[v]);
   if (missingVars.length > 0) {
