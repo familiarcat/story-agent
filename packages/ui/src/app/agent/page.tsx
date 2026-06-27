@@ -249,9 +249,9 @@ function btn(c: string): React.CSSProperties {
 function DiffView({ text, mono }: { text: string; mono: React.CSSProperties }) {
   const lines = text.split('\n');
   const colorFor = (l: string) =>
-    l.startsWith('+') && !l.startsWith('+++') ? { bg: '#e6ffed', fg: '#03543f' }
-    : l.startsWith('-') && !l.startsWith('---') ? { bg: '#ffeef0', fg: '#86181d' }
-    : l.startsWith('@@') ? { bg: '#f1f8ff', fg: '#005cc5' }
+    l.startsWith('+') && !l.startsWith('+++') ? { bg: 'color-mix(in srgb, var(--ok) 18%, var(--surface))', fg: 'var(--ok)' }
+    : l.startsWith('-') && !l.startsWith('---') ? { bg: 'color-mix(in srgb, var(--danger) 18%, var(--surface))', fg: 'var(--danger)' }
+    : l.startsWith('@@') ? { bg: 'color-mix(in srgb, var(--accent4) 18%, var(--surface))', fg: 'var(--accent4)' }
     : { bg: 'transparent', fg: 'var(--text)' };
   return (
     <pre style={{ ...mono, margin: 0 }}>

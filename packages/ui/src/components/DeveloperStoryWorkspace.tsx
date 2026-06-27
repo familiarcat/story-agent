@@ -216,10 +216,10 @@ export function DeveloperStoryWorkspace({
                     style={{
                       backgroundColor:
                         member.status === 'complete'
-                          ? '#10b981'
+                          ? 'var(--ok)'
                           : member.status === 'executing'
                             ? 'var(--warn)'
-                            : '#d1d5db',
+                            : 'var(--border)',
                     }}
                   />
                   <span className="flex-1">{member.crewName}</span>
