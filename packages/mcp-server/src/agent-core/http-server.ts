@@ -23,6 +23,13 @@ import { getRecentObservationMemories } from '@story-agent/shared/db';
 import '../lib/skill-theories.js';
 import '../lib/skill-theories-generated.js';
 
+// Deploy-validation markers (crew mission `fargate-deploy-validation`, OBS 07989292): the agent
+// server records WHEN it booted and WHICH commit it was built from, so curling /agent/health on a
+// live Fargate task confirms the rollout (startedAt changes per deploy; gitSha pins the image to a
+// commit). GIT_SHA is baked into the image at build time (docker/Dockerfile.mcp ARG); 'dev' locally.
+const SERVER_STARTED_AT = new Date().toISOString();
+const GIT_SHA = (process.env.GIT_SHA ?? 'dev').slice(0, 7);
+
 function authOk(req: IncomingMessage): boolean {
   const token = process.env.AGENT_SERVICE_TOKEN;
   if (!token) return true; // open on localhost when no token configured
@@ -92,8 +99,8 @@ export function startAgentHttpServer(port: number) {
 async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string, port?: number): Promise<void> {
   try {
     if (req.method === 'GET' && url === '/agent/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, service: 'story-agent-agent', port }));
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' });
+      res.end(JSON.stringify({ ok: true, service: 'story-agent-agent', port, gitSha: GIT_SHA, startedAt: SERVER_STARTED_AT }));
       return;
     }
     // Cost Observatory — aggregate spend by provider/model + savings vs an Anthropic-frontier baseline.
