@@ -626,7 +626,10 @@ function parseStructuredResponse(content: string): {
   }
 
   return {
-    findings: findings.length > 0 ? findings : ['Unable to extract findings from response'],
+    // When a response has no explicit FINDINGS: section (e.g. tool-eval prompts that ask for
+    // VOTE:/NOTES:, or security screens with CLEARANCE:/VETO:), DON'T discard it — return the raw
+    // content so downstream parsers (parseVote/parseDecision/Worf CLEARANCE) can read the real answer.
+    findings: findings.length > 0 ? findings : (content.trim() ? [content.trim()] : ['(empty response)']),
     recommendations: recommendations.length > 0 ? recommendations : ['Unable to extract recommendations'],
     confidence,
     hasSecurityVeto,

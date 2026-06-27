@@ -34,6 +34,32 @@ export type ToolCategory =
   | 'ai-tooling'
   | 'project-management';
 
+/**
+ * Robust verdict parsing — models don't always emit the exact `VOTE:`/`DECISION:` tag, which used to
+ * default specialists to 'abstain' (and Picard to 'trial') even when their prose clearly approved.
+ * Try the tag first, then fall back to sentiment.
+ */
+export function parseVote(text: string): 'approve' | 'reject' | 'abstain' {
+  const m = text.match(/VOTE:\s*(approve|reject|abstain)/i);
+  if (m) return m[1].toLowerCase() as 'approve' | 'reject' | 'abstain';
+  const t = text.toLowerCase();
+  const neg = /\b(reject|block|veto|oppose|against|not add|do not|don't|decline|avoid|duplicat|redundan)\b/.test(t);
+  const pos = /\b(approve|recommend|endorse|support|adopt|in favor|go ahead|green[- ]?light|best-of-breed)\b/.test(t);
+  if (pos && !neg) return 'approve';
+  if (neg && !pos) return 'reject';
+  return 'abstain';
+}
+
+export function parseDecision(text: string): 'approved' | 'rejected' | 'trial' {
+  const m = text.match(/DECISION:\s*(approved|rejected|trial)/i);
+  if (m) return m[1].toLowerCase() as 'approved' | 'rejected' | 'trial';
+  const t = text.toLowerCase();
+  if (/\b(reject|do not add|block)\b/.test(t)) return 'rejected';
+  if (/\btrial\b/.test(t)) return 'trial';
+  if (/\b(approve|add to registry|adopt|green[- ]?light)\b/.test(t)) return 'approved';
+  return 'trial';
+}
+
 export type SecurityClearance = 'approved' | 'review' | 'blocked';
 export type CostProfile = 'free' | 'paid' | 'self-hosted';
 export type ToolStatus = 'proposed' | 'under_evaluation' | 'approved' | 'rejected' | 'deprecated';
@@ -243,11 +269,7 @@ Respond with: VOTE: approve/reject/abstain, NOTES: [domain-specific evaluation]`
       );
 
       const text = result.findings.join('\n');
-      const voteMatch = text.match(/VOTE:\s*(approve|reject|abstain)/i);
-      results[crewId] = {
-        vote: (voteMatch?.[1]?.toLowerCase() as 'approve' | 'reject' | 'abstain') ?? 'abstain',
-        notes: text,
-      };
+      results[crewId] = { vote: parseVote(text), notes: text };
     })
   );
 
@@ -297,12 +319,11 @@ Respond with: DECISION: approved/rejected/trial, RATIONALE: [reasoning]`,
   );
 
   const text = result.findings.join('\n');
-  const decisionMatch = text.match(/DECISION:\s*(approved|rejected|trial)/i);
   const rationaleMatch = text.match(/RATIONALE:\s*([^\n]+)/i);
 
   return {
-    decision: (decisionMatch?.[1]?.toLowerCase() as 'approved' | 'rejected' | 'trial') ?? 'trial',
-    rationale: rationaleMatch?.[1] ?? 'Command decision pending full review',
+    decision: parseDecision(text),
+    rationale: rationaleMatch?.[1] ?? text.split('\n').find(l => l.trim())?.slice(0, 200) ?? 'Command decision',
   };
 }
 

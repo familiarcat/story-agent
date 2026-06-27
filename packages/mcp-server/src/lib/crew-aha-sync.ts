@@ -50,11 +50,18 @@ export async function syncCrewResultToAha(
   opts: { releaseId: string; executor?: string; clientId?: string | null; confirm?: boolean; titlePrefix?: string },
 ) {
   const draft = crewResultToAhaDraft(r, { titlePrefix: opts.titlePrefix });
+  const executor = opts.executor ?? 'riker'; // Riker owns story creation (under Worf's gate)
+  // TRUE dry-run: when not confirmed, return the draft WITHOUT touching the write path. (The governed
+  // executeAhaStoryWithMemory honors WorfGate auto-mode, which can auto-approve a low-risk create even
+  // with confirm=false — so a real preview must short-circuit BEFORE calling it.)
+  if (opts.confirm !== true) {
+    return { dryRun: true, draft, releaseId: opts.releaseId, executor, note: 'No write performed. Re-call with confirm:true to create in Aha (then subject to WorfGate auto-mode).' };
+  }
   return executeAhaStoryWithMemory({
     story: draft,
-    executor: opts.executor ?? 'riker', // Riker owns story creation (under Worf's gate)
+    executor,
     releaseId: opts.releaseId,
     clientId: opts.clientId ?? null,
-    confirm: opts.confirm === true,
+    confirm: true,
   });
 }
