@@ -1,49 +1,116 @@
 import { DOMAIN_GROUPS, HUB } from '../components/domains';
+import { lcars, CREW_ROSTER, RAIL_COLORS } from '../lib/lcars';
 
 /**
- * Orchestrating home — the unified-UI entry point (crew-decided). Leads with the hub (Agent
- * Workspace, which can drive every domain), then groups all surfaces by domain + intent so the user
- * picks where to go by what they want to do. Pure server component; reuses every existing page.
+ * LCARS dashboard home — the single entry point, styled in the Library Computer Access/Retrieval
+ * System aesthetic (crew unified-nav mission). Reuses DOMAIN_GROUPS (the single IA source) for the
+ * left rail + panels, and the crew roster for identity. Black ground, rounded elbows, condensed
+ * all-caps type. Pure server component.
  */
+const MONO = 'ui-monospace, "Helvetica Neue Condensed", "Arial Narrow", sans-serif';
+const ALL_SURFACES = DOMAIN_GROUPS.flatMap((g) => g.items);
+
 export default function Home() {
   return (
-    <main style={{ maxWidth: 1000, margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
-      <section style={{ padding: '0.5rem 0 1.25rem' }}>
-        <h1 style={{ fontSize: '1.5rem', margin: '0 0 0.25rem' }}>Your crew-run coding assistant</h1>
-        <p style={{ color: '#6b7280', margin: 0, fontSize: '0.95rem' }}>
-          A full Claude-Code-grade agent running entirely on the OpenRouter crew — Quark picks the cheapest adequate model, WorfGate governs every action.
-        </p>
-      </section>
+    <main style={{ background: lcars.black, color: lcars.text, fontFamily: MONO, minHeight: '100vh', padding: '0.75rem', letterSpacing: '0.03em' }}>
+      {/* Top elbow header */}
+      <header style={{ display: 'flex', gap: 8, alignItems: 'stretch', marginBottom: 10 }}>
+        <div style={{ width: 180, background: lcars.neonCarrot, color: lcars.black, borderTopLeftRadius: 28, borderBottomLeftRadius: 6, padding: '10px 14px', fontWeight: 800, display: 'flex', alignItems: 'flex-end', textTransform: 'uppercase' }}>
+          LCARS · Story Agent
+        </div>
+        <div style={{ flex: 1, background: lcars.eggplant, borderRadius: 6, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textTransform: 'uppercase', fontSize: '0.8rem', color: lcars.tanoi }}>
+          <span>Sovereign Factory · familiarcat</span>
+          <span style={{ color: lcars.paleCanary }}>OpenRouter Crew · WorfGate Online</span>
+        </div>
+        <div style={{ width: 90, background: lcars.goldenTanoi, color: lcars.black, borderTopRightRadius: 28, borderBottomRightRadius: 6, padding: '10px', fontWeight: 800, textAlign: 'right' }}>
+          47·∞
+        </div>
+      </header>
 
-      {/* Hub */}
-      <a href={HUB.href} style={{ display: 'block', textDecoration: 'none', border: '1px solid #bfdbfe', background: '#eff6ff', borderRadius: 12, padding: '1.1rem 1.25rem', marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1d4ed8' }}>{HUB.icon} {HUB.label} →</div>
-        <div style={{ color: '#374151', fontSize: '0.9rem', marginTop: 4 }}>{HUB.desc}</div>
-        <div style={{ color: '#6b7280', fontSize: '0.78rem', marginTop: 6 }}>The orchestrating hub — start here, or pick a domain below.</div>
-      </a>
+      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 10 }}>
+        {/* Left rail — nav (single IA source) */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <a href={HUB.href} style={railBtn(lcars.paleCanary, true)}>{HUB.icon} {HUB.label}</a>
+          {ALL_SURFACES.filter((s) => !s.hub).map((s, i) => (
+            <a key={s.href} href={s.href} style={railBtn(RAIL_COLORS[i % RAIL_COLORS.length])}>{s.label}</a>
+          ))}
+          <div style={{ flex: 1, minHeight: 12, background: lcars.eggplant, borderBottomLeftRadius: 20, marginTop: 6 }} />
+        </nav>
 
-      {/* Domain groups */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-        {DOMAIN_GROUPS.map(g => (
-          <section key={g.group} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.9rem 1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <h2 style={{ fontSize: '1rem', margin: 0 }}>{g.group}</h2>
-              <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>{g.owner}</span>
-            </div>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.15rem 0 0.6rem' }}>{g.intent}</p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-              {g.items.map(s => (
-                <li key={s.href}>
-                  <a href={s.href} style={{ textDecoration: 'none', color: '#1f2937' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: s.hub ? '#1d4ed8' : '#1f2937' }}>{s.icon} {s.label}</span>
-                    <span style={{ display: 'block', fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.4 }}>{s.desc}</span>
-                  </a>
-                </li>
+        {/* Main */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Hub panel */}
+          <a href={HUB.href} style={{ textDecoration: 'none', display: 'block', background: lcars.space, border: `2px solid ${lcars.neonCarrot}`, borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ color: lcars.neonCarrot, fontWeight: 800, fontSize: '1.05rem', textTransform: 'uppercase' }}>{HUB.icon} {HUB.label} →</div>
+            <div style={{ color: lcars.tanoi, fontSize: '0.85rem', marginTop: 6, lineHeight: 1.5, letterSpacing: 'normal' }}>{HUB.desc}</div>
+          </a>
+
+          {/* Hierarchy strip — firm → client → project → story (Aha parity layer) */}
+          <section style={panel(lcars.lilac)}>
+            <h2 style={panelTitle(lcars.lilac)}>Mission Hierarchy</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 2px', fontSize: '0.78rem' }}>
+              {['Firm: familiarcat', 'Client', 'Project', 'Epic', 'Story', 'Task', 'Sprint'].map((h, i) => (
+                <span key={h} style={{ background: i === 0 ? lcars.goldenTanoi : lcars.eggplant, color: i === 0 ? lcars.black : lcars.tanoi, padding: '4px 12px', borderRadius: 12, textTransform: 'uppercase' }}>{h}</span>
               ))}
-            </ul>
+            </div>
+            <div style={{ color: lcars.textDim, fontSize: '0.72rem', marginTop: 6, letterSpacing: 'normal' }}>
+              Served by the dynamic UI↔Aha parity layer (/api/aha/resource/&lt;resource&gt;) — reads open, writes Worf-gated.
+            </div>
           </section>
-        ))}
+
+          {/* Domain group panels */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
+            {DOMAIN_GROUPS.map((g, gi) => {
+              const c = RAIL_COLORS[gi % RAIL_COLORS.length];
+              return (
+                <section key={g.group} style={panel(c)}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <h2 style={panelTitle(c)}>{g.group}</h2>
+                    <span style={{ fontSize: '0.62rem', color: lcars.textDim, textTransform: 'uppercase' }}>{g.owner}</span>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '6px 0 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {g.items.map((s) => (
+                      <li key={s.href}>
+                        <a href={s.href} style={{ textDecoration: 'none', color: lcars.tanoi, fontSize: '0.82rem', display: 'block' }}>
+                          <span style={{ color: c, textTransform: 'uppercase', fontWeight: 700 }}>{s.label}</span>
+                          <span style={{ display: 'block', fontSize: '0.7rem', color: lcars.textDim, lineHeight: 1.4, letterSpacing: 'normal' }}>{s.desc}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+
+          {/* Crew roster */}
+          <section style={panel(lcars.anakiwa)}>
+            <h2 style={panelTitle(lcars.anakiwa)}>Bridge Crew · 11 Officers</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 6, marginTop: 6 }}>
+              {CREW_ROSTER.map((m) => (
+                <div key={m.id} style={{ background: lcars.space, borderLeft: `4px solid ${m.color}`, borderRadius: 6, padding: '6px 10px' }}>
+                  <div style={{ color: m.color, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.8rem' }}>{m.name}</div>
+                  <div style={{ color: lcars.textDim, fontSize: '0.66rem', textTransform: 'uppercase' }}>{m.role}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     </main>
   );
+}
+
+function railBtn(color: string, hub = false): React.CSSProperties {
+  return {
+    background: color, color: lcars.black, textDecoration: 'none', textTransform: 'uppercase',
+    fontWeight: 800, fontSize: '0.74rem', padding: '12px 12px', borderRadius: 6,
+    borderTopLeftRadius: hub ? 20 : 6, textAlign: 'right', lineHeight: 1.1,
+  };
+}
+function panel(color: string): React.CSSProperties {
+  return { background: lcars.space, borderTop: `3px solid ${color}`, borderRadius: 10, padding: '10px 14px' };
+}
+function panelTitle(color: string): React.CSSProperties {
+  return { color, fontSize: '0.9rem', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' };
 }
