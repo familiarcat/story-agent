@@ -1,0 +1,22 @@
+# Cross-platform line endings — normalize to LF in the repo so clones on macOS, Linux, and Windows
+# all check out consistent text (no CRLF churn, no "whole file changed" diffs on Windows).
+* text=auto eol=lf
+
+# Shell scripts MUST stay LF even on Windows checkouts (CRLF breaks bash/sh).
+*.sh text eol=lf
+
+# Windows-native scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Treat these as binary (never line-ending-converted or diffed as text).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.lockb binary
+pnpm-lock.yaml -diff linguist-generated

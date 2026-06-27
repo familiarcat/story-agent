@@ -1,6 +1,8 @@
 # Build outputs
 packages/*/dist/
 packages/*/.next/
+dist/
+*.tsbuildinfo
 
 # Environment
 .env
@@ -15,6 +17,13 @@ packages/*/node_modules/
 
 # OS
 .DS_Store
+Thumbs.db
+Desktop.ini
+
+# iCloud / cloud-sync conflict duplicates (e.g. "main 2", "route 2.ts") — never commit these.
+* 2
+* 2.*
+*.icloud
 
 # Terraform local state & providers (never commit)
 .terraform/

@@ -25,16 +25,25 @@ story-agent/
 
 ## Prerequisites
 
-- Node.js 18+
-- pnpm 8+
+- Node.js 22+ and pnpm 9+ (pinned in [`.tool-versions`](.tool-versions) / [`.nvmrc`](.nvmrc);
+  `package.json` declares `engines` + `packageManager` so `corepack enable` selects the right pnpm).
 - Supabase project (URL + service key for server-side access)
 - Aha API key (Settings → Security → API key)
 - GitHub Personal Access Token (repo + pull_request scopes)
 
+> **Cross-platform (macOS / Linux / Windows):** the repo is self-contained and clones cleanly on any
+> OS — line endings are normalized to LF via [`.gitattributes`](.gitattributes), all config comes from
+> `.env` (no machine-specific paths), and the toolchain is pinned. On Windows use WSL2 or Git Bash so
+> the `*.sh` ops scripts run; the app itself (build / test / dev / `tsx` scripts) is pure Node and
+> runs natively. **Do not place the clone in a cloud-synced folder** (iCloud/OneDrive/Dropbox) — it
+> corrupts `.git`; see [docs/git-push-resilience.md](docs/git-push-resilience.md).
+
 ## Setup
 
 ```bash
+git clone <repo-url> story-agent   # clone into a NON-cloud-synced path (e.g. ~/Developer)
 cd story-agent
+corepack enable                    # use the pinned pnpm (or: npm i -g pnpm@9)
 cp .env.example .env
 # Fill in SUPABASE_URL, SUPABASE_KEY, AHA_DOMAIN, AHA_API_KEY, GITHUB_TOKEN, GITHUB_DEFAULT_ORG
 
