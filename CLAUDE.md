@@ -111,8 +111,10 @@ and the PM side (Aha) — see [docs/aha-nomenclature.md](docs/aha-nomenclature.m
 - pnpm monorepo. Build a package: `pnpm --filter @story-agent/<pkg> run build`. Tests:
   `pnpm --filter @story-agent/<pkg> run test:unit`. Run scripts with `npx tsx scripts/<x>.ts`
   (the bash shell loads `~/.zshrc`, so crew/Supabase/Aha creds are present).
-- Known pre-existing failing test: `crew-collaboration.integration.test.ts` (missing template vars) —
-  unrelated to current work; don't chase it.
+- `crew-collaboration.integration.test.ts` (formerly the known-failing "missing template vars" test)
+  is now GREEN — fixed 2026-06-27: each crew agent in `crew-agents.ts` now passes
+  `storyDescription`/`acceptanceCriteria`, plus a `description`↔`storyDescription` alias and a
+  raw-content findings fallback in `prompt-engine.ts`.
 - Commit messages end with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`. The user
   works on `main` and wants pushes to trigger CI (`audit-check`).
 
