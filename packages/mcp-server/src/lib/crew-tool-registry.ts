@@ -195,7 +195,7 @@ Respond with: ASSESSMENT: [summary], RECOMMENDATION: approve/reject/trial, NOTES
 
 // ── SPECIALIST CREW EVALUATION ──────────────────────────────────────────────
 
-const TOOL_EVALUATORS: Record<ToolCategory, CrewId[]> = {
+export const TOOL_EVALUATORS: Record<ToolCategory, CrewId[]> = {
   'code-search': ['data', 'geordi'],
   'documentation': ['uhura', 'crusher'],
   'ci-cd': ['geordi', 'obrien'],
