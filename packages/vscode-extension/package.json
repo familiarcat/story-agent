@@ -81,6 +81,11 @@
         "icon": "$(rocket)"
       },
       {
+        "command": "story-agent.nodeActions",
+        "title": "Story Agent: Actions…",
+        "icon": "$(list-unordered)"
+      },
+      {
         "command": "story-agent.openDashboard",
         "title": "Story Agent: Open Dashboard",
         "icon": "$(browser)"
@@ -159,6 +164,16 @@
         {
           "command": "story-agent.prepareAhaStory",
           "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
+          "group": "inline"
+        },
+        {
+          "command": "story-agent.nodeActions",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
+          "group": "inline"
+        },
+        {
+          "command": "story-agent.nodeActions",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaProject",
           "group": "inline"
         }
       ],

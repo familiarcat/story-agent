@@ -8,6 +8,7 @@ import { NavigationTreeProvider } from './providers/NavigationTreeProvider';
 import { registerReviewChanges } from './reviewChanges';
 import { registerInlineChat } from './inlineChat';
 import { connectProviderInteractive } from './oauth';
+import { runNodeActions } from './selectionActions';
 
 function dashboardBase(): string {
   return vscode.workspace.getConfiguration('storyAgent').get<string>('dashboardUrl') ?? 'http://localhost:3000';
@@ -150,6 +151,10 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!ref) { vscode.window.showWarningMessage('No Aha reference on this item.'); return; }
       vscode.commands.executeCommand('workbench.action.chat.open', { query: `@story-agent /prepare ${ref}` });
     }),
+
+    // Selection-first UX: select a project/story node → pick a contract action (read = direct,
+    // write = WorfGate-gated dry-run). Folds the NL prompt into a selection. (selection-contract.ts)
+    vscode.commands.registerCommand('story-agent.nodeActions', (item: unknown) => runNodeActions(item)),
 
     vscode.commands.registerCommand(
       'story-agent.copyToClipboard',

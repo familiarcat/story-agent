@@ -37,6 +37,10 @@
       "import": "./dist/src/agent-modes.js",
       "types": "./dist/src/agent-modes.d.ts"
     },
+    "./selection-contract": {
+      "import": "./dist/src/selection-contract.js",
+      "types": "./dist/src/selection-contract.d.ts"
+    },
     "./aha-credentials": {
       "import": "./dist/src/aha-credentials.js",
       "types": "./dist/src/aha-credentials.d.ts"
