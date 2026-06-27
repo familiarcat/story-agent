@@ -183,9 +183,19 @@ defineSkillTheory({
   how: { invocation: 'crew_research_stalls({ limit? })', annotations: { title: 'Crew Research Stalls', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'Stall count + the crew-proposed loop fix (also stored to RAG).' },
 });
 
+defineSkillTheory({
+  tool: 'crew_sync_to_aha',
+  who: { owner: 'riker' },
+  what: { summary: 'Turn a stored crew mission result into an Aha! story so the crew auto-maintains its backlog.', capabilities: ['recall a crew mission from RAG', 'draft an Aha story from it', 'gated Aha create (dry-run unless confirmed)'] },
+  when: { useWhen: ['A crew mission/decision should become a tracked Aha story', 'Auto-maintaining the backlog from crew activity'], avoidWhen: ['No release (sprint) to target'], preconditions: ['A RAG mission memory exists for the storyId', 'AHA credentials resolve'] },
+  where: { scope: ['rag', 'aha', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Closes the loop from crew status/feedback to the PM system — the crew proposes stories from its own work; a human confirms the write.', goalsServed: ['traceability', 'autonomy', 'backlog hygiene'] },
+  how: { invocation: 'crew_sync_to_aha({ storyId, releaseId, executor?, confirm? })', annotations: { title: 'Crew Sync to Aha', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, output: 'Dry-run draft (default) or the created Aha story; always recorded to RAG.' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
-  'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls',
+  'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha',
 ];

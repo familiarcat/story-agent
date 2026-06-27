@@ -15,8 +15,9 @@ import { z } from 'zod';
 import { getCrewAhaMatrix, authorizeAhaWrite } from '../lib/crew-aha-roles.js';
 import { resolveAhaCredentials } from '@story-agent/shared/aha-credentials';
 import { executeAhaStoryWithMemory } from '../lib/crew-aha-mission.js';
-import { getRelevantObservationMemories } from '@story-agent/shared/db';
+import { getRelevantObservationMemories, getRecentObservationMemories } from '@story-agent/shared/db';
 import { gateAhaWrite } from '../lib/crew-aha-automode.js';
+import { syncCrewResultToAha } from '../lib/crew-aha-sync.js';
 
 async function aha(path: string, init?: RequestInit): Promise<any> {
   // Single source of truth: AWS Secrets Manager → direct-Aha env fallback (see aha-credentials.ts).
@@ -174,6 +175,27 @@ export function registerAhaTools(server: McpServer): void {
       audit('update-feature', { agentId, reference, fields: Object.keys(feature), decision: classification.decision });
       const res = await aha(`features/${reference}`, { method: 'PUT', body: JSON.stringify({ feature }) });
       return ok({ updated: res.feature?.reference_num, status: res.feature?.workflow_status?.name, by: agentId, autoMode: classification });
+    },
+  );
+
+  // ── CREW STATUS FEED → AHA STORY (auto-maintain the backlog from crew memory) ──
+  server.tool(
+    'crew_sync_to_aha',
+    'Turn a stored crew mission/status RESULT (from RAG, by storyId) into an Aha! story under a release, so the crew auto-maintains its own backlog. WorfGate-gated: dry-run draft unless confirm:true; identity-verified executor; audited; remembered to RAG. The crew proposes, a human confirms.',
+    {
+      storyId: z.string().describe('RAG mission storyId to convert (e.g. crew-autonomy, snyk-mcp-tools, stall-research)'),
+      releaseId: z.string().describe('Aha! release (sprint) to create the story in'),
+      executor: z.enum(['picard', 'data', 'riker', 'geordi', 'obrien', 'worf', 'yar', 'troi', 'crusher', 'uhura', 'quark']).optional().default('riker'),
+      clientId: z.string().optional(),
+      confirm: z.boolean().optional().describe('true = live Aha! write; false/omitted = dry-run draft (still recorded to RAG)'),
+    },
+    async ({ storyId, releaseId, executor, clientId, confirm }) => {
+      const mems = await getRecentObservationMemories(1, storyId, clientId ?? null);
+      if (!mems.length) return ok({ error: `no RAG mission memory found for storyId '${storyId}'` });
+      const m = mems[0];
+      const contributions = (m.transcript?.rounds?.[0]?.entries ?? []).map((e) => ({ crewId: e.speakerId }));
+      const result = { goals: m.transcript?.rounds?.[0]?.title ?? storyId, missionPlan: m.transcript?.consensusSummary ?? '', contributions, storyId };
+      return ok(await syncCrewResultToAha(result, { releaseId, executor, clientId: clientId ?? null, confirm }));
     },
   );
 }
