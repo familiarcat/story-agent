@@ -33,6 +33,10 @@
       "import": "./dist/src/skill-theory.js",
       "types": "./dist/src/skill-theory.d.ts"
     },
+    "./agent-modes": {
+      "import": "./dist/src/agent-modes.js",
+      "types": "./dist/src/agent-modes.d.ts"
+    },
     "./aha-credentials": {
       "import": "./dist/src/aha-credentials.js",
       "types": "./dist/src/aha-credentials.d.ts"
