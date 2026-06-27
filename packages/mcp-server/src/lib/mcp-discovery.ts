@@ -213,6 +213,28 @@ export async function recallTaughtTools(query: string, limit = 5): Promise<strin
   }
 }
 
+/**
+ * Constrain-to-list guardrail — when a discovery/eval is seeded from a PROVIDED source list (e.g. a
+ * scraped article), keep only candidates whose name matches that list (case/space-insensitive), so the
+ * crew can't drift off it onto tools it merely knows. Returns the kept items + the names it dropped.
+ */
+export function constrainToAllowedTools<T extends { name: string }>(
+  candidates: T[],
+  allowedNames: string[],
+): { kept: T[]; dropped: string[] } {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const allow = allowedNames.map(norm).filter(Boolean);
+  const kept: T[] = [];
+  const dropped: string[] = [];
+  for (const c of candidates) {
+    const n = norm(c.name);
+    const ok = !!n && allow.some((a) => n.includes(a) || a.includes(n));
+    if (ok) kept.push(c);
+    else dropped.push(c.name);
+  }
+  return { kept, dropped };
+}
+
 export interface RoleDiscoveryResult {
   crewId: CrewId;
   query: string;

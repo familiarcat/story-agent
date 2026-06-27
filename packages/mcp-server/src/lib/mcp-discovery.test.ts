@@ -10,6 +10,7 @@ import {
   validateToolCard,
   toolCardStoryId,
   toolCardText,
+  constrainToAllowedTools,
 } from './mcp-discovery.js';
 import type { ToolRecord } from './crew-tool-registry.js';
 
@@ -109,6 +110,20 @@ describe('registryServerToProposal', () => {
     expect(p.costProfile).toBe('self-hosted');
     expect(p.sourceReference).toBe('npm:mcp-x');
     expect((p.metadata as any).transports).toEqual(['stdio']);
+  });
+});
+
+describe('constrainToAllowedTools (anti-drift guardrail)', () => {
+  const allowed = ['Playwright MCP', 'Storybook MCP Server', 'MCP-Miro', 'Cursor Talk to Figma'];
+  it('keeps list-faithful picks (case/space-insensitive) and drops off-list drift', () => {
+    const picks = [{ name: 'playwright-mcp' }, { name: 'Storybook MCP' }, { name: 'PostgreSQL' }, { name: 'Trivy' }];
+    const { kept, dropped } = constrainToAllowedTools(picks, allowed);
+    expect(kept.map((k) => k.name)).toEqual(['playwright-mcp', 'Storybook MCP']);
+    expect(dropped).toEqual(['PostgreSQL', 'Trivy']);
+  });
+  it('matches Miro to MCP-Miro', () => {
+    const { kept } = constrainToAllowedTools([{ name: 'miro' }], allowed);
+    expect(kept).toHaveLength(1);
   });
 });
 
