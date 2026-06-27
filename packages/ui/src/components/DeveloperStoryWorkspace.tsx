@@ -14,8 +14,20 @@
 
 import React, { useEffect, useState } from 'react';
 import { DeveloperAdvisor } from './DeveloperAdvisor';
-import type { CrewExecutionState } from '@story-agent/shared';
+import { HierarchyTree } from './HierarchyTree';
+import type { CrewExecutionState, HierarchyNode, ActionIntent } from '@story-agent/shared';
 import { buildClientScopeHeaders, readClientScopeState } from '@/lib/client-scope-store';
+
+/**
+ * Route a selection-tree action from the DEVELOPER persona — the full code lifecycle. Reads open in
+ * place; lifecycle actions (plan / agent / branch / link-pr / prepare) hand off to the crew chat for
+ * the named story (the autonomous loop, WorfGate-gated). Same shared <HierarchyTree>, dev routing.
+ */
+function handleDeveloperAction(node: HierarchyNode, intent: ActionIntent) {
+  if (intent === 'open' && node.url) { window.open(node.url, '_blank'); return; }
+  if (node.ref) window.location.href = `/story/${encodeURIComponent(node.ref)}?action=${intent}`;
+  else if (node.url) window.open(node.url, '_blank');
+}
 
 interface DeveloperStoryProps {
   storyId: string;
@@ -47,7 +59,7 @@ export function DeveloperStoryWorkspace({
 }: DeveloperStoryProps) {
   const [story, setStory] = useState<StoryDetails | null>(null);
   const [crewState, setCrewState] = useState<CrewExecutionState | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'execution' | 'code' | 'advisor'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'execution' | 'code' | 'advisor' | 'hierarchy'>('overview');
   const [isConnected, setIsConnected] = useState(false);
 
   // Fetch story details
@@ -144,6 +156,12 @@ export function DeveloperStoryWorkspace({
             icon="🤖"
             label="Crew Guidance"
           />
+          <TabButton
+            active={activeTab === 'hierarchy'}
+            onClick={() => setActiveTab('hierarchy')}
+            icon="🗂️"
+            label="Hierarchy"
+          />
         </div>
 
         {/* Content */}
@@ -157,6 +175,9 @@ export function DeveloperStoryWorkspace({
             <div className="space-y-4">
               <DeveloperAdvisor storyRef={storyRef} isConnected={isConnected} />
             </div>
+          )}
+          {activeTab === 'hierarchy' && (
+            <HierarchyTree persona="developer" onAction={handleDeveloperAction} focusStoryRef={storyRef} title="Story tunnel — this story in context" />
           )}
         </div>
       </div>

@@ -15,12 +15,25 @@
 import React, { useState } from 'react';
 import { SprintBoard } from './SprintBoard';
 import { ProjectManagerAdvisor } from './ProjectManagerAdvisor';
+import { HierarchyTree } from './HierarchyTree';
+import type { HierarchyNode, ActionIntent } from '@story-agent/shared';
 
 interface PMDashboardProps {
   projectId: string;
 }
 
-type DashboardView = 'sprint' | 'roadmap' | 'crew' | 'budget' | 'risks';
+type DashboardView = 'sprint' | 'portfolio' | 'roadmap' | 'crew' | 'budget' | 'risks';
+
+/**
+ * Route a selection-tree action from the MANAGEMENT persona. Reads open in place; approval-style
+ * writes (start-story / complete) navigate to the gated story workspace where WorfGate confirms —
+ * a manager initiates, the gate enforces. (Shared <HierarchyTree>, persona-differentiated routing.)
+ */
+function handleManagementAction(node: HierarchyNode, intent: ActionIntent) {
+  if (intent === 'open' && node.url) { window.open(node.url, '_blank'); return; }
+  if (node.ref) window.location.href = `/story/${encodeURIComponent(node.ref)}?action=${intent}`;
+  else if (node.url) window.open(node.url, '_blank');
+}
 
 export function ProjectManagerDashboard({ projectId }: PMDashboardProps) {
   const [activeView, setActiveView] = useState<DashboardView>('sprint');
@@ -60,6 +73,12 @@ export function ProjectManagerDashboard({ projectId }: PMDashboardProps) {
           label="Sprint Board"
         />
         <ViewTab
+          active={activeView === 'portfolio'}
+          onClick={() => setActiveView('portfolio')}
+          icon="🗂️"
+          label="Portfolio"
+        />
+        <ViewTab
           active={activeView === 'roadmap'}
           onClick={() => setActiveView('roadmap')}
           icon="🗺️"
@@ -90,6 +109,9 @@ export function ProjectManagerDashboard({ projectId }: PMDashboardProps) {
         {/* Left: Main view */}
         <div className="col-span-3">
           {activeView === 'sprint' && <SprintBoard projectId={projectId} />}
+          {activeView === 'portfolio' && (
+            <HierarchyTree persona="management" onAction={handleManagementAction} title="Portfolio — select a project / story" />
+          )}
           {activeView === 'roadmap' && <RoadmapView projectId={projectId} />}
           {activeView === 'crew' && <CrewStatusView projectId={projectId} />}
           {activeView === 'budget' && <BudgetView projectId={projectId} />}

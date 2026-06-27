@@ -91,3 +91,23 @@ export function actionsForLevel(level: NodeLevel): NodeAction[] {
 export function actionRequiresConfirm(action: NodeAction): boolean {
   return action.write;
 }
+
+/**
+ * The two user personas the single codebase serves (crew mission `persona-workflow-strategy`,
+ * OBS 73757052 — Troi MEM 61 + Data MEM 62). The SAME select→act→crew→Aha workflow, rendered
+ * differently: MANAGEMENT (web dashboard) = portfolio oversight + approval-style writes (start /
+ * complete a story); DEVELOPER (VS Code + web story workspace) = the full code lifecycle (plan /
+ * execute / branch / link-PR). Both see all reads. This persona filter lives in the contract so
+ * every surface reuses one source of truth.
+ */
+export type Persona = 'management' | 'developer';
+
+/** Dev-only intents — low-level code/lifecycle ops a manager does not drive directly. */
+const DEVELOPER_ONLY: ReadonlySet<ActionIntent> = new Set(['agent', 'branch', 'link-pr']);
+
+export function actionsForPersona(level: NodeLevel, persona: Persona): NodeAction[] {
+  const all = actionsForLevel(level);
+  if (persona === 'developer') return all;
+  // management: all reads + approval-style writes (start-story / complete), minus dev-only ops.
+  return all.filter(a => !DEVELOPER_ONLY.has(a.intent));
+}

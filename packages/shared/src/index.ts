@@ -1,5 +1,9 @@
 // Shared types across MCP server and Next.js UI
 
+// Selection-first UI contract — re-exported so the web (which imports @story-agent/shared bare) and
+// the mcp-server share one source of truth. The VS Code extension mirrors it (esbuild, no bundle).
+export * from './selection-contract.js';
+
 export type StoryStatus =
   | 'pending'
   | 'discovery'

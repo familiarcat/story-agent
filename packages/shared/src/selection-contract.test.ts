@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  NODE_LEVELS, CHILD_LEVEL, childLevel, actionsForLevel, actionRequiresConfirm,
+  NODE_LEVELS, CHILD_LEVEL, childLevel, actionsForLevel, actionRequiresConfirm, actionsForPersona,
   type NodeLevel,
 } from './selection-contract.js';
 
@@ -45,6 +45,27 @@ describe('selection-first contract (firm → client → project → epic → sto
   it('plan (read-only) is offered on project, epic, story, task — the PM lane', () => {
     for (const lvl of ['project', 'epic', 'story', 'task'] as NodeLevel[]) {
       expect(actionsForLevel(lvl).some(a => a.intent === 'plan')).toBe(true);
+    }
+  });
+
+  it('persona filter: developer gets the full code lifecycle; management drops dev-only ops', () => {
+    const dev = actionsForPersona('story', 'developer').map(a => a.intent);
+    const mgmt = actionsForPersona('story', 'management').map(a => a.intent);
+    // developer = the full set
+    expect(dev).toEqual(actionsForLevel('story').map(a => a.intent));
+    expect(dev).toEqual(expect.arrayContaining(['agent', 'branch', 'link-pr']));
+    // management hides dev-only ops...
+    expect(mgmt).not.toContain('agent');
+    expect(mgmt).not.toContain('branch');
+    expect(mgmt).not.toContain('link-pr');
+    // ...but keeps reads + approval-style writes
+    expect(mgmt).toEqual(expect.arrayContaining(['plan', 'open', 'start-story', 'complete']));
+  });
+
+  it('management never loses read access at any level', () => {
+    for (const lvl of NODE_LEVELS) {
+      const reads = actionsForPersona(lvl as NodeLevel, 'management').filter(a => !a.write);
+      expect(reads.length, `management has no reads on ${lvl}`).toBeGreaterThan(0);
     }
   });
 });
