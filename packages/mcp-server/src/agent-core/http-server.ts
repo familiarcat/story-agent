@@ -193,6 +193,7 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
         workspace: body.workspace,
         clientId,
         tier: body.tier,
+        toolPolicy: body.toolPolicy,
         ...buildBridges(clientId),
         onEvent: (e) => send(e),
         requireApproval: body.requireApproval === true,

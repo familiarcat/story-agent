@@ -141,6 +141,7 @@ export async function runAgentTurn(
   prompt: string,
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken,
+  opts?: { toolPolicy?: "full" | "read-only" }
 ): Promise<AgentTurnResult> {
   const c = vscode.workspace.getConfiguration('storyAgent');
   const authToken = process.env.AGENT_SERVICE_TOKEN || c.get<string>('chat.agentServiceToken');
@@ -160,7 +161,7 @@ export async function runAgentTurn(
           'Content-Type': 'application/json',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
-        body: JSON.stringify({ input: prompt, workspace: workspacePath(), clientId }),
+        body: JSON.stringify({ input: prompt, workspace: workspacePath(), clientId, toolPolicy: opts?.toolPolicy }),
       });
       usedBase = base;
       break;

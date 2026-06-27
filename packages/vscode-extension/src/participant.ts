@@ -163,7 +163,7 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         const pctx = await gatherChatContext(request, token);
         if (pctx.note) stream.markdown(`${pctx.note}\n\n`);
         const planPrompt = `${pctx.contextBlock}PLAN MODE — do NOT edit files or run mutating commands. Read the codebase as needed and produce a concise, ordered implementation plan (numbered steps, files to touch, risks) for:\n\n${pctx.prompt || prompt}`;
-        const result = await runAgentTurn(planPrompt, stream, token);
+        const result = await runAgentTurn(planPrompt, stream, token, { toolPolicy: 'read-only' });
         stream.button({ command: 'story-agent.openObservationLounge', title: '$(eye) Open Observation Lounge' });
         return { metadata: { [META_CMD]: 'plan', escalated: result.escalated } };
       }
@@ -172,7 +172,7 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
       if (cmd === 'review') {
         const focus = prompt.length ? `\n\nFocus areas: ${prompt}` : '';
         const reviewPrompt = `CODE REVIEW — read-only. Run git_status and git_diff to inspect the current working changes, then review them for bugs, security issues, and clarity. Do NOT edit files.${focus}`;
-        const result = await runAgentTurn(reviewPrompt, stream, token);
+        const result = await runAgentTurn(reviewPrompt, stream, token, { toolPolicy: 'read-only' });
         return { metadata: { [META_CMD]: 'review', escalated: result.escalated } };
       }
 

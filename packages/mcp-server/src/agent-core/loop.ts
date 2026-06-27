@@ -63,6 +63,8 @@ export interface RunAgentOptions {
   requireApproval?: boolean;
   /** Resolver the surface wires to a back-channel; returns 'approve' | 'deny' for a pending gate. */
   requestApproval?: (info: { approvalId: string; tool: string; tier: WorfTier; remediations: string[]; args: unknown }) => Promise<'approve' | 'deny'>;
+  /** Tool policy: "full" (default) or "read-only" (limits tools to read-only operations). */
+  toolPolicy?: "full" | "read-only";
 }
 
 export interface AgentRunResult {
@@ -116,6 +118,8 @@ function providerOf(model: string): string {
 
 // Always-available tools: orient (read/search/list) + escalate. The lens focuses everything else.
 const LENS_CORE = new Set(['read_file', 'list_dir', 'search_code', 'crew_deliberate']);
+// Read-only tools for toolPolicy="read-only"
+const READ_ONLY_TOOLS = new Set(['read_file','list_dir','search_code','git_status','git_diff','rag_recall','crew_deliberate']);
 // Intent → tool affinities (problem topology). The lens reads the request + each tool's 5W1H theory.
 const LENS_INTENTS: Array<{ re: RegExp; tools: string[] }> = [
   { re: /\b(write|create|add|implement|scaffold|generate|new file)\b/, tools: ['write_file', 'edit_file', 'apply_patch'] },
@@ -232,7 +236,12 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   // Layer-3 dynamic lens: focus the tool set on the task (self-composed from the 5W1H mesh).
   const composed = (opts.composeLens ?? true) ? composeLens(userInput, tools) : { lens: tools, reason: `full mesh (${tools.length})` };
   emit({ type: 'lens', text: composed.reason });
-  const openaiTools = toOpenAITools(composed.lens);
+  let lensTools = composed.lens;
+  if (opts.toolPolicy === 'read-only') {
+    lensTools = composed.lens.filter(t => READ_ONLY_TOOLS.has(t.name));
+    emit({ type: 'lens', text: 'read-only (plan) mode: ' + lensTools.map(t=>t.name).join(', ') });
+  }
+  const openaiTools = toOpenAITools(lensTools);
 
   const perProvider: Record<string, number> = {};
   const accrue = (tin: number, tout: number) => {
