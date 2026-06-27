@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { lcars } from '../../lib/lcars';
+import { LcarsScreen, LcarsPanel, LcarsStat, LcarsBar } from '../../components/Lcars';
 
 interface Summary {
   turns: number;
@@ -27,49 +29,51 @@ export default function CostPage() {
   }
   useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
 
-  const card: React.CSSProperties = { border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem', background: '#fff' };
-  const bar = (frac: number, color: string) => ({ width: `${Math.min(100, frac * 100)}%`, height: 8, background: color, borderRadius: 4 });
-
   return (
-    <main style={{ maxWidth: 860, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
-        <h1 style={{ fontSize: '1.25rem', margin: 0 }}>💰 Cost Observatory — Quark</h1>
-        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>OpenRouter pool · auto-refresh 10s</span>
-      </header>
-
-      {err && <div style={{ ...card, color: '#b91c1c' }}>⚠️ {err}<div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 6 }}>Start the crew brain (<code>STORY_AGENT_AGENT_PORT=3103 pnpm --filter @story-agent/mcp-server start</code>) or set <code>STORY_AGENT_AGENT_URL</code> to the deployed ALB.</div></div>}
+    <LcarsScreen title="💰 Cost Observatory · Quark" status="OpenRouter pool · auto-refresh 10s">
+      {err && (
+        <LcarsPanel title="Signal lost" color={lcars.danger}>
+          <div style={{ color: lcars.danger, fontSize: '0.85rem', letterSpacing: 'normal' }}>⚠️ {err}</div>
+          <div style={{ fontSize: '0.72rem', color: lcars.textDim, marginTop: 6, letterSpacing: 'normal' }}>
+            Start the crew brain (<code>STORY_AGENT_AGENT_PORT=3103 pnpm --filter @story-agent/mcp-server start</code>) or set <code>STORY_AGENT_AGENT_URL</code> to the deployed ALB.
+          </div>
+        </LcarsPanel>
+      )}
 
       {data && (
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-            <div style={card}><div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Total spend ({data.turns} turns)</div><div style={{ fontSize: '1.6rem', fontWeight: 700 }}>${data.totalUSD.toFixed(4)}</div></div>
-            <div style={card}><div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Saved vs {data.baseline.model.split('/')[1]}</div><div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#059669' }}>{data.baseline.savedPct}%</div><div style={{ fontSize: '0.75rem', color: '#6b7280' }}>${data.baseline.savedUSD.toFixed(4)} saved</div></div>
-            <div style={card}><div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Tokens</div><div style={{ fontSize: '1.1rem', fontWeight: 600 }}>↑{data.tokensIn.toLocaleString()} ↓{data.tokensOut.toLocaleString()}</div></div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+            <LcarsStat label={`Total spend (${data.turns} turns)`} value={`$${data.totalUSD.toFixed(4)}`} accent={lcars.goldenTanoi} />
+            <LcarsStat label={`Saved vs ${data.baseline.model.split('/')[1] ?? data.baseline.model}`} value={`${data.baseline.savedPct}%`} accent={lcars.anakiwa} />
+            <LcarsStat label="Tokens ↑in ↓out" value={`↑${data.tokensIn.toLocaleString()} ↓${data.tokensOut.toLocaleString()}`} accent={lcars.tanoi} />
           </div>
 
-          <div style={card}>
-            <h2 style={{ fontSize: '0.95rem', margin: '0 0 0.75rem' }}>By model (Quark's picks)</h2>
+          <LcarsPanel title="By model · Quark's picks" color={lcars.neonCarrot}>
             {Object.entries(data.perModel).sort((a, b) => b[1].costUSD - a[1].costUSD).map(([m, v]) => (
-              <div key={m} style={{ marginBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}><span style={{ fontFamily: 'ui-monospace, monospace' }}>{m}</span><span style={{ color: '#6b7280' }}>{v.turns} turns · ${v.costUSD.toFixed(4)}</span></div>
-                <div style={bar(data.totalUSD ? v.costUSD / data.totalUSD : 0, m.startsWith('anthropic') ? '#9333ea' : '#059669')} />
+              <div key={m} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', letterSpacing: 'normal' }}>
+                  <span style={{ color: lcars.tanoi }}>{m}</span>
+                  <span style={{ color: lcars.textDim }}>{v.turns} turns · ${v.costUSD.toFixed(4)}</span>
+                </div>
+                <div style={{ marginTop: 3 }}>
+                  <LcarsBar frac={data.totalUSD ? v.costUSD / data.totalUSD : 0} color={m.startsWith('anthropic') ? lcars.lilac : lcars.neonCarrot} />
+                </div>
               </div>
             ))}
-            {!Object.keys(data.perModel).length && <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>No turns yet — use the chat or agent to populate.</p>}
-          </div>
+            {!Object.keys(data.perModel).length && <p style={{ color: lcars.textDim, fontSize: '0.8rem', letterSpacing: 'normal' }}>No turns yet — use the chat or agent to populate.</p>}
+          </LcarsPanel>
 
-          <div style={card}>
-            <h2 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem' }}>Recent turns</h2>
-            <div style={{ fontSize: '0.78rem', fontFamily: 'ui-monospace, monospace', color: '#374151' }}>
+          <LcarsPanel title="Recent turns" color={lcars.lilac}>
+            <div style={{ fontSize: '0.76rem', color: lcars.tanoi, letterSpacing: 'normal' }}>
               {data.recent.map((e, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', borderBottom: '1px solid #f3f4f6' }}>
-                  <span>{e.surface} · {e.model}</span><span style={{ color: '#6b7280' }}>${e.costUSD.toFixed(5)}</span>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', borderBottom: `1px solid ${lcars.eggplant}` }}>
+                  <span>{e.surface} · {e.model}</span><span style={{ color: lcars.textDim }}>${e.costUSD.toFixed(5)}</span>
                 </div>
               ))}
             </div>
-          </div>
+          </LcarsPanel>
         </div>
       )}
-    </main>
+    </LcarsScreen>
   );
 }

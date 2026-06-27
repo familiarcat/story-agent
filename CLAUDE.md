@@ -26,6 +26,19 @@ analysis, deliberation, and planning. Concretely:
 A `CLAUDE.md` cannot change which model *this session* runs on — but following the above shifts the
 substantive work onto the crew, which is the point.
 
+## Crew memory recall (read BEFORE any NL prompt)
+
+**Every Claude Code or Story Agent natural-language prompt must RECALL crew RAG memory before acting,
+and STORE durable conclusions after.** The crew compounds only if each turn builds on what it already
+knows. Loop: `prompt → recall → act → store → next prompt recalls it`.
+
+- **Recall first:** `rag_recall` (agent-core), or `getRelevantObservationMemories` /
+  `recall_taught_tools` (scripts/tools), keyed to the task — cite what you found (prior rulings,
+  taught tools, persona context). Don't re-litigate decisions already in RAG.
+- **Store after:** `storeObservationMemory` (crew-wide) + a per-member `storeCrewPersonalMemory`,
+  tagged for recall. Mission pipeline results store automatically.
+- Full protocol + consumers: [docs/crew-memory-recall-protocol.md](docs/crew-memory-recall-protocol.md).
+
 ## LLM routing (Quark)
 
 - Single selector: `quarkSelectModel(crewBaseTier(crewId))` in
