@@ -18,6 +18,8 @@ import { executeAhaStoryWithMemory } from '../lib/crew-aha-mission.js';
 import { getRelevantObservationMemories, getRecentObservationMemories } from '@story-agent/shared/db';
 import { gateAhaWrite } from '../lib/crew-aha-automode.js';
 import { syncCrewResultToAha } from '../lib/crew-aha-sync.js';
+import { getAhaStory } from '../lib/aha.js';
+import { ahaRefToBranchName, branchCreateCommand } from '../lib/git-aha-branching.js';
 
 async function aha(path: string, init?: RequestInit): Promise<any> {
   // Single source of truth: AWS Secrets Manager → direct-Aha env fallback (see aha-credentials.ts).
@@ -196,6 +198,24 @@ export function registerAhaTools(server: McpServer): void {
       const contributions = (m.transcript?.rounds?.[0]?.entries ?? []).map((e) => ({ crewId: e.speakerId }));
       const result = { goals: m.transcript?.rounds?.[0]?.title ?? storyId, missionPlan: m.transcript?.consensusSummary ?? '', contributions, storyId };
       return ok(await syncCrewResultToAha(result, { releaseId, executor, clientId: clientId ?? null, confirm }));
+    },
+  );
+
+  // ── GIT BRANCH ↔ AHA STORY (mirror the backlog in git) ─────────────────────
+  server.tool(
+    'aha_branch_for_story',
+    'Derive the git branch name for an Aha! story/task so branches mirror the backlog (story/<REF>-<kebab-slug>). Returns the branch name + the from-main create command (never force) for the agent to run via WorfGate-governed git. Does NOT create the branch itself — derivation only.',
+    {
+      ref: z.string().describe('Aha reference, e.g. PROD-17 (story) or PROD-17.1 (task)'),
+      name: z.string().optional().describe('Story title; if omitted, fetched from Aha'),
+      kind: z.enum(['story', 'task', 'epic']).optional().default('story'),
+      base: z.string().optional().default('main'),
+    },
+    async ({ ref, name, kind, base }) => {
+      let title = name;
+      if (!title) { try { title = (await getAhaStory(ref)).name; } catch { /* title optional */ } }
+      const branch = ahaRefToBranchName({ ref, name: title, kind });
+      return ok({ ref, kind, branch, base, command: branchCreateCommand(branch, base), note: 'Run via agent-core run_shell (WorfGate-gated); never force-push or rewrite main.' });
     },
   );
 }

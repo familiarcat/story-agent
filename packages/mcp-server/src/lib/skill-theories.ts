@@ -193,9 +193,19 @@ defineSkillTheory({
   how: { invocation: 'crew_sync_to_aha({ storyId, releaseId, executor?, confirm? })', annotations: { title: 'Crew Sync to Aha', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, output: 'Dry-run draft (default) or the created Aha story; always recorded to RAG.' },
 });
 
+defineSkillTheory({
+  tool: 'aha_branch_for_story',
+  who: { owner: 'riker' },
+  what: { summary: 'Derive a git branch name from an Aha story/task so branches mirror the backlog.', capabilities: ['story/<REF>-<slug> branch naming', 'from-main create command (never force)'] },
+  when: { useWhen: ['Starting work on an Aha story/task', 'Automating branch creation alongside Aha'], avoidWhen: ['Working directly on main'] },
+  where: { scope: ['aha', 'git'], surfaces: ['api', 'mcp'], sideEffects: 'none' },
+  why: { rationale: 'One deterministic mapping from the Aha hierarchy to git branches keeps work traceable end-to-end (story ↔ branch ↔ PR).', goalsServed: ['traceability', 'automation'] },
+  how: { invocation: 'aha_branch_for_story({ ref, name?, kind?, base? })', annotations: { title: 'Aha Branch For Story', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'branch name + the from-main create command (the agent runs it via WorfGate-gated git).' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
-  'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha',
+  'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story',
 ];
