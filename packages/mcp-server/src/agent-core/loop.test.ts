@@ -19,8 +19,11 @@ describe('shouldEscalate', () => {
     expect(shouldEscalate('review the security of the auth flow')).toBe(true);
     expect(shouldEscalate('design the schema migration')).toBe(true);
   });
-  it('escalates on very long prompts (>600 chars)', () => {
-    expect(shouldEscalate('x'.repeat(601))).toBe(true);
+  it('escalates on very long prompts (>1200 chars — crew stall-research tuning)', () => {
+    expect(shouldEscalate('x'.repeat(1201))).toBe(true);
+  });
+  it('does NOT escalate a long-but-actionable prompt under the raised threshold', () => {
+    expect(shouldEscalate('x'.repeat(601))).toBe(false); // 600→1200 reduces escalation-into-inaction
   });
   it('does not escalate a short simple task', () => {
     expect(shouldEscalate('add a comment to README')).toBe(false);

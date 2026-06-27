@@ -101,7 +101,7 @@ const ESCALATION_SIGNALS = ['architect', 'security', 'migration', 'refactor', 'p
 /** PROD-15: should this request escalate to the full crew before the loop runs? */
 export function shouldEscalate(input: string): boolean {
   const t = input.toLowerCase();
-  return ESCALATION_SIGNALS.some(k => t.includes(k)) || input.length > 600;
+  return ESCALATION_SIGNALS.some(k => t.includes(k)) || input.length > 1200;
 }
 
 const ACTION_VERBS = /\b(edit|create|write|add|implement|fix|replace|update|run|build|refactor|rename|delete|remove|convert|map|reskin|apply|scaffold|generate|install|commit|patch)\b/;
