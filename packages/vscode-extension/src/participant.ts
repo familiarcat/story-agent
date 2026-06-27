@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { fetchAhaStory } from './aha';
 import { buildObservationLoungeBrief } from './brief';
 import { runAssistantTurn, resetSession } from './chatEngine';
-import { runAgentTurn, renderSymphonyPanel, runChatTurn } from './agentClient';
+import { runAgentTurn, renderSymphonyPanel, runChatTurn, fetchAhaHierarchy } from './agentClient';
 import { gatherChatContext } from './contextProvider';
 
 const PARTICIPANT_ID = 'story-agent.agent';
@@ -162,7 +162,9 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         }
         const pctx = await gatherChatContext(request, token);
         if (pctx.note) stream.markdown(`${pctx.note}\n\n`);
-        const planPrompt = `${pctx.contextBlock}PLAN MODE — do NOT edit files or run mutating commands. Read the codebase as needed and produce a concise, ordered implementation plan (numbered steps, files to touch, risks) for:\n\n${pctx.prompt || prompt}`;
+        const ahaTree = await fetchAhaHierarchy(token);
+        if (ahaTree) stream.markdown(ahaTree + '\n\n');
+        const planPrompt = `${pctx.contextBlock}${ahaTree ? ahaTree + '\n\n' : ''}PLAN MODE (project-management aware) — do NOT edit files or run mutating commands. Read the codebase as needed and produce a concise, ordered implementation plan (numbered steps, files to touch, risks). Map the work onto the Aha hierarchy above: state which firm → client → project → epic → story this belongs under, or propose a NEW story/branch (as a gated dry-run the user can confirm) if none fits. Plan for:\n\n${pctx.prompt || prompt}`;
         const result = await runAgentTurn(planPrompt, stream, token, { toolPolicy: 'read-only' });
         stream.button({ command: 'story-agent.openObservationLounge', title: '$(eye) Open Observation Lounge' });
         return { metadata: { [META_CMD]: 'plan', escalated: result.escalated } };

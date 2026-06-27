@@ -46,6 +46,63 @@ function agentCandidates(): string[] {
   return primary === LOCAL_AGENT ? [LOCAL_AGENT] : [primary, LOCAL_AGENT];
 }
 
+interface AhaProduct {
+  id: string;
+  name: string;
+  referencePrefix: string | null;
+  url: string;
+}
+
+interface AhaResponse {
+  products?: AhaProduct[];
+}
+
+function isAhaProductArray(obj: unknown): obj is AhaProduct[] {
+  return Array.isArray(obj) && obj.every(p => 
+    p && 
+    typeof p === 'object' &&
+    'id' in p && typeof p.id === 'string' &&
+    'name' in p && typeof p.name === 'string' &&
+    ('referencePrefix' in p && (p.referencePrefix === null || typeof p.referencePrefix === 'string')) &&
+    'url' in p && typeof p.url === 'string'
+  );
+}
+
+export async function fetchAhaHierarchy(token: vscode.CancellationToken): Promise<string> {
+  if (token.isCancellationRequested) return '';
+  
+  for (const base of agentCandidates()) {
+    try {
+      const resp = await fetch(`${base}/aha/products`);
+      if (!resp.ok) continue;
+      
+      const data = await resp.json() as unknown;
+      let products: AhaProduct[] | null = null;
+      
+      if (isAhaProductArray(data)) {
+        products = data;
+      } else if (typeof data === 'object' && data !== null && 'products' in data) {
+        const response = data as AhaResponse;
+        if (isAhaProductArray(response.products)) {
+          products = response.products;
+        }
+      }
+      
+      if (!products?.length) return '';
+      
+      const lines = ['**Aha hierarchy (firm → client → project):**'];
+      for (const p of products.slice(0, 25)) {
+        lines.push(p.referencePrefix ? `- **${p.referencePrefix}** — ${p.name}` : `- ${p.name}`);
+      }
+      return lines.join('\n');
+    } catch {
+      continue; // this base unreachable — fall through to the next (cloud→local stagger)
+    }
+  }
+
+  return '';
+}
+
 /** Layer-5 posture panel — render the live firm→client→project + WorfGate + tool snapshot in chat. */
 export async function renderSymphonyPanel(stream: vscode.ChatResponseStream): Promise<void> {
   let snap: any;
