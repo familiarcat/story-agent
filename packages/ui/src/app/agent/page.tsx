@@ -127,20 +127,20 @@ export default function AgentPage() {
           {model ? `🤖 ${model}` : 'OpenRouter · Quark-selected'} · session ~${sessionCost.toFixed(4)}
         </span>
       </header>
-      <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 0 }}>
+      <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: 0 }}>
         A full coding loop on the crew — read/edit/run/search/git on the cheapest adequate OpenRouter model.
         Every tool call is governed by WorfGate (🟢 allow · 🟡 remediated · 🔴 blocked).
       </p>
 
-      <div ref={scrollRef} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem', height: '62vh', overflowY: 'auto', background: '#fafafa' }}>
+      <div ref={scrollRef} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '1rem', height: '62vh', overflowY: 'auto', background: 'var(--surface)' }}>
         {events.length === 0 && (
-          <p style={{ color: '#9ca3af' }}>
+          <p style={{ color: 'var(--text-dim)' }}>
             Give the agent a coding task — e.g. “List the files in packages/shared/src and summarize delegation-router.ts”,
             or “Add a comment to the top of README.md”. Quark picks the model; you watch the tool loop run live.
           </p>
         )}
         {events.map((e, i) => <EventRow key={i} e={e} decided={decided} onApprove={approve} />)}
-        {busy && <div style={{ color: '#9ca3af', fontSize: '0.85rem' }}>…working</div>}
+        {busy && <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>…working</div>}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: '0.75rem' }}>
@@ -150,9 +150,9 @@ export default function AgentPage() {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); run(); } }}
           placeholder="Describe a coding task… (Enter to run, Shift+Enter for newline)"
           rows={2}
-          style={{ flex: 1, padding: '0.6rem', borderRadius: 8, border: '1px solid #d1d5db', fontFamily: 'inherit', fontSize: '0.9rem', resize: 'vertical' }}
+          style={{ flex: 1, padding: '0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: '0.9rem', resize: 'vertical' }}
         />
-        <button onClick={run} disabled={busy || !input.trim()} style={{ padding: '0 1.25rem', borderRadius: 8, border: 'none', background: busy ? '#9ca3af' : '#2563eb', color: 'white', fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}>
+        <button onClick={run} disabled={busy || !input.trim()} style={{ padding: '0 1.25rem', borderRadius: 8, border: 'none', background: busy ? 'var(--text-dim)' : 'var(--accent4)', color: 'var(--on-accent)', fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}>
           {busy ? '…' : 'Run'}
         </button>
       </div>
@@ -164,18 +164,18 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
   const mono: React.CSSProperties = { fontFamily: font.mono, fontSize: '0.8rem' };
   switch (e.kind) {
     case 'user':
-      return <Block label="You" color="#2563eb"><div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{e.text}</div></Block>;
+      return <Block label="You" color="var(--accent4)"><div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{e.text}</div></Block>;
     case 'model':
-      return <div style={{ ...mono, color: '#6b7280', margin: '0.4rem 0' }}>🤖 model selected: {e.model}</div>;
+      return <div style={{ ...mono, color: 'var(--text-dim)', margin: '0.4rem 0' }}>🤖 model selected: {e.model}</div>;
     case 'lens':
-      return <div style={{ ...mono, color: '#9ca3af', margin: '0.2rem 0' }}>🔭 {e.text}</div>;
+      return <div style={{ ...mono, color: 'var(--text-dim)', margin: '0.2rem 0' }}>🔭 {e.text}</div>;
     case 'text':
-      return <Block label="Agent" color="#059669"><div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.text}</div></Block>;
+      return <Block label="Agent" color="var(--ok)"><div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.text}</div></Block>;
     case 'tool_call':
       return (
-        <div style={{ margin: '0.4rem 0', padding: '0.5rem 0.7rem', background: '#eef2ff', borderRadius: 6, borderLeft: '3px solid #6366f1' }}>
-          <div style={{ ...mono, color: '#4338ca' }}>🔧 {e.tool}</div>
-          <pre style={{ ...mono, margin: '0.3rem 0 0', whiteSpace: 'pre-wrap', color: '#374151' }}>{safeJson(e.args)}</pre>
+        <div style={{ margin: '0.4rem 0', padding: '0.5rem 0.7rem', background: 'var(--surface-2)', borderRadius: 6, borderLeft: '3px solid var(--accent3)' }}>
+          <div style={{ ...mono, color: 'var(--accent3)' }}>🔧 {e.tool}</div>
+          <pre style={{ ...mono, margin: '0.3rem 0 0', whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{safeJson(e.args)}</pre>
         </div>
       );
     case 'gate': {
@@ -185,15 +185,15 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
       return (
         <div style={{ ...mono, margin: '0.3rem 0', color: c }}>
           {icon} WorfGate [{e.tier}] {e.tool}
-          {e.remediations?.length ? <span style={{ color: '#6b7280' }}> — {e.remediations.join('; ')}</span> : null}
+          {e.remediations?.length ? <span style={{ color: 'var(--text-dim)' }}> — {e.remediations.join('; ')}</span> : null}
           {e.needsApproval && e.approvalId && (
             decision
-              ? <span style={{ marginLeft: 8, color: decision === 'approve' ? '#059669' : '#dc2626' }}>
+              ? <span style={{ marginLeft: 8, color: decision === 'approve' ? 'var(--ok)' : 'var(--danger)' }}>
                   {decision === 'approve' ? '✓ approved' : '✗ denied'}
                 </span>
               : <span style={{ marginLeft: 8 }}>
-                  <button onClick={() => onApprove(e.approvalId!, 'approve')} style={btn('#059669')}>Approve</button>
-                  <button onClick={() => onApprove(e.approvalId!, 'deny')} style={btn('#dc2626')}>Deny</button>
+                  <button onClick={() => onApprove(e.approvalId!, 'approve')} style={btn('var(--ok)')}>Approve</button>
+                  <button onClick={() => onApprove(e.approvalId!, 'deny')} style={btn('var(--danger)')}>Deny</button>
                 </span>
           )}
         </div>
@@ -201,24 +201,24 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
     }
     case 'tool_result':
       return (
-        <div style={{ margin: '0.2rem 0 0.5rem', padding: '0.5rem 0.7rem', background: '#f3f4f6', borderRadius: 6, borderLeft: '3px solid #9ca3af', maxHeight: 280, overflow: 'auto' }}>
-          <div style={{ ...mono, color: '#6b7280', marginBottom: 4 }}>⮑ {e.tool} result</div>
+        <div style={{ margin: '0.2rem 0 0.5rem', padding: '0.5rem 0.7rem', background: 'var(--surface-2)', borderRadius: 6, borderLeft: '3px solid var(--text-dim)', maxHeight: 280, overflow: 'auto' }}>
+          <div style={{ ...mono, color: 'var(--text-dim)', marginBottom: 4 }}>⮑ {e.tool} result</div>
           {isDiff(e.tool, e.text)
             ? <DiffView text={e.text} mono={mono} />
-            : <pre style={{ ...mono, margin: 0, whiteSpace: 'pre-wrap', color: '#111827' }}>{e.text}</pre>}
+            : <pre style={{ ...mono, margin: 0, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{e.text}</pre>}
         </div>
       );
     case 'cost':
-      return <div style={{ ...mono, color: '#d97706', margin: '0.2rem 0' }}>💰 {e.text || `$${e.costUSD?.toFixed?.(4)}`}</div>;
+      return <div style={{ ...mono, color: 'var(--warn)', margin: '0.2rem 0' }}>💰 {e.text || `$${e.costUSD?.toFixed?.(4)}`}</div>;
     case 'escalation':
-      return <div style={{ ...mono, color: '#7c3aed', margin: '0.3rem 0' }}>⏫ escalation{e.tool ? ` (${e.tool})` : ''}: {e.text}</div>;
+      return <div style={{ ...mono, color: 'var(--accent3)', margin: '0.3rem 0' }}>⏫ escalation{e.tool ? ` (${e.tool})` : ''}: {e.text}</div>;
     case 'retry':
-      return <div style={{ ...mono, color: '#9ca3af', margin: '0.2rem 0' }}>↻ {e.text}</div>;
+      return <div style={{ ...mono, color: 'var(--text-dim)', margin: '0.2rem 0' }}>↻ {e.text}</div>;
     case 'done':
       return (
-        <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid #e5e7eb' }}>
+        <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border)' }}>
           {e.text && <div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.text}</div>}
-          <div style={{ ...mono, color: '#059669', marginTop: 4 }}>✅ done{e.model ? ` · ${e.model}` : ''}{typeof e.costUSD === 'number' ? ` · $${e.costUSD.toFixed(4)}` : ''}</div>
+          <div style={{ ...mono, color: 'var(--ok)', marginTop: 4 }}>✅ done{e.model ? ` · ${e.model}` : ''}{typeof e.costUSD === 'number' ? ` · $${e.costUSD.toFixed(4)}` : ''}</div>
         </div>
       );
     case 'error':
@@ -242,7 +242,7 @@ function Block({ label, color, children }: { label: string; color: string; child
 }
 
 function btn(c: string): React.CSSProperties {
-  return { marginLeft: 6, padding: '1px 8px', fontSize: '0.72rem', borderRadius: 5, border: `1px solid ${c}`, background: 'white', color: c, cursor: 'pointer' };
+  return { marginLeft: 6, padding: '1px 8px', fontSize: '0.72rem', borderRadius: 5, border: `1px solid ${c}`, background: 'var(--surface)', color: c, cursor: 'pointer' };
 }
 
 /** Render a unified diff with colored add/remove lines. */
@@ -252,7 +252,7 @@ function DiffView({ text, mono }: { text: string; mono: React.CSSProperties }) {
     l.startsWith('+') && !l.startsWith('+++') ? { bg: '#e6ffed', fg: '#03543f' }
     : l.startsWith('-') && !l.startsWith('---') ? { bg: '#ffeef0', fg: '#86181d' }
     : l.startsWith('@@') ? { bg: '#f1f8ff', fg: '#005cc5' }
-    : { bg: 'transparent', fg: '#374151' };
+    : { bg: 'transparent', fg: 'var(--text)' };
   return (
     <pre style={{ ...mono, margin: 0 }}>
       {lines.map((l, i) => {

@@ -13,10 +13,10 @@ function PointsBar({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <div style={{ flex: 1, height: 7, background: '#e5e7eb', borderRadius: 999, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: pct >= 80 ? '#059669' : pct >= 50 ? '#2563eb' : '#f59e0b', borderRadius: 999 }} />
+      <div style={{ flex: 1, height: 7, background: 'var(--border)', borderRadius: 999, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: pct >= 80 ? 'var(--ok)' : pct >= 50 ? 'var(--accent4)' : 'var(--warn)', borderRadius: 999 }} />
       </div>
-      <span style={{ fontSize: '0.75rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{done}/{total} pts ({pct}%)</span>
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>{done}/{total} pts ({pct}%)</span>
     </div>
   );
 }
@@ -85,16 +85,16 @@ export default function SprintPage() {
 
   const statusColor = (status: string): string => {
     const s = status.toLowerCase();
-    if (s.includes('done') || s.includes('complete') || s.includes('ship')) return '#059669';
-    if (s.includes('progress') || s.includes('review')) return '#2563eb';
-    if (s.includes('block')) return '#dc2626';
-    return '#6b7280';
+    if (s.includes('done') || s.includes('complete') || s.includes('ship')) return 'var(--ok)';
+    if (s.includes('progress') || s.includes('review')) return 'var(--accent4)';
+    if (s.includes('block')) return 'var(--danger)';
+    return 'var(--text-dim)';
   };
 
   return (
     <div style={{ maxWidth: 1000 }}>
       <div style={{ marginBottom: '0.75rem' }}>
-        <a href="/dashboard" style={{ color: '#6b7280', fontSize: '0.85rem' }}>← Dashboard</a>
+        <a href="/dashboard" style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>← Dashboard</a>
       </div>
 
       <ClientScopeSelector title="Client Scope For Sprint Planning" />
@@ -102,7 +102,7 @@ export default function SprintPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <div>
           <h1 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>Sprint Board</h1>
-          <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '4px 0 0' }}>
+          <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', margin: '4px 0 0' }}>
             View sprints, story point capacity, and agile ritual dates from Aha.
           </p>
         </div>
@@ -114,7 +114,7 @@ export default function SprintPage() {
       {/* Project + Sprint selectors */}
       <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.85rem 1rem' }}>
         <label>
-          <div style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: 4 }}>Aha Project</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: 4 }}>Aha Project</div>
           <select
             value={selectedProjectId}
             onChange={e => setSelectedProjectId(e.target.value)}
@@ -125,7 +125,7 @@ export default function SprintPage() {
           </select>
         </label>
         <label>
-          <div style={{ fontSize: '0.78rem', color: '#6b7280', marginBottom: 4 }}>Sprint / Release</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: 4 }}>Sprint / Release</div>
           <select
             value={selectedSprintId}
             onChange={e => setSelectedSprintId(e.target.value)}
@@ -138,7 +138,7 @@ export default function SprintPage() {
         </label>
       </div>
 
-      {error && <div style={{ color: '#991b1b', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</div>}
+      {error && <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</div>}
 
       {/* Sprint summary card */}
       {sprintView && (
@@ -148,7 +148,7 @@ export default function SprintPage() {
               <div>
                 <div style={{ fontWeight: 700, fontSize: '1rem' }}>{sprintView.sprint.name}</div>
                 {sprintView.sprint.startDate && (
-                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
                     {sprintView.sprint.startDate} → {sprintView.sprint.endDate ?? 'no end date'}
                     {sprintView.sprint.startDate && sprintView.sprint.endDate && (() => {
                       const start = new Date(sprintView.sprint.startDate!);
@@ -162,7 +162,7 @@ export default function SprintPage() {
               <a href={sprintView.sprint.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem' }}>Open in Aha ↗</a>
             </div>
             <PointsBar done={sprintView.sprint.doneStoryPoints} total={sprintView.sprint.totalStoryPoints} />
-            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', fontSize: '0.8rem', color: '#6b7280' }}>
+            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
               <span>📋 {sprintView.sprint.featureCount} stories</span>
               <span>✅ {sprintView.sprint.doneStoryPoints} pts done</span>
               <span>🔄 {sprintView.sprint.remainingStoryPoints} pts remaining</span>
@@ -172,7 +172,7 @@ export default function SprintPage() {
 
           {/* Stories table */}
           {loadingStories ? (
-            <div className="card" style={{ color: '#6b7280', textAlign: 'center' }}>Loading stories…</div>
+            <div className="card" style={{ color: 'var(--text-dim)', textAlign: 'center' }}>Loading stories…</div>
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <table>
@@ -212,7 +212,7 @@ export default function SprintPage() {
                 </tbody>
               </table>
               {sprintView.stories.length === 0 && (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>No stories in this sprint.</div>
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dim)' }}>No stories in this sprint.</div>
               )}
             </div>
           )}

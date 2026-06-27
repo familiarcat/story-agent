@@ -90,7 +90,7 @@ export default function NewStoryPage() {
   return (
     <div style={{ maxWidth: 760 }}>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>Import Story from Aha</h1>
-      <p style={{ marginBottom: '1.25rem', color: '#4b5563' }}>
+      <p style={{ marginBottom: '1.25rem', color: 'var(--text)' }}>
         Select an Aha project and feature, then import it into the story lifecycle tracker.
       </p>
 
@@ -149,8 +149,8 @@ export default function NewStoryPage() {
           <a className="btn btn-secondary" href="/dashboard">Back to Dashboard</a>
         </div>
 
-        {error && <div style={{ color: '#991b1b', fontSize: '0.9rem' }}>{error}</div>}
-        {success && <div style={{ color: '#065f46', fontSize: '0.9rem' }}>{success}</div>}
+        {error && <div style={{ color: 'var(--danger)', fontSize: '0.9rem' }}>{error}</div>}
+        {success && <div style={{ color: 'var(--ok)', fontSize: '0.9rem' }}>{success}</div>}
       </div>
     </div>
   );

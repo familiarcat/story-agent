@@ -19,7 +19,7 @@ function StatusBadge({ status }: { status: StoryRecord['status'] }) {
 
 function PhaseBadge({ phase }: { phase: 1 | 2 }) {
   return (
-    <span style={{ fontSize: '0.75rem', color: phase === 2 ? '#9d174d' : '#1d4ed8', fontWeight: 600 }}>
+    <span style={{ fontSize: '0.75rem', color: phase === 2 ? 'var(--danger)' : 'var(--accent1)', fontWeight: 600 }}>
       Phase {phase}
     </span>
   );
@@ -190,12 +190,12 @@ export default async function Dashboard() {
     <div>
       {isDemo && (
         <div style={{
-          backgroundColor: '#fef3c7',
-          border: '1px solid #f59e0b',
+          backgroundColor: 'var(--surface-2)',
+          border: '1px solid var(--warn)',
           borderRadius: '0.5rem',
           padding: '1rem',
           marginBottom: '1.5rem',
-          color: '#92400e',
+          color: 'var(--warn)',
           fontSize: '0.875rem',
         }}>
           ℹ️ <strong>Demo Mode:</strong> Showing client-aware sample data. Configure Supabase and client security metadata to connect live client → project → sprint → story tracking.
@@ -204,7 +204,7 @@ export default async function Dashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Delivery Command</h1>
-          <p style={{ marginTop: '0.25rem', color: '#6b7280', fontSize: '0.95rem' }}>
+          <p style={{ marginTop: '0.25rem', color: 'var(--text-dim)', fontSize: '0.95rem' }}>
             Client → Project → Sprint → Story visibility with security-aware delivery context.
           </p>
         </div>
@@ -224,13 +224,13 @@ export default async function Dashboard() {
             <div key={`${node.clientName}-${node.projectName}-${node.sprintName}`} className="card" style={{ marginBottom: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'start' }}>
                 <div>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#9a3412' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--warn)' }}>
                     {node.clientName}
                   </div>
                   <div style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.25rem' }}>{node.projectName}</div>
-                  <div style={{ color: '#6b7280', fontSize: '0.9rem', marginTop: '0.25rem' }}>{node.sprintName}</div>
+                  <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.25rem' }}>{node.sprintName}</div>
                 </div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1d4ed8' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent1)' }}>
                   {security.complianceMode}
                 </span>
               </div>
@@ -239,7 +239,7 @@ export default async function Dashboard() {
                 <span><strong>{node.activeCount}</strong> active</span>
                 <span><strong>{node.blockedCount}</strong> blocked</span>
               </div>
-              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', display: 'grid', gap: '0.4rem', fontSize: '0.84rem', color: '#4b5563' }}>
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gap: '0.4rem', fontSize: '0.84rem', color: 'var(--text)' }}>
                 <div><strong>LLM Route:</strong> {security.llmRoute}</div>
                 <div><strong>Data Plane:</strong> {security.dataPlane}</div>
                 <div><strong>Security Notes:</strong> {security.notes}</div>
@@ -260,7 +260,7 @@ export default async function Dashboard() {
       </div>
 
       {stories.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: '#6b7280', padding: '3rem' }}>
+        <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '3rem' }}>
           No stories tracked yet. <a href="/story/new">Add a story to get started.</a>
         </div>
       ) : (
@@ -298,17 +298,17 @@ export default async function Dashboard() {
                   <td style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.storyTitle}
                   </td>
-                  <td style={{ fontSize: '0.85rem', color: '#6b7280' }}>{s.repoFullName}</td>
+                  <td style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>{s.repoFullName}</td>
                   <td style={{ fontSize: '0.85rem', fontFamily: 'monospace' }}>{s.branch}</td>
                   <td><StatusBadge status={s.status} /></td>
                   <td><PhaseBadge phase={s.phase} /></td>
                   <td>
                     {s.prUrl
                       ? <a href={s.prUrl} target="_blank" rel="noreferrer">#{s.prNumber}</a>
-                      : <span style={{ color: '#d1d5db' }}>—</span>
+                      : <span style={{ color: 'var(--border)' }}>—</span>
                     }
                   </td>
-                  <td style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
                     {new Date(s.updatedAt).toLocaleDateString()}
                   </td>
                   <td>

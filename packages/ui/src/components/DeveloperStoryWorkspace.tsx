@@ -218,7 +218,7 @@ export function DeveloperStoryWorkspace({
                         member.status === 'complete'
                           ? '#10b981'
                           : member.status === 'executing'
-                            ? '#f59e0b'
+                            ? 'var(--warn)'
                             : '#d1d5db',
                     }}
                   />

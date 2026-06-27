@@ -1,19 +1,97 @@
+/*
+ * Modular theme system (crew theme-system mission, RAG MEM 50).
+ *
+ * THE TOKEN CONTRACT — the "default theme template". Every theme is just a values map for these
+ * semantic CSS variables; components/pages consume var(--*) and NEVER hardcode hex. Add a theme by
+ * copying the :root block under a new [data-theme="x"] selector and changing values — zero component
+ * edits. LCARS is the default (:root); dark + light are alternates (VS Code-style).
+ */
+
+:root,
+:root[data-theme="lcars"] {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #11121a;
+  --text: #ffcc99;
+  --text-dim: #9999cc;
+  --border: #664466;
+  --accent1: #ff9933; /* neon carrot   */
+  --accent2: #ffcc66; /* golden tanoi  */
+  --accent3: #cc99cc; /* lilac         */
+  --accent4: #99ccff; /* anakiwa       */
+  --danger: #cc6666;
+  --ok: #99cc99;
+  --warn: #ffcc66;
+  --on-accent: #000000;
+  --radius: 8px;
+  --radius-elbow: 18px;
+  --font: ui-monospace, "Arial Narrow", "Helvetica Neue Condensed", sans-serif;
+  --uppercase: uppercase;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b0e14;
+  --surface: #151a23;
+  --surface-2: #1d2430;
+  --text: #e6e9ef;
+  --text-dim: #9aa3b2;
+  --border: #2a3340;
+  --accent1: #4f8cff;
+  --accent2: #7c5cff;
+  --accent3: #22c55e;
+  --accent4: #38bdf8;
+  --danger: #ef4444;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --on-accent: #ffffff;
+  --radius: 10px;
+  --radius-elbow: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --uppercase: none;
+}
+
+:root[data-theme="light"] {
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --text: #111827;
+  --text-dim: #6b7280;
+  --border: #e5e7eb;
+  --accent1: #2563eb;
+  --accent2: #7c3aed;
+  --accent3: #059669;
+  --accent4: #0891b2;
+  --danger: #dc2626;
+  --ok: #16a34a;
+  --warn: #d97706;
+  --on-accent: #ffffff;
+  --radius: 8px;
+  --radius-elbow: 8px;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --uppercase: none;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; }
-a { color: #2563eb; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); transition: background 0.15s ease, color 0.15s ease; }
+a { color: var(--accent4); }
+
 table { width: 100%; border-collapse: collapse; }
-th, td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
-th { background: #f3f4f6; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
-.badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
-.badge-pending    { background: #f3f4f6; color: #6b7280; }
-.badge-discovery  { background: #dbeafe; color: #1d4ed8; }
-.badge-implementing { background: #fef3c7; color: #92400e; }
-.badge-pr_open    { background: #dcfce7; color: #166534; }
-.badge-pr_revision { background: #fce7f3; color: #9d174d; }
-.badge-pr_approved { background: #d1fae5; color: #065f46; }
-.badge-merged     { background: #ede9fe; color: #5b21b6; }
-.badge-blocked    { background: #fee2e2; color: #991b1b; }
-.card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
-.btn { display: inline-block; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: none; }
-.btn-primary { background: #2563eb; color: white; }
-.btn-secondary { background: #f3f4f6; color: #374151; }
+th, td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem; color: var(--text); }
+
+.btn { display: inline-block; padding: 0.5rem 1rem; border-radius: var(--radius); font-size: 0.9rem; font-weight: 600; cursor: pointer; border: none; }
+.btn-primary { background: var(--accent1); color: var(--on-accent); }
+.btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+
+/* Status badges — semantic, theme-driven. color-mix tints the accent against the surface. */
+.badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; background: var(--surface-2); color: var(--text-dim); }
+.badge-pending      { background: var(--surface-2); color: var(--text-dim); }
+.badge-discovery    { background: color-mix(in srgb, var(--accent4) 22%, var(--surface)); color: var(--accent4); }
+.badge-implementing { background: color-mix(in srgb, var(--warn) 22%, var(--surface)); color: var(--warn); }
+.badge-pr_open      { background: color-mix(in srgb, var(--ok) 22%, var(--surface)); color: var(--ok); }
+.badge-pr_revision  { background: color-mix(in srgb, var(--accent3) 22%, var(--surface)); color: var(--accent3); }
+.badge-pr_approved  { background: color-mix(in srgb, var(--ok) 26%, var(--surface)); color: var(--ok); }
+.badge-merged       { background: color-mix(in srgb, var(--accent2) 22%, var(--surface)); color: var(--accent2); }
+.badge-blocked      { background: color-mix(in srgb, var(--danger) 22%, var(--surface)); color: var(--danger); }

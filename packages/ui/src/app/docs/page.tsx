@@ -42,10 +42,10 @@ export default function DocsPage() {
     <main style={{ maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ padding: '0 1rem 0.5rem' }}>
         <h1 style={{ fontSize: '1.25rem', marginBottom: 4 }}>📜 API Docs — Crew Server</h1>
-        <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: 0 }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginTop: 0 }}>
           The live API the UI, the VS Code extension, and clients consume — every endpoint on a
           Quark-selected OpenRouter model, governed by WorfGate.{' '}
-          <a href="/api/openapi" style={{ color: '#2563eb' }}>raw spec</a>
+          <a href="/api/openapi" style={{ color: 'var(--accent4)' }}>raw spec</a>
         </p>
       </div>
       <div id="swagger-ui" />

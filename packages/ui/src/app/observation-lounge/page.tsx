@@ -98,19 +98,19 @@ function StepIndicator({ current }: { current: Step }) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
               <div style={{
                 width: 28, height: 28, borderRadius: '50%',
-                background: done ? '#059669' : active ? '#2563eb' : '#e5e7eb',
-                color: done || active ? '#fff' : '#9ca3af',
+                background: done ? 'var(--ok)' : active ? 'var(--accent4)' : 'var(--border)',
+                color: done || active ? 'var(--surface)' : 'var(--text-dim)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 700, fontSize: 13,
               }}>
                 {done ? '✓' : num}
               </div>
-              <div style={{ fontSize: 10, color: active ? '#2563eb' : done ? '#059669' : '#9ca3af', marginTop: 4, textAlign: 'center', fontWeight: active ? 600 : 400 }}>
+              <div style={{ fontSize: 10, color: active ? 'var(--accent4)' : done ? 'var(--ok)' : 'var(--text-dim)', marginTop: 4, textAlign: 'center', fontWeight: active ? 600 : 400 }}>
                 {label}
               </div>
             </div>
             {i < 3 && (
-              <div style={{ height: 2, flex: 1, background: done ? '#059669' : '#e5e7eb', marginBottom: 18 }} />
+              <div style={{ height: 2, flex: 1, background: done ? 'var(--ok)' : 'var(--border)', marginBottom: 18 }} />
             )}
           </div>
         );
@@ -122,13 +122,13 @@ function StepIndicator({ current }: { current: Step }) {
 function Field({ label, children, col = false }: { label: string; children: React.ReactNode; col?: boolean }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: col ? '1/-1' : undefined }}>
-      <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 500 }}>{label}</span>
       {children}
     </label>
   );
 }
 
-const inputStyle: React.CSSProperties = { padding: '0.45rem 0.6rem', fontSize: '0.875rem', width: '100%', border: '1px solid #d1d5db', borderRadius: 4, fontFamily: 'inherit' };
+const inputStyle: React.CSSProperties = { padding: '0.45rem 0.6rem', fontSize: '0.875rem', width: '100%', border: '1px solid var(--border)', borderRadius: 4, fontFamily: 'inherit' };
 const textareaStyle: React.CSSProperties = { ...inputStyle, minHeight: 72, resize: 'vertical' };
 
 // ── Main wizard ──────────────────────────────────────────────────────────────
@@ -242,12 +242,12 @@ export default function ObservationLoungePage() {
   return (
     <div style={{ maxWidth: 820 }}>
       <div style={{ marginBottom: '0.75rem' }}>
-        <a href="/dashboard" style={{ color: '#6b7280', fontSize: '0.85rem' }}>← Dashboard</a>
+        <a href="/dashboard" style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>← Dashboard</a>
       </div>
 
       <div style={{ marginBottom: '1.25rem' }}>
         <h1 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>Observation Lounge</h1>
-        <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '4px 0 0' }}>
+        <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', margin: '4px 0 0' }}>
           Step through mission intake: load story → review context → set execution parameters → assign sprint & launch.
         </p>
       </div>
@@ -268,7 +268,7 @@ export default function ObservationLoungePage() {
               autoFocus
             />
           </Field>
-          {error && <div style={{ color: '#991b1b', fontSize: '0.85rem', marginTop: 8 }}>{error}</div>}
+          {error && <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: 8 }}>{error}</div>}
           <div style={{ marginTop: '1rem' }}>
             <button className="btn btn-primary" onClick={loadStory} disabled={loading}>
               {loading ? 'Fetching from Aha…' : 'Load Story →'}
@@ -284,19 +284,19 @@ export default function ObservationLoungePage() {
             Step 2 — Review Story Context
           </h2>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem', padding: '0.75rem', background: '#f0fdf4', borderRadius: 6, border: '1px solid #bbf7d0' }}>
-            <div><div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Story</div><strong>{w.story.referenceNum}</strong></div>
-            <div><div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</div>{w.story.workflowStatus}</div>
-            <div><div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Aha</div><a href={w.story.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem' }}>Open ↗</a></div>
-            <div style={{ gridColumn: '1/-1' }}><div style={{ fontSize: '0.7rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Title</div><strong>{w.story.name}</strong></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem', padding: '0.75rem', background: 'var(--surface-2)', borderRadius: 6, border: '1px solid var(--border)' }}>
+            <div><div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Story</div><strong>{w.story.referenceNum}</strong></div>
+            <div><div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</div>{w.story.workflowStatus}</div>
+            <div><div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Aha</div><a href={w.story.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem' }}>Open ↗</a></div>
+            <div style={{ gridColumn: '1/-1' }}><div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Title</div><strong>{w.story.name}</strong></div>
           </div>
 
           <div style={{ display: 'grid', gap: '0.75rem' }}>
             <Field label="Description (from Aha)" col>
-              <textarea value={w.story.description || '(no description)'} readOnly style={{ ...textareaStyle, background: '#f9fafb', color: '#374151' }} />
+              <textarea value={w.story.description || '(no description)'} readOnly style={{ ...textareaStyle, background: 'var(--bg)', color: 'var(--text)' }} />
             </Field>
             <Field label="Acceptance Criteria (from Aha requirements)" col>
-              <textarea value={w.story.acceptanceCriteria || '(no criteria defined in Aha)'} readOnly style={{ ...textareaStyle, background: '#f9fafb', color: '#374151' }} />
+              <textarea value={w.story.acceptanceCriteria || '(no criteria defined in Aha)'} readOnly style={{ ...textareaStyle, background: 'var(--bg)', color: 'var(--text)' }} />
             </Field>
             <Field label="Non-goals (specify here)" col>
               <textarea value={w.nonGoals} onChange={e => set('nonGoals', e.target.value)} placeholder="What is explicitly out of scope for this story?" style={textareaStyle} />
@@ -377,7 +377,7 @@ export default function ObservationLoungePage() {
             </Field>
 
             {selectedSprint && (
-              <div style={{ gridColumn: '1/-1', padding: '0.6rem 0.85rem', background: '#eff6ff', borderRadius: 5, border: '1px solid #bfdbfe', fontSize: '0.83rem' }}>
+              <div style={{ gridColumn: '1/-1', padding: '0.6rem 0.85rem', background: 'var(--surface-2)', borderRadius: 5, border: '1px solid var(--border)', fontSize: '0.83rem' }}>
                 <strong>{selectedSprint.name}</strong> &nbsp;·&nbsp;
                 {selectedSprint.doneStoryPoints}/{selectedSprint.totalStoryPoints} pts done &nbsp;·&nbsp;
                 {selectedSprint.featureCount} stories &nbsp;·&nbsp;
@@ -385,8 +385,8 @@ export default function ObservationLoungePage() {
               </div>
             )}
 
-            <div style={{ gridColumn: '1/-1', borderTop: '1px solid #f3f4f6', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 500, marginBottom: '0.5rem' }}>Agile Rituals (optional)</div>
+            <div style={{ gridColumn: '1/-1', borderTop: '1px solid var(--surface-2)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 500, marginBottom: '0.5rem' }}>Agile Rituals (optional)</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
                 <Field label="Planning Date">
                   <input value={w.planningDate} onChange={e => set('planningDate', e.target.value)} type="date" style={inputStyle} />
@@ -402,24 +402,24 @@ export default function ObservationLoungePage() {
           </div>
 
           {/* Execution mode choice */}
-          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1rem' }}>
+          <div style={{ borderTop: '1px solid var(--surface-2)', paddingTop: '1rem' }}>
             <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.6rem' }}>How should this mission be executed?</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <button
                 onClick={() => finalize('autonomous')}
-                style={{ padding: '1rem', border: '2px solid #2563eb', borderRadius: 6, background: '#eff6ff', cursor: 'pointer', textAlign: 'left' }}
+                style={{ padding: '1rem', border: '2px solid var(--accent4)', borderRadius: 6, background: 'var(--surface-2)', cursor: 'pointer', textAlign: 'left' }}
               >
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1d4ed8' }}>⚡ Autonomous</div>
-                <div style={{ fontSize: '0.8rem', color: '#374151', marginTop: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--accent1)' }}>⚡ Autonomous</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text)', marginTop: 4 }}>
                   Generate the full Phase 1 kickoff prompt ready to paste to Copilot. Agent discovers, implements, and opens a PR automatically.
                 </div>
               </button>
               <button
                 onClick={() => finalize('guided')}
-                style={{ padding: '1rem', border: '2px solid #7c3aed', borderRadius: 6, background: '#f5f3ff', cursor: 'pointer', textAlign: 'left' }}
+                style={{ padding: '1rem', border: '2px solid var(--accent3)', borderRadius: 6, background: 'var(--surface-2)', cursor: 'pointer', textAlign: 'left' }}
               >
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#6d28d9' }}>🧭 Guided Wizard</div>
-                <div style={{ fontSize: '0.8rem', color: '#374151', marginTop: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--accent3)' }}>🧭 Guided Wizard</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text)', marginTop: 4 }}>
                   Step through each delivery phase manually — Discovery → Plan → Implement → Validate → PR. You control each transition.
                 </div>
               </button>
@@ -441,13 +441,13 @@ export default function ObservationLoungePage() {
               <div style={{ fontWeight: 700, fontSize: '1rem' }}>
                 {mode === 'autonomous' ? 'Autonomous Execution' : 'Guided Wizard'} — {w.story?.referenceNum}
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{w.story?.name}</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{w.story?.name}</div>
             </div>
             <button className="btn btn-secondary" style={{ marginLeft: 'auto', fontSize: '0.8rem' }} onClick={() => setMode(null)}>← Change Mode</button>
           </div>
 
           {mode === 'autonomous' && (
-            <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#eff6ff', borderRadius: 5, fontSize: '0.85rem', color: '#1e3a5f' }}>
+            <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--surface-2)', borderRadius: 5, fontSize: '0.85rem', color: 'var(--text)' }}>
               Copy the kickoff prompt below and paste it into <strong>Copilot Chat</strong>. The agent will run Phase 1 end-to-end (discover → plan → implement → test → open PR).
               After the PR opens, switch to <strong>Phase 2 (PR revision)</strong> to process review comments.
             </div>
@@ -455,19 +455,19 @@ export default function ObservationLoungePage() {
 
           {mode === 'guided' && (
             <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.85rem', color: '#4c1d95', fontWeight: 600, marginBottom: '0.5rem' }}>Guided Phase Sequence</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--accent3)', fontWeight: 600, marginBottom: '0.5rem' }}>Guided Phase Sequence</div>
               {['1. Discovery — paste prompt, review codebase analysis', '2. Plan — review + approve implementation plan', '3. Implement — agent applies changes', '4. Validate — run tests, verify acceptance criteria', '5. PR — agent opens PR, you review and merge'].map((phase, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0', borderBottom: '1px solid #f3f4f6', fontSize: '0.83rem' }}>
-                  <span style={{ color: '#7c3aed' }}>→</span> {phase}
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0', borderBottom: '1px solid var(--surface-2)', fontSize: '0.83rem' }}>
+                  <span style={{ color: 'var(--accent3)' }}>→</span> {phase}
                 </div>
               ))}
-              <div style={{ marginTop: '0.75rem', fontSize: '0.82rem', color: '#6b7280' }}>
+              <div style={{ marginTop: '0.75rem', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
                 Use the kickoff prompt below to start Discovery. After each phase completes, instruct Copilot to proceed to the next phase.
               </div>
             </div>
           )}
 
-          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.85rem' }}>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
               <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                 {mode === 'guided' ? 'Phase 1 — Discovery Kickoff Prompt' : 'Kickoff Prompt'}
@@ -476,22 +476,22 @@ export default function ObservationLoungePage() {
                 {copied ? '✓ Copied' : '$(clippy) Copy'}
               </button>
             </div>
-            <pre style={{ margin: 0, padding: '0.85rem', background: '#f9fafb', borderRadius: 5, fontSize: '0.8rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: '#1f2937', maxHeight: '40vh', overflow: 'auto', border: '1px solid #e5e7eb' }}>
+            <pre style={{ margin: 0, padding: '0.85rem', background: 'var(--bg)', borderRadius: 5, fontSize: '0.8rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: 'var(--text)', maxHeight: '40vh', overflow: 'auto', border: '1px solid var(--border)' }}>
               {kickoff}
             </pre>
           </div>
 
           {w.missionPlan && (
-            <div style={{ marginTop: '1rem', borderTop: '1px solid #e5e7eb', paddingTop: '0.85rem' }}>
+            <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
                 Crew Agents and Assignments
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
                 {w.missionPlan.crew.map(member => (
-                  <div key={member.id} style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.55rem 0.65rem', background: '#fcfcfd' }}>
-                    <div style={{ fontSize: '0.78rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{member.role}</div>
+                  <div key={member.id} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '0.55rem 0.65rem', background: 'var(--surface)' }}>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{member.role}</div>
                     <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>{member.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#374151' }}>{member.specialty}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text)' }}>{member.specialty}</div>
                   </div>
                 ))}
               </div>
@@ -499,18 +499,18 @@ export default function ObservationLoungePage() {
           )}
 
           {w.debate && (
-            <div style={{ marginTop: '1rem', borderTop: '1px solid #e5e7eb', paddingTop: '0.85rem' }}>
+            <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.45rem' }}>
                 Observation Lounge Consensus
               </div>
-              <div style={{ padding: '0.7rem', border: '1px solid #dbeafe', background: '#eff6ff', borderRadius: 6, fontSize: '0.82rem', color: '#1e3a8a' }}>
+              <div style={{ padding: '0.7rem', border: '1px solid var(--surface-2)', background: 'var(--surface-2)', borderRadius: 6, fontSize: '0.82rem', color: 'var(--accent4)' }}>
                 {w.debate.consensusSummary}
               </div>
               {w.debate.rounds.map((round, idx) => (
-                <div key={idx} style={{ marginTop: '0.65rem', border: '1px solid #e5e7eb', borderRadius: 6, padding: '0.55rem 0.65rem' }}>
+                <div key={idx} style={{ marginTop: '0.65rem', border: '1px solid var(--border)', borderRadius: 6, padding: '0.55rem 0.65rem' }}>
                   <div style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: '0.35rem' }}>{round.title}</div>
                   {round.entries.map((entry, entryIdx) => (
-                    <div key={entryIdx} style={{ fontSize: '0.79rem', color: '#374151', marginBottom: '0.35rem' }}>
+                    <div key={entryIdx} style={{ fontSize: '0.79rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
                       <strong>{entry.speakerId}</strong> ({entry.position}): {entry.statement}
                     </div>
                   ))}
@@ -520,29 +520,29 @@ export default function ObservationLoungePage() {
           )}
 
           {w.sharedMemories && w.sharedMemories.length > 0 && (
-            <div style={{ marginTop: '1rem', borderTop: '1px solid #e5e7eb', paddingTop: '0.85rem' }}>
+            <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.45rem' }}>
                 🧠 Prior Memories That Influenced This Decision
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.6rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.6rem' }}>
                 {w.sharedMemories.length} relevant memories from the crew's collective experience
               </div>
               {w.sharedMemories.map((memory, idx) => (
-                <div key={idx} style={{ marginBottom: '0.55rem', borderLeft: '3px solid #8b5cf6', paddingLeft: '0.65rem', background: '#faf5ff', padding: '0.55rem 0.65rem', borderRadius: 4 }}>
+                <div key={idx} style={{ marginBottom: '0.55rem', borderLeft: '3px solid var(--accent3)', paddingLeft: '0.65rem', background: 'var(--surface-2)', padding: '0.55rem 0.65rem', borderRadius: 4 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#7c3aed', fontWeight: 600 }}>{memory.missionReference ?? memory.storyId}</span>
-                    <span style={{ fontSize: '0.75rem', color: '#a78bfa' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent3)', fontWeight: 600 }}>{memory.missionReference ?? memory.storyId}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent3)' }}>
                       {new Date(memory.createdAt).toLocaleDateString()} • {(memory.similarity ?? 0).toFixed(2)} relevance
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#374151', marginBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text)', marginBottom: '0.25rem' }}>
                     <strong>Decision:</strong> {memory.transcript.finalDecision}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280', lineHeight: 1.4 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.4 }}>
                     {memory.transcript.consensusSummary}
                   </div>
                   {memory.transcript.unresolvedRisks.length > 0 && (
-                    <div style={{ fontSize: '0.75rem', color: '#991b1b', marginTop: '0.3rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.3rem' }}>
                       ⚠️ Risks: {memory.transcript.unresolvedRisks.slice(0, 2).join(', ')}
                     </div>
                   )}

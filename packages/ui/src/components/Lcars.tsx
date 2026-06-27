@@ -13,7 +13,7 @@ export function LcarsScreen({ title, status, children }: { title: string; status
   return (
     <main style={{ background: lcars.black, color: lcars.text, fontFamily: MONO, minHeight: '100vh', padding: '0.75rem', letterSpacing: '0.03em' }}>
       <header style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <div style={{ background: lcars.neonCarrot, color: lcars.black, borderTopLeftRadius: 24, borderBottomLeftRadius: 6, borderTopRightRadius: 6, borderBottomRightRadius: 6, padding: '8px 16px', fontWeight: 800, textTransform: 'uppercase' }}>{title}</div>
+        <div style={{ background: lcars.neonCarrot, color: lcars.onAccent, borderTopLeftRadius: 'var(--radius-elbow)', borderBottomLeftRadius: 6, borderTopRightRadius: 6, borderBottomRightRadius: 6, padding: '8px 16px', fontWeight: 800, textTransform: 'var(--uppercase)' as CSSProperties['textTransform'] }}>{title}</div>
         {status ? <div style={{ flex: 1, background: lcars.eggplant, borderRadius: 6, padding: '8px 14px', color: lcars.tanoi, fontSize: '0.78rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center' }}>{status}</div> : <div style={{ flex: 1 }} />}
       </header>
       {children}
@@ -33,7 +33,7 @@ export function LcarsPanel({ title, color = lcars.goldenTanoi, children, style }
 
 /** A rounded LCARS pill button / link. */
 export function LcarsButton({ href, color = lcars.goldenTanoi, children, onClick }: { href?: string; color?: string; children: ReactNode; onClick?: () => void }) {
-  const style: CSSProperties = { background: color, color: lcars.black, textDecoration: 'none', textTransform: 'uppercase', fontWeight: 800, fontSize: '0.74rem', padding: '8px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', display: 'inline-block' };
+  const style: CSSProperties = { background: color, color: lcars.onAccent, textDecoration: 'none', textTransform: 'uppercase', fontWeight: 800, fontSize: '0.74rem', padding: '8px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', display: 'inline-block' };
   return href ? <a href={href} style={style}>{children}</a> : <button type="button" onClick={onClick} style={style}>{children}</button>;
 }
 

@@ -15,14 +15,14 @@ export default function Home() {
     <main style={{ background: lcars.black, color: lcars.text, fontFamily: MONO, minHeight: '100vh', padding: '0.75rem', letterSpacing: '0.03em' }}>
       {/* Top elbow header */}
       <header style={{ display: 'flex', gap: 8, alignItems: 'stretch', marginBottom: 10 }}>
-        <div style={{ width: 180, background: lcars.neonCarrot, color: lcars.black, borderTopLeftRadius: 28, borderBottomLeftRadius: 6, padding: '10px 14px', fontWeight: 800, display: 'flex', alignItems: 'flex-end', textTransform: 'uppercase' }}>
+        <div style={{ width: 180, background: lcars.neonCarrot, color: lcars.onAccent, borderTopLeftRadius: 28, borderBottomLeftRadius: 6, padding: '10px 14px', fontWeight: 800, display: 'flex', alignItems: 'flex-end', textTransform: 'uppercase' }}>
           LCARS · Story Agent
         </div>
         <div style={{ flex: 1, background: lcars.eggplant, borderRadius: 6, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textTransform: 'uppercase', fontSize: '0.8rem', color: lcars.tanoi }}>
           <span>Sovereign Factory · familiarcat</span>
           <span style={{ color: lcars.paleCanary }}>OpenRouter Crew · WorfGate Online</span>
         </div>
-        <div style={{ width: 90, background: lcars.goldenTanoi, color: lcars.black, borderTopRightRadius: 28, borderBottomRightRadius: 6, padding: '10px', fontWeight: 800, textAlign: 'right' }}>
+        <div style={{ width: 90, background: lcars.goldenTanoi, color: lcars.onAccent, borderTopRightRadius: 28, borderBottomRightRadius: 6, padding: '10px', fontWeight: 800, textAlign: 'right' }}>
           47·∞
         </div>
       </header>
@@ -50,7 +50,7 @@ export default function Home() {
             <h2 style={panelTitle(lcars.lilac)}>Mission Hierarchy</h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '4px 2px', fontSize: '0.78rem' }}>
               {['Firm: familiarcat', 'Client', 'Project', 'Epic', 'Story', 'Task', 'Sprint'].map((h, i) => (
-                <span key={h} style={{ background: i === 0 ? lcars.goldenTanoi : lcars.eggplant, color: i === 0 ? lcars.black : lcars.tanoi, padding: '4px 12px', borderRadius: 12, textTransform: 'uppercase' }}>{h}</span>
+                <span key={h} style={{ background: i === 0 ? lcars.goldenTanoi : lcars.eggplant, color: i === 0 ? lcars.onAccent : lcars.tanoi, padding: '4px 12px', borderRadius: 12, textTransform: 'uppercase' }}>{h}</span>
               ))}
             </div>
             <div style={{ color: lcars.textDim, fontSize: '0.72rem', marginTop: 6, letterSpacing: 'normal' }}>
@@ -103,7 +103,7 @@ export default function Home() {
 
 function railBtn(color: string, hub = false): React.CSSProperties {
   return {
-    background: color, color: lcars.black, textDecoration: 'none', textTransform: 'uppercase',
+    background: color, color: lcars.onAccent, textDecoration: 'none', textTransform: 'uppercase',
     fontWeight: 800, fontSize: '0.74rem', padding: '12px 12px', borderRadius: 6,
     borderTopLeftRadius: hub ? 20 : 6, textAlign: 'right', lineHeight: 1.1,
   };

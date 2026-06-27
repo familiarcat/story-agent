@@ -79,14 +79,14 @@ export default function ChatPage() {
       const fence = part.match(/^```(\w*)\n?([\s\S]*?)```$/);
       if (fence) {
         return (
-          <pre key={i} style={{ background: '#0f172a', color: '#e2e8f0', padding: '0.75rem', borderRadius: 6, overflowX: 'auto', fontSize: '0.82rem', margin: '0.5rem 0' }}>
+          <pre key={i} style={{ background: 'var(--text)', color: 'var(--border)', padding: '0.75rem', borderRadius: 6, overflowX: 'auto', fontSize: '0.82rem', margin: '0.5rem 0' }}>
             <code>{fence[2].replace(/\n$/, '')}</code>
           </pre>
         );
       }
       const inline = part.split(/(`[^`]+`)/g).map((seg, j) =>
         seg.startsWith('`') && seg.endsWith('`')
-          ? <code key={j} style={{ background: '#eef2ff', padding: '0 4px', borderRadius: 3, fontSize: '0.85em' }}>{seg.slice(1, -1)}</code>
+          ? <code key={j} style={{ background: 'var(--surface-2)', padding: '0 4px', borderRadius: 3, fontSize: '0.85em' }}>{seg.slice(1, -1)}</code>
           : <span key={j}>{seg}</span>
       );
       return <span key={i} style={{ whiteSpace: 'pre-wrap' }}>{inline}</span>;
@@ -97,28 +97,28 @@ export default function ChatPage() {
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🖖 Story Agent — Crew Assistant</h1>
-        <span style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: '0.8rem', color: '#6b7280' }}>
+        <span style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
           OpenRouter · Quark-optimized · session ~${sessionCost.toFixed(4)}
           {turns.length > 0 && (
-            <button onClick={() => setTurns([])} disabled={busy} style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', borderRadius: 6, border: '1px solid #d1d5db', background: 'white', cursor: busy ? 'default' : 'pointer' }}>
+            <button onClick={() => setTurns([])} disabled={busy} style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', cursor: busy ? 'default' : 'pointer' }}>
               + New chat
             </button>
           )}
         </span>
       </header>
 
-      <div ref={scrollRef} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem', height: '60vh', overflowY: 'auto', background: '#fafafa' }}>
+      <div ref={scrollRef} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '1rem', height: '60vh', overflowY: 'auto', background: 'var(--surface)' }}>
         {turns.length === 0 && (
-          <p style={{ color: '#9ca3af' }}>Ask anything. Quark routes each turn to the cheapest adequate model on OpenRouter (simple → tier-3 like DeepSeek; complex → tier-4). Crew RAG memory is injected when relevant. The model + cost shows under each reply.</p>
+          <p style={{ color: 'var(--text-dim)' }}>Ask anything. Quark routes each turn to the cheapest adequate model on OpenRouter (simple → tier-3 like DeepSeek; complex → tier-4). Crew RAG memory is injected when relevant. The model + cost shows under each reply.</p>
         )}
         {turns.map((t, i) => (
           <div key={i} style={{ marginBottom: '1rem' }}>
-            <div style={{ fontWeight: 600, fontSize: '0.8rem', color: t.role === 'user' ? '#2563eb' : '#059669' }}>
+            <div style={{ fontWeight: 600, fontSize: '0.8rem', color: t.role === 'user' ? 'var(--accent4)' : 'var(--ok)' }}>
               {t.role === 'user' ? 'You' : 'Crew'}
             </div>
             <div style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{t.text ? renderText(t.text) : (busy && i === turns.length - 1 ? '…' : '')}</div>
             {t.meta && (
-              <div style={{ marginTop: 6, fontSize: '0.72rem', color: '#6b7280', fontFamily: 'ui-monospace, monospace' }}>
+              <div style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'ui-monospace, monospace' }}>
                 🤖 {t.meta.model} · {t.meta.provider} · {t.meta.tier} route · ↑{t.meta.tokensIn} ↓{t.meta.tokensOut} tok · ~${t.meta.costUSD.toFixed(4)}
                 {t.meta.sources?.length ? <><br />📎 {t.meta.sources.join(', ')}</> : null}
               </div>
@@ -134,9 +134,9 @@ export default function ChatPage() {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           placeholder="Ask the crew… (Enter to send, Shift+Enter for newline)"
           rows={2}
-          style={{ flex: 1, padding: '0.6rem', borderRadius: 8, border: '1px solid #d1d5db', fontFamily: 'inherit', fontSize: '0.9rem', resize: 'vertical' }}
+          style={{ flex: 1, padding: '0.6rem', borderRadius: 8, border: '1px solid var(--border)', fontFamily: 'inherit', fontSize: '0.9rem', resize: 'vertical' }}
         />
-        <button onClick={send} disabled={busy || !input.trim()} style={{ padding: '0 1.25rem', borderRadius: 8, border: 'none', background: busy ? '#9ca3af' : '#059669', color: 'white', fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}>
+        <button onClick={send} disabled={busy || !input.trim()} style={{ padding: '0 1.25rem', borderRadius: 8, border: 'none', background: busy ? 'var(--text-dim)' : 'var(--ok)', color: 'var(--on-accent)', fontWeight: 600, cursor: busy ? 'default' : 'pointer' }}>
           {busy ? '…' : 'Send'}
         </button>
       </div>

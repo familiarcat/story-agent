@@ -38,7 +38,7 @@ export function ClientScopeSelector({ title = 'Client Scope' }: ClientScopeSelec
       <div style={{ fontWeight: 700, marginBottom: '0.65rem' }}>{title}</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr auto', gap: '0.6rem', alignItems: 'end' }}>
         <label>
-          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.25rem' }}>Selected Client</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.25rem' }}>Selected Client</div>
           <input
             value={clientId}
             onChange={e => setClientId(e.target.value)}
@@ -48,7 +48,7 @@ export function ClientScopeSelector({ title = 'Client Scope' }: ClientScopeSelec
         </label>
 
         <label>
-          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.25rem' }}>Role</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.25rem' }}>Role</div>
           <select value={role} onChange={e => setRole(e.target.value as ClientScopeRole)} style={{ width: '100%', padding: '0.45rem 0.55rem' }}>
             {ROLES.map(nextRole => (
               <option key={nextRole} value={nextRole}>{nextRole}</option>
@@ -60,7 +60,7 @@ export function ClientScopeSelector({ title = 'Client Scope' }: ClientScopeSelec
           Save Scope
         </button>
       </div>
-      {saved && <div style={{ marginTop: '0.5rem', color: '#065f46', fontSize: '0.85rem' }}>Scope saved</div>}
+      {saved && <div style={{ marginTop: '0.5rem', color: 'var(--ok)', fontSize: '0.85rem' }}>Scope saved</div>}
     </div>
   );
 }
