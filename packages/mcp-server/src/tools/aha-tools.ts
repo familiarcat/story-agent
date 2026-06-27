@@ -20,7 +20,7 @@ import { gateAhaWrite } from '../lib/crew-aha-automode.js';
 import { syncCrewResultToAha } from '../lib/crew-aha-sync.js';
 import { getAhaStory } from '../lib/aha.js';
 import { ahaRefToBranchName, branchCreateCommand } from '../lib/git-aha-branching.js';
-import { startStoryWithBranch } from '../lib/crew-story-lifecycle.js';
+import { startStoryWithBranch, linkStoryToPR, completeStory } from '../lib/crew-story-lifecycle.js';
 
 async function aha(path: string, init?: RequestInit): Promise<any> {
   // Single source of truth: AWS Secrets Manager → direct-Aha env fallback (see aha-credentials.ts).
@@ -234,5 +234,30 @@ export function registerAhaTools(server: McpServer): void {
     },
     async ({ name, description, releaseId, executor, push, confirm }) =>
       ok(await startStoryWithBranch({ name, description, releaseId, executor, push, confirm })),
+  );
+
+  // ── LINK STORY TO PR (Move to code review) ─────────────────────────────────
+  server.tool(
+    'crew_link_story_pr',
+    'Link an Aha story to its PR and move it to code review (gated).',
+    {
+      ref: z.string(),
+      prUrl: z.string(),
+      prTitle: z.string(),
+      confirm: z.boolean().optional()
+    },
+    async (a) => ok(await linkStoryToPR(a))
+  );
+
+  // ── COMPLETE STORY (Mark shipped + delete branch) ──────────────────────────
+  server.tool(
+    'crew_complete_story',
+    'Mark an Aha story shipped and delete its branch on merge (gated; never main).',
+    {
+      ref: z.string(),
+      branch: z.string(),
+      confirm: z.boolean().optional()
+    },
+    async (a) => ok(await completeStory(a))
   );
 }

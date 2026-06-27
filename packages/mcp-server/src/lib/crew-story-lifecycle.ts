@@ -8,6 +8,7 @@
 import { execSync } from 'node:child_process';
 import { executeAhaStoryWithMemory } from './crew-aha-mission.js';
 import { ahaRefToBranchName, slugify } from './git-aha-branching.js';
+import { linkAhaStoryToPR, updateAhaStoryStatus } from './aha.js';
 
 export interface StartStoryResult {
   dryRun?: boolean;
@@ -17,6 +18,21 @@ export interface StartStoryResult {
   pushed?: boolean;
   note?: string;
   ahaAudit?: unknown;
+}
+
+export interface LinkStoryToPRResult {
+  dryRun?: boolean;
+  ref: string;
+  prUrl: string;
+  linked?: boolean;
+}
+
+export interface CompleteStoryResult {
+  dryRun?: boolean;
+  ref: string;
+  branch: string;
+  completed?: boolean;
+  deleted?: boolean;
 }
 
 /** Create an Aha story + its matching git branch (in sync). Dry-run unless confirm:true. */
@@ -68,4 +84,42 @@ export async function startStoryWithBranch(input: {
   }
 
   return { ahaRef: ref, branch, branchCreated, pushed, note, ahaAudit: (aha as { audit?: unknown }).audit };
+}
+
+/** Link an Aha story to its PR and move it to code review (gated). */
+export async function linkStoryToPR(input: {
+  ref: string;
+  prUrl: string;
+  prTitle: string;
+  confirm?: boolean;
+}): Promise<LinkStoryToPRResult> {
+  if (input.confirm !== true) {
+    return { dryRun: true, ref: input.ref, prUrl: input.prUrl };
+  }
+
+  await linkAhaStoryToPR(input.ref, input.prUrl, input.prTitle);
+  await updateAhaStoryStatus(input.ref, 'In code review');
+  return { ref: input.ref, prUrl: input.prUrl, linked: true };
+}
+
+/** Mark an Aha story shipped and delete its branch on merge (gated; never main). */
+export async function completeStory(input: {
+  ref: string;
+  branch: string;
+  confirm?: boolean;
+  cwd?: string;
+}): Promise<CompleteStoryResult> {
+  if (input.branch === 'main') throw new Error('refuse to operate on main');
+  if (input.confirm !== true) {
+    return { dryRun: true, ref: input.ref, branch: input.branch };
+  }
+
+  await updateAhaStoryStatus(input.ref, 'Shipped');
+  let deleted = false;
+  try {
+    execSync('git branch -d ' + input.branch, { cwd: input.cwd ?? process.cwd(), stdio: 'pipe' });
+    execSync('git push origin --delete ' + input.branch, { cwd: input.cwd ?? process.cwd(), stdio: 'pipe' });
+    deleted = true;
+  } catch (e) {}
+  return { ref: input.ref, branch: input.branch, completed: true, deleted };
 }

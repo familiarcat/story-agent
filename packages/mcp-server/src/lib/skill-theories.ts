@@ -194,6 +194,26 @@ defineSkillTheory({
 });
 
 defineSkillTheory({
+  tool: 'crew_link_story_pr',
+  who: { owner: 'riker' },
+  what: { summary: 'Link an Aha story to its PR and move it to code review.', capabilities: ['linkAhaStoryToPR', 'advance story status to In code review'] },
+  when: { useWhen: ['A PR has been opened for a story branch'], avoidWhen: ['No PR yet'] },
+  where: { scope: ['aha', 'git', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Keeps the Aha story in lockstep with the PR — traceability from branch → PR → backlog.', goalsServed: ['traceability', 'sync'] },
+  how: { invocation: 'crew_link_story_pr({ ref, prUrl, prTitle, confirm? })', annotations: { title: 'Crew Link Story PR', readOnlyHint: false, idempotentHint: true, openWorldHint: true }, output: 'Link result (dry-run unless confirm:true).' },
+});
+
+defineSkillTheory({
+  tool: 'crew_complete_story',
+  who: { owner: 'riker' },
+  what: { summary: 'On merge, mark an Aha story shipped and delete its branch.', capabilities: ['updateAhaStoryStatus Shipped', 'delete local + remote branch (never main)'] },
+  when: { useWhen: ['A story PR has merged'], avoidWhen: ['Work still in progress'], preconditions: ['branch is not main'] },
+  where: { scope: ['aha', 'git', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Closes the lifecycle — the backlog and the repo both reflect that the work shipped.', goalsServed: ['traceability', 'hygiene'] },
+  how: { invocation: 'crew_complete_story({ ref, branch, confirm? })', annotations: { title: 'Crew Complete Story', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }, output: 'Completion result (dry-run unless confirm:true; refuses main).' },
+});
+
+defineSkillTheory({
   tool: 'crew_start_story',
   who: { owner: 'riker' },
   what: { summary: 'Create an Aha story AND its matching git branch in one gated step (keeps git ↔ backlog in sync).', capabilities: ['gated Aha story create', 'matching story/<REF>-<slug> branch from main (no switch, never force)', 'optional push'] },
@@ -218,4 +238,5 @@ export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
   'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story', 'crew_start_story',
+  'crew_link_story_pr', 'crew_complete_story',
 ];
