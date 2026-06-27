@@ -6,8 +6,10 @@
  *   story-agent "fix the failing test in foo.ts"   # one-shot
  *   story-agent                                     # interactive REPL
  *   echo "..." | story-agent -                      # read task from stdin
+ *   story-agent --json "..."                        # NDJSON event stream (live orchestrator feedback)
  *
  * Env: CREW_LLM_APPROVED_KEY/URL (OpenRouter). Runs in the current directory as the workspace.
+ *      STORY_AGENT_EVENTS_JSON=1 is equivalent to passing --json.
  */
 import 'dotenv/config';
 import readline from 'readline';
@@ -25,7 +27,21 @@ const C = {
 
 const tierColor = (t?: string) => (t === 'green' ? C.green : t === 'yellow' ? C.yellow : C.red)(t ?? '?');
 
+/**
+ * NDJSON event mode (`--json` / STORY_AGENT_EVENTS_JSON=1): emit ONE parseable line per event to
+ * stdout so an orchestrator (Claude Code, or any supervisor) gets LIVE crew feedback by tailing the
+ * stream — instead of a silent buffer that only surfaces on exit. Each line is a self-contained
+ * AgentEvent; the run ends with a final {type:'summary',...} line. This is the fix for "the loop
+ * does not give feedback from the OpenRouter crew to the orchestrator."
+ */
+const JSON_EVENTS = process.env.STORY_AGENT_EVENTS_JSON === '1' || process.argv.includes('--json');
+
+function emitJsonLine(obj: unknown) {
+  process.stdout.write(JSON.stringify(obj) + '\n');
+}
+
 function printEvent(e: AgentEvent) {
+  if (JSON_EVENTS) { emitJsonLine(e); return; }
   switch (e.type) {
     case 'model': process.stderr.write(C.dim(`◇ model: ${e.model}\n`)); break;
     case 'tool_call': process.stderr.write(C.cyan(`→ ${e.tool} `) + C.dim(JSON.stringify(e.args).slice(0, 120) + '\n')); break;
@@ -40,16 +56,24 @@ function printEvent(e: AgentEvent) {
 async function runOnce(task: string, clientId: string | null) {
   const bridges = buildBridges(clientId);
   const res = await runAgentLoop(task, { workspace: process.cwd(), clientId, onEvent: printEvent, ...bridges });
-  process.stderr.write(
-    C.dim(`\n── ${res.model} · ${res.iterations} turns · ${res.toolCalls.length} tools · ` +
-      `$${res.totalCostUSD.toFixed(5)} · ${res.totalTokens} tok` +
-      (res.escalated ? ' · escalated' : '') + (res.budgetExceeded ? ' · budget-capped' : '') + '\n'),
-  );
+  if (JSON_EVENTS) {
+    emitJsonLine({
+      type: 'summary', model: res.model, iterations: res.iterations, tools: res.toolCalls.length,
+      costUSD: res.totalCostUSD, tokens: res.totalTokens, escalated: res.escalated,
+      budgetExceeded: res.budgetExceeded, stalled: res.stalled,
+    });
+  } else {
+    process.stderr.write(
+      C.dim(`\n── ${res.model} · ${res.iterations} turns · ${res.toolCalls.length} tools · ` +
+        `$${res.totalCostUSD.toFixed(5)} · ${res.totalTokens} tok` +
+        (res.escalated ? ' · escalated' : '') + (res.budgetExceeded ? ' · budget-capped' : '') + '\n'),
+    );
+  }
   return res;
 }
 
 async function main() {
-  const args = process.argv.slice(2);
+  const args = process.argv.slice(2).filter(a => a !== '--json');
   const clientId = process.env.STORY_AGENT_CLIENT_ID || null;
 
   // stdin mode
