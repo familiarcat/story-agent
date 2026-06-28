@@ -19,6 +19,11 @@ analysis, deliberation, and planning. Concretely:
   which run the tool-calling loop on a Quark-selected OpenRouter model.
 - **Observation Lounge responses** (full-crew deliberation) are the expected format when the user
   asks "what does the crew think" — engage all officers on their own models, then synthesize.
+- **Ideation / "what should we build" →** run the **Innovation Lounge** (`run_innovation_lounge` MCP
+  tool, or `npx tsx scripts/innovation-lounge.ts`): each of the 11 invents an original project in
+  their canonical persona, the crew debates, Picard resolves a portfolio (pursue now/next/park).
+  Generative + deliberative (vs the self-reflection Observation Lounge). Stored to RAG, frugal (~$0.04).
+  Full guide: [docs/innovation-lounge.md](docs/innovation-lounge.md).
 - **Anthropic is a POOL MEMBER, not the default.** Never hardcode Anthropic as the primary model.
   Quark selects the cheapest adequate model per task (DeepSeek / Llama / OpenAI for most work;
   Anthropic only for tier-4 architecture/security). See "LLM routing" below.

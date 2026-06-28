@@ -151,6 +151,16 @@ defineSkillTheory({
   how: { invocation: 'run_crew_mission_pipeline({ input, clientId?, store? })', annotations: { title: 'Run Crew Mission Pipeline', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'goals, team, contributions, efficiency, mission plan (stored to RAG).' },
 });
 
+defineSkillTheory({
+  tool: 'run_innovation_lounge',
+  who: { owner: 'picard' },
+  what: { summary: 'Crew creative jam: 11 persona-driven project pitches, a debate, and a resolved portfolio.', capabilities: ['ideation', 'persona creativity', 'debate', 'portfolio synthesis'] },
+  when: { useWhen: ['Generating fresh project/product ideas from the crew', 'Asserting the platform end-to-end (create + debate + resolve)'], avoidWhen: ['Executing a known plan (use run_crew_mission_pipeline)'] },
+  where: { scope: ['crew', 'llm', 'rag'], surfaces: ['mcp'], sideEffects: 'external' },
+  why: { rationale: 'Each member invents in their canonical persona, the crew debates the slate, Picard resolves — generative + deliberative, stored to RAG so ideas compound.', goalsServed: ['ideation', 'dogfooding', 'portfolio-planning'] },
+  how: { invocation: 'run_innovation_lounge({ theme?, store? })', annotations: { title: 'Run Innovation Lounge', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'pitches, debate, portfolio (pursue now/next/park), dissent, synthesis, markdown — stored to RAG.' },
+});
+
 // ── dynamic MCP discovery + crew tool-teaching ────────────────────────────────
 
 defineSkillTheory({

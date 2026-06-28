@@ -26,6 +26,7 @@ import { CrewWebSocketServer } from './lib/websocket-server.js';
 import { startRagHttpServer } from './lib/rag-http-server.js';
 import { registerAhaTools } from './tools/aha-tools.js';
 import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
+import { registerInnovationLoungeTools } from './tools/innovation-lounge-tools.js';
 import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
 import { registerSkillTools } from './tools/skill-tools.js';
@@ -52,6 +53,7 @@ registerCrewIntegrityTools(server);
 registerStarshipTools(server);
 registerAhaTools(server);  // 📋 Aha! — crew project/epic/story/sprint management via REST
 registerCrewMissionTools(server);  // 🧭 6-stage pipeline: Picard→Riker→Quark→crew→Quark→Picard
+registerInnovationLoungeTools(server);  // 💡 crew creative jam: 11 persona pitches → debate → portfolio
 registerClientTools(server);  // 👥 client onboarding + hierarchy (WorfGate-governed)
 registerWorfGateTools(server);  // 🛡️ Worf's credential broker (presence/audit; values never exposed)
 registerSkillTools(server);  // 📚 5W1H skill-theory introspection (describe_skill / coverage)
