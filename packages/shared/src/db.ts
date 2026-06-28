@@ -1069,6 +1069,28 @@ export async function searchDocumentation(
 }
 
 /**
+ * Upsert one documentation chunk into sa_documentation — the corpus searchDocumentation reads, so the
+ * crew can access the docs as a "contemplative basis" during decisions. Idempotent on
+ * (source_path, chunk_index), so re-ingesting updates in place. Embedding is omitted: the
+ * search_documentation_by_text RPC is ILIKE-based (searchable without it); semantic 1536-dim
+ * embeddings are a future add (the shared embed() is 64-dim, so a column/embedding change is needed).
+ */
+export async function storeDocumentationChunk(rec: {
+  title: string; category: string; sourcePath: string; filename: string;
+  chunkIndex: number; chunkCount: number; content: string; contentHash?: string; tags?: string[];
+}): Promise<void> {
+  const client = await getSupabaseClient();
+  const now = new Date().toISOString();
+  const { error } = await client.from('sa_documentation').upsert({
+    title: rec.title, category: rec.category, source_path: rec.sourcePath, filename: rec.filename,
+    chunk_index: rec.chunkIndex, chunk_count: rec.chunkCount, chunk_content: rec.content,
+    content_hash: rec.contentHash ?? null, tags: rec.tags ?? [], is_searchable: true,
+    ingested_at: now, updated_at: now,
+  }, { onConflict: 'source_path,chunk_index' });
+  if (error) throw new Error('storeDocumentationChunk: ' + error.message);
+}
+
+/**
  * Get documentation by category
  * Returns all documents in a specific category for browsing
  */

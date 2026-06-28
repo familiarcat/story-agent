@@ -3,7 +3,7 @@
  * feedback) to the real subsystems. Surfaces (CLI/API/VS Code) call buildBridges() so every
  * surface gets identical behavior — the whole point of the unification.
  */
-import { getRelevantObservationMemories, storeObservationMemory } from '@story-agent/shared/db';
+import { getRelevantObservationMemories, storeObservationMemory, searchDocumentation } from '@story-agent/shared/db';
 import { runMissionPipeline } from '../lib/crew-mission-pipeline.js';
 import type { ToolContext } from './tools.js';
 import type { RunAgentOptions } from './loop.js';
@@ -13,11 +13,20 @@ export function buildBridges(
 ): Pick<ToolContext, 'ragRecall' | 'crewDeliberate'> & Pick<RunAgentOptions, 'recordFeedback'> {
   return {
     ragRecall: async (query: string, limit: number) => {
-      const memories = await getRelevantObservationMemories({ queryText: query, clientId, limit });
-      if (!memories.length) return '(no relevant crew memories)';
-      return memories
-        .map((m, i) => `#${i + 1} [${m.missionReference ?? m.storyId}] ${m.transcript?.consensusSummary?.slice(0, 400) ?? ''}`)
-        .join('\n\n');
+      // The crew recalls TWO corpora: prior decisions (observation memory) AND the project's
+      // documentation (the "contemplative basis"), so docs inform autonomous decision-making.
+      const [memories, docs] = await Promise.all([
+        getRelevantObservationMemories({ queryText: query, clientId, limit }),
+        searchDocumentation(query, undefined, 4).catch(() => []),
+      ]);
+      const memBlock = memories.length
+        ? memories.map((m, i) => `#${i + 1} [${m.missionReference ?? m.storyId}] ${m.transcript?.consensusSummary?.slice(0, 400) ?? ''}`).join('\n\n')
+        : '';
+      const docBlock = docs.length
+        ? '\n\nRELEVANT DOCS:\n' + docs.map((d: any) => `• [${d.source_path ?? d.title}] ${(d.chunk_content ?? '').slice(0, 300)}`).join('\n')
+        : '';
+      const out = (memBlock + docBlock).trim();
+      return out || '(no relevant crew memories or docs)';
     },
     crewDeliberate: async (brief: string) => {
       const r = await runMissionPipeline(brief);
