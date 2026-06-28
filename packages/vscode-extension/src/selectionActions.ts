@@ -6,14 +6,26 @@ import * as vscode from 'vscode';
  * packages/shared/src/selection-contract.ts — INLINED because the extension bundles via esbuild and
  * deliberately avoids bundling @story-agent/shared (see aha.ts). Keep the action set in sync.
  *
+ * PERSONA: the VS Code extension is the DEVELOPER surface, so it renders actionsForPersona(level,
+ * 'developer') — the full code lifecycle (plan / execute / branch / link-PR / complete). Management
+ * (web dashboard) gets the same contract minus the dev-only ops (agent / branch / link-pr). This
+ * mirrors selection-contract.ts's actionsForPersona so the two surfaces never drift.
+ *
  * Reads (plan / prepare / open) route directly or open the chat with a prefilled query. WRITES
  * (start-story / branch / link-pr / complete) route to /agent as WorfGate-gated DRY-RUNS the crew
  * shows before confirming — so a selection can never silently mutate Aha/git.
  */
 type Level = 'project' | 'epic' | 'story' | 'task';
+type Persona = 'management' | 'developer';
 interface Action { intent: string; label: string; write: boolean; }
 
-const ACTIONS: Record<Level, Action[]> = {
+/** This surface's persona. The extension is the developer-facing tool. */
+const PERSONA: Persona = 'developer';
+
+/** Dev-only intents — mirrors DEVELOPER_ONLY in selection-contract.ts. */
+const DEVELOPER_ONLY = new Set(['agent', 'branch', 'link-pr']);
+
+const ACTIONS_BY_LEVEL: Record<Level, Action[]> = {
   project: [
     { intent: 'plan', label: '$(checklist) Plan (read-only)', write: false },
     { intent: 'open', label: '$(link-external) Open in Aha', write: false },
@@ -38,6 +50,16 @@ const ACTIONS: Record<Level, Action[]> = {
     { intent: 'open', label: '$(link-external) Open in Aha', write: false },
   ],
 };
+
+/**
+ * Persona-filtered actions for a level — mirrors selection-contract.ts actionsForPersona().
+ * developer = full lifecycle; management = all reads + approval writes, minus dev-only ops.
+ */
+function actionsForPersona(level: Level, persona: Persona): Action[] {
+  const all = ACTIONS_BY_LEVEL[level];
+  if (persona === 'developer') return all;
+  return all.filter(a => !DEVELOPER_ONLY.has(a.intent));
+}
 
 /** Build the chat-participant query for an action. Writes carry explicit gated-dry-run language. */
 function buildQuery(intent: string, ref: string, name: string): string {
@@ -72,7 +94,7 @@ export async function runNodeActions(item: unknown): Promise<void> {
   const d = describe(item);
   if (!d) { vscode.window.showWarningMessage('Story Agent: no selectable actions for this item.'); return; }
 
-  const picks = ACTIONS[d.level].map(a => ({ label: a.label, intent: a.intent, write: a.write }));
+  const picks = actionsForPersona(d.level, PERSONA).map(a => ({ label: a.label, intent: a.intent, write: a.write }));
   const chosen = await vscode.window.showQuickPick(picks, {
     title: `${d.ref || d.name} — actions`,
     placeHolder: 'Select an action — writes run as WorfGate-gated dry-runs you confirm',
