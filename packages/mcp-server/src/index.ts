@@ -170,8 +170,11 @@ async function main() {
     const wsHttpServer = createHTTPServer();
     new CrewWebSocketServer(wsHttpServer);
 
-    wsHttpServer.listen(wsPort, 'localhost', () => {
-      process.stderr.write(`story-agent WebSocket server listening on ws://localhost:${wsPort}\n`);
+    // Bind 0.0.0.0 (not localhost) so the Fargate ALB can reach the WS target group (port 8000);
+    // a localhost bind is unreachable from the ALB and fails the health check.
+    const wsHost = process.env.STORY_AGENT_BIND_HOST ?? '0.0.0.0';
+    wsHttpServer.listen(wsPort, wsHost, () => {
+      process.stderr.write(`story-agent WebSocket server listening on ws://${wsHost}:${wsPort}\n`);
     });
   }
 }

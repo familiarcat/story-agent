@@ -67,7 +67,11 @@ export function startRagHttpServer(port: number): void {
     sendJson(res, 404, { error: 'not found', routes: ['GET /rag/health', 'POST /rag/query'] });
   });
 
-  server.listen(port, 'localhost', () => {
-    process.stderr.write(`story-agent RAG read service on http://localhost:${port}/rag (crew cloud memory + docs)\n`);
+  // Bind 0.0.0.0 (not localhost) so the Fargate ALB can reach /rag/health on this port — the
+  // mcp target group health-checks 3102; a localhost bind is unreachable from the ALB and the task
+  // fails its health check forever. (Matches the MCP HTTP 3101 + agent 3103 binds.)
+  const host = process.env.STORY_AGENT_BIND_HOST ?? '0.0.0.0';
+  server.listen(port, host, () => {
+    process.stderr.write(`story-agent RAG read service on http://${host}:${port}/rag (crew cloud memory + docs)\n`);
   });
 }
