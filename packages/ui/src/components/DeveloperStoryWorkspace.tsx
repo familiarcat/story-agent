@@ -15,6 +15,7 @@
 import React, { useEffect, useState } from 'react';
 import { DeveloperAdvisor } from './DeveloperAdvisor';
 import { HierarchyTree } from './HierarchyTree';
+import { WorkflowStatus } from './WorkflowStatus';
 import type { CrewExecutionState, HierarchyNode, ActionIntent } from '@story-agent/shared';
 import { buildClientScopeHeaders, readClientScopeState } from '@/lib/client-scope-store';
 
@@ -225,6 +226,18 @@ export function DeveloperStoryWorkspace({
                   className="bg-green-500 h-2 rounded-full"
                   style={{
                     width: `${(crewState.crewExecutions.filter(e => e.status === 'complete').length / crewState.crewExecutions.length) * 100}%`,
+                  }}
+                />
+              </div>
+              {/* Reusable crew-feedback primitive (shared with the dashboard + mirrored in vscode). */}
+              <div className="mt-2">
+                <WorkflowStatus
+                  variant="line"
+                  label="Run"
+                  status={{
+                    costUSD: crewState.totalCostUsd,
+                    toolCount: crewState.crewExecutions.length,
+                    stalled: (crewState.blockers?.length ?? 0) > 0,
                   }}
                 />
               </div>

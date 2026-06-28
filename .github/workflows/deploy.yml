@@ -97,14 +97,41 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Required security gate BEFORE any apply (crew air-tight deploy plan, OBS 05309228 — Worf/Yar):
+  # the WorfGate audit must pass before we touch production. Skips green if SUPABASE_URL isn't
+  # configured (same guard as audit-check.yml), so it never false-fails before setup.
+  security_gate:
+    runs-on: ubuntu-latest
+    if: ${{ vars.AWS_REGION != '' && vars.AWS_DEPLOY_ROLE_ARN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: WorfGate security audit
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          WORFGATE_AUDIT_MAX: 100
+          STORY_AGENT_PATH: ${{ github.workspace }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::notice::SUPABASE_URL not configured — skipping live WorfGate audit (gate stays green)."
+            exit 0
+          fi
+          pnpm exec tsx scripts/check-recent-audits.ts
+
   deploy:
-    needs: [detect, build_mcp, build_ui]
-    # Run when something changed and builds (if any) didn't fail. Skipped builds are fine (infra-only).
+    needs: [detect, build_mcp, build_ui, security_gate]
+    # Run when something changed, builds (if any) didn't fail, AND the security gate passed. Skipped
+    # builds are fine (infra-only); a FAILED security_gate blocks the deploy (incl. apply).
     if: >-
       ${{ always()
         && (needs.detect.outputs.app == 'true' || needs.detect.outputs.infra == 'true')
         && needs.build_mcp.result != 'failure'
-        && needs.build_ui.result != 'failure' }}
+        && needs.build_ui.result != 'failure'
+        && needs.security_gate.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
