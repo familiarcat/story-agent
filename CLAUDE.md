@@ -34,6 +34,13 @@ unavailable, or a ≤few-line deterministic fix the loop stalled on) — call it
 the live-feedback + ask-first approval + self-healing-stall methodology in
 [docs/crew-live-feedback-and-approvals.md](docs/crew-live-feedback-and-approvals.md).
 
+**Reach the crew via MCP, not tsx scripts (when connected).** The repo registers a `story-agent` MCP
+server ([.mcp.json](.mcp.json) → [scripts/mcp-crew-stdio.sh](scripts/mcp-crew-stdio.sh)) exposing the
+crew's tools directly to Claude Code: `run_crew_mission_pipeline` (Observation Lounge engine),
+`crew:get-relevant-memories` / `crew:store-memory` (the recall→store protocol), per-officer tools,
+Aha, WorfGate, skills. PREFER these MCP tools over writing `tsx` mission scripts. Activate once with a
+Claude Code restart + approve (`/mcp`). Full guide: [docs/claude-code-mcp.md](docs/claude-code-mcp.md).
+
 ## Crew memory recall (read BEFORE any NL prompt)
 
 **Every Claude Code or Story Agent natural-language prompt must RECALL crew RAG memory before acting,

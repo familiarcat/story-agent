@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "story-agent": {
+      "command": "scripts/mcp-crew-stdio.sh",
+      "comment": "OpenRouter crew over stdio — run_crew_mission_pipeline, crew memory recall/store, Aha, WorfGate, skills. The wrapper sources crew secrets. Lets Claude Code call the crew directly instead of tsx mission scripts. See docs/claude-code-mcp.md."
+    },
     "aha": {
       "type": "http",
       "url": "https://familiarcat.use3.aha.io/api/v1/mcp"

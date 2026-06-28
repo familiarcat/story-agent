@@ -4,9 +4,11 @@
 			"type": "stdio",
 			"command": "node",
 			"args": [
-				"${workspaceFolder}/packages/mcp-server/dist/index.js"
+				"${workspaceFolder}/packages/mcp-server/dist/src/index.js"
 			],
 			"env": {
+				"CREW_LLM_APPROVED_KEY": "${env:CREW_LLM_APPROVED_KEY}",
+				"CREW_LLM_APPROVED_URL": "${env:CREW_LLM_APPROVED_URL}",
 				"AHA_DOMAIN": "${env:AHA_DOMAIN}",
 				"AHA_API_KEY": "${env:AHA_API_KEY}",
 				"GITHUB_TOKEN": "${env:GITHUB_TOKEN}",
