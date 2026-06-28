@@ -135,6 +135,10 @@ and the PM side (Aha) — see [docs/aha-nomenclature.md](docs/aha-nomenclature.m
 - pnpm monorepo. Build a package: `pnpm --filter @story-agent/<pkg> run build`. Tests:
   `pnpm --filter @story-agent/<pkg> run test:unit`. Run scripts with `npx tsx scripts/<x>.ts`
   (the bash shell loads `~/.zshrc`, so crew/Supabase/Aha creds are present).
+- **Viewing crew results end-to-end (web UI + VS Code extension):** follow
+  [docs/system-test-guide.md](docs/system-test-guide.md) — `pnpm dev`, then the per-surface PASS/FAIL
+  walkthrough. Crew results surface at `/observation-lounge`, `/crew/memories`, `/agent`, and
+  `/innovation-lounge` (web) + the matching extension commands.
 - `crew-collaboration.integration.test.ts` (formerly the known-failing "missing template vars" test)
   is now GREEN — fixed 2026-06-27: each crew agent in `crew-agents.ts` now passes
   `storyDescription`/`acceptanceCriteria`, plus a `description`↔`storyDescription` alias and a
@@ -147,6 +151,7 @@ and the PM side (Aha) — see [docs/aha-nomenclature.md](docs/aha-nomenclature.m
 | Command | Purpose |
 |---|---|
 | `pnpm run build` / `pnpm run check` | build all / typecheck+lint+test |
+| `pnpm dev` | start the full stack (MCP + agent `:3103` + RAG `:3102` + web UI `:3000`) |
 | `pnpm run mcp` | start the MCP server (set `STORY_AGENT_AGENT_PORT=3103` for the `/agent` loop) |
 | `npx tsx scripts/onboard-client.ts` | onboard a client (defaults to Jonah) |
 | `supabase db push` | apply pending cloud migrations |

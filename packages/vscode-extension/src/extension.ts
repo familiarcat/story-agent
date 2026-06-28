@@ -65,6 +65,14 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.env.openExternal(vscode.Uri.parse(`${base}/observation-lounge`));
     }),
 
+    vscode.commands.registerCommand('story-agent.openInnovationLounge', () => {
+      const base =
+        vscode.workspace
+          .getConfiguration('storyAgent')
+          .get<string>('dashboardUrl') ?? 'http://localhost:3000';
+      vscode.env.openExternal(vscode.Uri.parse(`${base}/innovation-lounge`));
+    }),
+
     vscode.commands.registerCommand('story-agent.openSidebar', () => {
       vscode.commands.executeCommand(
         'workbench.view.extension.story-agent-sidebar'

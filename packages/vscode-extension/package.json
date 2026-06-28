@@ -96,6 +96,11 @@
         "icon": "$(eye)"
       },
       {
+        "command": "story-agent.openInnovationLounge",
+        "title": "Story Agent: Open Innovation Lounge",
+        "icon": "$(lightbulb)"
+      },
+      {
         "command": "story-agent.connectOAuth",
         "title": "Story Agent: Connect OAuth Provider (Aha!, Google, AWS…)",
         "icon": "$(key)"
