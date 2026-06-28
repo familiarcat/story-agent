@@ -24,6 +24,7 @@ import { registerStarshipTools } from './tools/starship-tools.js';
 import { registerCrewIntegrityTools } from './tools/crew-integrity-tools.js';
 import { CrewWebSocketServer } from './lib/websocket-server.js';
 import { startRagHttpServer } from './lib/rag-http-server.js';
+import { guardListen } from './lib/port-guard.js';
 import { registerAhaTools } from './tools/aha-tools.js';
 import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
 import { registerInnovationLoungeTools } from './tools/innovation-lounge-tools.js';
@@ -142,6 +143,7 @@ async function main() {
       );
     });
 
+    guardListen(httpServer, httpPort, 'MCP HTTP server');
     httpServer.listen(httpPort, '0.0.0.0', () => {
       process.stderr.write(
         `story-agent MCP HTTP server listening on http://0.0.0.0:${httpPort}/mcp\n`,
@@ -175,6 +177,7 @@ async function main() {
     // Bind 0.0.0.0 (not localhost) so the Fargate ALB can reach the WS target group (port 8000);
     // a localhost bind is unreachable from the ALB and fails the health check.
     const wsHost = process.env.STORY_AGENT_BIND_HOST ?? '0.0.0.0';
+    guardListen(wsHttpServer, wsPort, 'WebSocket server');
     wsHttpServer.listen(wsPort, wsHost, () => {
       process.stderr.write(`story-agent WebSocket server listening on ws://${wsHost}:${wsPort}\n`);
     });

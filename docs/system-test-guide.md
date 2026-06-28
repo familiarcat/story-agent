@@ -124,6 +124,18 @@ curl -s "localhost:3000/api/crew/memories?crew=data"     # → { success:true, m
   re-approve (new tools load on connect).
 - `/innovation-lounge` and its API route are live in the web build (no restart needed beyond `pnpm dev`).
 
+## 8. Troubleshooting — `EADDRINUSE` on `pnpm dev`
+
+If you see `listen EADDRINUSE: address already in use 0.0.0.0:3102` (or :3101/:3103/:8000), a previous
+MCP instance still holds the port (a stale `node --watch`, or a second `pnpm dev`). As of the
+`guardListen` hardening this is now a single non-fatal log line — the existing instance keeps serving,
+so the UIs still reach RAG/agent. To make THIS process own the port instead:
+```bash
+lsof -nP -iTCP:3102 -sTCP:LISTEN     # see who holds it
+lsof -ti:3102 | xargs kill           # free it (repeat for 3101/3103/3000/8000), then re-run pnpm dev
+```
+Only run one `pnpm dev` at a time. (Crew lesson: O'Brien RAG memory, tags `eaddrinuse`/`ports`.)
+
 ---
 
 *Crew portfolio for this work (mission pipeline, $0.0019): Geordi/O'Brien — verify ground truth +

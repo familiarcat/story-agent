@@ -9,6 +9,7 @@
  * extension becomes a thin client instead of re-implementing the loop.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
+import { guardListen } from '../lib/port-guard.js';
 import { handleChatRequest } from './chat.js';
 import { recordCost, costSummary } from './cost-ledger.js';
 import { handleAhaRequest } from './aha-http.js';
@@ -90,6 +91,7 @@ export function startAgentHttpServer(port: number) {
     await serveAgent(req, res, (req.url || '').split('?')[0], port);
   });
 
+  guardListen(server, port, 'Agent HTTP server');
   server.listen(port, '0.0.0.0', () => {
     process.stderr.write(`story-agent Agent HTTP server listening on http://0.0.0.0:${port}/agent\n`);
   });

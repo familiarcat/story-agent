@@ -11,6 +11,7 @@
  */
 import { createServer, type ServerResponse } from 'http';
 import { getRelevantObservationMemories, searchDocumentation } from '@story-agent/shared/db';
+import { guardListen } from './port-guard.js';
 
 function sendJson(res: ServerResponse, code: number, body: unknown): void {
   const payload = JSON.stringify(body);
@@ -77,6 +78,7 @@ export function startRagHttpServer(port: number): void {
   // mcp target group health-checks 3102; a localhost bind is unreachable from the ALB and the task
   // fails its health check forever. (Matches the MCP HTTP 3101 + agent 3103 binds.)
   const host = process.env.STORY_AGENT_BIND_HOST ?? '0.0.0.0';
+  guardListen(server, port, 'RAG read service');
   server.listen(port, host, () => {
     process.stderr.write(`story-agent RAG read service on http://${host}:${port}/rag (crew cloud memory + docs)\n`);
   });
