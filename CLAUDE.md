@@ -41,6 +41,13 @@ crew's tools directly to Claude Code: `run_crew_mission_pipeline` (Observation L
 Aha, WorfGate, skills. PREFER these MCP tools over writing `tsx` mission scripts. Activate once with a
 Claude Code restart + approve (`/mcp`). Full guide: [docs/claude-code-mcp.md](docs/claude-code-mcp.md).
 
+**When does Story Agent become PRIMARY (retiring Claude Code as driver)?** Per the full-crew lounge,
+the single go-criterion is multi-file edit reliability. The decision is made by the documented
+**shadow test** ([docs/shadow-test-story-agent-primary.md](docs/shadow-test-story-agent-primary.md)):
+run the same agent-core loop on the same tasks via tier-3 (deepseek) vs an `anthropic/*` control,
+compare auto-recovery/correctness/cost from `AgentRunResult`. GO when Lane A ≥90% auto-recovery at
+parity correctness and ≤~80% of Lane B cost. Until GO: front-door = Story Agent, orchestrator = Claude Code.
+
 ## Crew memory recall (read BEFORE any NL prompt)
 
 **Every Claude Code or Story Agent natural-language prompt must RECALL crew RAG memory before acting,
