@@ -47,6 +47,11 @@ Claude Code restart + approve (`/mcp`). Full guide: [docs/claude-code-mcp.md](do
 and STORE durable conclusions after.** The crew compounds only if each turn builds on what it already
 knows. Loop: `prompt → recall → act → store → next prompt recalls it`.
 
+- **New session? Recall the BOOTSTRAP first** (tags `bootstrap`/`session-restart`, or read
+  [docs/session-bootstrap.md](docs/session-bootstrap.md)): the tool-agnostic restart protocol — connect
+  the `story-agent` MCP, recall, act on the crew, store. The crew RAG is the portable brain so a session
+  resumes in ANY AI tool (Claude Code, Story Agent, Continue, Copilot, Cursor).
+
 - **Recall first:** `rag_recall` (agent-core), or `getRelevantObservationMemories` /
   `recall_taught_tools` (scripts/tools), keyed to the task — cite what you found (prior rulings,
   taught tools, persona context). Don't re-litigate decisions already in RAG.
