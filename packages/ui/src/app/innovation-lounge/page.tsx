@@ -106,7 +106,7 @@ export default function InnovationLoungePage() {
             )}
 
             {/* Picard's resolution */}
-            <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <section data-dev-tour="il-resolution" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
               <h2 className="text-xl font-bold text-slate-900 mb-3">🖖 Captain Picard&apos;s Resolution</h2>
               <p className="whitespace-pre-wrap text-slate-700 text-sm leading-relaxed">
                 {session.transcript.consensusSummary}
@@ -130,7 +130,7 @@ export default function InnovationLoungePage() {
             </section>
 
             {/* Pitches */}
-            <section className="mb-6">
+            <section data-dev-tour="il-pitches" className="mb-6">
               <h2 className="text-xl font-bold text-slate-900 mb-3">The Pitches</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {pitches.map((p, i) => (
@@ -147,7 +147,7 @@ export default function InnovationLoungePage() {
 
             {/* Debate */}
             {debate.length > 0 && (
-              <section className="mb-6">
+              <section data-dev-tour="il-debate" className="mb-6">
                 <h2 className="text-xl font-bold text-slate-900 mb-3">The Debate</h2>
                 <div className="space-y-2">
                   {debate.map((d, i) => (

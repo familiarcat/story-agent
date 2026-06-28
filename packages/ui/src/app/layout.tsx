@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import NavBar from '../components/NavBar';
 import { ThemeProvider, THEME_INIT_SCRIPT } from '../components/ThemeProvider';
+import DevTour from '../components/dev-tour/DevTour';
 
 export const metadata: Metadata = {
   title: 'Story Agent',
@@ -19,6 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <NavBar />
           <main style={{ padding: '2rem' }}>{children}</main>
+          {/* Developer-only guided tour — hard-gated, never ships to production (see DevTour). */}
+          <DevTour />
         </ThemeProvider>
       </body>
     </html>

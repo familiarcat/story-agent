@@ -136,6 +136,30 @@ lsof -ti:3102 | xargs kill           # free it (repeat for 3101/3103/3000/8000),
 ```
 Only run one `pnpm dev` at a time. (Crew lesson: O'Brien RAG memory, tags `eaddrinuse`/`ports`.)
 
+## 9. Dev Tour — guided walkthrough of every screen/component (DEV ONLY)
+
+A developer-only overlay that cycles through the current screen and every opted-in component, showing
+a **hovering card above each for 5 seconds**, scaled to the target, with prev/pause/next controls and a
+5-second countdown. It's the fastest way to expose and sanity-check every screen + component.
+
+**Enable it (local dev only):**
+```bash
+NEXT_PUBLIC_DEV_TOUR=1 pnpm --filter @story-agent/ui dev
+# (or add NEXT_PUBLIC_DEV_TOUR=1 to packages/ui/.env.local, then pnpm dev)
+```
+A **"▶ Dev Tour"** button appears bottom-right. Click it to walk the current screen; navigate between
+routes and re-run to cover all screens. Screen copy comes from the nav IA ([domains.ts](../packages/ui/src/components/domains.ts)).
+
+**Add a component to the tour:** put `data-dev-tour="my-id"` on its root element and add a `my-id`
+entry to [registry.ts](../packages/ui/src/components/dev-tour/registry.ts). No other wiring.
+
+**⛔ Production safety (hard gate — do not weaken):** the tour renders only when
+`NODE_ENV !== 'production'` **and** `NEXT_PUBLIC_DEV_TOUR === '1'`. In the prod Docker build
+(`NODE_ENV=production`) the constant folds to `false` and the engine is **dead-code-eliminated** —
+verified: the DevTour-unique strings are absent from `packages/ui/.next/static` after a prod build.
+Never set `NEXT_PUBLIC_DEV_TOUR` in `terraform/*`, `docker/*`, or any deployed environment.
+(Crew guardrail: Worf RAG memory, tags `never-ship`/`dev-tour`.)
+
 ---
 
 *Crew portfolio for this work (mission pipeline, $0.0019): Geordi/O'Brien — verify ground truth +
