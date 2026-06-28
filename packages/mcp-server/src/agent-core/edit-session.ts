@@ -100,22 +100,39 @@ async function impactedPackages(workspace: string, touched: string[]): Promise<s
   return withTsconfig;
 }
 
+/** A tsc diagnostic line: `relative/path.ts(line,col): error TSxxxx: ...`. Capture the file path. */
+const TSC_ERROR_RE = /^(.+?)\((\d+),(\d+)\):\s+error\s+TS\d+:/;
+
 /**
- * Scoped verification: `tsc --noEmit` in each impacted package. Returns ok=false + concatenated
- * errors if any package fails to typecheck. Cheap (one package, no emit); skips packages without a
- * tsconfig and returns ok=true when nothing typecheckable was touched.
+ * Scoped verification: `tsc --noEmit` in each impacted package, but report ONLY errors in the files
+ * the agent actually TOUCHED — not the package's PRE-EXISTING errors (e.g. test files missing
+ * @types). Otherwise the loop chases noise it didn't cause (observed live). This answers the real
+ * question — "did MY multi-file edit break a file I edited?" — which catches the dominant failure
+ * mode (dup/missing imports in the edited files). Cheap (one no-emit pass per impacted package).
+ *
+ * Known limitation: an edit that breaks an UNTOUCHED importer is not caught here (a future
+ * baseline-diff could). Returns ok=true when nothing typecheckable was touched.
  */
 export async function verifyTouched(workspace: string, touched: string[]): Promise<{ ok: boolean; output: string }> {
   const dirs = await impactedPackages(workspace, touched);
   if (!dirs.length) return { ok: true, output: '' };
+  const touchedSet = new Set(touched.map(p => path.resolve(p)));
   const failures: string[] = [];
   for (const dir of dirs) {
+    let raw = '';
     try {
       await pexec('npx', ['tsc', '--noEmit'], { cwd: dir, timeout: 180_000, maxBuffer: 16 * 1024 * 1024 });
+      continue; // clean typecheck for this package
     } catch (e: any) {
-      const out = `${e?.stdout || ''}${e?.stderr || ''}`.trim() || e?.message || 'tsc failed';
-      failures.push(`# ${path.basename(dir)} typecheck failed:\n${out.slice(0, 4000)}`);
+      raw = `${e?.stdout || ''}\n${e?.stderr || ''}`;
     }
+    // Keep only diagnostics whose file is one the agent touched (paths are relative to the package dir).
+    const mine = raw.split(/\r?\n/).filter(line => {
+      const m = TSC_ERROR_RE.exec(line.trim());
+      if (!m) return false;
+      return touchedSet.has(path.resolve(dir, m[1].trim()));
+    });
+    if (mine.length) failures.push(`# ${path.basename(dir)} — errors in your edited files:\n${mine.join('\n').slice(0, 4000)}`);
   }
   return failures.length ? { ok: false, output: failures.join('\n\n') } : { ok: true, output: '' };
 }
