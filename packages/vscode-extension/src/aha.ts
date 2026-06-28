@@ -1,295 +1,106 @@
 import * as vscode from 'vscode';
+import { createAhaClient, type AhaClient } from '@story-agent/shared/aha-client';
 
-// AhaStory type — inlined to avoid bundling @story-agent/shared
-export interface AhaStory {
-  id: string;
-  referenceNum: string;
-  name: string;
-  description: string;
-  acceptanceCriteria: string;
-  url: string;
-  workflowStatus: string;
-}
+// Types come from the canonical domain package (esbuild bundles only the lean client/mappers; the
+// type-only re-export erases at build, so no heavy @story-agent/shared runtime dep is pulled in).
+export type { AhaProject, AhaSprint, AhaSprintStory, AhaStory } from '@story-agent/shared';
+import type { AhaStory } from '@story-agent/shared';
 
-export interface AhaProject {
-  id: string;
-  name: string;
-  referencePrefix: string | null;
-  url: string;
-}
+/**
+ * VS Code Aha adapter — now built on the canonical createAhaClient (@story-agent/shared/aha-client)
+ * so the field-mapping is shared (no fork), BUT it keeps this surface's deliberate PROXY-FIRST
+ * transport via an injected fetchImpl: GET reads route through the crew server's single-source cache
+ * (/aha/raw) first, then fall back to direct Aha REST with local creds. This is "both options" from
+ * the dedup investigation (OBS memory 112): Option B (shared mappers) + Option A (proxy fetchImpl),
+ * so we get full dedup with zero regression to the single-source proxy.
+ */
 
-export interface AhaSprint {
-  id: string;
-  name: string;
-  startDate: string | null;
-  endDate: string | null;
-  url: string;
-  totalStoryPoints: number;
-  doneStoryPoints: number;
-  remainingStoryPoints: number;
-  featureCount: number;
-}
-
-export interface AhaSprintStory {
-  referenceNum: string;
-  name: string;
-  storyPoints: number | null;
-  workflowStatus: string;
-  url: string;
-}
-
-function getConfig(): { domain: string; apiKey: string } {
+function getConfigSafe(): { domain: string; apiKey: string } {
   const cfg = vscode.workspace.getConfiguration('storyAgent');
-  // Resolution order: environment (AWS/SSM or terminal-launch) → VS Code settings (local Dock
-  // launch). First non-empty wins (empty strings are treated as unset, unlike `??`).
+  // env (AWS/SSM or terminal launch) → VS Code settings. First non-empty wins (empty ≠ unset).
   const pick = (...vals: Array<string | undefined>): string =>
     vals.map(v => (v ?? '').trim()).find(v => v.length > 0) ?? '';
-
-  const domain = pick(process.env.AHA_DOMAIN, cfg.get<string>('ahaDomain'));
-  const apiKey = pick(process.env.AHA_API_KEY, process.env.AHA_API_TOKEN, cfg.get<string>('ahaApiKey'));
-
-  if (!domain || !apiKey) {
-    throw new Error(
-      'Aha credentials not configured. Set AHA_DOMAIN + AHA_API_KEY (or AHA_API_TOKEN) in your ' +
-      'environment, or "Story Agent: Aha Api Key" / "Aha Domain" in VS Code settings.'
-    );
-  }
-  return { domain, apiKey };
-}
-
-export async function fetchAhaStory(
-  referenceNum: string,
-  token?: vscode.CancellationToken
-): Promise<AhaStory> {
-  const id = referenceNum.includes('/')
-    ? referenceNum.split('/').pop()!
-    : referenceNum;
-
-  // Single-source proxy (cached) with direct-REST fallback.
-  const data = (await ahaGet(`features/${id}`)) as Record<string, unknown>;
-  const f = data.feature as Record<string, unknown>;
-
-  const description =
-    ((f.description as Record<string, unknown> | null)?.body as string) ?? '';
-
-  const acceptanceCriteria = ((f.requirements as unknown[]) ?? [])
-    .map((r: unknown) => {
-      const req = r as Record<string, unknown>;
-      return `- ${req.name}: ${
-        (req.description as Record<string, unknown>)?.body ?? ''
-      }`;
-    })
-    .join('\n');
-
   return {
-    id: f.id as string,
-    referenceNum: f.reference_num as string,
-    name: f.name as string,
-    description,
-    acceptanceCriteria,
-    url: f.url as string,
-    workflowStatus:
-      ((f.workflow_status as Record<string, unknown>)?.name as string) ??
-      'unknown',
+    domain: pick(process.env.AHA_DOMAIN, cfg.get<string>('ahaDomain')),
+    apiKey: pick(process.env.AHA_API_KEY, process.env.AHA_API_TOKEN, cfg.get<string>('ahaApiKey')),
   };
 }
 
-/** Crew server base for Aha (single source) — configured/cloud, then local loop. */
+function requireConfig(): { domain: string; apiKey: string } {
+  const c = getConfigSafe();
+  if (!c.domain || !c.apiKey) {
+    throw new Error(
+      'Aha credentials not configured. Set AHA_DOMAIN + AHA_API_KEY (or AHA_API_TOKEN) in your ' +
+      'environment, or "Story Agent: Aha Api Key" / "Aha Domain" in VS Code settings.',
+    );
+  }
+  return c;
+}
+
+export function isConfigured(): boolean {
+  const c = getConfigSafe();
+  return !!(c.domain && c.apiKey);
+}
+
+/** Crew server bases for the Aha single-source proxy — configured/cloud first, then the local loop. */
 function agentBases(): string[] {
   const configured = (vscode.workspace.getConfiguration('storyAgent').get<string>('chat.agentServiceUrl') || process.env.STORY_AGENT_AGENT_URL || '').replace(/\/$/, '');
   const local = 'http://localhost:3103';
   return configured && configured !== local ? [configured, local] : [local];
 }
 
+/** A JSON Response-shim so createAhaClient (which calls res.ok/res.json/res.text) can consume proxy hits. */
+function jsonResponse(data: unknown): Response {
+  return { ok: true, status: 200, json: async () => data, text: async () => JSON.stringify(data) } as unknown as Response;
+}
+
 /**
- * GET an Aha API path through the crew server's read-only proxy (/aha/raw, single source + cache),
- * falling back to direct Aha REST with the local key if the brain is unreachable.
+ * Proxy-first fetch injected into createAhaClient. The path is reconstructed from the URL createAhaClient
+ * built (`https://<domain>/api/v1/<path>`) — it is INTERNAL (created by the client from typed args, never
+ * user input), so there is no traversal surface. GET reads try the crew proxy first; writes and proxy
+ * misses fall through to direct Aha REST with local creds.
  */
-async function ahaGet(path: string): Promise<any> {
-  for (const base of agentBases()) {
-    try {
-      const r = await fetch(`${base}/aha/raw?path=${encodeURIComponent(path)}`);
-      if (r.ok) { const d: any = await r.json(); if (d && !d.error) return d; }
-    } catch { /* fall through */ }
-  }
-  const { domain, apiKey } = getConfig();
-  const r = await fetch(`https://${domain}/api/v1/${path}`, { headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' } });
-  if (!r.ok) throw new Error(`Aha API ${r.status}: ${await r.text()}`);
-  return r.json();
-}
+function proxyFirstFetch(): typeof fetch {
+  return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    const url = String(input);
+    const method = (init?.method ?? 'GET').toUpperCase();
+    const marker = '/api/v1/';
+    const at = url.indexOf(marker);
+    const path = at >= 0 ? url.slice(at + marker.length) : '';
 
-export async function listAhaProjects(): Promise<AhaProject[]> {
-  // Single source: prefer the crew server's cached /aha/products (no per-client key needed); fall
-  // back to direct Aha REST if the brain is unreachable or Aha isn't configured there.
-  for (const base of agentBases()) {
-    try {
-      const r = await fetch(base + '/aha/products');
-      if (r.ok) {
-        const d: any = await r.json();
-        if (Array.isArray(d.products) && d.products.length) {
-          return d.products.map((p: any) => ({ id: String(p.id), name: p.name, referencePrefix: p.referencePrefix ?? null, url: p.url ?? '' }));
-        }
+    if (method === 'GET' && path) {
+      for (const base of agentBases()) {
+        try {
+          const r = await fetch(`${base}/aha/raw?path=${encodeURIComponent(path)}`);
+          if (r.ok) {
+            const d: unknown = await r.json();
+            if (d && !(d as Record<string, unknown>).error) return jsonResponse(d);
+          }
+        } catch { /* fall through to direct REST */ }
       }
-    } catch { /* fall through to direct REST */ }
-  }
+    }
 
-  const { domain, apiKey } = getConfig();
-  const res = await fetch(`https://${domain}/api/v1/products?per_page=100`, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Aha API ${res.status}: ${await res.text()}`);
-  }
-
-  const data = (await res.json()) as Record<string, unknown>;
-  const products = (data.products as Record<string, unknown>[] | undefined) ?? [];
-  return products.map((p) => ({
-    id: p.id as string,
-    name: p.name as string,
-    referencePrefix: (p.reference_prefix as string | undefined) ?? null,
-    url: p.url as string,
-  }));
+    // Direct REST fallback (writes always; reads when the proxy is unreachable). Requires creds.
+    const { domain, apiKey } = requireConfig();
+    const directUrl = at >= 0 ? `https://${domain}${url.slice(at)}` : url;
+    return fetch(directUrl, { ...init, headers: { ...(init?.headers as Record<string, string> | undefined), Authorization: `Bearer ${apiKey}`, Accept: 'application/json' } });
+  }) as typeof fetch;
 }
 
-export async function getProjectHierarchy(projectId: string): Promise<{
-  project: AhaProject;
-  stats: {
-    totalStories: number;
-    totalStoryPoints: number;
-    plannedPoints: number;
-    completedPoints: number;
-    releaseCount: number;
-  };
-  releases: Array<{
-    release: AhaSprint;
-    storiesByStatus: Record<string, AhaSprintStory[]>;
-  }>;
-  unreleasedStories: AhaStory[];
-  statusesUsed: string[];
-}> {
-  const data = (await ahaGet(`products/${projectId}`)) as Record<string, unknown>;
-  const p = data.product as Record<string, unknown>;
-
-  const project: AhaProject = {
-    id: p.id as string,
-    name: p.name as string,
-    referencePrefix: (p.reference_prefix as string | undefined) ?? null,
-    url: p.url as string,
-  };
-
-  // Fetch releases (via the single-source proxy)
-  const releasesData = (await ahaGet(`products/${projectId}/releases?per_page=50`)) as Record<string, unknown>;
-  const releases = (releasesData.releases as Record<string, unknown>[] | undefined) ?? [];
-
-  // Map releases with their stories
-  const releasesWithStories = await Promise.all(
-    releases.map(async (r) => {
-      const releaseId = r.id as string;
-      const storiesData = (await ahaGet(`releases/${releaseId}/features?per_page=100`)) as Record<string, unknown>;
-      const features = (storiesData.features as Record<string, unknown>[] | undefined) ?? [];
-
-      const stories: AhaSprintStory[] = features.map((f) => ({
-        referenceNum: f.reference_num as string,
-        name: f.name as string,
-        storyPoints: (f.score as number | null | undefined) ?? null,
-        workflowStatus:
-          ((f.workflow_status as Record<string, unknown>)?.name as string) ?? 'unknown',
-        url: f.url as string,
-      }));
-
-      const storiesByStatus: Record<string, AhaSprintStory[]> = {};
-      for (const story of stories) {
-        if (!storiesByStatus[story.workflowStatus]) {
-          storiesByStatus[story.workflowStatus] = [];
-        }
-        storiesByStatus[story.workflowStatus].push(story);
-      }
-
-      const progress = r.progress_source_data as Record<string, unknown> | undefined;
-      const release: AhaSprint = {
-        id: releaseId,
-        name: r.name as string,
-        startDate: (r.start_date as string | null | undefined) ?? null,
-        endDate: (r.end_date as string | null | undefined) ?? null,
-        url: r.url as string,
-        totalStoryPoints: (progress?.total_points as number | undefined) ?? 0,
-        doneStoryPoints: (progress?.done_points as number | undefined) ?? 0,
-        remainingStoryPoints: (progress?.remaining_points as number | undefined) ?? 0,
-        featureCount: (r.num_features as number | undefined) ?? 0,
-      };
-
-      return { release, storiesByStatus };
-    })
-  );
-
-  // Fetch all stories to find unreleased ones (via the single-source proxy)
-  const allStoriesData = (await ahaGet(`products/${projectId}/features?per_page=100`)) as Record<string, unknown>;
-  const allFeatures = (allStoriesData.features as Record<string, unknown>[] | undefined) ?? [];
-  const releasedIds = new Set(
-    releasesWithStories.flatMap((r) =>
-      Object.values(r.storiesByStatus)
-        .flat()
-        .map((s) => s.referenceNum)
-    )
-  );
-
-  const unreleasedStories: AhaStory[] = allFeatures
-    .filter((f) => !releasedIds.has(f.reference_num as string))
-    .map((f) => ({
-      id: f.id as string,
-      referenceNum: f.reference_num as string,
-      name: f.name as string,
-      description: '',
-      acceptanceCriteria: '',
-      url: f.url as string,
-      workflowStatus: ((f.workflow_status as Record<string, unknown>)?.name as string) ?? 'unknown',
-    }));
-
-  // Collect statuses
-  const statusesUsed = new Set<string>();
-  for (const rel of releasesWithStories) {
-    Object.keys(rel.storiesByStatus).forEach((s) => statusesUsed.add(s));
-  }
-  for (const story of unreleasedStories) {
-    statusesUsed.add(story.workflowStatus);
-  }
-
-  // Calculate stats
-  const totalStoryPoints = releasesWithStories.reduce(
-    (sum, r) => sum + r.release.totalStoryPoints,
-    0
-  );
-  const completedPoints = releasesWithStories.reduce(
-    (sum, r) => sum + r.release.doneStoryPoints,
-    0
-  );
-
-  return {
-    project,
-    stats: {
-      totalStories:
-        releasesWithStories.reduce((sum, r) => sum + r.release.featureCount, 0) +
-        unreleasedStories.length,
-      totalStoryPoints,
-      plannedPoints: totalStoryPoints,
-      completedPoints,
-      releaseCount: releasesWithStories.length,
-    },
-    releases: releasesWithStories,
-    unreleasedStories,
-    statusesUsed: Array.from(statusesUsed).sort(),
-  };
+/** Build the canonical client wired to this surface's proxy-first transport. Token rides via fetchImpl. */
+function client(): AhaClient {
+  const { domain } = getConfigSafe();
+  return createAhaClient({ domain, token: '', fetchImpl: proxyFirstFetch() });
 }
 
-export function isConfigured(): boolean {
-  try {
-    getConfig();
-    return true;
-  } catch {
-    return false;
-  }
+export async function fetchAhaStory(referenceNum: string, _token?: vscode.CancellationToken): Promise<AhaStory> {
+  return client().getStory(referenceNum);
+}
+
+export async function listAhaProjects() {
+  return client().listProjects();
+}
+
+export async function getProjectHierarchy(projectId: string) {
+  return client().getHierarchy(projectId);
 }

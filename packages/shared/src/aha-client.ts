@@ -1,4 +1,5 @@
 import type { AhaProject, AhaSprint, AhaSprintStory, AhaStory } from './index.js';
+import { mapProduct, mapFeatureSummary, mapFeatureToStory, mapRelease, mapSprintStory } from './aha-mappers.js';
 
 /**
  * Canonical Aha REST client — the single source of truth for the Aha/PM domain.
@@ -40,21 +41,6 @@ export interface AhaClient {
   }>;
 }
 
-function mapRelease(r: Record<string, unknown>): AhaSprint {
-  const progress = r.progress_source_data as Record<string, unknown> | undefined;
-  return {
-    id: r.id as string,
-    name: r.name as string,
-    startDate: (r.start_date as string | null | undefined) ?? null,
-    endDate: (r.end_date as string | null | undefined) ?? null,
-    url: r.url as string,
-    totalStoryPoints: (progress?.total_points as number | undefined) ?? 0,
-    doneStoryPoints: (progress?.done_points as number | undefined) ?? 0,
-    remainingStoryPoints: (progress?.remaining_points as number | undefined) ?? 0,
-    featureCount: (r.num_features as number | undefined) ?? 0,
-  };
-}
-
 export function createAhaClient(cfg: AhaClientConfig): AhaClient {
   const f = cfg.fetchImpl ?? fetch;
   const base = `https://${cfg.domain}/api/v1`;
@@ -78,15 +64,7 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
   const listStoriesForProject: AhaClient['listStoriesForProject'] = async (projectId, page = 1) => {
     const data = await get(`products/${projectId}/features?page=${page}&per_page=50`);
     const features = (data.features as Record<string, unknown>[] | undefined) ?? [];
-    return features.map((f) => ({
-      id: f.id as string,
-      referenceNum: f.reference_num as string,
-      name: f.name as string,
-      description: '',
-      acceptanceCriteria: '',
-      url: f.url as string,
-      workflowStatus: (f.workflow_status as Record<string, unknown>)?.name as string ?? 'unknown',
-    }));
+    return features.map(mapFeatureSummary);
   };
 
   const listSprints: AhaClient['listSprints'] = async (projectId) => {
@@ -98,24 +76,12 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
   const getSprintStories: AhaClient['getSprintStories'] = async (releaseId) => {
     const data = await get(`releases/${releaseId}/features?per_page=100`);
     const features = (data.features as Record<string, unknown>[] | undefined) ?? [];
-    return features.map((f) => ({
-      referenceNum: f.reference_num as string,
-      name: f.name as string,
-      storyPoints: (f.score as number | null | undefined) ?? null,
-      workflowStatus: (f.workflow_status as Record<string, unknown>)?.name as string ?? 'unknown',
-      url: f.url as string,
-    }));
+    return features.map(mapSprintStory);
   };
 
   const getRoadmap: AhaClient['getRoadmap'] = async (projectId) => {
     const projectData = await get(`products/${projectId}`);
-    const prod = projectData.product as Record<string, unknown>;
-    const project: AhaProject = {
-      id: prod?.id as string,
-      name: prod?.name as string,
-      referencePrefix: (prod?.reference_prefix as string | undefined) ?? null,
-      url: prod?.url as string,
-    };
+    const project = mapProduct(projectData.product as Record<string, unknown>);
     const releases = await listSprints(projectId);
     const releasesWithStories = await Promise.all(
       releases.map(async (release) => ({ ...release, stories: await getSprintStories(release.id) })),
@@ -164,33 +130,12 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
     async getStory(referenceNum) {
       const id = referenceNum.includes('/') ? referenceNum.split('/').pop()! : referenceNum;
       const data = await get(`features/${id}`);
-      const fe = data.feature as Record<string, unknown>;
-      const descRaw = (fe.description as Record<string, unknown> | null)?.body ?? '';
-      const acceptanceRaw = ((fe.requirements as unknown[]) ?? [])
-        .map((r) => {
-          const req = r as Record<string, unknown>;
-          return `- ${req.name}: ${(req.description as Record<string, unknown>)?.body ?? ''}`;
-        })
-        .join('\n');
-      return {
-        id: fe.id as string,
-        referenceNum: fe.reference_num as string,
-        name: fe.name as string,
-        description: descRaw as string,
-        acceptanceCriteria: acceptanceRaw,
-        url: fe.url as string,
-        workflowStatus: (fe.workflow_status as Record<string, unknown>)?.name as string ?? 'unknown',
-      };
+      return mapFeatureToStory(data.feature as Record<string, unknown>);
     },
     async listProjects(page = 1) {
       const data = await get(`products?page=${page}&per_page=100`);
       const products = (data.products as Record<string, unknown>[] | undefined) ?? [];
-      return products.map((p) => ({
-        id: p.id as string,
-        name: p.name as string,
-        referencePrefix: (p.reference_prefix as string | undefined) ?? null,
-        url: p.url as string,
-      }));
+      return products.map(mapProduct);
     },
     async updateStoryStatus(featureId, statusName) {
       await send('PUT', `features/${featureId}`, { feature: { workflow_status: { name: statusName } } });
