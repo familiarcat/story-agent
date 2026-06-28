@@ -8,6 +8,7 @@
  */
 
 import { quarkSelectModel, crewBaseTier } from './crew-team-assembly.js';
+import { ahaRefToBranchName, branchCreateCommand, type BranchKind } from './git-aha-branching.js';
 
 export type CrewTier = 'leader' | 'supporter';
 
@@ -30,7 +31,7 @@ const ROLES: Omit<CrewAhaRole, 'tier'>[] = [
   { crewId: 'picard',  fullName: 'Jean-Luc Picard',  ahaFocus: 'Portfolio & release strategy (products, releases/sprints)', ahaTools: ['aha:list-products', 'aha:list-releases', 'aha:get-record'], responsibility: 'Decides what the crew organizes next; approves the backlog direction.' },
   { crewId: 'data',    fullName: 'Data',              ahaFocus: 'Backlog structure & consistency (epics → features → requirements)', ahaTools: ['aha:list-epics', 'aha:list-features', 'aha:get-record'], responsibility: 'Ensures the epic/story/task hierarchy is internally consistent and well-formed.' },
   { crewId: 'worf',    fullName: 'Worf, Son of Mogh', ahaFocus: 'Write governance (confirm-gate + audit on all mutations)', ahaTools: ['aha:create-feature', 'aha:update-feature'], responsibility: 'Gatekeeps every Aha! write: dry-run review, confirm:true, immutable audit.' },
-  { crewId: 'riker',   fullName: 'William T. Riker',  ahaFocus: 'Execution — create/advance features (stories)', ahaTools: ['aha:create-feature', 'aha:update-feature'], responsibility: 'The doer: creates stories and moves workflow status (under Worf\'s gate).' },
+  { crewId: 'riker',   fullName: 'William T. Riker',  ahaFocus: 'Execution — create/advance features (stories) + own the git branch→PR lifecycle', ahaTools: ['aha:create-feature', 'aha:update-feature'], responsibility: 'The doer: creates stories and moves workflow status (under Worf\'s gate). OWNS the git branch→PR lifecycle: assigns the feature branch per story, opens/links/advances the PR, and shepherds it to merge-readiness.' },
   { crewId: 'geordi',  fullName: 'Geordi La Forge',   ahaFocus: 'Release/sprint mechanics & linkage', ahaTools: ['aha:list-releases', 'aha:list-features'], responsibility: 'Wires features into the right releases (sprints).' },
   { crewId: 'obrien',  fullName: "Miles O'Brien",     ahaFocus: 'Keep Aha! in sync with real delivery state', ahaTools: ['aha:update-feature', 'aha:get-record'], responsibility: 'Reconciles Aha! statuses with shipped/PR reality.' },
   { crewId: 'yar',     fullName: 'Tasha Yar',         ahaFocus: 'Requirements & acceptance (tasks)', ahaTools: ['aha:get-record', 'aha:list-features'], responsibility: 'Defines acceptance criteria / requirements on features.' },
@@ -82,6 +83,54 @@ export function authorizeAhaWrite(crewId: string, toolName: string): { authorize
 }
 
 /**
+ * Git branch + PR lifecycle ownership (crew decision, run_crew_mission_pipeline — GO).
+ *
+ * Riker (Number One) already assembles the crew; he ALSO owns the git branch→PR lifecycle. This
+ * centralizes accountability WITHOUT new infra — the tools already exist (create_story_branch /
+ * aha_branch_for_story, open_pull_request, crew_link_story_pr, post_pr_comment, crew_complete_story)
+ * and the canonical branch name comes from ahaRefToBranchName (git-aha-branching.ts).
+ *
+ * Riker owns the FLOW; he does NOT own the GATE: Worf keeps the WorfGate merge veto, and
+ * Geordi/O'Brien own CI (audit-check). Backup owner avoids a single-point bottleneck (Picard's note).
+ */
+export const GIT_LIFECYCLE_OWNER = 'riker';
+export const GIT_LIFECYCLE_BACKUP = 'geordi';
+
+export interface GitLifecycleOwnership {
+  crewId: string;
+  fullName: string;
+  backupCrewId: string;
+  owns: string[];
+  delegatesTo: Record<string, string>;
+  branchConvention: string;
+}
+
+export function getGitLifecycleOwnership(): GitLifecycleOwnership {
+  const role = getCrewAhaRole(GIT_LIFECYCLE_OWNER);
+  return {
+    crewId: GIT_LIFECYCLE_OWNER,
+    fullName: role?.fullName ?? 'William T. Riker',
+    backupCrewId: GIT_LIFECYCLE_BACKUP,
+    owns: ['branch assignment', 'PR open', 'PR ↔ story link', 'workflow-status advance', 'merge-readiness shepherding'],
+    delegatesTo: { 'merge gate': 'worf (WorfGate veto)', 'CI / audit-check': 'obrien + geordi' },
+    branchConvention: '<kind>/<aha-ref>-<slug> (kind = story | task | epic) — via ahaRefToBranchName',
+  };
+}
+
+/**
+ * Canonical branch assignment for a story — the single call the owner (Riker) uses so every feature
+ * branch follows one convention. Delegates to git-aha-branching.ts (pure name derivation).
+ */
+export function assignStoryBranch(input: { ref: string; name?: string; kind?: BranchKind; base?: string }): {
+  owner: string;
+  branch: string;
+  createCommand: string;
+} {
+  const branch = ahaRefToBranchName({ ref: input.ref, name: input.name, kind: input.kind });
+  return { owner: GIT_LIFECYCLE_OWNER, branch, createCommand: branchCreateCommand(branch, input.base ?? 'main') };
+}
+
+/**
  * Prompt section injected into each crew member's enriched system prompt so they know
  * their Aha! capabilities and how to self-organize. Returns '' for non-Aha crew (none today).
  */
@@ -97,5 +146,22 @@ export function buildCrewAhaPromptSection(crewId: string): string {
     `Hierarchy: familiarcat is the consultancy FIRM (top Aha workspace). Under it are CLIENT workspaces (Aha products, e.g. Jonah, Bayer). PROJECTS are Aha INITIATIVES within a client product (Aha caps product nesting at 2 levels, so projects are initiatives, not nested products). Within a project — Epic=epic, Feature=story, Requirement=task, Release=sprint. So: Firm → Client(product) → Project(initiative) → Epic → Story → Task (Sprint = time axis).`,
     `As a ${tier}, you run on the ${model} model for Aha! decisions (cost_optimized: leaders=quality, supporters=cheap).`,
     `Governance (not access restriction): every write requires confirm:true and is audited; coordinate via aha:crew-assignments.`,
+    buildGitLifecyclePromptSection(crewId),
   ].join('\n');
+}
+
+/**
+ * Git branch/PR ownership line for the enriched prompt: Riker gets the owner charter; everyone else
+ * gets the one-liner that branch/PR coordination routes through Riker (Worf still gates the merge).
+ */
+export function buildGitLifecyclePromptSection(crewId: string): string {
+  const o = getGitLifecycleOwnership();
+  if (crewId === GIT_LIFECYCLE_OWNER) {
+    return [
+      `\n--- GIT BRANCH → PR LIFECYCLE (you own this) ---`,
+      `You assign the feature branch per story (convention: ${o.branchConvention}; use assignStoryBranch), open/link/advance the PR, and shepherd it to merge-readiness.`,
+      `You own the FLOW, not the GATE: Worf holds the WorfGate merge veto; Geordi/O'Brien own CI (audit-check). ${o.backupCrewId} is your backup to avoid a bottleneck.`,
+    ].join('\n');
+  }
+  return `\nGit branch/PR lifecycle is owned by ${o.fullName} (backup: ${o.backupCrewId}) — route branch assignment + PR shepherding through him; Worf still gates the merge.`;
 }
