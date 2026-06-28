@@ -17,10 +17,14 @@ resource "aws_lb_target_group" "ui" {
   vpc_id      = var.vpc_id
   target_type = "ip"
   health_check {
-    path     = "/dashboard"
-    matcher  = "200-399"
-    interval = 30
-    timeout  = 5
+    path    = "/dashboard"
+    matcher = "200-399"
+    # Fast convergence (Crusher deploy-health charter, OBS 508fa10b): default healthy_threshold=5 ×
+    # interval=30 ≈ 150s to mark a task healthy — the deploy's main lag. 2 × 10s ≈ 20s instead.
+    interval            = 10
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
   }
 }
 
@@ -33,21 +37,24 @@ resource "aws_lb_target_group" "mcp_http" {
   target_type          = "ip"
   deregistration_delay = 300 # drain in-flight MCP requests
   health_check {
-    port     = "3102"
-    path     = "/rag/health"
-    matcher  = "200"
-    interval = 30
-    timeout  = 5
+    port    = "3102"
+    path    = "/rag/health"
+    matcher = "200"
+    # Fast convergence (Crusher deploy-health charter): 2 × 10s ≈ 20s to healthy vs the ~150s default.
+    interval            = 10
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
   }
 }
 
 # MCP WebSocket crew-state — :8000, sticky so a client stays pinned to one task
 resource "aws_lb_target_group" "mcp_ws" {
-  name                 = "${local.name}-mcp-ws"
-  port                 = 8000
-  protocol             = "HTTP"
-  vpc_id               = var.vpc_id
-  target_type          = "ip"
+  name        = "${local.name}-mcp-ws"
+  port        = 8000
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
   # 60s (was 600): under a Fargate vCPU quota of 2, a 10-min WS drain pins the old MCP task's vCPU and
   # starves the new task during a deploy (deadlock). Short drain keeps stop-before-start within quota.
   deregistration_delay = 60
@@ -57,11 +64,14 @@ resource "aws_lb_target_group" "mcp_ws" {
     cookie_duration = 3600
   }
   health_check {
-    port     = "3102"
-    path     = "/rag/health"
-    matcher  = "200"
-    interval = 30
-    timeout  = 5
+    port    = "3102"
+    path    = "/rag/health"
+    matcher = "200"
+    # Fast convergence (Crusher deploy-health charter): 2 × 10s ≈ 20s to healthy vs the ~150s default.
+    interval            = 10
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
   }
 }
 

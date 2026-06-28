@@ -22,10 +22,10 @@ resource "aws_ecs_task_definition" "mcp" {
   # 1 vCPU so UI(1) + MCP(1) fit the default Fargate vCPU quota of 2. Bump back to 2048 once the
   # quota increase (requested via Service Quotas, L-3032A538) is approved; missions are
   # OpenRouter-API-bound, not local-CPU-bound, so 1 vCPU / 2 GB is adequate at baseline.
-  cpu                      = "1024"
-  memory                   = "2048"
-  execution_role_arn       = aws_iam_role.execution.arn
-  task_role_arn            = aws_iam_role.task.arn
+  cpu                = "1024"
+  memory             = "2048"
+  execution_role_arn = aws_iam_role.execution.arn
+  task_role_arn      = aws_iam_role.task.arn
   runtime_platform {
     cpu_architecture        = "ARM64"
     operating_system_family = "LINUX"
@@ -152,11 +152,11 @@ resource "aws_ecs_task_definition" "ui" {
 }
 
 resource "aws_ecs_service" "ui" {
-  name            = "${local.name}-ui"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.ui.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                               = "${local.name}-ui"
+  cluster                            = aws_ecs_cluster.main.id
+  task_definition                    = aws_ecs_task_definition.ui.arn
+  desired_count                      = 1
+  launch_type                        = "FARGATE"
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
   availability_zone_rebalancing      = "DISABLED"
