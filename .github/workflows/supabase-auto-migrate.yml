@@ -23,8 +23,11 @@ jobs:
   db-push:
     name: supabase db push
     runs-on: ubuntu-latest
-    # Skip cleanly until the access token is configured (no red failures before setup).
-    if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+    # Gate on a repo VARIABLE (not a secret): `secrets.*` is NOT permitted in a job-level `if:` — it
+    # makes the workflow invalid, so GitHub failed it (0 jobs) on EVERY push regardless of paths. Set
+    # repo var SUPABASE_AUTO_MIGRATE=true (plus secrets SUPABASE_ACCESS_TOKEN + SUPABASE_DB_PASSWORD)
+    # to enable; otherwise this job skips cleanly (no red failures before setup).
+    if: ${{ vars.SUPABASE_AUTO_MIGRATE == 'true' }}
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}

@@ -3,6 +3,8 @@
 // Selection-first UI contract — re-exported so the web (which imports @story-agent/shared bare) and
 // the mcp-server share one source of truth. The VS Code extension mirrors it (esbuild, no bundle).
 export * from './selection-contract.js';
+// Crew/agent run-status contract — one shape rendered by <WorkflowStatus> on web + mirrored in vscode.
+export * from './workflow-status.js';
 
 export type StoryStatus =
   | 'pending'
