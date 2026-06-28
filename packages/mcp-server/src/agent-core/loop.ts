@@ -15,11 +15,14 @@ import { randomUUID } from 'node:crypto';
 import { quarkSelectModel, MODEL_POOL } from '../lib/crew-team-assembly.js';
 import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
 import { gateLocalOp, type WorfTier } from './worfgate-local.js';
+import { EditSession, MUTATING_TOOLS, verifyTouched } from './edit-session.js';
 import { getSkillTheory } from '@story-agent/shared/skill-theory';
 import '../lib/skill-theories.js'; // register tool theories so the lens can read them
 
 export interface AgentEvent {
-  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens' | 'stall';
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens' | 'stall' | 'verify';
+  /** verify events carry ok (did the scoped typecheck pass). */
+  ok?: boolean;
   text?: string;
   attempt?: number;
   tool?: string;
@@ -65,6 +68,10 @@ export interface RunAgentOptions {
   requestApproval?: (info: { approvalId: string; tool: string; tier: WorfTier; remediations: string[]; args: unknown }) => Promise<'approve' | 'deny'>;
   /** Tool policy: "full" (default) or "read-only" (limits tools to read-only operations). */
   toolPolicy?: "full" | "read-only";
+  /** Multi-file reliability: snapshot touched files + scoped typecheck before finishing (default true). */
+  verifyEdits?: boolean;
+  /** Max self-correction rounds when the post-edit typecheck fails before rolling back. Default 2. */
+  maxVerifyRetries?: number;
 }
 
 export interface AgentRunResult {
@@ -78,6 +85,10 @@ export interface AgentRunResult {
   budgetExceeded: boolean;
   /** Self-healing: the loop detected a finish/iterate stall (0 tool calls on an actionable task) and nudged. */
   stalled: boolean;
+  /** Multi-file reliability: a post-edit scoped typecheck failed at least once (the loop self-corrected). */
+  verifyFailed?: boolean;
+  /** Multi-file reliability: edits were rolled back because the typecheck stayed broken after retries. */
+  rolledBack?: boolean;
   /** PROD-13 cost observatory — per-provider spend, burn rate, and whether the review threshold tripped. */
   observatory: { perProvider: Record<string, number>; burnRatePerTurnUSD: number; reviewTriggered: boolean };
 }
@@ -224,6 +235,12 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const reviewThresholdUSD = opts.reviewThresholdUSD;
   const emit = opts.onEvent ?? (() => {});
 
+  // Multi-file reliability: snapshot touched files + scoped typecheck before finishing.
+  const verifyEdits = opts.verifyEdits !== false;
+  const maxVerifyRetries = opts.maxVerifyRetries ?? 2;
+  const editSession = new EditSession(workspace);
+  let verifyAttempts = 0;
+
   const model = quarkSelectModel(opts.tier ?? 3).id;
   emit({ type: 'model', model });
 
@@ -343,6 +360,25 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
         messages.push({ role: 'user', content: 'You replied with text but called NO tools. Do not just describe the plan — perform it NOW by calling the appropriate tools (read_file/edit_file/write_file/apply_patch/run_shell/etc.). If the task is genuinely already complete, reply with the single word DONE.' });
         continue;
       }
+      // Multi-file reliability: never FINISH on a broken build. Scoped-typecheck the touched packages;
+      // on failure feed the errors back for bounded self-correction, then roll back if still broken.
+      if (verifyEdits && editSession.hasChanges()) {
+        const v = await verifyTouched(workspace, editSession.touched());
+        if (!v.ok && verifyAttempts < maxVerifyRetries) {
+          verifyAttempts++;
+          result.verifyFailed = true;
+          emit({ type: 'verify', ok: false, attempt: verifyAttempts, text: `post-edit typecheck failed (round ${verifyAttempts}/${maxVerifyRetries}) — self-correcting` });
+          messages.push({ role: 'user', content: `Your edits do not pass typecheck. Fix ALL of these errors, then continue:\n\n${v.output}` });
+          continue;
+        }
+        if (!v.ok) {
+          const restored = await editSession.rollback();
+          result.rolledBack = true;
+          emit({ type: 'verify', ok: false, text: `edits still broken after ${maxVerifyRetries} self-correction round(s) — rolled back ${restored} file(s)` });
+        } else {
+          emit({ type: 'verify', ok: true, text: 'edits pass scoped typecheck' });
+        }
+      }
       result.finalText = msg.content || '';
       emit({ type: 'text', text: result.finalText });
       return await finalize();
@@ -395,6 +431,8 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
           emit({ type: 'escalation', tool: name, text: output });
         } else {
           if (name === 'crew_deliberate') result.escalated = true;
+          // Snapshot originals BEFORE the mutation so a broken multi-file edit can be rolled back.
+          if (verifyEdits && MUTATING_TOOLS.has(name)) await editSession.snapshotForTool(name, gate.args as Record<string, unknown>);
           try {
             output = await tool.handler(gate.args, ctx);
           } catch (e: any) {

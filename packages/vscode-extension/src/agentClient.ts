@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 
 interface AgentEvent {
-  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens';
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens' | 'stall' | 'verify';
   text?: string;
   tool?: string;
   args?: unknown;
@@ -16,6 +16,8 @@ interface AgentEvent {
   remediations?: string[];
   model?: string;
   costUSD?: number;
+  /** verify events: did the post-edit scoped typecheck pass. */
+  ok?: boolean;
   // done frame carries the full AgentRunResult
   finalText?: string;
   iterations?: number;
@@ -287,6 +289,12 @@ export async function runAgentTurn(
           break;
         case 'escalation':
           stream.markdown(`\n> 🔴 **Escalation:** ${e.text}\n`);
+          break;
+        case 'stall':
+          stream.markdown(`&nbsp;&nbsp;_↻ ${e.text}_\n`); // self-healing stall nudge
+          break;
+        case 'verify':
+          stream.markdown(e.ok ? `&nbsp;&nbsp;_✓✓ ${e.text}_\n` : `\n> ⚠️ **Verify:** ${e.text}\n`); // multi-file reliability gate
           break;
         case 'text':
           if (e.text?.trim()) stream.markdown('\n' + e.text + '\n');

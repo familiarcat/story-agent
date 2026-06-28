@@ -49,6 +49,7 @@ function printEvent(e: AgentEvent) {
     case 'tool_result': process.stderr.write(C.dim(`  ✓ ${e.tool}\n`)); break;
     case 'escalation': process.stderr.write(C.red(`  ⚑ escalation: ${e.text}\n`)); break;
     case 'stall': process.stderr.write(C.yellow(`  ↻ ${e.text}\n`)); break;
+    case 'verify': process.stderr.write((e.ok ? C.green('  ✓✓ ') : C.yellow('  ⚠ verify: ')) + C.dim((e.text ?? '') + '\n')); break;
     case 'text': if (e.text?.trim()) process.stdout.write(e.text + '\n'); break;
   }
 }
