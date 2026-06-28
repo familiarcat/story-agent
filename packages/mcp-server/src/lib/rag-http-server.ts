@@ -18,6 +18,12 @@ function sendJson(res: ServerResponse, code: number, body: unknown): void {
   res.end(payload);
 }
 
+// Deploy-validation markers on the ALB-reachable health path (3102): /rag/health is the mcp target
+// group's health check, so curling the live ALB confirms WHICH image is serving (gitSha) and that it
+// just rolled (startedAt). gitSha is baked into the image at build (docker/Dockerfile.mcp ARG GIT_SHA).
+const RAG_STARTED_AT = new Date().toISOString();
+const RAG_GIT_SHA = (process.env.GIT_SHA ?? 'dev').slice(0, 7);
+
 export function startRagHttpServer(port: number): void {
   const token = process.env.RAG_SERVICE_TOKEN ?? '';
 
@@ -28,7 +34,7 @@ export function startRagHttpServer(port: number): void {
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
     if (req.method === 'GET' && req.url?.startsWith('/rag/health')) {
-      sendJson(res, 200, { ok: true, service: 'story-agent-rag', port });
+      sendJson(res, 200, { ok: true, service: 'story-agent-rag', port, gitSha: RAG_GIT_SHA, startedAt: RAG_STARTED_AT });
       return;
     }
 

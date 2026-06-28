@@ -147,6 +147,37 @@ jobs:
         working-directory: terraform
         run: terraform apply -input=false -auto-approve tfplan
 
+      # Air-tight gate (crew mission deploy-airtight-strategy, OBS 05309228): an apply is NOT done
+      # until the rolled tasks are actually HEALTHY. Without this, a push went green while the live
+      # service crash-looped (the 0.0.0.0-bind bug was invisible). `ecs wait services-stable` fails
+      # the job if either service can't reach running=desired + deployment COMPLETED within ~10min,
+      # then we confirm the live ALB /rag/health reports the NEW gitSha (best-effort if ALB is private).
+      - name: Post-deploy health gate (apply only)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true' }}
+        run: |
+          set -euo pipefail
+          echo "Waiting for ECS services to stabilize (running=desired, rollout COMPLETED)…"
+          if ! aws ecs wait services-stable --cluster story-agent \
+                 --services story-agent-mcp story-agent-ui --region "$AWS_REGION"; then
+            echo "::error::ECS services did not stabilize — rolled tasks are unhealthy. Deploy FAILED."
+            exit 1
+          fi
+          echo "::notice::ECS services stable (tasks healthy)."
+          ALB=$(aws elbv2 describe-load-balancers --names story-agent-alb --region "$AWS_REGION" \
+                  --query 'LoadBalancers[0].DNSName' --output text 2>/dev/null || echo "")
+          EXPECT=$(echo "${{ github.sha }}" | cut -c1-7)
+          if [ -n "$ALB" ]; then
+            for i in $(seq 1 8); do
+              LIVE=$(curl -s --max-time 8 "http://$ALB/rag/health" | sed -n 's/.*"gitSha":"\([^"]*\)".*/\1/p' || true)
+              echo "live /rag/health gitSha=$LIVE expected=$EXPECT (try $i)"
+              if [ "$LIVE" = "$EXPECT" ]; then echo "::notice::Deploy verified live — /rag/health reports $LIVE"; exit 0; fi
+              sleep 12
+            done
+            echo "::warning::Could not confirm gitSha via ALB (may be internal/HTTPS-only); ECS-stable gate already passed."
+          else
+            echo "::warning::ALB DNS not resolved for live gitSha check; ECS-stable gate already passed."
+          fi
+
       # Standing guarantee for the live approval channel: assert the ElastiCache cluster still has
       # TLS-in-transit + required mode + AUTH (the 2026-06-26 hardening). Read-only; runs every deploy.
       - name: Verify Redis security posture (live)
