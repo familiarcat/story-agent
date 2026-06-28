@@ -118,6 +118,10 @@ importers:
         version: 4.1.8(@types/node@22.19.19)(vite@8.0.16(@types/node@22.19.19))
 
   packages/vscode-extension:
+    dependencies:
+      '@story-agent/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^22.10.5
