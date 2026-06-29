@@ -1,16 +1,21 @@
-# Aha! Nomenclature — Firm → Client → Project
+# Aha! Nomenclature — Firm → Tier → Client → Project
+
+> **Revised model** adds a **TIER** grouping (Commercial | Enterprise) above clients, plus a human
+> IAM entitlement system — see [architecture/hierarchy-and-entitlements.md](architecture/hierarchy-and-entitlements.md).
+> Enterprise = DoD-grade WorfGate (`regulated-defense` posture).
 
 Story Agent is operated by **familiarcat**, a consultancy **firm** that serves multiple **clients**,
 each with multiple **projects**. The PM hierarchy (aligned with Aha!) is:
 
 ```
 familiarcat (FIRM, system operator/root)
-└── Client            (e.g. Jonah, Bayer — onboarded as data, never hardcoded)
-    └── Project        (per client; the unit of delivery)
-        ├── Epic
-        │   └── Story        (Aha Feature)
-        │       └── Task     (Aha Requirement)
-        └── Sprint           (Aha Release — the time axis)
+└── TIER              (Commercial | Enterprise — Enterprise = DoD-grade WorfGate)
+    └── Client            (e.g. Jonah, Bayer — onboarded as data, never hardcoded)
+        └── Project        (per client; the unit of delivery)
+            ├── Epic
+            │   └── Story        (Aha Feature)
+            │       └── Task     (Aha Requirement)
+            └── Sprint           (Aha Release — the time axis)
 ```
 
 ## Aha! mapping (nested-product-per-project)
