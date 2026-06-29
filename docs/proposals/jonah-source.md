@@ -7,12 +7,14 @@
 
 ## 1. Client definition
 
-- **Slug (id):** `jonah`  ·  **Display name:** `Jonah` `<full name / company?>`
-- **Parent:** `familiarcat`  ·  **Security tier:** `client`  *(handles financial + tenant PII)*
-- **Industry / domain:** real-estate development
+- **Slug (id):** `jonah` (also `jonah-corp` = "Jonah Corporation")  ·  **Display name:** `Jonah` `<full name?>`
+- **Parent:** `familiarcat`  ·  **Security tier:** `enterprise`  *(matches the seeded definition; handles financial + tenant PII)*
+- **Industry / domain:** **two lines of work under one client** —
+  1. **Commerce Platform** (existing, on record): commercial enterprise SaaS — multi-tenant, RLS-isolated.
+  2. **Real-Estate** (new, expanding): real-estate development.
 - **Primary contact:** `<Jonah — email/role>`
-- **Mandate:** help Jonah **search** for opportunities, **build** their digital systems, and **maintain** them on the crew platform.
-- **Goals:** faster opportunity evaluation · cheaper per-development digital build-out · lower ongoing maintenance TCO.
+- **Mandate:** continue the **Jonah Commerce Platform** AND stand up the **real-estate** line — search opportunities, build the digital systems, maintain them.
+- **Goals:** Commerce — multi-tenant enterprise apps (ToDo, PM) with strict RLS. Real-estate — faster opportunity evaluation · cheaper per-development build-out · lower maintenance TCO.
 
 ## 2. Research & Story  *(RAG seed — PASTE JONAH'S MATERIAL HERE)*
 
@@ -33,17 +35,26 @@
 | `<teammate>` | client | `<analyst/PM>` | client `jonah` | read | client | web |
 | `<familiarcat operator>` | firm | delivery lead | **ALL clients & projects** | read-write | internal | web / vscode |
 
-## 4. Projects (Aha hierarchy)  *(seed from the catalog; confirm with Jonah)*
+## 4. Projects (Aha hierarchy) — two lines under client `jonah`
 
-### Project: `Deal Intelligence`  (`JONAH-DI`)
+### LINE A — Jonah Commerce Platform *(EXISTING, on record — Aha `JONAH-S-1`)*
+Already seeded in [scripts/seed-multi-client-projects.ts](../../scripts/seed-multi-client-projects.ts):
+- **Jonah ToDo Application** (`proj-jonah-todo`, repo `jonah-corp/sovereign-todo`) — stories `JTC-001` (tasks schema), `JTC-002` (multi-tenant RLS). Enterprise data isolation.
+- **Jonah Project Management** (`proj-jonah-pm`, repo `jonah-corp/sovereign-pm`) — stories `JPM-001` (projects schema), `JPM-002` (RLS).
+- **Prompt engineering:** enterprise SaaS rigor; org_id isolation is non-negotiable; tone = precise/technical.
+
+### LINE B — Jonah Real Estate *(NEW — additional projects under the same client)*
+
+#### Project: `Deal Intelligence`  (`JONAH-RE-1`)
 - **Objective:** ingest a deal packet (OM + rent roll + T12) → populated underwriting model + market/site brief.
-- **Epics → Stories (seed):**
-  - Epic `Underwriting`: doc-intelligence parse → model · market/site brief · deal scoring
-- **Prompt engineering:** assume institutional-grade rigor; tone = concise + numbers-first; glossary = OM, T12, NOI, cap rate, IRR, DSCR.
+- **Epics → Stories (seed):** Epic `Underwriting` → doc-intelligence parse → model · market/site brief · deal scoring.
+- **Prompt engineering:** institutional-grade rigor; numbers-first; glossary = OM, T12, NOI, cap rate, IRR, DSCR.
 
-### Project: `Portals`  (`JONAH-PT`)  *(high-value, later)*
+#### Project: `Portals`  (`JONAH-RE-2`)  *(high-value, later)*
 - **Objective:** investor portal + leasing/listing portal.
 - **Prompt engineering:** PII-aware; gated writes; investor-facing tone.
+
+> The dedicated roaming **Underwriter** officer (§5) serves LINE B. LINE A continues on the core crew.
 
 ## 5. Dedicated crew member *(candidate — confirm if wanted)*
 
@@ -62,9 +73,10 @@ Jonah-aware (real-estate vocabulary, PII-careful, numbers-first) without any cod
 
 ## 7. Injection checklist (run once §2–3 are filled)
 
-- [ ] `onboard_client({ id: 'jonah', name, parentClientId: 'familiarcat', securityTier: 'client' })`
-- [ ] Store §2 Research & Story to RAG (`clientId: 'jonah'`, tags `client`, `jonah`, `onboarding`, `real-estate`)
-- [ ] Create Aha hierarchy: projects `JONAH-DI`, `JONAH-PT` → epics → stories (WorfGate-gated)
-- [ ] *(if §5 confirmed)* Register the `underwriter` roaming officer + seed personal RAG
+- [ ] `onboard_client({ id: 'jonah', name, parentClientId: 'familiarcat', securityTier: 'enterprise' })` *(already seeded — confirm/idempotent)*
+- [ ] Store §2 Research & Story to RAG (`clientId: 'jonah'`, tags `client`, `jonah`, `onboarding`, `commerce`, `real-estate`)
+- [ ] **LINE A** (Commerce Platform) already seeded (`proj-jonah-todo`, `proj-jonah-pm`) — leave as-is
+- [ ] **LINE B** (Real Estate): create Aha projects `JONAH-RE-1` (Deal Intelligence), `JONAH-RE-2` (Portals) → epics → stories (WorfGate-gated)
+- [ ] *(if §5 confirmed)* Register the `underwriter` roaming officer + seed personal RAG (serves LINE B)
 - [ ] *(if §3)* Apply human entitlements in WorfGate policy
-- [ ] Verify: `rag_recall` / `crew:get-relevant-memories(domain: 'finance', projectId: 'jonah')` returns the story + structure
+- [ ] Verify: `rag_recall` / `crew:get-relevant-memories(domain: 'finance', projectId: 'jonah')` returns BOTH lines + the story
