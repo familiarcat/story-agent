@@ -15,6 +15,8 @@
  *                   basic audit logging.
  */
 
+import { businessTierFromSecurityTier, enforceEnterpriseFloor, type BusinessTier, type TierAttestation } from './business-tier.js';
+
 export type SecurityTier = 'regulated' | 'enterprise' | 'standard';
 
 export interface UITheme {
@@ -69,6 +71,10 @@ export interface ClientSecurityPolicy {
   clientId: string;
   clientName: string;
   tier: SecurityTier;
+  /** Top conceptual tier (commercial | enterprise). Enterprise = DoD-grade floor + attestation. */
+  businessTier: BusinessTier;
+  /** Manager attestation recorded when businessTier = enterprise. */
+  tierAttestation?: TierAttestation;
   auth: ClientAuthRequirements;
   worfGate: ClientWorfGatePolicy;
   /** Human-readable rationale for why this tier applies */
@@ -195,6 +201,7 @@ export const CLIENT_SECURITY_POLICY: ClientSecurityPolicy = {
   clientId: 'client-int',
   clientName: 'Client AG (Internal)',
   tier: 'regulated',
+  businessTier: 'enterprise',
   tierRationale:
     'Pharmaceutical enterprise with GDPR obligations, PHI-adjacent data, and mandatory Entra auth. ' +
     'Client is the hardest security client — all other clients are measured against this profile.',
@@ -313,6 +320,7 @@ export const DEFAULT_ENTERPRISE_POLICY: ClientSecurityPolicy = {
   clientId: '__enterprise_default__',
   clientName: 'Enterprise Client (Default)',
   tier: 'enterprise',
+  businessTier: 'enterprise',
   tierRationale:
     'Enterprise client with strong auth requirements but without regulated-tier GDPR/PHI obligations.',
 
@@ -399,6 +407,7 @@ export const DEFAULT_STANDARD_POLICY: ClientSecurityPolicy = {
   clientId: '__standard_default__',
   clientName: 'Standard Client (Default)',
   tier: 'standard',
+  businessTier: 'commercial',
   tierRationale: 'Standard client — basic auth, advisory WorfGate, core env var credentials.',
 
   auth: {
@@ -453,6 +462,10 @@ export interface ClientOnboardingSpec {
   clientId: string;
   clientName: string;
   tier: SecurityTier;
+  /** Top conceptual tier (default derived from `tier`). Enterprise mandates the security floor + attestation. */
+  businessTier?: BusinessTier;
+  /** Manager attestation — REQUIRED when businessTier resolves to enterprise. */
+  tierAttestation?: TierAttestation;
   /** GitHub org allowlisted for this client's outbound commits. */
   githubOrg: string;
   /** Parent client in the hierarchy (e.g. 'familiarcat'). null = top-level org. */
@@ -472,10 +485,14 @@ const BASELINE_CONTROLLED_MARKERS = ['confidential', 'internal use only', 'propr
 
 /** Build a complete, floor-compliant ClientSecurityPolicy from a minimal spec. */
 export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPolicy {
+  // Business tier (coarse top grouping). Enterprise mandates a security floor — a standard-tier client
+  // placed in the Enterprise tier is raised to 'enterprise' so the DoD-grade controls apply.
+  const businessTier = spec.businessTier ?? businessTierFromSecurityTier(spec.tier);
+  const effectiveTier = enforceEnterpriseFloor(businessTier, spec.tier);
   // Posture drives the discrete config (config-over-code). Pick the spec's posture, else default by tier.
-  const posture = spec.posture ?? defaultPostureForTier(spec.tier);
+  const posture = spec.posture ?? defaultPostureForTier(effectiveTier);
   const pc = getSecurityPosture(posture);
-  const regulated = spec.tier === 'regulated' || pc.requireSsmSecrets;
+  const regulated = effectiveTier === 'regulated' || pc.requireSsmSecrets;
   const secretSource: 'ssm' | 'env' | 'either' = pc.requireSsmSecrets ? 'ssm' : 'either';
   const hardBlock = spec.controlledDataHardBlock ?? pc.controlledDataHardBlock;
 
@@ -495,7 +512,9 @@ export function buildClientPolicy(spec: ClientOnboardingSpec): ClientSecurityPol
   return {
     clientId: spec.clientId.trim().toLowerCase(),
     clientName: spec.clientName,
-    tier: spec.tier,
+    tier: effectiveTier,
+    businessTier,
+    tierAttestation: spec.tierAttestation,
     parentClientId: spec.parentClientId ?? null,
     tierRationale:
       spec.tierRationale ??
@@ -570,6 +589,7 @@ const CLIENT_POLICY_REGISTRY: Record<string, ClientSecurityPolicy> = {
     clientId: 'familiarcat',
     clientName: 'Retailer Rewards Program (familiarcat)',
     tier: 'enterprise',
+    businessTier: 'enterprise',
     tierRationale:
       'React app tracking customer loyalty points and transaction history. ' +
       'Handles PII-lite data (customer IDs, transaction amounts) with no regulated/GDPR/PHI obligations. ' +

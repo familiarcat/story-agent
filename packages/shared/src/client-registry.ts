@@ -19,6 +19,7 @@ import {
   type ClientOnboardingSpec,
   type ClientSecurityPolicy,
 } from './client-security-policy.js';
+import { assertTierAttestation } from './business-tier.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 interface ClientRow {
@@ -66,6 +67,8 @@ export async function onboardClient(
   onboardedBy = 'crew',
 ): Promise<ClientSecurityPolicy> {
   const policy = buildClientPolicy(spec);
+  // Enterprise tier requires a top-level manager attestation before it can be persisted.
+  assertTierAttestation(policy.businessTier, policy.tierAttestation);
   if (policy.parentClientId && !lookupClientPolicy(policy.parentClientId)) {
     // parent may be a DB row not yet cached — hydrate once and re-check.
     await hydrateClientPolicies();
@@ -92,6 +95,8 @@ async function persistPolicyRow(db: SupabaseClient, policy: ClientSecurityPolicy
     id: policy.clientId,
     name: policy.clientName,
     security_tier: policy.tier,
+    business_tier: policy.businessTier,
+    business_tier_attestation: policy.tierAttestation ?? null,
     parent_client_id: policy.parentClientId ?? null,
     policy: policy as unknown as Record<string, unknown>,
     onboarded_by: onboardedBy,
