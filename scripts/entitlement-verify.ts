@@ -12,7 +12,8 @@ import { checkHumanEntitlement } from '../packages/shared/src/entitlements.js';
   const cases: Array<[string, string, Record<string, string>]> = [
     ['Brady (granted both tiers)', 'b1eba510-20f1-7031-0564-36d8c7c37ee4', { tier: 'enterprise', client: 'jonah', project: 'JONAH-RE-1' }],
     ['Brady (granted both tiers)', 'b1eba510-20f1-7031-0564-36d8c7c37ee4', { tier: 'commercial', client: 'someco' }],
-    ['nobody (no grants)', 'no-such-user-id', { tier: 'enterprise', client: 'jonah' }],
+    ['Roy (Bayer employee) → Bayer', '81bb5560-90b1-7070-7d3c-009e669b2d46', { tier: 'enterprise', client: 'bayer', project: 'bayer-x' }],
+    ['Roy → Jonah (should DENY — different client/tier)', '81bb5560-90b1-7070-7d3c-009e669b2d46', { tier: 'commercial', client: 'jonah' }],
   ];
   for (const [who, id, path] of cases) {
     const d = await checkHumanEntitlement(id, path, 'write');
