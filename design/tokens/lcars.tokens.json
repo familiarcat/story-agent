@@ -1,0 +1,46 @@
+{
+  "$description": "LCARS design tokens — W3C/DTCG. Source of truth = packages/ui/src/app/globals.css (:root lcars theme) + packages/ui/src/lib/tokens.ts. Import via Tokens Studio for Figma → becomes Figma variables under lcars/<group>/<name>. PUBLIC UI constants only — contains NO sa_*/client/controlled data. See docs/figma-supply-spec.md.",
+  "lcars": {
+    "color": {
+      "bg":        { "$type": "color", "$value": "#000000", "$description": "app background" },
+      "surface":   { "$type": "color", "$value": "#0a0a0a", "$description": "card surface" },
+      "surface-2": { "$type": "color", "$value": "#11121a", "$description": "raised surface / table header" },
+      "text":      { "$type": "color", "$value": "#ffcc99", "$description": "primary text (amber)" },
+      "text-dim":  { "$type": "color", "$value": "#9999cc", "$description": "muted text (periwinkle)" },
+      "border":    { "$type": "color", "$value": "#664466", "$description": "borders / dividers" },
+      "accent1":   { "$type": "color", "$value": "#ff9933", "$description": "neon carrot — primary action" },
+      "accent2":   { "$type": "color", "$value": "#ffcc66", "$description": "golden tanoi" },
+      "accent3":   { "$type": "color", "$value": "#cc99cc", "$description": "lilac — tool/escalation" },
+      "accent4":   { "$type": "color", "$value": "#99ccff", "$description": "anakiwa — links/user" },
+      "danger":    { "$type": "color", "$value": "#cc6666", "$description": "error" },
+      "ok":        { "$type": "color", "$value": "#99cc99", "$description": "success / WorfGate green" },
+      "warn":      { "$type": "color", "$value": "#ffcc66", "$description": "warning / WorfGate yellow" },
+      "on-accent": { "$type": "color", "$value": "#000000", "$description": "text on an accent fill" }
+    },
+    "space": {
+      "1": { "$type": "dimension", "$value": "4px" },
+      "2": { "$type": "dimension", "$value": "8px" },
+      "3": { "$type": "dimension", "$value": "12px" },
+      "4": { "$type": "dimension", "$value": "16px" },
+      "6": { "$type": "dimension", "$value": "24px" },
+      "8": { "$type": "dimension", "$value": "32px" }
+    },
+    "radius": {
+      "base":  { "$type": "dimension", "$value": "8px",  "$description": "--radius (cards, buttons)" },
+      "elbow": { "$type": "dimension", "$value": "18px", "$description": "--radius-elbow (LCARS elbow corner)" },
+      "pill":  { "$type": "dimension", "$value": "9999px", "$description": "badges" }
+    },
+    "type": {
+      "family-mono": { "$type": "fontFamily", "$value": ["ui-monospace", "Arial Narrow", "Helvetica Neue Condensed", "sans-serif"], "$description": "LCARS condensed/mono" },
+      "size-badge":  { "$type": "dimension", "$value": "12px" },
+      "size-body":   { "$type": "dimension", "$value": "14.4px", "$description": "0.9rem" },
+      "size-label":  { "$type": "dimension", "$value": "13.6px", "$description": "0.85rem, uppercase table headers" },
+      "size-h2":     { "$type": "dimension", "$value": "20px" },
+      "size-h1":     { "$type": "dimension", "$value": "28px" }
+    },
+    "elevation": {
+      "flat":  { "$type": "shadow", "$value": { "color": "#00000000", "offsetX": "0", "offsetY": "0", "blur": "0", "spread": "0" }, "$description": "LCARS is border-driven, not shadow-driven — default is flat" },
+      "panel": { "$type": "shadow", "$value": { "color": "#000000cc", "offsetX": "0", "offsetY": "2px", "blur": "8px", "spread": "0" }, "$description": "optional subtle lift for overlays" }
+    }
+  }
+}
