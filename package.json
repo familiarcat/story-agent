@@ -23,7 +23,7 @@
     "test:unit": "pnpm --filter @story-agent/shared test:unit && pnpm --filter @story-agent/mcp-server test:unit",
     "test:integration": "pnpm --filter @story-agent/shared test:integration && pnpm --filter @story-agent/mcp-server test:integration",
     "test:ci": "TEST_ENV=integration pnpm run test",
-    "check": "pnpm run typecheck && pnpm run build",
+    "check": "pnpm run tokens:check && pnpm run typecheck && pnpm run build",
     "ext:package": "pnpm --filter story-agent-vscode package",
     "ext:install-local": "code --install-extension packages/vscode-extension/story-agent-vscode-1.0.0.vsix --force",
     "web:dev:clean": "rm -rf packages/ui/.next && pnpm --filter @story-agent/ui dev",

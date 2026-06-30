@@ -83,7 +83,7 @@ Create a **fine-grained** GitHub PAT (Settings → Developer settings → Fine-g
 - **Resource owner / repository:** `familiarcat/story-agent` **only** (not "all repos").
 - **Permissions — exactly two:** `Contents: Read and write` + `Pull requests: Read and write`. Nothing else.
 - **Expiration:** short (e.g. 90 days), rotate on expiry.
-- **Storage:** put it in `~/.alexai-secrets` (e.g. `TOKENS_STUDIO_GITHUB_PAT=...`), **never commit it**. It lives only in the Figma plugin + your secrets file — WorfGate governance: out-of-repo, value never logged.
+- **Storage (centralized WorfGate source of truth):** add `TOKENS_STUDIO_GITHUB_PAT=...` to `~/.alexai-secrets/api-keys.env` (sourced by `~/.zshenv`, so both interactive `~/.zshrc` shells **and** non-interactive automation see it). **Never commit it.** It is registered in the WorfGate credential broker ([worfgate-credentials.ts](../packages/shared/src/worfgate-credentials.ts)) — operation `figma:tokens-sync`, this credential only; any repo-side automation resolves it via `resolveWorfGateCredential('TOKENS_STUDIO_GITHUB_PAT', { operation: 'figma:tokens-sync' })` (authorized by crew identity, audited, value never logged). The Figma plugin also needs the value pasted into its UI once.
 
 ### Repo side — token JSON drives the app (Data)
 `design/tokens/lcars.tokens.json` is the **source of truth** for the LCARS theme. The lcars block of

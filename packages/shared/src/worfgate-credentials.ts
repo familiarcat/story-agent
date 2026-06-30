@@ -15,6 +15,7 @@ export type CredentialOperation =
   | 'aws:deploy' | 'aws:secrets'
   | 'aha:write' | 'aha:read'
   | 'github:push'
+  | 'figma:tokens-sync'
   | 'llm:call';
 
 export interface CredentialSpec {
@@ -51,6 +52,7 @@ export const CREW_CREDENTIAL_REGISTRY: Record<string, CredentialSpec> = {
   AWS_SECRET_ACCESS_KEY: { name: 'AWS_SECRET_ACCESS_KEY', description: 'AWS secret key', operations: ['aws:deploy', 'aws:secrets'], required: false },
   AWS_REGION: { name: 'AWS_REGION', description: 'AWS region', operations: ['aws:deploy', 'aws:secrets'], required: false },
   GITHUB_TOKEN: { name: 'GITHUB_TOKEN', description: 'GitHub PAT for branch/PR operations', operations: ['github:push'], required: false },
+  TOKENS_STUDIO_GITHUB_PAT: { name: 'TOKENS_STUDIO_GITHUB_PAT', description: 'Fine-grained GitHub PAT for Tokens Studio Figma↔repo sync (this repo only; Contents R/W + Pull requests R/W). Centralized in ~/.alexai-secrets, brokered by WorfGate.', operations: ['figma:tokens-sync'], required: false },
 };
 
 export interface CredentialAccessResult {
