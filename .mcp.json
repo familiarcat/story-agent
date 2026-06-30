@@ -7,6 +7,11 @@
     "aha": {
       "type": "http",
       "url": "https://familiarcat.use3.aha.io/api/v1/mcp"
+    },
+    "figma": {
+      "type": "http",
+      "url": "http://127.0.0.1:3845/mcp",
+      "comment": "Official Figma MCP — LOCAL desktop server (loopback only, no external egress). Crew-selected + crew-approved (evaluate_tool_for_crew: figma-mcp-local — 3 approvals, qualityScore 1.00). The REMOTE server (https://mcp.figma.com/mcp) was Worf-vetoed for external-egress / controlled-data leakage. Read-only design→code context feeding the crew's Figma→LCARS scaffold pipeline. REQUIRES the Figma desktop app running with Dev Mode MCP enabled (Figma → Preferences → Enable Dev Mode MCP Server). Scope: non-controlled UI frames only, never sa_*/client data. See docs/figma-design-pipeline.md."
     }
   }
 }
