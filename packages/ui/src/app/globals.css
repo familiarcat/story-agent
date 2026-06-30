@@ -7,6 +7,7 @@
  * edits. LCARS is the default (:root); dark + light are alternates (VS Code-style).
  */
 
+/* @tokens:lcars:start — GENERATED from design/tokens/lcars.tokens.json by `pnpm tokens:build`. Do not edit between markers. */
 :root,
 :root[data-theme="lcars"] {
   --bg: #000000;
@@ -15,10 +16,10 @@
   --text: #ffcc99;
   --text-dim: #9999cc;
   --border: #664466;
-  --accent1: #ff9933; /* neon carrot   */
-  --accent2: #ffcc66; /* golden tanoi  */
-  --accent3: #cc99cc; /* lilac         */
-  --accent4: #99ccff; /* anakiwa       */
+  --accent1: #ff9933;
+  --accent2: #ffcc66;
+  --accent3: #cc99cc;
+  --accent4: #99ccff;
   --danger: #cc6666;
   --ok: #99cc99;
   --warn: #ffcc66;
@@ -28,6 +29,7 @@
   --font: ui-monospace, "Arial Narrow", "Helvetica Neue Condensed", sans-serif;
   --uppercase: uppercase;
 }
+/* @tokens:lcars:end */
 
 :root[data-theme="dark"] {
   --bg: #0b0e14;

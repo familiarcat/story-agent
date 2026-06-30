@@ -1,0 +1,32 @@
+name: Design Tokens Drift Check
+
+# Closes the repo→code half of the bidirectional Figma loop: when Tokens Studio opens a PR with
+# edited design/tokens/lcars.tokens.json, this fails if globals.css wasn't regenerated (`pnpm tokens:build`).
+on:
+  pull_request:
+    paths:
+      - 'design/tokens/**'
+      - 'packages/ui/src/app/globals.css'
+      - 'scripts/build-tokens.ts'
+  push:
+    branches: [ main ]
+    paths:
+      - 'design/tokens/**'
+      - 'packages/ui/src/app/globals.css'
+      - 'scripts/build-tokens.ts'
+  workflow_dispatch:
+
+jobs:
+  tokens-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check tokens ↔ globals.css are in sync
+        run: pnpm tokens:check

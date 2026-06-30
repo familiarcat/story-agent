@@ -65,3 +65,35 @@ in-repo lcars.tokens.json ──(Tokens Studio import)──▶ Figma variables 
         └──(Tokens Studio Git sync: edits in Figma → PR back to repo)◀────────────┘
                        (code → Figma) and (Figma → code) share ONE token set
 ```
+
+## (b) Git sync — closing the full loop (crew-ruled, GO)
+This makes the loop **bidirectional and automatic**: a token edited in Figma opens a PR here; on merge,
+a build step regenerates the CSS the app actually uses.
+
+### Tokens Studio plugin config (Geordi)
+In **Tokens Studio → Settings → Sync providers → Add new → GitHub**:
+- **Repository:** `familiarcat/story-agent`
+- **Branch:** `main` (the plugin pushes a feature branch + opens a PR)
+- **File path:** `design/tokens/lcars.tokens.json`
+- **Storage:** *Single file* · **Token format:** *DTCG*
+- **PAT:** paste the fine-grained token (below) — Tokens Studio stores it locally in the plugin, never in the repo.
+
+### Least-privilege PAT (Worf — mandatory scope)
+Create a **fine-grained** GitHub PAT (Settings → Developer settings → Fine-grained tokens):
+- **Resource owner / repository:** `familiarcat/story-agent` **only** (not "all repos").
+- **Permissions — exactly two:** `Contents: Read and write` + `Pull requests: Read and write`. Nothing else.
+- **Expiration:** short (e.g. 90 days), rotate on expiry.
+- **Storage:** put it in `~/.alexai-secrets` (e.g. `TOKENS_STUDIO_GITHUB_PAT=...`), **never commit it**. It lives only in the Figma plugin + your secrets file — WorfGate governance: out-of-repo, value never logged.
+
+### Repo side — token JSON drives the app (Data)
+`design/tokens/lcars.tokens.json` is the **source of truth** for the LCARS theme. The lcars block of
+[globals.css](../packages/ui/src/app/globals.css) is **generated** from it (between `@tokens:lcars:start/end`
+markers; dark/light stay hand-authored):
+- `pnpm tokens:build` — regenerate `globals.css` from the token file.
+- `pnpm tokens:check` — fail if `globals.css` is stale (CI drift guard).
+- CI: [.github/workflows/design-tokens.yml](../.github/workflows/design-tokens.yml) runs `tokens:check` on any PR touching `design/tokens/**` — so a Tokens Studio PR that forgot to rebuild is blocked.
+
+### Round-trip acceptance test (Yar — verified)
+Edit a token in Figma → Tokens Studio "Push" opens a PR → CI drift check runs → merge →
+`pnpm tokens:build` regenerates `globals.css` → the app reflects the new value. *(The repo→code half —
+drift-fail → build → restore — is automated-tested via `scripts/build-tokens.ts`.)*

@@ -62,7 +62,9 @@
     "deploy:cleanup-orphans:apply": "bash scripts/cleanup-orphaned-stack.sh --apply",
     "deploy:auto": "npx tsx scripts/deploy-auto.ts",
     "deploy:mission": "npx tsx scripts/deploy-automation-mission.ts",
-    "activation:status": "npx tsx scripts/activation-status.ts"
+    "activation:status": "npx tsx scripts/activation-status.ts",
+    "tokens:build": "npx tsx scripts/build-tokens.ts",
+    "tokens:check": "npx tsx scripts/build-tokens.ts --check"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",
