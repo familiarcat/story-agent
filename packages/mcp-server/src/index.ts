@@ -28,6 +28,8 @@ import { guardListen } from './lib/port-guard.js';
 import { registerAhaTools } from './tools/aha-tools.js';
 import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
 import { registerInnovationLoungeTools } from './tools/innovation-lounge-tools.js';
+import { registerEntitlementTools } from './tools/entitlement-tools.js';
+import { wireLiveEntitlementResolver } from '@story-agent/shared';
 import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
 import { registerSkillTools } from './tools/skill-tools.js';
@@ -56,6 +58,7 @@ registerAhaTools(server);  // 📋 Aha! — crew project/epic/story/sprint manag
 registerCrewMissionTools(server);  // 🧭 6-stage pipeline: Picard→Riker→Quark→crew→Quark→Picard
 registerInnovationLoungeTools(server);  // 💡 crew creative jam: 11 persona pitches → debate → portfolio
 registerClientTools(server);  // 👥 client onboarding + hierarchy (WorfGate-governed)
+registerEntitlementTools(server);  // 🔑 human entitlements: request → manager-approve → IAM provision
 registerWorfGateTools(server);  // 🛡️ Worf's credential broker (presence/audit; values never exposed)
 registerSkillTools(server);  // 📚 5W1H skill-theory introspection (describe_skill / coverage)
 
@@ -65,6 +68,10 @@ async function main() {
 
   // Report any missing credentials at startup — especially Client-tier requirements.
   reportMissingCredentialsAtStartup();
+
+  // Wire the live human-entitlement resolver (AWS IAM Identity Center). No-op unless
+  // STORY_AGENT_IAM_ENABLE=1 + STORY_AGENT_IDENTITY_STORE_ID are set — fail-closed until then.
+  if (wireLiveEntitlementResolver()) process.stderr.write('Human entitlements: live IAM Identity Center resolver wired.\n');
 
   // Register WorfGate external secret providers (Vault / AWS Secrets Manager) if configured.
   const activeProviders = initWorfGateCredentialProviders();

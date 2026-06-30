@@ -161,6 +161,26 @@ defineSkillTheory({
   how: { invocation: 'run_innovation_lounge({ theme?, store? })', annotations: { title: 'Run Innovation Lounge', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'pitches, debate, portfolio (pursue now/next/park), dissent, synthesis, markdown — stored to RAG.' },
 });
 
+defineSkillTheory({
+  tool: 'request_entitlement',
+  who: { owner: 'worf' },
+  what: { summary: 'Request human access at a hierarchy level; records the ask for manager approval.', capabilities: ['entitlement request', 'access workflow'] },
+  when: { useWhen: ['A human needs access to a client/project/tier'], avoidWhen: ['Granting access (use grant_entitlement)'] },
+  where: { scope: ['meta', 'rag'], surfaces: ['mcp'], sideEffects: 'none' },
+  why: { rationale: 'Separates the (human) approval decision from provisioning; nothing is granted by requesting.', goalsServed: ['least-privilege', 'auditability'] },
+  how: { invocation: 'request_entitlement({ humanId, level, id, reason? })', annotations: { title: 'Request Entitlement', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'a pending request for a manager to approve.' },
+});
+
+defineSkillTheory({
+  tool: 'grant_entitlement',
+  who: { owner: 'worf' },
+  what: { summary: 'Manager-approved grant: provision a human into the IAM Identity Center group for a level (inherits below).', capabilities: ['entitlement grant', 'IAM provisioning'] },
+  when: { useWhen: ['A top-level manager has approved a human access request'], avoidWhen: ['No manager approval (never auto-grant)'] },
+  where: { scope: ['aws', 'meta'], surfaces: ['mcp'], sideEffects: 'external' },
+  why: { rationale: 'Automates provisioning while keeping the approval decision human (Worf floor); top-down inheritance via IAM Identity Center.', goalsServed: ['hands-free-entitlements', 'least-privilege'] },
+  how: { invocation: 'grant_entitlement({ humanId, level, id, approvedBy, access? })', annotations: { title: 'Grant Entitlement', readOnlyHint: false, idempotentHint: true, openWorldHint: true }, output: 'granted (live IAM) or approved_pending_iam; audited.' },
+});
+
 // ── dynamic MCP discovery + crew tool-teaching ────────────────────────────────
 
 defineSkillTheory({
