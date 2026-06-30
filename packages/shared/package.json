@@ -60,6 +60,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-identitystore": "^3.1073.0",
     "@aws-sdk/client-secrets-manager": "^3.1073.0",
     "@supabase/supabase-js": "^2.47.10",
     "redis": "^4.7.1"
