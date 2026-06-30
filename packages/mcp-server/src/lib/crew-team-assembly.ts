@@ -11,6 +11,8 @@
  * advanced/frontier tiers where capability actually warrants it.
  */
 
+import type { BusinessTier } from '@story-agent/shared';
+
 export type Provider = 'Meta' | 'DeepSeek' | 'OpenAI' | 'Anthropic';
 
 export interface PoolModel {
@@ -62,6 +64,29 @@ const COMPLEX = ['architect', 'security', 'refactor', 'migration', 'privilege', 
 /** Base capability tier for a crew member's domain (judgment criticality of the role). */
 export function crewBaseTier(crewId: string): 1 | 2 | 3 | 4 {
   return CREW.find(c => c.crewId === crewId)?.baseTier ?? 2;
+}
+
+/**
+ * Tier-aware LLM escalation (crew ruling): the REQUESTER's business/access tier escalates the model.
+ * ENTERPRISE work is high-stakes + human-in-the-loop (the Worf/Picard decision level) → run at the
+ * leader/frontier tier (4). COMMERCIAL stays cost-optimized (3, e.g. deepseek). Returns 0 = no
+ * escalation (use the crew member's own base tier). It only ever floors the tier UP, never down —
+ * and a commercial requester never silently pulls a frontier model (capped at 3).
+ */
+export function escalatedTierForBusinessTier(businessTier?: BusinessTier | null): 0 | 3 | 4 {
+  if (businessTier === 'enterprise') return 4;
+  if (businessTier === 'commercial') return 3;
+  return 0;
+}
+
+/** Effective capability tier = MAX(crew base, requester-tier escalation). Enterprise → ≥4. */
+export function effectiveCapabilityTier(crewId: string, requesterTier?: BusinessTier | null): 1 | 2 | 3 | 4 {
+  return Math.max(crewBaseTier(crewId), escalatedTierForBusinessTier(requesterTier)) as 1 | 2 | 3 | 4;
+}
+
+/** QUARK selection escalated by the requester's tier — enterprise prompts get the leader/frontier model. */
+export function quarkSelectModelForRequester(crewId: string, requesterTier?: BusinessTier | null): PoolModel {
+  return quarkSelectModel(effectiveCapabilityTier(crewId, requesterTier));
 }
 
 export interface TeamMember { crewId: string; domain: string; capabilityTier: number; model: string; provider: Provider; reason: string; }

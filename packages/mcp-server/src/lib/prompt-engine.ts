@@ -19,7 +19,8 @@ import OpenAI from 'openai';
 import type { PromptTemplate } from './prompt-templates.js';
 import { getPromptTemplate } from './prompt-templates.js';
 import { promptArchive, calculateTokenCost, type PromptUsageRecord } from './prompt-archiver.js';
-import { quarkSelectModel, crewBaseTier } from './crew-team-assembly.js';
+import { quarkSelectModel, crewBaseTier, escalatedTierForBusinessTier } from './crew-team-assembly.js';
+import type { BusinessTier } from '@story-agent/shared';
 
 type CrewLlmModelProfile = 'quality' | 'balanced' | 'cost_optimized';
 
@@ -44,7 +45,7 @@ function getCopilotPrimaryModel(): string {
   return (process.env.CREW_LLM_COPILOT_MODEL ?? 'gpt-4o-mini').trim();
 }
 
-function selectModelForCall(template: PromptTemplate): string {
+function selectModelForCall(template: PromptTemplate, requesterTier?: BusinessTier | null): string {
   const provider = getLlmProvider();
   const profile = getCrewLlmModelProfile();
 
@@ -56,7 +57,10 @@ function selectModelForCall(template: PromptTemplate): string {
       return getApprovedPrimaryModel();
     }
     const baseTier = crewBaseTier(template.crewId);
-    const tier = profile === 'balanced' ? Math.min(4, baseTier + 1) : baseTier;
+    const profileTier = profile === 'balanced' ? Math.min(4, baseTier + 1) : baseTier;
+    // Tier-aware escalation: an ENTERPRISE requester floors the model UP to the leader/frontier tier
+    // (human-in-the-loop, Worf/Picard-grade); COMMERCIAL stays cost-optimized. Floors up, never down.
+    const tier = Math.max(profileTier, escalatedTierForBusinessTier(requesterTier));
     return quarkSelectModel(tier).id;
   }
 
@@ -382,7 +386,7 @@ export async function executePromptEngineCall(
 
     const client = getLlmClient();
     const provider = getLlmProvider();
-    const selectedModel = selectModelForCall(template);
+    const selectedModel = selectModelForCall(template, variables.requesterTier as BusinessTier | undefined);
     console.log(`[PROMPT_ENGINE/LOUNGE] Calling ${crewId} (${selectedModel}) via ${provider}`);
 
     let responseText: string;
@@ -447,7 +451,7 @@ export async function executePromptEngineCall(
     // Use demo mode or configured LLM provider
     const client = getLlmClient();
     const provider = getLlmProvider();
-    const selectedModel = selectModelForCall(template);
+    const selectedModel = selectModelForCall(template, variables.requesterTier as BusinessTier | undefined);
     console.log(`[PROMPT_ENGINE] Calling ${crewId} (${selectedModel}) via ${provider} for story ${storyRef}`);
 
     let responseText: string;
