@@ -15,11 +15,11 @@ import { listGroups, iamEntitlementsEnabled } from '../packages/shared/src/iam-i
     process.exit(1);
   }
   // The tiered hierarchy to mirror (extend from the live client/project registry later).
-  // Canonical hierarchy (crew ruling, memory 119): Jonah is ONE enterprise client; jonah-corp is a
-  // retired duplicate. All four projects (Commerce Platform + Real Estate) live under `jonah`.
+  // Canonical hierarchy (crew ruling, memory 119): jonah + bayer are ENTERPRISE clients; jonah-corp
+  // was never persisted (no merge). All four jonah projects live under `jonah`.
   const desired = desiredGroupsFromHierarchy({
     tiers: ['commercial', 'enterprise'],
-    clients: ['jonah'],
+    clients: ['jonah', 'bayer'],
     projects: ['JONAH-RE-1', 'JONAH-RE-2', 'proj-jonah-todo', 'proj-jonah-pm'],
   });
   const existing = [...(await listGroups()).keys()];

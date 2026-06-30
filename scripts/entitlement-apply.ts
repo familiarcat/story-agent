@@ -15,10 +15,11 @@ const GRANTS = [
 
 (async () => {
   if (!iamEntitlementsEnabled()) { console.error('Set STORY_AGENT_IAM_ENABLE=1 + STORY_AGENT_IDENTITY_STORE_ID.'); process.exit(1); }
-  // Canonical hierarchy (crew ruling, memory 119): Jonah is ONE enterprise client; jonah-corp retired.
+  // Canonical hierarchy (crew ruling, memory 119): both jonah + bayer are ENTERPRISE clients (verified
+  // in the clients table); jonah-corp was never persisted (no merge needed).
   const desired = desiredGroupsFromHierarchy({
     tiers: ['commercial', 'enterprise'],
-    clients: ['jonah'],
+    clients: ['jonah', 'bayer'],
     projects: ['JONAH-RE-1', 'JONAH-RE-2', 'proj-jonah-todo', 'proj-jonah-pm'],
   });
 
