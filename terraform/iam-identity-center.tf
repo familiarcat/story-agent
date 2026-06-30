@@ -45,3 +45,35 @@ output "entitlement_group_ids" {
   description = "Map of hierarchy node -> Identity Center group id (empty until enabled)."
   value       = { for k, g in aws_identitystore_group.entitlement : k => g.group_id }
 }
+
+# Least-privilege policy for the crew's entitlement-automation principal (hardening: run the sync on
+# THIS, not broad OpenRouterDeployer). Identity Store GROUP + MEMBERSHIP management + read only — NO
+# sso-admin PermissionSets, NO iam:* policy writes. The crew shapes groups, never permissions.
+resource "aws_iam_policy" "entitlement_automation" {
+  count       = var.enable_human_entitlements ? 1 : 0
+  name        = "story-agent-entitlement-automation"
+  description = "Crew entitlement sync — IAM Identity Center group + membership management only (least privilege)."
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "IdentityStoreGroupsAndMemberships"
+      Effect = "Allow"
+      Action = [
+        "identitystore:ListGroups", "identitystore:CreateGroup", "identitystore:DeleteGroup",
+        "identitystore:DescribeGroup", "identitystore:GetGroupId",
+        "identitystore:CreateGroupMembership", "identitystore:DeleteGroupMembership",
+        "identitystore:ListGroupMemberships", "identitystore:ListGroupMembershipsForMember",
+        "identitystore:ListUsers", "identitystore:DescribeUser",
+        "sso-admin:ListInstances",
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+# Attach to a dedicated automation user/role you create (e.g. story-agent-entitlement-bot), or to the
+# Fargate task role — NOT to a human or a broad deployer. Output the ARN for that wiring.
+output "entitlement_automation_policy_arn" {
+  description = "ARN of the least-privilege entitlement-automation policy (empty until enabled)."
+  value       = var.enable_human_entitlements ? aws_iam_policy.entitlement_automation[0].arn : ""
+}
