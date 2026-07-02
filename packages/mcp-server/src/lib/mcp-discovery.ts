@@ -38,6 +38,21 @@ export function buildRegistryQuery(crewId: CrewId, task: string): string {
   return [...new Set([...taskKeywords, ...cats])].slice(0, 6).join(' ');
 }
 
+/**
+ * FOCUSED search terms — each is searched SEPARATELY and the results merged. The registry's `search`
+ * does phrase/AND matching, so one concatenated 6-word query returns nothing (e.g. "figma" hits,
+ * "servers multi client management code search ci cd" does not). Task keywords lead (most specific),
+ * then a couple role-category anchors as fallback.
+ */
+export function buildRegistrySearchTerms(crewId: CrewId, task: string): string[] {
+  const taskKeywords = task
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 3);
+  const cats = categoriesForCrew(crewId).map((c) => c.replace('-', ' '));
+  return [...new Set([...taskKeywords, ...cats])].slice(0, 8);
+}
+
 const CATEGORY_KEYWORDS: Record<ToolCategory, string[]> = {
   'code-search': ['code', 'search', 'grep', 'index', 'repo', 'symbol'],
   'documentation': ['doc', 'documentation', 'wiki', 'readme', 'knowledge'],
@@ -255,8 +270,20 @@ export async function discoverMcpForRole(
   opts: { limit?: number; evaluateTop?: number; fetchImpl?: typeof fetch } = {},
 ): Promise<RoleDiscoveryResult> {
   const categories = categoriesForCrew(crewId);
-  const query = buildRegistryQuery(crewId, task);
-  const { servers } = await searchMcpRegistry({ search: query, limit: opts.limit ?? 10, fetchImpl: opts.fetchImpl });
+  const limit = opts.limit ?? 10;
+  // Multi-term search: query each focused term separately, merge + dedupe (the registry does phrase
+  // matching, so a single concatenated query yields 0 — this is what previously returned no candidates).
+  const terms = buildRegistrySearchTerms(crewId, task);
+  const byName = new Map<string, McpRegistryServer>();
+  for (const term of terms) {
+    if (byName.size >= limit) break;
+    try {
+      const { servers: found } = await searchMcpRegistry({ search: term, limit, fetchImpl: opts.fetchImpl });
+      for (const s of found) if (s.name && !byName.has(s.name)) byName.set(s.name, s);
+    } catch { /* skip a bad term, keep searching the rest */ }
+  }
+  const servers = [...byName.values()].slice(0, limit);
+  const query = terms.join(' | ');
 
   const evaluateTop = opts.evaluateTop ?? 2;
   const evaluated: ToolEvaluationResult[] = [];

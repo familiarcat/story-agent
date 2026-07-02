@@ -38,6 +38,23 @@ describe('normalizeServer', () => {
     expect(s.isLatest).toBe(true);
     expect(s.remotes).toEqual([{ type: 'streamable-http', url: 'https://h/mcp' }]); // remote w/o url dropped
   });
+
+  it('reads the WRAPPED registry v0 shape { server: {...}, _meta } (real API format)', () => {
+    // The live registry nests fields under `.server`; reading raw.name returned '' for every server
+    // (the bug that made discovery yield 0 candidates).
+    const s = normalizeServer({
+      server: {
+        name: 'com.figma.mcp/mcp',
+        description: 'The Figma MCP server brings Figma context into your AI workflow.',
+        remotes: [{ type: 'streamable-http', url: 'https://mcp.figma.com/mcp' }],
+      },
+      _meta: { 'io.modelcontextprotocol.registry/official': { status: 'active', isLatest: false } },
+    });
+    expect(s.name).toBe('com.figma.mcp/mcp');
+    expect(s.description).toContain('Figma');
+    expect(s.status).toBe('active');
+    expect(s.remotes?.[0].url).toBe('https://mcp.figma.com/mcp');
+  });
 });
 
 describe('searchMcpRegistry (mocked fetch)', () => {

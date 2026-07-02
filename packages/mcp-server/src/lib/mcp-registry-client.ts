@@ -41,18 +41,21 @@ export interface McpRegistrySearchResult {
   count: number;
 }
 
-/** Normalize a raw registry entry into our flat McpRegistryServer (pure — unit-testable). */
+/** Normalize a raw registry entry into our flat McpRegistryServer (pure — unit-testable).
+ * The registry v0 response wraps each entry as { server: {...}, _meta: {...} }; older/flat shapes are
+ * also tolerated (fall back to raw). Reading raw.name directly returned '' for every server (bug). */
 export function normalizeServer(raw: any): McpRegistryServer {
-  const meta = raw?._meta?.['io.modelcontextprotocol.registry/official'] ?? {};
+  const s = raw?.server ?? raw ?? {};
+  const meta = raw?._meta?.['io.modelcontextprotocol.registry/official'] ?? s?._meta?.['io.modelcontextprotocol.registry/official'] ?? {};
   return {
-    name: String(raw?.name ?? ''),
-    description: String(raw?.description ?? ''),
-    title: typeof raw?.title === 'string' ? raw.title : undefined,
-    version: typeof raw?.version === 'string' ? raw.version : undefined,
-    remotes: Array.isArray(raw?.remotes)
-      ? raw.remotes.map((r: any) => ({ type: String(r?.type ?? ''), url: String(r?.url ?? '') })).filter((r: McpRegistryRemote) => r.url)
+    name: String(s?.name ?? ''),
+    description: String(s?.description ?? ''),
+    title: typeof s?.title === 'string' ? s.title : undefined,
+    version: typeof s?.version === 'string' ? s.version : undefined,
+    remotes: Array.isArray(s?.remotes)
+      ? s.remotes.map((r: any) => ({ type: String(r?.type ?? ''), url: String(r?.url ?? '') })).filter((r: McpRegistryRemote) => r.url)
       : undefined,
-    packages: Array.isArray(raw?.packages) ? (raw.packages as McpRegistryPackage[]) : undefined,
+    packages: Array.isArray(s?.packages) ? (s.packages as McpRegistryPackage[]) : undefined,
     status: typeof meta?.status === 'string' ? meta.status : undefined,
     isLatest: typeof meta?.isLatest === 'boolean' ? meta.isLatest : undefined,
   };
