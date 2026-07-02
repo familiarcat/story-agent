@@ -14,24 +14,33 @@ import fs from 'fs';
 import path from 'path';
 import { resolveWorfGateCredentialAsync } from '../packages/shared/src/worfgate-credentials.js';
 
-const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || 'rpkkkbufdwxmjaerbhbn';
-const API = `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
-
-async function runSql(token: string, sql: string): Promise<{ ok: boolean; status: number; body: string }> {
-  const r = await fetch(API, {
+const runSql = (apiUrl: string) => async (token: string, sql: string): Promise<{ ok: boolean; status: number; body: string }> => {
+  const r = await fetch(apiUrl, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: sql }),
   });
   const body = await r.text();
   return { ok: r.ok, status: r.status, body: body.slice(0, 400) };
+};
+
+/** Resolve the CLOUD project ref THROUGH WorfGate (SUPABASE_PROJECT_REF → SUPABASE_PROJECT_ID), so
+ * the migration target is a governed variable — not a hardcoded constant. */
+async function resolveProjectRef(): Promise<string> {
+  for (const name of ['SUPABASE_PROJECT_REF', 'SUPABASE_PROJECT_ID'] as const) {
+    const c = await resolveWorfGateCredentialAsync(name, { operation: 'supabase:migrate', crewId: 'worf' });
+    if (c.authorized && c.available && c.value) return c.value.trim();
+  }
+  return 'rpkkkbufdwxmjaerbhbn'; // last-resort default (kept for back-compat)
 }
 
 async function main() {
-  // WorfGate brokers the access token — governed, audited, never logged.
+  // WorfGate brokers the access token AND the cloud project ref — governed, audited, never logged.
   const cred = await resolveWorfGateCredentialAsync('SUPABASE_ACCESS_TOKEN', { operation: 'supabase:migrate', crewId: 'worf' });
   if (!cred.authorized) { console.error(`WorfGate refused: ${cred.reason}`); process.exit(3); }
   if (!cred.available || !cred.value) { console.error(`WorfGate: SUPABASE_ACCESS_TOKEN unavailable — ${cred.reason}`); process.exit(2); }
+  const PROJECT_REF = await resolveProjectRef();
+  const runSqlOn = runSql(`https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`);
   console.log(`🛡️  WorfGate brokered SUPABASE_ACCESS_TOKEN (source=${cred.source}) for worf · project ${PROJECT_REF}`);
 
   const args = process.argv.slice(2);
@@ -53,7 +62,7 @@ async function main() {
   let failed = 0;
   for (const f of files) {
     const sql = fs.readFileSync(path.join(dir, f), 'utf8');
-    const res = await runSql(cred.value, sql);
+    const res = await runSqlOn(cred.value, sql);
     console.log(`${res.ok ? '✅' : '❌'} ${f} [${res.status}]${res.ok ? '' : ' ' + res.body}`);
     if (!res.ok) failed++;
   }
