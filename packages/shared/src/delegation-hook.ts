@@ -13,6 +13,7 @@
  */
 import { appendFileSync } from 'node:fs';
 import { scoreDelegation } from './delegation-router.js';
+import { readLedger, summarizeLanes, writeStatusMarker } from './control-lane.js';
 
 function readStdin(): Promise<string> {
   return new Promise((resolve) => {
@@ -48,6 +49,8 @@ async function main() {
         confidence: d.confidence, savingsUSD: d.savingsUSD, tokens: d.signals.estTokens,
       }) + '\n'
     );
+    // Refresh the control-lane marker so any AI tool/UI can show the current lane + cost split.
+    writeStatusMarker(dir, summarizeLanes(readLedger(dir)), new Date().toISOString());
   } catch { /* ignore */ }
 
   if (d.route === 'delegate') {

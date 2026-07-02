@@ -64,7 +64,9 @@
     "deploy:mission": "npx tsx scripts/deploy-automation-mission.ts",
     "activation:status": "npx tsx scripts/activation-status.ts",
     "tokens:build": "npx tsx scripts/build-tokens.ts",
-    "tokens:check": "npx tsx scripts/build-tokens.ts --check"
+    "tokens:check": "npx tsx scripts/build-tokens.ts --check",
+    "lanes": "npx tsx scripts/control-lanes.ts",
+    "lanes:json": "npx tsx scripts/control-lanes.ts --json"
   },
   "devDependencies": {
     "@types/ws": "^8.18.1",

@@ -636,3 +636,5 @@ export { CREW_BASELINE_MEMORIES } from './lib/crew-baseline-memories.js';
 
 export { scoreDelegation } from './delegation-router.js';
 export type { DelegationDecision, DelegationOptions, Route, DelegateMode, TokenRate } from './delegation-router.js';
+export { laneForRoute, readLedger, recordCrewRun, summarizeLanes, laneBanner, buildStatusMarker, writeStatusMarker, statusPath } from './control-lane.js';
+export type { Lane, LaneSummary, LaneStatusMarker, LedgerEntry, DecisionEntry, CrewRunEntry } from './control-lane.js';

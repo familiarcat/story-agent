@@ -53,6 +53,24 @@ run the same agent-core loop on the same tasks via tier-3 (deepseek) vs an `anth
 compare auto-recovery/correctness/cost from `AgentRunResult`. GO when Lane A ≥90% auto-recovery at
 parity correctness and ≤~80% of Lane B cost. Until GO: front-door = Story Agent, orchestrator = Claude Code.
 
+## Control-lane visibility (crew vs Anthropic — cost attribution)
+
+The system makes it observable **when the OpenRouter CREW is driving vs when ANTHROPIC (Claude Code)
+is orchestrating** — the core cost lever. Two lanes:
+- **🖖 CREW** — work delegated to the cheap OpenRouter crew (deliberation or agent-core).
+- **🅰️ ANTHROPIC** — the premium orchestrator handling a prompt natively.
+
+Mechanics ([control-lane.ts](packages/shared/src/control-lane.ts)):
+- The `UserPromptSubmit` hook ([delegation-hook.ts](packages/shared/src/delegation-hook.ts)) logs each
+  prompt's **intent** (`route` delegate|native + est. savings) to `.claude/delegation-audit.jsonl`
+  (Worf-safe: metrics only, never prompt text) and refreshes `.claude/control-lane-status.json`.
+- `runMissionPipeline` records each **actual** crew activation with its real `costUSD` (`recordCrewRun`).
+- **`pnpm lanes`** prints the headline: `CREW N delegated (~$X saved, M runs $Y) | ANTHROPIC K native · Z% delegated`.
+  `pnpm lanes:json` / `.claude/control-lane-status.json` is the machine-readable marker any AI tool/UI reads.
+
+Cross-tool contract: [AGENTS.md](AGENTS.md) documents the lanes so ANY AI client (Claude Code, Story
+Agent, Continue, Copilot, Cursor) honors the same default — delegate to the crew, keep Anthropic thin.
+
 ## Crew memory recall (read BEFORE any NL prompt)
 
 **Every Claude Code or Story Agent natural-language prompt must RECALL crew RAG memory before acting,

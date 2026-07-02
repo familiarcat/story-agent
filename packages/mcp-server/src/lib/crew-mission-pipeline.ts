@@ -12,6 +12,7 @@
  * everything else runs on cheaper providers. Reuses assembleAndOptimize (Riker+Quark).
  */
 import { assembleAndOptimize, quarkSelectModel, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
+import { recordCrewRun } from '@story-agent/shared';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
@@ -108,9 +109,19 @@ export async function runMissionPipeline(nlInput: string): Promise<MissionPipeli
     `GOALS:\n${goals}\n\nCREW CONTRIBUTIONS:\n${contributions.map(c => `${c.crewId}: ${c.text}`).join('\n')}`, 360);
   ledger.push(planResp);
 
+  const finalTotalUSD = Number(ledger.reduce((s, r) => s + r.costUSD, 0).toFixed(5));
+
+  // Control-lane ledger: record this CONFIRMED crew activation with its ACTUAL cost, so the
+  // control-lane reporter shows real crew spend (not just the hook's delegation intent). Best-effort.
+  try {
+    recordCrewRun(process.env.CLAUDE_PROJECT_DIR || process.cwd(), {
+      costUSD: finalTotalUSD, members: plan.team.length, label: 'run_crew_mission_pipeline',
+    });
+  } catch { /* never block a mission on telemetry */ }
+
   return {
     goals, team: plan.team, contributions,
-    efficiency: { perMember, perProvider, totalCostUSD: Number(ledger.reduce((s, r) => s + r.costUSD, 0).toFixed(5)), totalTokens },
+    efficiency: { perMember, perProvider, totalCostUSD: finalTotalUSD, totalTokens },
     missionPlan: planResp.text, topModel: TOP_MODEL,
   };
 }

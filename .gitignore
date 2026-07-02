@@ -36,6 +36,7 @@ terraform/bootstrap/.terraform/
 terraform/bootstrap/*.tfstate*
 terraform/.terraform/
 
-# delegation router runtime audit log
+# delegation router runtime audit log + control-lane marker (per-machine runtime)
 .claude/delegation-audit.jsonl
+.claude/control-lane-status.json
 .claude/settings.local.json
