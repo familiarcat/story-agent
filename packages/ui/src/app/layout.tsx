@@ -11,7 +11,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: THEME_INIT_SCRIPT sets data-theme on <html> before hydration
+    // (no-FOUC), so the pre-paint DOM intentionally differs from the SSR HTML on this element only.
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Pre-paint: apply the persisted theme before hydration (no flash). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
