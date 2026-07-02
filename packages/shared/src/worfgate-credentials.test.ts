@@ -102,3 +102,61 @@ describe('Ocelot provider (stub — non-blocking until enabled)', () => {
     expect(listCredentialProviders().some(p => p.name === 'ocelot')).toBe(true);
   });
 });
+
+import {
+  resolveWorfGateOverride,
+  summarizeOverridesForLounge,
+  getOverrideAuditLog,
+  OVERRIDE_LIMIT_PER_DAY,
+  MIN_OVERRIDE_REASON_LEN,
+} from './worfgate-credentials.js';
+
+describe("O'Brien break-glass override (governed + monitored)", () => {
+  const GOOD_REASON = 'automating the nightly deploy token rotation'; // ≥ 20 chars
+
+  it('refuses a crew member not permitted to override', () => {
+    const r = resolveWorfGateOverride('GITHUB_TOKEN', { operation: 'llm:call', crewId: 'geordi', reason: GOOD_REASON });
+    expect(r.authorized).toBe(false);
+    expect(r.reason).toMatch(/not permitted to break-glass/i);
+  });
+
+  it('refuses an unregistered credential (never invents secrets)', () => {
+    const r = resolveWorfGateOverride('NOT_A_REAL_SECRET', { operation: 'llm:call', crewId: 'obrien', reason: GOOD_REASON });
+    expect(r.authorized).toBe(false);
+    expect(r.reason).toMatch(/not a registered credential/i);
+  });
+
+  it(`refuses a justification shorter than ${MIN_OVERRIDE_REASON_LEN} chars`, () => {
+    const r = resolveWorfGateOverride('GITHUB_TOKEN', { operation: 'llm:call', crewId: 'obrien', reason: 'too short' });
+    expect(r.authorized).toBe(false);
+    expect(r.reason).toMatch(/justification/i);
+  });
+
+  it('GRANTS a bounded override, returns the value, and monitors it (value never in the log)', () => {
+    process.env.GITHUB_TOKEN = 'gh-secret-xyz';
+    const r = resolveWorfGateOverride('GITHUB_TOKEN', { operation: 'llm:call', crewId: 'obrien', reason: GOOD_REASON });
+    expect(r.authorized).toBe(true);
+    expect(r.available).toBe(true);
+    expect(r.value).toBe('gh-secret-xyz');
+    expect(r.override).toBe(true);
+    // the monitored stream never carries the secret value
+    const log = getOverrideAuditLog();
+    expect(JSON.stringify(log)).not.toContain('gh-secret-xyz');
+    expect(log.some(e => e.granted && e.crewId === 'obrien')).toBe(true);
+  });
+
+  it('enforces the rate limit + surfaces anomalies for the Observation Lounge', () => {
+    process.env.AHA_API_KEY = 'aha-secret';
+    // obrien already has ≥1 grant above; drive to the limit, then expect a refusal.
+    for (let i = 0; i < OVERRIDE_LIMIT_PER_DAY + 2; i++) {
+      resolveWorfGateOverride('AHA_API_KEY', { operation: 'llm:call', crewId: 'obrien', reason: `${GOOD_REASON} #${i}` });
+    }
+    const last = resolveWorfGateOverride('AHA_API_KEY', { operation: 'llm:call', crewId: 'obrien', reason: `${GOOD_REASON} final` });
+    expect(last.authorized).toBe(false);
+    expect(last.reason).toMatch(/rate limit/i);
+
+    const digest = summarizeOverridesForLounge(24);
+    expect(digest.granted).toBeGreaterThan(0);
+    expect(digest.anomalies.length).toBeGreaterThan(0); // rate pressure + repeats flagged
+  });
+});

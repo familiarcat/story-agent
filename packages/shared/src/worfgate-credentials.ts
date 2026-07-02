@@ -203,3 +203,113 @@ export function credentialStatus(names?: string[]): Array<{ name: string; descri
     .filter(Boolean)
     .map(s => ({ name: s.name, description: s.description, operations: s.operations, available: worfGateHasCredential(s.name), required: s.required }));
 }
+
+// ── BREAK-GLASS OVERRIDE (O'Brien) — governed, justified, crew-monitored ───────
+//
+// Crew-designed (Observation Lounge): O'Brien (devops) may OVERRIDE the per-credential OPERATION
+// allowlist to automate, but ONLY as break-glass — never a backdoor. Bounds (Worf's ruling):
+//   • reason REQUIRED, ≥ MIN_OVERRIDE_REASON_LEN chars (a real justification, not a placeholder);
+//   • REGISTERED credentials only — override NEVER invents a secret outside the registry;
+//   • overrides the OPERATION restriction ONLY — not the registry allowlist, not the value redaction;
+//   • O'Brien-scoped (+ Worf/Picard for command/security tiering);
+//   • RATE-LIMITED (OVERRIDE_LIMIT_PER_DAY / rolling 24h) — beyond that needs crew approval;
+//   • the secret value is STILL never logged.
+// Every override — granted OR denied — is written to a SEPARATE MONITORED stream the Observation
+// Lounge surfaces for the whole crew to review (transparent break-glass, not a silent bypass).
+
+/** Crew permitted to break-glass override. O'Brien is primary; Worf (gate owner) + Picard (command) tier in. */
+export const OVERRIDE_CREW = new Set(['obrien', 'worf', 'picard']);
+export const MIN_OVERRIDE_REASON_LEN = 20;
+export const OVERRIDE_LIMIT_PER_DAY = 3;
+const OVERRIDE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export interface OverrideEntry {
+  timestamp: string;
+  name: string;
+  operation: CredentialOperation;
+  crewId: string;
+  reason: string;
+  /** true = the override was permitted (all bounds passed); false = refused (denialReason set). */
+  granted: boolean;
+  /** whether the credential value was actually present in the environment. */
+  available: boolean;
+  denialReason?: string;
+}
+
+const overrideAuditLog: OverrideEntry[] = [];
+const OVERRIDE_AUDIT_MAX = 500;
+
+function recordOverride(e: OverrideEntry): void {
+  overrideAuditLog.push(e);
+  if (overrideAuditLog.length > OVERRIDE_AUDIT_MAX) overrideAuditLog.splice(0, overrideAuditLog.length - OVERRIDE_AUDIT_MAX);
+}
+
+/** The MONITORED override stream (no secret values, ever) — the Observation Lounge reads this. */
+export function getOverrideAuditLog(): OverrideEntry[] {
+  return [...overrideAuditLog];
+}
+
+/**
+ * Break-glass: resolve a REGISTERED credential for an operation OUTSIDE its normal allowlist, with a
+ * mandatory justification. Bounded + monitored per the crew ruling. The value is returned only to the
+ * caller and NEVER logged. Every attempt (granted/denied) lands in the monitored override stream.
+ */
+export function resolveWorfGateOverride(
+  name: string,
+  ctx: { operation: CredentialOperation; crewId: string; reason: string },
+): CredentialAccessResult & { override: true; monitored: true } {
+  const crewId = (ctx.crewId || '').toLowerCase();
+  const reason = (ctx.reason || '').trim();
+  const ts = new Date().toISOString();
+  const deny = (denialReason: string, available = false): CredentialAccessResult & { override: true; monitored: true } => {
+    recordOverride({ timestamp: ts, name, operation: ctx.operation, crewId, reason, granted: false, available, denialReason });
+    return { name, authorized: false, available, reason: `override refused: ${denialReason}`, override: true, monitored: true };
+  };
+
+  if (!OVERRIDE_CREW.has(crewId)) return deny(`'${crewId}' is not permitted to break-glass override (O'Brien/Worf/Picard only)`);
+  if (!CREW_CREDENTIAL_REGISTRY[name]) return deny(`'${name}' is not a registered credential — override never invents secrets`);
+  if (reason.length < MIN_OVERRIDE_REASON_LEN) return deny(`a justification of ≥ ${MIN_OVERRIDE_REASON_LEN} chars is required`);
+
+  const cutoff = Date.now() - OVERRIDE_WINDOW_MS;
+  const recent = overrideAuditLog.filter(e => e.granted && e.crewId === crewId && Date.parse(e.timestamp) >= cutoff).length;
+  if (recent >= OVERRIDE_LIMIT_PER_DAY) return deny(`rate limit reached (${OVERRIDE_LIMIT_PER_DAY}/24h) — escalate to the crew in the Observation Lounge`);
+
+  const value = process.env[name];
+  const available = Boolean(value);
+  recordOverride({ timestamp: ts, name, operation: ctx.operation, crewId, reason, granted: true, available });
+  // Mirror into the normal audit trail (authorized under override) — unified history, no value.
+  audit({ timestamp: ts, name, operation: ctx.operation, crewId, authorized: true, available });
+  if (!available) return { name, authorized: true, available: false, reason: `override GRANTED but '${name}' absent in env`, override: true, monitored: true };
+  return { name, authorized: true, available: true, value, reason: `WorfGate OVERRIDE granted for ${crewId} (${ctx.operation}) — reason: ${reason}`, override: true, monitored: true };
+}
+
+/**
+ * Monitoring digest for the Observation Lounge — the crew reviews overrides together. No secret
+ * values. Surfaces recent overrides + anomaly flags (rate pressure, repeats, denials) for review.
+ */
+export function summarizeOverridesForLounge(sinceHours = 24): {
+  windowHours: number; total: number; granted: number; denied: number;
+  byCrew: Record<string, number>; byCredentialOp: Record<string, number>;
+  recent: OverrideEntry[]; anomalies: string[];
+} {
+  const cutoff = Date.now() - sinceHours * 60 * 60 * 1000;
+  const recent = overrideAuditLog.filter(e => Date.parse(e.timestamp) >= cutoff);
+  const byCrew: Record<string, number> = {};
+  const byCredentialOp: Record<string, number> = {};
+  let granted = 0, denied = 0;
+  for (const e of recent) {
+    if (e.granted) granted++; else denied++;
+    byCrew[e.crewId] = (byCrew[e.crewId] ?? 0) + 1;
+    const k = `${e.name}:${e.operation}`;
+    byCredentialOp[k] = (byCredentialOp[k] ?? 0) + 1;
+  }
+  const anomalies: string[] = [];
+  for (const [crew, n] of Object.entries(byCrew)) {
+    if (n >= OVERRIDE_LIMIT_PER_DAY) anomalies.push(`${crew} at/over the ${OVERRIDE_LIMIT_PER_DAY}/24h override limit (${n})`);
+  }
+  for (const [k, n] of Object.entries(byCredentialOp)) {
+    if (n >= 2) anomalies.push(`repeated override ${k} ×${n} — review the underlying allowlist gap`);
+  }
+  if (denied > 0) anomalies.push(`${denied} override(s) DENIED — inspect for probing/misconfig`);
+  return { windowHours: sinceHours, total: recent.length, granted, denied, byCrew, byCredentialOp, recent, anomalies };
+}
