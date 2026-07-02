@@ -693,7 +693,7 @@ export async function upsertStory(
   story: Omit<StoryRecord, 'createdAt' | 'updatedAt'> & { createdAt?: string; updatedAt?: string, clientId?: string }
 ): Promise<void> {
   const now = new Date().toISOString();
-  throwOnError(await (await db()).from('stories').upsert({
+  throwOnError(await (await db()).from('sa_stories').upsert({
     id:             story.id,
     story_id:       story.storyId,
     story_title:    story.storyTitle,
@@ -717,12 +717,12 @@ export async function upsertStory(
 }
 
 export async function getStory(storyId: string, clientId: string): Promise<StoryRecord | null> {
-  const { data } = await (await db()).from('stories').select('*').eq('story_id', storyId).eq('client_id', clientId).maybeSingle();
+  const { data } = await (await db()).from('sa_stories').select('*').eq('story_id', storyId).eq('client_id', clientId).maybeSingle();
   return data ? mapStory(data) : null;
 }
 
 export async function listStories(): Promise<StoryRecord[]> {
-  const rows = throwOnError(await (await db()).from('stories').select('*').order('updated_at', { ascending: false }));
+  const rows = throwOnError(await (await db()).from('sa_stories').select('*').order('updated_at', { ascending: false }));
   return (rows ?? []).map(mapStory);
 }
 
