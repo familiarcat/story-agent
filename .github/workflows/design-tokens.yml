@@ -7,13 +7,19 @@ on:
     paths:
       - 'design/tokens/**'
       - 'packages/ui/src/app/globals.css'
+      - 'packages/ui/src/lib/tokens.ts'
+      - 'packages/ui/src/components/ProjectStatusPanel*'
       - 'scripts/build-tokens.ts'
+      - '.github/workflows/design-tokens.yml'
   push:
     branches: [ main ]
     paths:
       - 'design/tokens/**'
       - 'packages/ui/src/app/globals.css'
+      - 'packages/ui/src/lib/tokens.ts'
+      - 'packages/ui/src/components/ProjectStatusPanel*'
       - 'scripts/build-tokens.ts'
+      - '.github/workflows/design-tokens.yml'
   workflow_dispatch:
 
 jobs:
@@ -28,5 +34,7 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Check tokens ↔ globals.css are in sync
+      - name: Check tokens ↔ globals.css are in sync (round-trip drift guard)
         run: pnpm tokens:check
+      - name: Token-contract unit tests (components bind var(--*), never hex)
+        run: pnpm --filter @story-agent/ui exec vitest run src/components/ProjectStatusPanel.test.ts

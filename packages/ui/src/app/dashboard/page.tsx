@@ -1,6 +1,7 @@
 import { listStories } from '@/lib/db';
 import type { StoryRecord } from '@story-agent/shared';
 import Link from 'next/link';
+import { ProjectStatusPanel, type ProjectStatusRow } from '@/components/ProjectStatusPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -186,6 +187,14 @@ export default async function Dashboard() {
   const byStatus = (s: StoryRecord['status']) => stories.filter(x => x.status === s).length;
   const hierarchy = deriveHierarchy(stories);
 
+  // Figma→token pilot, now LIVE: derive the token-driven ProjectStatusPanel from the same hierarchy.
+  const statusRows: ProjectStatusRow[] = hierarchy.map((node, i) => ({
+    id: `${node.clientName}-${node.projectName}-${i}`,
+    name: `${node.clientName} · ${node.projectName}`,
+    status: node.blockedCount > 0 ? 'blocked' : node.activeCount > 0 ? 'implementing' : 'merged',
+    progress: node.storyCount ? Math.round((100 * (node.storyCount - node.activeCount)) / node.storyCount) : 0,
+  }));
+
   return (
     <div>
       {isDemo && (
@@ -248,6 +257,13 @@ export default async function Dashboard() {
           );
         })}
       </div>
+
+      {/* Figma→token pilot component, live on the dashboard (token-driven; no hardcoded color). */}
+      {statusRows.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <ProjectStatusPanel title="Project Status" rows={statusRows} live={!isDemo} />
+        </div>
+      )}
 
       {/* Summary pills */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
