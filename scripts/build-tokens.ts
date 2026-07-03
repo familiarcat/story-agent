@@ -3,14 +3,14 @@
  *
  *   Figma → (Tokens Studio Git sync) → design/tokens/lcars.tokens.json → THIS SCRIPT → globals.css
  *
- * The DTCG token file is the SOURCE OF TRUTH for the LCARS theme. This script regenerates ONLY the
- * `:root[data-theme="lcars"]` block in packages/ui/src/app/globals.css, between the
- * `@tokens:lcars:start/end` markers. The `dark` + `light` themes stay hand-authored (untouched).
+ * The DTCG token file is the SOURCE OF TRUTH for ALL THREE themes (lcars default + dark + light).
+ * This script regenerates each theme's `:root[...]` block in packages/ui/src/app/globals.css, between
+ * per-theme `@tokens:<theme>:start/end` markers. Everything outside the markers is left untouched.
  *
  *   pnpm tokens:build   → regenerate globals.css from the token file
  *   pnpm tokens:check   → fail (exit 1) if globals.css is out of sync (CI drift guard)
  *
- * Crew-ruled (Observation Lounge, RAG mem: Figma git-sync loop). Frugal, no extra deps.
+ * Crew-ruled (Observation Lounge). Frugal, no extra deps.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -21,10 +21,14 @@ const ROOT = resolve(__dirname, '..');
 const TOKENS = resolve(ROOT, 'design/tokens/lcars.tokens.json');
 const CSS = resolve(ROOT, 'packages/ui/src/app/globals.css');
 
-const START = '/* @tokens:lcars:start';
-const END = '@tokens:lcars:end */';
+/** Themes to generate. `lcars` is the default (also matches bare :root). Order = emit order. */
+const THEMES: Array<{ key: string; selector: string }> = [
+  { key: 'lcars', selector: ':root,\n:root[data-theme="lcars"] {' },
+  { key: 'dark', selector: ':root[data-theme="dark"] {' },
+  { key: 'light', selector: ':root[data-theme="light"] {' },
+];
 
-/** token path (under `lcars`) → CSS custom property, in emit order. The lcars :root contract. */
+/** token path (relative to a theme group) → CSS custom property, in emit order. Uniform across themes. */
 const MAP: Array<[string, string]> = [
   ['color.bg', '--bg'],
   ['color.surface', '--surface'],
@@ -43,9 +47,8 @@ const MAP: Array<[string, string]> = [
   ['radius.base', '--radius'],
   ['radius.elbow', '--radius-elbow'],
   ['type.family-mono', '--font'],
+  ['case', '--uppercase'],
 ];
-// Non-token literals that belong to the lcars theme block (not a design value Figma owns).
-const STATIC_TAIL: Array<[string, string]> = [['--uppercase', 'uppercase']];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function get(obj: any, path: string): any {
@@ -55,36 +58,39 @@ function fontValue(v: string[]): string {
   return v.map((f) => (/\s/.test(f) ? `"${f}"` : f)).join(', ');
 }
 
-function generateBlock(): string {
-  const tokens = JSON.parse(readFileSync(TOKENS, 'utf8')).lcars;
+function generateBlock(theme: { key: string; selector: string }, root: any): string {
+  const group = root[theme.key];
+  if (!group) throw new Error(`token theme missing: ${theme.key}`);
   const lines: string[] = [];
   for (const [path, cssVar] of MAP) {
-    const node = get(tokens, path);
-    if (!node || node.$value === undefined) throw new Error(`token missing: lcars.${path}`);
+    const node = get(group, path);
+    if (!node || node.$value === undefined) throw new Error(`token missing: ${theme.key}.${path}`);
     const value = Array.isArray(node.$value) ? fontValue(node.$value) : String(node.$value);
     lines.push(`  ${cssVar}: ${value};`);
   }
-  for (const [cssVar, value] of STATIC_TAIL) lines.push(`  ${cssVar}: ${value};`);
   return [
-    `${START} — GENERATED from design/tokens/lcars.tokens.json by \`pnpm tokens:build\`. Do not edit between markers. */`,
-    ':root,',
-    ':root[data-theme="lcars"] {',
+    `/* @tokens:${theme.key}:start — GENERATED from design/tokens/lcars.tokens.json by \`pnpm tokens:build\`. Do not edit between markers. */`,
+    theme.selector,
     ...lines,
     '}',
-    `/* ${END}`,
+    `/* @tokens:${theme.key}:end */`,
   ].join('\n');
 }
 
 function render(): string {
-  const css = readFileSync(CSS, 'utf8');
-  const startIdx = css.indexOf(START);
-  const endIdx = css.indexOf(END);
-  if (startIdx === -1 || endIdx === -1) {
-    throw new Error(`markers not found in ${CSS} — add ${START} ... ${END} around the lcars :root block`);
+  const root = JSON.parse(readFileSync(TOKENS, 'utf8'));
+  let css = readFileSync(CSS, 'utf8');
+  for (const theme of THEMES) {
+    const START = `/* @tokens:${theme.key}:start`;
+    const END = `@tokens:${theme.key}:end */`;
+    const startIdx = css.indexOf(START);
+    const endIdx = css.indexOf(END);
+    if (startIdx === -1 || endIdx === -1) {
+      throw new Error(`markers not found for theme '${theme.key}' in ${CSS} — add ${START} ... ${END} around its :root block`);
+    }
+    css = css.slice(0, startIdx) + generateBlock(theme, root) + css.slice(endIdx + END.length);
   }
-  const before = css.slice(0, startIdx);
-  const after = css.slice(endIdx + END.length);
-  return before + generateBlock() + after;
+  return css;
 }
 
 const check = process.argv.includes('--check');
@@ -96,11 +102,11 @@ if (check) {
     console.error('✗ globals.css is OUT OF SYNC with design/tokens/lcars.tokens.json. Run `pnpm tokens:build`.');
     process.exit(1);
   }
-  console.log('✓ tokens in sync (globals.css matches lcars.tokens.json)');
+  console.log('✓ tokens in sync (globals.css matches lcars.tokens.json — lcars/dark/light)');
 } else {
   if (next !== current) {
     writeFileSync(CSS, next);
-    console.log('✓ globals.css regenerated from lcars.tokens.json');
+    console.log('✓ globals.css regenerated from lcars.tokens.json (lcars/dark/light)');
   } else {
     console.log('✓ globals.css already up to date');
   }

@@ -31,6 +31,7 @@
 }
 /* @tokens:lcars:end */
 
+/* @tokens:dark:start — GENERATED from design/tokens/lcars.tokens.json by `pnpm tokens:build`. Do not edit between markers. */
 :root[data-theme="dark"] {
   --bg: #0b0e14;
   --surface: #151a23;
@@ -51,7 +52,9 @@
   --font: system-ui, -apple-system, "Segoe UI", sans-serif;
   --uppercase: none;
 }
+/* @tokens:dark:end */
 
+/* @tokens:light:start — GENERATED from design/tokens/lcars.tokens.json by `pnpm tokens:build`. Do not edit between markers. */
 :root[data-theme="light"] {
   --bg: #f9fafb;
   --surface: #ffffff;
@@ -72,6 +75,7 @@
   --font: system-ui, -apple-system, "Segoe UI", sans-serif;
   --uppercase: none;
 }
+/* @tokens:light:end */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); transition: background 0.15s ease, color 0.15s ease; }

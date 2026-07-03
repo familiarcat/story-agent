@@ -12,6 +12,12 @@
       "type": "http",
       "url": "http://127.0.0.1:3845/mcp",
       "comment": "Official Figma MCP — LOCAL desktop server (loopback only, no external egress). Crew-selected + crew-approved (evaluate_tool_for_crew: figma-mcp-local — 3 approvals, qualityScore 1.00). The REMOTE server (https://mcp.figma.com/mcp) was Worf-vetoed for external-egress / controlled-data leakage. Read-only design→code context feeding the crew's Figma→LCARS scaffold pipeline. REQUIRES the Figma desktop app running with Dev Mode MCP enabled (Figma → Preferences → Enable Dev Mode MCP Server). Scope: non-controlled UI frames only, never sa_*/client data. See docs/figma-design-pipeline.md."
+    },
+    "figma-context": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": { "FIGMA_API_KEY": "${FIGMA_API_KEY}" },
+      "comment": "GLips Figma-Context-MCP (io.github.GLips/Figma-Context-MCP) — stdio-local, crew-approved (evaluate_tool_for_crew: figma-context-mcp-glips — 3 approvals, qualityScore 1.00, adopt-first per RAG 139). Feeds richer Figma layout data (nodes/constraints/typography/spacing) to geordi's LCARS scaffold pipeline. Auth = a Figma personal access token via FIGMA_API_KEY from ~/.alexai-secrets (WorfGate-governed, never committed); egress = Figma API only. Set FIGMA_API_KEY, then reconnect (/mcp) to activate. See docs/mcp-candidates-ui-management.md."
     }
   }
 }

@@ -28,11 +28,13 @@ Integration cost: **stdio-local free = LOW · remote+OAuth/paid = HIGHER**. Valu
 | **com.mcparmory/figma** | stdio, free | redundant | **PARK** | duplicates official Figma export/design-data |
 | **UI5 webcomponents-mcp(-react)** | stdio, **free (Apache-2.0)** | niche vs LCARS | **PARK** | free (no licensing fee — tier-3 crew mis-stated this), but UI5's component model competes with LCARS |
 
-## First adoption (Picard)
-**io.github.GLips/Figma-Context-MCP** — run it through `evaluate_tool_for_crew` (Worf → Quark → Picard);
-on pass, register in `.mcp.json` as a **stdio-local** server with a WorfGate-brokered Figma API token
-(no external egress beyond Figma's own API, same posture as our approved local Figma MCP). It adds
-richer Figma layout data to the scaffold pipeline without duplicating the token loop.
+## First adoption (Picard) — ✅ DONE
+**io.github.GLips/Figma-Context-MCP** — crew-approved via `evaluate_tool_for_crew`
+(`figma-context-mcp-glips`: **3 approvals, no veto, qualityScore 1.00**) and **wired into
+[.mcp.json](../.mcp.json)** as the `figma-context` **stdio-local** server (`npx figma-developer-mcp`),
+auth via `FIGMA_API_KEY` from `~/.alexai-secrets` (WorfGate-governed, never committed; egress = Figma
+API only). **To activate:** set `FIGMA_API_KEY`, then reconnect (`/mcp`). It adds richer Figma layout
+data to the scaffold pipeline without duplicating the token loop.
 
 ## Redundancy guardrail (Data)
 Our **single source of truth stays the in-repo LCARS DTCG tokens** (Tokens Studio git-sync loop). Any

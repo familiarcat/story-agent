@@ -1,5 +1,5 @@
 {
-  "$description": "LCARS design tokens — W3C/DTCG. Source of truth = packages/ui/src/app/globals.css (:root lcars theme) + packages/ui/src/lib/tokens.ts. Import via Tokens Studio for Figma → becomes Figma variables under lcars/<group>/<name>. PUBLIC UI constants only — contains NO sa_*/client/controlled data. See docs/figma-supply-spec.md.",
+  "$description": "Design tokens — W3C/DTCG. SOURCE OF TRUTH for all three themes (lcars default + dark + light), generated into packages/ui/src/app/globals.css by `pnpm tokens:build`. `lcars` also carries the shared scale (space, radius.pill, type sizes, elevation). Import via Tokens Studio for Figma. PUBLIC UI constants only — NO sa_*/client/controlled data. See docs/figma-supply-spec.md.",
   "lcars": {
     "color": {
       "bg":        { "$type": "color", "$value": "#000000", "$description": "app background" },
@@ -17,6 +17,20 @@
       "warn":      { "$type": "color", "$value": "#ffcc66", "$description": "warning / WorfGate yellow" },
       "on-accent": { "$type": "color", "$value": "#000000", "$description": "text on an accent fill" }
     },
+    "radius": {
+      "base":  { "$type": "dimension", "$value": "8px",  "$description": "--radius (cards, buttons)" },
+      "elbow": { "$type": "dimension", "$value": "18px", "$description": "--radius-elbow (LCARS elbow corner)" },
+      "pill":  { "$type": "dimension", "$value": "9999px", "$description": "badges (shared)" }
+    },
+    "type": {
+      "family-mono": { "$type": "fontFamily", "$value": ["ui-monospace", "Arial Narrow", "Helvetica Neue Condensed", "sans-serif"], "$description": "LCARS condensed/mono → --font" },
+      "size-badge":  { "$type": "dimension", "$value": "12px" },
+      "size-body":   { "$type": "dimension", "$value": "14.4px", "$description": "0.9rem" },
+      "size-label":  { "$type": "dimension", "$value": "13.6px", "$description": "0.85rem, uppercase table headers" },
+      "size-h2":     { "$type": "dimension", "$value": "20px" },
+      "size-h1":     { "$type": "dimension", "$value": "28px" }
+    },
+    "case": { "$value": "uppercase", "$description": "--uppercase (LCARS uppercases headers)" },
     "space": {
       "1": { "$type": "dimension", "$value": "4px" },
       "2": { "$type": "dimension", "$value": "8px" },
@@ -25,22 +39,61 @@
       "6": { "$type": "dimension", "$value": "24px" },
       "8": { "$type": "dimension", "$value": "32px" }
     },
-    "radius": {
-      "base":  { "$type": "dimension", "$value": "8px",  "$description": "--radius (cards, buttons)" },
-      "elbow": { "$type": "dimension", "$value": "18px", "$description": "--radius-elbow (LCARS elbow corner)" },
-      "pill":  { "$type": "dimension", "$value": "9999px", "$description": "badges" }
-    },
-    "type": {
-      "family-mono": { "$type": "fontFamily", "$value": ["ui-monospace", "Arial Narrow", "Helvetica Neue Condensed", "sans-serif"], "$description": "LCARS condensed/mono" },
-      "size-badge":  { "$type": "dimension", "$value": "12px" },
-      "size-body":   { "$type": "dimension", "$value": "14.4px", "$description": "0.9rem" },
-      "size-label":  { "$type": "dimension", "$value": "13.6px", "$description": "0.85rem, uppercase table headers" },
-      "size-h2":     { "$type": "dimension", "$value": "20px" },
-      "size-h1":     { "$type": "dimension", "$value": "28px" }
-    },
     "elevation": {
       "flat":  { "$type": "shadow", "$value": { "color": "#00000000", "offsetX": "0", "offsetY": "0", "blur": "0", "spread": "0" }, "$description": "LCARS is border-driven, not shadow-driven — default is flat" },
       "panel": { "$type": "shadow", "$value": { "color": "#000000cc", "offsetX": "0", "offsetY": "2px", "blur": "8px", "spread": "0" }, "$description": "optional subtle lift for overlays" }
     }
+  },
+  "dark": {
+    "color": {
+      "bg":        { "$type": "color", "$value": "#0b0e14" },
+      "surface":   { "$type": "color", "$value": "#151a23" },
+      "surface-2": { "$type": "color", "$value": "#1d2430" },
+      "text":      { "$type": "color", "$value": "#e6e9ef" },
+      "text-dim":  { "$type": "color", "$value": "#9aa3b2" },
+      "border":    { "$type": "color", "$value": "#2a3340" },
+      "accent1":   { "$type": "color", "$value": "#4f8cff" },
+      "accent2":   { "$type": "color", "$value": "#7c5cff" },
+      "accent3":   { "$type": "color", "$value": "#22c55e" },
+      "accent4":   { "$type": "color", "$value": "#38bdf8" },
+      "danger":    { "$type": "color", "$value": "#ef4444" },
+      "ok":        { "$type": "color", "$value": "#22c55e" },
+      "warn":      { "$type": "color", "$value": "#f59e0b" },
+      "on-accent": { "$type": "color", "$value": "#ffffff" }
+    },
+    "radius": {
+      "base":  { "$type": "dimension", "$value": "10px" },
+      "elbow": { "$type": "dimension", "$value": "10px" }
+    },
+    "type": {
+      "family-mono": { "$type": "fontFamily", "$value": ["system-ui", "-apple-system", "Segoe UI", "sans-serif"] }
+    },
+    "case": { "$value": "none" }
+  },
+  "light": {
+    "color": {
+      "bg":        { "$type": "color", "$value": "#f9fafb" },
+      "surface":   { "$type": "color", "$value": "#ffffff" },
+      "surface-2": { "$type": "color", "$value": "#f3f4f6" },
+      "text":      { "$type": "color", "$value": "#111827" },
+      "text-dim":  { "$type": "color", "$value": "#6b7280" },
+      "border":    { "$type": "color", "$value": "#e5e7eb" },
+      "accent1":   { "$type": "color", "$value": "#2563eb" },
+      "accent2":   { "$type": "color", "$value": "#7c3aed" },
+      "accent3":   { "$type": "color", "$value": "#059669" },
+      "accent4":   { "$type": "color", "$value": "#0891b2" },
+      "danger":    { "$type": "color", "$value": "#dc2626" },
+      "ok":        { "$type": "color", "$value": "#16a34a" },
+      "warn":      { "$type": "color", "$value": "#d97706" },
+      "on-accent": { "$type": "color", "$value": "#ffffff" }
+    },
+    "radius": {
+      "base":  { "$type": "dimension", "$value": "8px" },
+      "elbow": { "$type": "dimension", "$value": "8px" }
+    },
+    "type": {
+      "family-mono": { "$type": "fontFamily", "$value": ["system-ui", "-apple-system", "Segoe UI", "sans-serif"] }
+    },
+    "case": { "$value": "none" }
   }
 }
