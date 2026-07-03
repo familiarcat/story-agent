@@ -32,6 +32,7 @@ import { registerEntitlementTools } from './tools/entitlement-tools.js';
 import { wireLiveEntitlementResolver } from '@story-agent/shared';
 import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
+import { registerAnalyzeImageTool } from './tools/analyze-image.js';
 import { registerSkillTools } from './tools/skill-tools.js';
 import { applySkillAnnotations } from './lib/apply-skill-annotations.js';
 import { startAgentHttpServer, handleAgentRequest } from './agent-core/http-server.js';
@@ -60,6 +61,7 @@ registerInnovationLoungeTools(server);  // 💡 crew creative jam: 11 persona pi
 registerClientTools(server);  // 👥 client onboarding + hierarchy (WorfGate-governed)
 registerEntitlementTools(server);  // 🔑 human entitlements: request → manager-approve → IAM provision
 registerWorfGateTools(server);  // 🛡️ Worf's credential broker (presence/audit; values never exposed)
+registerAnalyzeImageTool(server);  // 🖼️ multimodal vision — analyze_image (Quark-selected vision model)
 registerSkillTools(server);  // 📚 5W1H skill-theory introspection (describe_skill / coverage)
 
 async function main() {
@@ -138,6 +140,7 @@ async function main() {
           registerCrewMissionTools(perRequestServer);  // 🧭 mission pipeline over HTTP
           registerClientTools(perRequestServer);  // 👥 client onboarding over HTTP
           registerWorfGateTools(perRequestServer);  // 🛡️ Worf credential broker over HTTP
+          registerAnalyzeImageTool(perRequestServer);  // 🖼️ multimodal vision over HTTP
           registerSkillTools(perRequestServer);  // 📚 skill-theory introspection over HTTP
 
           await perRequestServer.connect(httpTransport);

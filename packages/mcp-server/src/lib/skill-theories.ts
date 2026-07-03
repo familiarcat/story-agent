@@ -303,11 +303,21 @@ defineSkillTheory({
   how: { invocation: 'worfgate_pending_changes()', annotations: { title: 'WorfGate Pending Changes', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Pending requests + recent audit entries (no file content).' },
 });
 
+defineSkillTheory({
+  tool: 'analyze_image',
+  who: { owner: 'geordi' },
+  what: { summary: 'Analyze an image/screenshot with a Quark-selected OpenRouter vision model.', capabilities: ['describe / OCR', 'screenshot → epic/story/task breakdown', 'UI/accessibility review', 'diagram → tasks', 'optional store-to-RAG'] },
+  when: { useWhen: ['Turning a screenshot into stories/tasks', 'Reviewing a UI image', 'Extracting text from an image', 'Interpreting a diagram'], avoidWhen: ['The image contains sa_*/client/controlled data or secrets — never send those to a 3rd-party vision provider'] },
+  where: { scope: ['llm', 'rag'], surfaces: ['mcp', 'api', 'vscode'], sideEffects: 'external' },
+  why: { rationale: 'Multimodal input lets the crew act on visual context; Quark routes to the cheapest adequate vision model and Anthropic stays thin.', goalsServed: ['multimodal capability', 'cost efficiency'] },
+  how: { invocation: 'analyze_image({ image, intent, customPrompt?, storeToRag?, ragTags? })', annotations: { title: 'Analyze Image', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'analysis text + the vision model used + ragStored. Image data egresses to the vision provider; never logged.' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
   'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story', 'crew_start_story',
   'crew_link_story_pr', 'crew_complete_story', 'worfgate_override_monitor',
-  'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes',
+  'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes', 'analyze_image',
 ];

@@ -12,8 +12,9 @@
  */
 
 import type { BusinessTier } from '@story-agent/shared';
+import { selectVisionModel, type VisionComplexity } from '@story-agent/shared';
 
-export type Provider = 'Meta' | 'DeepSeek' | 'OpenAI' | 'Anthropic';
+export type Provider = 'Meta' | 'DeepSeek' | 'OpenAI' | 'Anthropic' | 'Google';
 
 export interface PoolModel {
   id: string;        // OpenRouter slug (all verified reachable on the crew key)
@@ -21,15 +22,19 @@ export interface PoolModel {
   tier: 1 | 2 | 3 | 4; // 1 basic · 2 standard · 3 advanced · 4 frontier
   costIn: number;    // USD / 1M input tokens (approx)
   costOut: number;   // USD / 1M output tokens (approx)
+  supportsVision?: boolean; // multimodal — accepts image_url content parts
 }
 
 // Verified-available models, cost-ranked. Quark picks from here — Anthropic is not privileged.
 export const MODEL_POOL: PoolModel[] = [
   { id: 'meta-llama/llama-3.3-70b-instruct', provider: 'Meta', tier: 2, costIn: 0.12, costOut: 0.30 },
-  { id: 'openai/gpt-4o-mini', provider: 'OpenAI', tier: 2, costIn: 0.15, costOut: 0.60 },
+  { id: 'openai/gpt-4o-mini', provider: 'OpenAI', tier: 2, costIn: 0.15, costOut: 0.60, supportsVision: true },
   { id: 'deepseek/deepseek-chat', provider: 'DeepSeek', tier: 3, costIn: 0.25, costOut: 0.85 },
-  { id: 'anthropic/claude-haiku-4.5', provider: 'Anthropic', tier: 3, costIn: 1.0, costOut: 5.0 },
-  { id: 'anthropic/claude-sonnet-4.6', provider: 'Anthropic', tier: 4, costIn: 3.0, costOut: 15.0 },
+  { id: 'anthropic/claude-haiku-4.5', provider: 'Anthropic', tier: 3, costIn: 1.0, costOut: 5.0, supportsVision: true },
+  { id: 'anthropic/claude-sonnet-4.6', provider: 'Anthropic', tier: 4, costIn: 3.0, costOut: 15.0, supportsVision: true },
+  // ── Vision tier (multimodal). Routed by quarkSelectVisionModel; gemini is best-effort (runVisionAnalysis falls back). ──
+  { id: 'google/gemini-flash-1.5', provider: 'Google', tier: 2, costIn: 0.075, costOut: 0.30, supportsVision: true },
+  { id: 'openai/gpt-4o', provider: 'OpenAI', tier: 3, costIn: 2.5, costOut: 10.0, supportsVision: true },
 ];
 
 const blended = (m: PoolModel) => m.costIn + m.costOut; // simple cost proxy for ranking
@@ -38,6 +43,12 @@ const blended = (m: PoolModel) => m.costIn + m.costOut; // simple cost proxy for
 export function quarkSelectModel(capabilityTier: number): PoolModel {
   const eligible = MODEL_POOL.filter(m => m.tier >= capabilityTier).sort((a, b) => blended(a) - blended(b));
   return eligible[0] ?? MODEL_POOL.slice().sort((a, b) => b.tier - a.tier)[0];
+}
+
+/** QUARK (vision): the vision model slug for a complexity — simple→gemini-flash, moderate→gpt-4o-mini,
+ *  complex→gpt-4o (Anthropic thin, explicit only). Delegates to the shared routing (single source). */
+export function quarkSelectVisionModel(complexity: VisionComplexity, opts?: { anthropic?: boolean }): string {
+  return selectVisionModel(complexity, opts);
 }
 
 // ── RIKER: team assembly by skill/tool/domain ────────────────────────────────

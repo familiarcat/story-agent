@@ -638,3 +638,7 @@ export { scoreDelegation } from './delegation-router.js';
 export type { DelegationDecision, DelegationOptions, Route, DelegateMode, TokenRate } from './delegation-router.js';
 export { laneForRoute, readLedger, recordCrewRun, summarizeLanes, laneBanner, buildStatusMarker, writeStatusMarker, statusPath } from './control-lane.js';
 export type { Lane, LaneSummary, LaneStatusMarker, LedgerEntry, DecisionEntry, CrewRunEntry } from './control-lane.js';
+export { ImageInputSchema, MAX_IMAGE_BASE64_BYTES, imageInputToUrl, checkImageSize } from './image-input.js';
+export type { ImageInput } from './image-input.js';
+export { VISION_MODELS, VISION_MODEL_ARCHITECTURE, selectVisionModel, INTENT_COMPLEXITY, INTENT_PROMPTS, runVisionAnalysis } from './vision.js';
+export type { VisionComplexity, VisionIntent, VisionResult } from './vision.js';
