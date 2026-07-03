@@ -48,7 +48,23 @@ export default function DocsPage() {
           <a href="/api/openapi" style={{ color: 'var(--accent4)' }}>raw spec</a>
         </p>
       </div>
-      <div id="swagger-ui" />
+      {/* Embedded 3rd-party UI principle (crew ruling, RAG): Swagger ships light-designed CSS with
+          dark-gray text that's invisible on our dark themes. Give it a CONTROLLED light surface (its
+          native context) with color-scheme:light so it's legible in ANY app theme — parent theme
+          tokens do NOT propagate past this wrapper. */}
+      <div
+        style={{
+          background: '#ffffff',
+          color: '#1b1b1b',
+          colorScheme: 'light',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          margin: '0 1rem 2rem',
+          overflow: 'hidden',
+        }}
+      >
+        <div id="swagger-ui" />
+      </div>
     </main>
   );
 }

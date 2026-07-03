@@ -46,6 +46,14 @@ Use [`ChatMessage`](../packages/ui/src/components/ChatMessage.tsx) — never re-
 It gives the standard: uppercase accent **sender headline** → **indented, de-emphasized body**, on a
 **rounded per-role surface** (You vs Crew). See [chat-ui-standard.md](chat-ui-standard.md).
 
+## Embedded 3rd-party UI (Swagger, future widgets)
+Third-party UI ships its **own hardcoded colors** — it does **not** inherit our `var(--*)` tokens, so
+our theme contrast can't fix it (Swagger's dark-gray text was invisible on the dark themes). **Rule:**
+give embedded 3rd-party UI a **controlled surface in the context it was designed for** — for Swagger, a
+light panel with `color-scheme: light` ([docs/page.tsx](../packages/ui/src/app/docs/page.tsx)). Parent
+theme tokens must **not** propagate past the wrapper. Don't rely on our tokens reaching inside a 3rd-party
+widget; wrap it.
+
 ## Credential rotation policy (Worf) — design-system tokens
 The design workflow uses two credentials, both **fine-grained**, **out-of-repo** (`~/.alexai-secrets`),
 **WorfGate-brokered**, **never committed**:
