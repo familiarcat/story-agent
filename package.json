@@ -68,6 +68,8 @@
     "tokens:check": "npx tsx scripts/build-tokens.ts --check",
     "lanes": "npx tsx scripts/control-lanes.ts",
     "lanes:json": "npx tsx scripts/control-lanes.ts --json",
+    "figma:themes": "npx tsx scripts/figma-to-client-theme.ts",
+    "figma:themes:dry": "npx tsx scripts/figma-to-client-theme.ts --dry-run",
     "activate": "npx tsx scripts/activate-changes.ts",
     "activate:full": "npx tsx scripts/activate-changes.ts --full"
   },

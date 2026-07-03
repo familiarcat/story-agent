@@ -1,0 +1,6 @@
+{
+  "$description": "Client → Figma binding (Model A: one firm FIGMA_API_KEY, iterate file keys per client). Maps a client id to the Figma file the pipeline reads for that client's brand theme. Add a client id + fileKey here and `pnpm figma:themes` auto-enrolls them. fileKey = the segment in a Figma URL: figma.com/design/<FILE_KEY>/... nodeId is optional (a specific top frame). For the pipeline to map colors, the Figma file's published COLOR STYLES should be named to the LCARS token contract (bg, surface, surface-2, text, text-dim, border, accent1..4, danger, ok, warn, on-accent).",
+  "clients": {
+    "jonah": { "fileKey": "", "nodeId": "", "note": "St. Louis real-estate brand — fill fileKey to source the theme from Figma (currently hand-authored)." }
+  }
+}
