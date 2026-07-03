@@ -26,6 +26,7 @@ const THEMES: Array<{ key: string; selector: string }> = [
   { key: 'lcars', selector: ':root,\n:root[data-theme="lcars"] {' },
   { key: 'dark', selector: ':root[data-theme="dark"] {' },
   { key: 'light', selector: ':root[data-theme="light"] {' },
+  { key: 'jonah', selector: ':root[data-theme="jonah"],\n[data-theme="jonah"] {' }, // client brand theme — also scopes to a nested wrapper (per-page brand)
 ];
 
 /** token path (relative to a theme group) → CSS custom property, in emit order. Uniform across themes. */

@@ -95,5 +95,32 @@
       "family-mono": { "$type": "fontFamily", "$value": ["system-ui", "-apple-system", "Segoe UI", "sans-serif"] }
     },
     "case": { "$value": "none" }
+  },
+  "jonah": {
+    "$description": "Jonah client brand — St. Louis distressed-property developer. Editorial real-estate: warm charcoal, bronze accent, cream text, crisp corners, serif. Applied via [data-theme=\"jonah\"].",
+    "color": {
+      "bg":        { "$type": "color", "$value": "#141210" },
+      "surface":   { "$type": "color", "$value": "#1d1a16" },
+      "surface-2": { "$type": "color", "$value": "#272219" },
+      "text":      { "$type": "color", "$value": "#f4efe6" },
+      "text-dim":  { "$type": "color", "$value": "#b6a992" },
+      "border":    { "$type": "color", "$value": "#3a3229" },
+      "accent1":   { "$type": "color", "$value": "#c8a15a" },
+      "accent2":   { "$type": "color", "$value": "#a8823f" },
+      "accent3":   { "$type": "color", "$value": "#8a6d3b" },
+      "accent4":   { "$type": "color", "$value": "#ddcea8" },
+      "danger":    { "$type": "color", "$value": "#c0553f" },
+      "ok":        { "$type": "color", "$value": "#8a9a5b" },
+      "warn":      { "$type": "color", "$value": "#c8964a" },
+      "on-accent": { "$type": "color", "$value": "#141210" }
+    },
+    "radius": {
+      "base":  { "$type": "dimension", "$value": "4px" },
+      "elbow": { "$type": "dimension", "$value": "4px" }
+    },
+    "type": {
+      "family-mono": { "$type": "fontFamily", "$value": ["Iowan Old Style", "Georgia", "Cambria", "serif"] }
+    },
+    "case": { "$value": "none" }
   }
 }

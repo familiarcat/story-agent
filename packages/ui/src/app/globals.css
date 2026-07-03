@@ -77,6 +77,30 @@
 }
 /* @tokens:light:end */
 
+/* @tokens:jonah:start — GENERATED from design/tokens/lcars.tokens.json by `pnpm tokens:build`. Do not edit between markers. */
+:root[data-theme="jonah"],
+[data-theme="jonah"] {
+  --bg: #141210;
+  --surface: #1d1a16;
+  --surface-2: #272219;
+  --text: #f4efe6;
+  --text-dim: #b6a992;
+  --border: #3a3229;
+  --accent1: #c8a15a;
+  --accent2: #a8823f;
+  --accent3: #8a6d3b;
+  --accent4: #ddcea8;
+  --danger: #c0553f;
+  --ok: #8a9a5b;
+  --warn: #c8964a;
+  --on-accent: #141210;
+  --radius: 4px;
+  --radius-elbow: 4px;
+  --font: "Iowan Old Style", Georgia, Cambria, serif;
+  --uppercase: none;
+}
+/* @tokens:jonah:end */
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); transition: background 0.15s ease, color 0.15s ease; }
 a { color: var(--accent4); }
