@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { ChatMessage } from '@/components/ChatMessage';
 
 const META = '␞ META ␞';
 
@@ -112,18 +113,18 @@ export default function ChatPage() {
           <p style={{ color: 'var(--text-dim)' }}>Ask anything. Quark routes each turn to the cheapest adequate model on OpenRouter (simple → tier-3 like DeepSeek; complex → tier-4). Crew RAG memory is injected when relevant. The model + cost shows under each reply.</p>
         )}
         {turns.map((t, i) => (
-          <div key={i} style={{ marginBottom: '1rem' }}>
-            <div style={{ fontWeight: 600, fontSize: '0.8rem', color: t.role === 'user' ? 'var(--accent4)' : 'var(--ok)' }}>
-              {t.role === 'user' ? 'You' : 'Crew'}
-            </div>
-            <div style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{t.text ? renderText(t.text) : (busy && i === turns.length - 1 ? '…' : '')}</div>
-            {t.meta && (
-              <div style={{ marginTop: 6, fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'ui-monospace, monospace' }}>
+          <ChatMessage
+            key={i}
+            role={t.role}
+            meta={t.meta && (
+              <>
                 🤖 {t.meta.model} · {t.meta.provider} · {t.meta.tier} route · ↑{t.meta.tokensIn} ↓{t.meta.tokensOut} tok · ~${t.meta.costUSD.toFixed(4)}
                 {t.meta.sources?.length ? <><br />📎 {t.meta.sources.join(', ')}</> : null}
-              </div>
+              </>
             )}
-          </div>
+          >
+            {t.text ? renderText(t.text) : (busy && i === turns.length - 1 ? '…' : '')}
+          </ChatMessage>
         ))}
       </div>
 
