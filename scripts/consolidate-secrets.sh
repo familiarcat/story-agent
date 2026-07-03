@@ -23,12 +23,17 @@ SECRETISH='(KEY|TOKEN|SECRET|PASSWORD|_PAT|CRED|API|SUPABASE|AWS_|FIGMA|AHA_|OPE
 [ -f "$ZSHRC" ]   || { echo "no ~/.zshrc — nothing to consolidate"; exit 0; }
 [ -f "$SECRETS" ] || { echo "no $SECRETS — create it first (mkdir -p ~/.alexai-secrets && touch $SECRETS)"; exit 1; }
 
-valof() { # value of an export VAR in a file (last wins), no printing to caller's stdout
-  grep -E "^[[:space:]]*export[[:space:]]+$1=" "$2" 2>/dev/null | tail -1 | sed -E "s/^[[:space:]]*export[[:space:]]+$1=//; s/^\"//; s/\"$//" || true
+# Match assignments with OR WITHOUT `export` — a non-exported VAR= never reaches subprocesses
+# (the FIGMA_API_KEY bug), so we catch + normalize those too.
+valof() { # value of a VAR in a file (last wins), no printing to caller's stdout
+  grep -E "^[[:space:]]*(export[[:space:]]+)?$1=" "$2" 2>/dev/null | tail -1 | sed -E "s/^[[:space:]]*(export[[:space:]]+)?$1=//; s/^\"//; s/\"$//" || true
+}
+rhsof() { # raw right-hand side (preserve quoting) of a VAR in a file
+  grep -E "^[[:space:]]*(export[[:space:]]+)?$1=" "$2" 2>/dev/null | tail -1 | sed -E "s/^[[:space:]]*(export[[:space:]]+)?$1=//" || true
 }
 
-names=$(grep -E "^[[:space:]]*export[[:space:]]+${SECRETISH}[A-Z0-9_]*=" "$ZSHRC" 2>/dev/null \
-  | sed -E 's/^[[:space:]]*export[[:space:]]+([A-Z0-9_]+)=.*/\1/' | sort -u || true)
+names=$(grep -E "^[[:space:]]*(export[[:space:]]+)?${SECRETISH}[A-Z0-9_]*=" "$ZSHRC" 2>/dev/null \
+  | sed -E 's/^[[:space:]]*(export[[:space:]]+)?([A-Z0-9_]+)=.*/\2/' | sort -u || true)
 
 migrate=(); dup=(); conflict=()
 for n in $names; do
@@ -54,17 +59,17 @@ echo "backed up: $ZSHRC.bak.$ts  +  $SECRETS.bak.$ts"
 
 for n in "${migrate[@]}" "${conflict[@]}"; do
   [ -z "$n" ] && continue
-  line=$(grep -E "^[[:space:]]*export[[:space:]]+$n=" "$ZSHRC" | tail -1)
-  # replace any existing entry in secrets, then append the ~/.zshrc line
-  grep -vE "^[[:space:]]*export[[:space:]]+$n=" "$SECRETS" > "$SECRETS.tmp" && mv "$SECRETS.tmp" "$SECRETS"
-  echo "$line" >> "$SECRETS"
-  # comment out the ~/.zshrc export (kept for audit, no longer active)
-  perl -i -pe "s{^(\s*export\s+$n=.*)}{# [consolidated → ~/.alexai-secrets] \$1}" "$ZSHRC"
+  rhs=$(rhsof "$n" "$ZSHRC")
+  # replace any existing entry in secrets, then append NORMALIZED to `export` (fixes non-exported vars)
+  grep -vE "^[[:space:]]*(export[[:space:]]+)?$n=" "$SECRETS" > "$SECRETS.tmp" && mv "$SECRETS.tmp" "$SECRETS"
+  printf 'export %s=%s\n' "$n" "$rhs" >> "$SECRETS"
+  # comment out the ~/.zshrc line (export or plain) — kept for audit, no longer active
+  perl -i -pe "s{^(\s*(export\s+)?$n=.*)}{# [consolidated → ~/.alexai-secrets] \$1}" "$ZSHRC"
 done
 # DUP entries: just comment out in ~/.zshrc (already identical in secrets)
 for n in "${dup[@]}"; do
   [ -z "$n" ] && continue
-  perl -i -pe "s{^(\s*export\s+$n=.*)}{# [dup, lives in ~/.alexai-secrets] \$1}" "$ZSHRC"
+  perl -i -pe "s{^(\s*(export\s+)?$n=.*)}{# [dup, lives in ~/.alexai-secrets] \$1}" "$ZSHRC"
 done
 
 chmod 600 "$SECRETS"
