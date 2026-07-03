@@ -45,6 +45,13 @@ const r = resolveWorfGateOverride('GITHUB_TOKEN', {
 // r.override === true, r.value present only to the caller; the override is now in the monitored stream.
 ```
 
-## Follow-up (not yet wired)
-Expose `summarizeOverridesForLounge()` as an MCP tool (with a SkillTheory) so `run_crew_mission_pipeline`
-auto-surfaces recent overrides for live crew review each Observation Lounge session.
+## Crew review tool — ✅ wired
+`worfgate_override_monitor` (MCP tool, [worfgate-tools.ts](../packages/mcp-server/src/tools/worfgate-tools.ts),
+SkillTheory owner=worf) surfaces the override digest + anomaly flags + recent entries (no secret values)
+for the crew to review in the Observation Lounge:
+```
+worfgate_override_monitor({ sinceHours? })   // default 24h
+→ { headline: "✅ N granted / M denied — nominal" | "⚠️ … K anomaly flag(s)", digest, recentAll }
+```
+Call it during/after an Observation Lounge session to monitor O'Brien's break-glass use. (Requires an
+`/mcp` reconnect / `pnpm mcp` restart to load the new tool.)

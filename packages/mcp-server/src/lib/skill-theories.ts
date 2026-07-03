@@ -263,10 +263,20 @@ defineSkillTheory({
   how: { invocation: 'aha_branch_for_story({ ref, name?, kind?, base? })', annotations: { title: 'Aha Branch For Story', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'branch name + the from-main create command (the agent runs it via WorfGate-gated git).' },
 });
 
+defineSkillTheory({
+  tool: 'worfgate_override_monitor',
+  who: { owner: 'worf' },
+  what: { summary: "Surface O'Brien's WorfGate break-glass overrides for crew review.", capabilities: ['override digest (granted/denied)', 'anomaly flags (rate pressure, repeats, denials)', 'recent monitored entries'] },
+  when: { useWhen: ['Reviewing break-glass activity in the Observation Lounge', 'Auditing whether overrides are staying exceptional'], avoidWhen: ['You need a specific credential value (never exposed here)'] },
+  where: { scope: ['meta'], surfaces: ['mcp'], sideEffects: 'none' },
+  why: { rationale: "O'Brien can override WorfGate with a justification; transparent crew monitoring is the safeguard that keeps break-glass from becoming a silent backdoor.", goalsServed: ['security', 'accountability', 'trust'] },
+  how: { invocation: 'worfgate_override_monitor({ sinceHours? })', annotations: { title: 'WorfGate Override Monitor', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'A monitoring digest + anomaly flags + recent override entries (no secret values).' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
   'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story', 'crew_start_story',
-  'crew_link_story_pr', 'crew_complete_story',
+  'crew_link_story_pr', 'crew_complete_story', 'worfgate_override_monitor',
 ];

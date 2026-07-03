@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { credentialStatus, getCredentialAuditLog, CREW_CREDENTIAL_REGISTRY, listCredentialProviders } from '@story-agent/shared/worfgate-credentials';
+import { credentialStatus, getCredentialAuditLog, CREW_CREDENTIAL_REGISTRY, listCredentialProviders, summarizeOverridesForLounge, getOverrideAuditLog, OVERRIDE_LIMIT_PER_DAY } from '@story-agent/shared/worfgate-credentials';
 
 /**
  * WorfGate credential tools — Worf's owned skill surfaced to the crew.
@@ -44,5 +44,34 @@ export function registerWorfGateTools(server: McpServer): void {
     async () => ({
       content: [{ type: 'text' as const, text: JSON.stringify({ registry: Object.keys(CREW_CREDENTIAL_REGISTRY), audit: getCredentialAuditLog() }, null, 2) }],
     })
+  );
+
+  server.tool(
+    'worfgate_override_monitor',
+    [
+      "Surface O'Brien's WorfGate break-glass OVERRIDES for the crew to review in the Observation Lounge:",
+      'a digest (granted/denied, by crew, by credential:operation) + anomaly flags (rate pressure,',
+      'repeated overrides, denials) + the recent monitored entries. No secret values — monitoring only.',
+    ].join(' '),
+    {
+      sinceHours: z.number().optional().describe('Look-back window in hours (default 24).'),
+    },
+    async ({ sinceHours }) => {
+      const digest = summarizeOverridesForLounge(sinceHours ?? 24);
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            officer: 'worf',
+            headline: digest.anomalies.length
+              ? `⚠️ ${digest.granted} granted / ${digest.denied} denied in ${digest.windowHours}h — ${digest.anomalies.length} anomaly flag(s)`
+              : `✅ ${digest.granted} granted / ${digest.denied} denied in ${digest.windowHours}h — nominal`,
+            rateLimitPerDay: OVERRIDE_LIMIT_PER_DAY,
+            digest,
+            recentAll: getOverrideAuditLog().slice(-25),
+          }, null, 2),
+        }],
+      };
+    }
   );
 }
