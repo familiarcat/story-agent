@@ -13,6 +13,7 @@
   "packageManager": "pnpm@9.3.0",
   "scripts": {
     "dev": "concurrently --names MCP,UI --colors magenta,blue \"pnpm --filter @story-agent/mcp-server dev\" \"pnpm --filter @story-agent/ui dev\"",
+    "prebuild": "node scripts/guard-build-vs-dev.mjs",
     "build": "pnpm --filter @story-agent/shared build && pnpm --filter @story-agent/mcp-server build && pnpm --filter @story-agent/ui build && pnpm --filter story-agent-vscode build",
     "start": "concurrently --names MCP,UI --colors magenta,blue \"pnpm --filter @story-agent/mcp-server start\" \"pnpm --filter @story-agent/ui start\"",
     "mcp": "pnpm --filter @story-agent/mcp-server dev",
