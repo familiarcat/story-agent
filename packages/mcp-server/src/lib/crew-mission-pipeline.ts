@@ -105,7 +105,7 @@ export async function runMissionPipeline(nlInput: string): Promise<MissionPipeli
 
   // 6. PICARD mission plan (top-tier) — synthesize a concrete plan to autonomously execute.
   const planResp = await call(TOP_MODEL,
-    'You are Captain Picard on the highest-tier model. Synthesize the crew\'s contributions into a concrete MISSION PLAN: an ordered list of steps the crew will autonomously execute, each tagged with the owning crew member. End with "Make it so."',
+    'You are Captain Picard on the highest-tier model. Synthesize the crew\'s contributions into a concrete MISSION PLAN: an ordered list of steps the crew will autonomously execute, each tagged with the owning crew member. When a step searches or counts files, make it RECURSIVE and complete (e.g. `find <dir> -name` or `rg`; do NOT use `-maxdepth 1` or other shallow limits) unless the task explicitly scopes it. End with "Make it so."',
     `GOALS:\n${goals}\n\nCREW CONTRIBUTIONS:\n${contributions.map(c => `${c.crewId}: ${c.text}`).join('\n')}`, 360);
   ledger.push(planResp);
 
