@@ -42,7 +42,19 @@ const RED_SHELL = [
 ];
 
 // Sensitive paths/strings the gate refuses to read or exfiltrate even in green/yellow.
-const SECRET_HINTS = [/\.alexai-secrets/, /\.ssh\//, /id_rsa/, /\.aws\/credentials/, /\.env(\.|$)/, /api-keys\.env/];
+const SECRET_HINTS = [/\.alexai-secrets/, /\.ssh\//, /id_rsa/, /\.aws\/credentials/, /\.env(\.|$)/, /api-keys\.env/, /\.zshrc/, /\.zshenv/];
+
+/** True if a path is a sensitive/secret location (shared classifier — reused by the change-request gate). */
+export function isSensitivePath(p: string): boolean {
+  return SECRET_HINTS.some((re) => re.test(p));
+}
+
+/** True if a path resolves INSIDE the workspace (out-of-workspace writes are high-blast-radius = red). */
+export function isInsideWorkspace(p: string, workspace: string = process.env.STORY_AGENT_WORKSPACE || process.cwd()): boolean {
+  const root = path.resolve(workspace);
+  const resolved = path.resolve(root, p);
+  return resolved === root || resolved.startsWith(root + path.sep);
+}
 
 /** Clamp a path argument into the workspace; returns {value, changed}. */
 function clampPath(p: string, workspace: string): { value: string; changed: boolean } {
