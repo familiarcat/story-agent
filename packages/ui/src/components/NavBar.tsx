@@ -1,6 +1,7 @@
 import { DOMAIN_GROUPS } from './domains';
 import { lcars, RAIL_COLORS } from '../lib/lcars';
 import { ThemeSwitcher } from './ThemeProvider';
+import { ClientMenu } from './ClientMenu';
 
 /**
  * Unified shell navigation — LCARS motif (crew design-unification ruling). A black banner with a
@@ -33,6 +34,7 @@ export default function NavBar() {
         );
       })}
       <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <ClientMenu />
         <ThemeSwitcher />
         <a href="/docs" style={{ color: lcars.textDim, textDecoration: 'none', fontSize: '0.72rem', textTransform: 'uppercase' }}>v1.0.0</a>
       </span>
