@@ -71,9 +71,28 @@ resource "aws_iam_policy" "entitlement_automation" {
   })
 }
 
-# Attach to a dedicated automation user/role you create (e.g. story-agent-entitlement-bot), or to the
-# Fargate task role — NOT to a human or a broad deployer. Output the ARN for that wiring.
 output "entitlement_automation_policy_arn" {
   description = "ARN of the least-privilege entitlement-automation policy (empty until enabled)."
   value       = var.enable_human_entitlements ? aws_iam_policy.entitlement_automation[0].arn : ""
+}
+
+# Dedicated least-privilege automation PRINCIPAL — the entitlement sync runs as THIS, not the broad
+# OpenRouterDeployer. Gated on the same flag. NOTE: no aws_iam_access_key here on purpose — keys in
+# tfstate are a leak; mint the access key out-of-band (console/CLI) and store it in ~/.alexai-secrets
+# (WorfGate-brokered, never committed), or prefer the Fargate task role for in-cluster runs.
+resource "aws_iam_user" "entitlement_bot" {
+  count = var.enable_human_entitlements ? 1 : 0
+  name  = "story-agent-entitlement-bot"
+  tags  = { purpose = "crew-entitlement-automation", managed_by = "terraform", least_privilege = "true" }
+}
+
+resource "aws_iam_user_policy_attachment" "entitlement_bot" {
+  count      = var.enable_human_entitlements ? 1 : 0
+  user       = aws_iam_user.entitlement_bot[0].name
+  policy_arn = aws_iam_policy.entitlement_automation[0].arn
+}
+
+output "entitlement_bot_user_name" {
+  description = "Dedicated least-priv automation user (empty until enabled). Mint its access key out-of-band; store in ~/.alexai-secrets — never in tfstate/repo."
+  value       = var.enable_human_entitlements ? aws_iam_user.entitlement_bot[0].name : ""
 }
