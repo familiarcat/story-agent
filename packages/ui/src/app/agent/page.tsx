@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { color, tier as TIER_COLOR, font } from '@/lib/tokens';
+import { ChatMessage } from '@/components/ChatMessage';
 import { parseSSEFrame, cumulativeCost, sanitizeError, isDiff, safeJson } from './transcript';
 
 /**
@@ -164,13 +165,13 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
   const mono: React.CSSProperties = { fontFamily: font.mono, fontSize: '0.8rem' };
   switch (e.kind) {
     case 'user':
-      return <Block label="You" color="var(--accent4)"><div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{e.text}</div></Block>;
+      return <ChatMessage role="user"><div style={{ whiteSpace: 'pre-wrap' }}>{e.text}</div></ChatMessage>;
     case 'model':
       return <div style={{ ...mono, color: 'var(--text-dim)', margin: '0.4rem 0' }}>🤖 model selected: {e.model}</div>;
     case 'lens':
       return <div style={{ ...mono, color: 'var(--text-dim)', margin: '0.2rem 0' }}>🔭 {e.text}</div>;
     case 'text':
-      return <Block label="Agent" color="var(--ok)"><div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.text}</div></Block>;
+      return <ChatMessage role="assistant" sender="Agent"><div style={{ whiteSpace: 'pre-wrap' }}>{e.text}</div></ChatMessage>;
     case 'tool_call':
       return (
         <div style={{ margin: '0.4rem 0', padding: '0.5rem 0.7rem', background: 'var(--surface-2)', borderRadius: 6, borderLeft: '3px solid var(--accent3)' }}>
@@ -230,15 +231,6 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
     default:
       return null;
   }
-}
-
-function Block({ label, color, children }: { label: string; color: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: '0.6rem' }}>
-      <div style={{ fontWeight: 600, fontSize: '0.78rem', color }}>{label}</div>
-      {children}
-    </div>
-  );
 }
 
 function btn(c: string): React.CSSProperties {

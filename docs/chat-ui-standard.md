@@ -29,8 +29,8 @@ node-testable). API:
 ## Implementation path (crew-ordered)
 1. **✅ Component + role tokens** — `ChatMessage` built on `@/lib/tokens` (`space`, `font`, `var(--*)`). *(First step — done.)*
 2. **✅ Pilot: `/chat`** — adopted; flat message divs replaced with `<ChatMessage>` (rounded bg, role rail, headline→indented-body hierarchy, meta line). Test 2/2, UI typecheck clean, zero hex.
-3. **Next: `/agent`** — replace the local `Block` (You/Agent) with `<ChatMessage role="assistant">` for the agent transcript.
-4. **Extension** — mirror `ChatMessage` into the VS Code chat view (it mirrors contracts, no shared bundle) so the extension chat matches 1:1.
+3. **✅ `/agent`** — the transcript's `user` + `text` events now render via `<ChatMessage>` (You / Agent); the dead local `Block` was removed. Only chat bubbles were converted — tool/gate/status lines stay as-is. Typecheck clean, `/agent` → 200.
+4. **⊘ VS Code extension — N/A by design.** The extension chat uses VS Code's **native chat participant** (`stream.markdown`, [agentClient.ts](../packages/vscode-extension/src/agentClient.ts)) — VS Code owns that panel's styling, so the bubble standard can't/shouldn't be applied. The extension's webviews (sidebar, story panel) aren't chat surfaces. **When** a future extension adds a *custom* chat webview, it must mirror `ChatMessage` as HTML/CSS (same tokens).
 5. **Future client projects** — consume `ChatMessage` from the UI component set; any client theme is just a `[data-theme]` token map (LCARS/dark/light already exist).
 6. **Optional token promotion (Data)** — if chat needs its own knobs later, add a `chat/*` namespace to `lcars.tokens.json` *derived from existing space/radius/accent tokens* (avoid sprawl) and wire through `build-tokens.ts`. Not needed for the standard above.
 
