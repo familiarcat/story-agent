@@ -313,6 +313,26 @@ defineSkillTheory({
   how: { invocation: 'analyze_image({ image, intent, customPrompt?, storeToRag?, ragTags? })', annotations: { title: 'Analyze Image', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'analysis text + the vision model used + ragStored. Image data egresses to the vision provider; never logged.' },
 });
 
+defineSkillTheory({
+  tool: 'run_shell',
+  who: { owner: 'geordi' },
+  what: { summary: 'Execute a shell command in the workspace under the WorfGate governor.', capabilities: ['build / test / install', 'git operations', 'green run · yellow bounded · red blocked'] },
+  when: { useWhen: ['Running build/test/lint/install/git as part of a task'], avoidWhen: ['Destructive out-of-workspace ops (gateLocalOp red-blocks them)'], preconditions: ['cwd is clamped to the workspace'] },
+  where: { scope: ['local-shell'], surfaces: ['mcp', 'api'], sideEffects: 'local' },
+  why: { rationale: 'Closes the plan→execute gap — the crew can run commands, governed, with a failure memory on non-zero exit.', goalsServed: ['implementation', 'autonomy'] },
+  how: { invocation: 'run_shell({ command, cwd?, timeoutMs?, reason })', annotations: { title: 'Run Shell', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }, output: '{ stdout, stderr, exitCode, durationMs, tier } (red commands are blocked with the reason).' },
+});
+
+defineSkillTheory({
+  tool: 'plan_then_execute',
+  who: { owner: 'picard' },
+  what: { summary: 'Autonomous loop: crew deliberates a plan, then the agent-core loop executes it.', capabilities: ['NL task → crew plan → file edits + run_shell → result', 'self-heal / verify / autoEscalate'] },
+  when: { useWhen: ['A multi-step coding task stated in natural language should be planned then executed end-to-end'], avoidWhen: ['A trivial one-shot edit (call the file tool directly)'] },
+  where: { scope: ['crew', 'llm', 'local-fs', 'local-shell'], surfaces: ['mcp', 'api'], sideEffects: 'local' },
+  why: { rationale: 'Wires deliberation + execution into one governed loop — the crew plans, the agent-core loop acts, WorfGate gates every mutation.', goalsServed: ['autonomy', 'implementation', 'reviewability'] },
+  how: { invocation: 'plan_then_execute({ task, maxIterations?, clientId? })', annotations: { title: 'Plan Then Execute', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }, output: 'the crew plan + the AgentRunResult (iterations, tool calls, cost, escalation).' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
@@ -320,4 +340,5 @@ export const THEORIZED_TOOLS = [
   'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story', 'crew_start_story',
   'crew_link_story_pr', 'crew_complete_story', 'worfgate_override_monitor',
   'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes', 'analyze_image',
+  'run_shell', 'plan_then_execute',
 ];
