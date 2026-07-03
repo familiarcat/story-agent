@@ -273,10 +273,41 @@ defineSkillTheory({
   how: { invocation: 'worfgate_override_monitor({ sinceHours? })', annotations: { title: 'WorfGate Override Monitor', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'A monitoring digest + anomaly flags + recent override entries (no secret values).' },
 });
 
+defineSkillTheory({
+  tool: 'worfgate_request_change',
+  who: { owner: 'worf' },
+  what: { summary: 'Propose a governed file change (request→approve→apply, step 1).', capabilities: ['classify tier green/yellow/red', 'flag sensitive/out-of-workspace writes', 'return a change id without writing'] },
+  when: { useWhen: ['WorfGate should make a code or config change but request it first', 'Editing sensitive files (~/.zshrc, ~/.alexai-secrets) that require approval'], avoidWhen: ['A trivial in-loop edit the agent-core governor already handles inline'] },
+  where: { scope: ['local-fs', 'meta'], surfaces: ['mcp'], sideEffects: 'none' },
+  why: { rationale: 'Request-first write keeps human-in-the-loop control over sensitive/high-blast changes while still letting WorfGate act.', goalsServed: ['security', 'accountability', 'implementation'] },
+  how: { invocation: 'worfgate_request_change({ path, content, description, crewId? })', annotations: { title: 'WorfGate Request Change', readOnlyHint: true, idempotentHint: false, openWorldHint: false }, output: 'Change id + tier + whether approval is required (nothing written yet).' },
+});
+
+defineSkillTheory({
+  tool: 'worfgate_apply_change',
+  who: { owner: 'worf' },
+  what: { summary: 'Apply or refuse a proposed WorfGate change (request→approve→apply, step 2).', capabilities: ['apply green/yellow immediately', 'apply red/sensitive only on explicit approval', 'back up before write'] },
+  when: { useWhen: ['Approving/applying a change from worfgate_request_change'], preconditions: ['A prior request id exists', 'decision:"approve" for sensitive/red changes'] },
+  where: { scope: ['local-fs'], surfaces: ['mcp'], sideEffects: 'local' },
+  why: { rationale: 'The apply step is where the recorded approval gates the actual write; sensitive files never write without it.', goalsServed: ['security', 'implementation'] },
+  how: { invocation: 'worfgate_apply_change({ id, decision? })', annotations: { title: 'WorfGate Apply Change', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }, output: 'Applied/refused + whether a backup was made (content never logged).' },
+});
+
+defineSkillTheory({
+  tool: 'worfgate_pending_changes',
+  who: { owner: 'worf' },
+  what: { summary: 'List open WorfGate change requests + recent change audit.', capabilities: ['review queue', 'change audit trail (paths/tiers/decisions, no content)'] },
+  when: { useWhen: ['Reviewing what changes are awaiting approval', 'Auditing recent governed writes'], avoidWhen: ['You need a secret value (never exposed)'] },
+  where: { scope: ['meta'], surfaces: ['mcp'], sideEffects: 'none' },
+  why: { rationale: 'Transparent review queue + audit keeps governed write accountable.', goalsServed: ['security', 'accountability'] },
+  how: { invocation: 'worfgate_pending_changes()', annotations: { title: 'WorfGate Pending Changes', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Pending requests + recent audit entries (no file content).' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
   'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story', 'crew_start_story',
   'crew_link_story_pr', 'crew_complete_story', 'worfgate_override_monitor',
+  'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes',
 ];

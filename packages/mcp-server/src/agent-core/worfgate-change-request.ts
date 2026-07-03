@@ -51,6 +51,22 @@ export function getChangeAuditLog(): ChangeAuditEntry[] {
   return [...auditLog];
 }
 
+// ── Pending-request registry (so MCP `request` + `apply` can span separate tool calls) ──
+const pending = new Map<string, { req: ChangeRequest; content: string }>();
+
+/** Stash a proposed change + its content so a later apply call can retrieve it by id. */
+export function stashChange(req: ChangeRequest, content: string): void {
+  pending.set(req.id, { req, content });
+}
+/** Retrieve a stashed change by id (content included — caller must not log it). */
+export function getPendingChange(id: string): { req: ChangeRequest; content: string } | undefined {
+  return pending.get(id);
+}
+/** List still-open (requested) changes — the review queue. No content. */
+export function listPendingChanges(): ChangeRequest[] {
+  return [...pending.values()].map((x) => x.req).filter((r) => r.status === 'requested');
+}
+
 /** PROPOSE a change. Classifies tier + whether approval is required. Writes nothing. */
 export function requestWorfGateChange(input: {
   path: string; description: string; crewId: string; workspace?: string; nowIso?: string;

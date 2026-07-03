@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { credentialStatus, getCredentialAuditLog, CREW_CREDENTIAL_REGISTRY, listCredentialProviders, summarizeOverridesForLounge, getOverrideAuditLog, OVERRIDE_LIMIT_PER_DAY } from '@story-agent/shared/worfgate-credentials';
+import { requestWorfGateChange, applyWorfGateChange, stashChange, getPendingChange, listPendingChanges, getChangeAuditLog } from '../agent-core/worfgate-change-request.js';
 
 /**
  * WorfGate credential tools — Worf's owned skill surfaced to the crew.
@@ -73,5 +74,72 @@ export function registerWorfGateTools(server: McpServer): void {
         }],
       };
     }
+  );
+
+  // ── Governed write: request → approve → apply (reuses gateLocalOp + approval channel) ──
+
+  server.tool(
+    'worfgate_request_change',
+    [
+      'PROPOSE a file change under WorfGate governance (step 1 of request→approve→apply). Classifies the',
+      'tier: in-workspace code is green/yellow (applies without approval); a SENSITIVE path',
+      '(~/.zshrc, ~/.alexai-secrets, .env, .ssh, or anything outside the workspace) is red and REQUIRES',
+      'an explicit approval. Returns a change id — nothing is written yet. Content is held, never logged.',
+    ].join(' '),
+    {
+      path: z.string().describe('Absolute or workspace-relative file path to change.'),
+      content: z.string().describe('The full new file content to write on apply.'),
+      description: z.string().describe('Human-readable summary of the change (audited).'),
+      crewId: z.string().optional().describe('Requesting crew member (default worf).'),
+    },
+    async ({ path, content, description, crewId }) => {
+      const req = requestWorfGateChange({ path, description, crewId: crewId ?? 'worf' });
+      stashChange(req, content);
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            officer: 'worf',
+            change: { id: req.id, path: req.path, tier: req.tier, sensitive: req.sensitive, needsApproval: req.needsApproval, status: req.status },
+            next: req.needsApproval
+              ? `SENSITIVE (${req.tier}) — approve to apply: worfgate_apply_change({ id: "${req.id}", decision: "approve" })`
+              : `bounded (${req.tier}) — apply: worfgate_apply_change({ id: "${req.id}" })`,
+          }, null, 2),
+        }],
+      };
+    }
+  );
+
+  server.tool(
+    'worfgate_apply_change',
+    [
+      'APPLY (or refuse) a proposed WorfGate change by id (step 2 of request→approve→apply). Green/yellow',
+      'apply immediately; red/sensitive apply ONLY with decision:"approve" — the explicit recorded',
+      'approval (break-glass). Backs up an existing file first; file content is never logged.',
+    ].join(' '),
+    {
+      id: z.string().describe('The change id from worfgate_request_change.'),
+      decision: z.enum(['approve', 'deny']).optional().describe('Required for sensitive/red changes: approve to apply, deny to refuse.'),
+    },
+    async ({ id, decision }) => {
+      const p = getPendingChange(id);
+      if (!p) return { content: [{ type: 'text' as const, text: JSON.stringify({ officer: 'worf', error: `no pending change '${id}'` }) }] };
+      const res = await applyWorfGateChange(p.req, p.content, { decision, approvalTimeoutMs: 1000 });
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({ officer: 'worf', id, applied: res.applied, reason: res.reason, backedUp: Boolean(res.backup), status: p.req.status }, null, 2),
+        }],
+      };
+    }
+  );
+
+  server.tool(
+    'worfgate_pending_changes',
+    'List open WorfGate change requests (the review queue) + the recent change audit trail. Paths + tiers + decisions only — never file content or secret values.',
+    {},
+    async () => ({
+      content: [{ type: 'text' as const, text: JSON.stringify({ officer: 'worf', pending: listPendingChanges(), audit: getChangeAuditLog().slice(-25) }, null, 2) }],
+    })
   );
 }
