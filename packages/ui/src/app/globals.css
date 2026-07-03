@@ -11,11 +11,11 @@
 :root,
 :root[data-theme="lcars"] {
   --bg: #000000;
-  --surface: #0a0a0a;
-  --surface-2: #11121a;
-  --text: #ffcc99;
-  --text-dim: #9999cc;
-  --border: #664466;
+  --surface: #16161f;
+  --surface-2: #22222f;
+  --text: #ffd9b3;
+  --text-dim: #bcbce8;
+  --border: #8a6a8a;
   --accent1: #ff9933;
   --accent2: #ffcc66;
   --accent3: #cc99cc;
@@ -36,9 +36,9 @@
   --bg: #0b0e14;
   --surface: #151a23;
   --surface-2: #1d2430;
-  --text: #e6e9ef;
-  --text-dim: #9aa3b2;
-  --border: #2a3340;
+  --text: #eef1f6;
+  --text-dim: #bcc6d6;
+  --border: #3b4759;
   --accent1: #4f8cff;
   --accent2: #7c5cff;
   --accent3: #22c55e;
@@ -59,9 +59,9 @@
   --bg: #f9fafb;
   --surface: #ffffff;
   --surface-2: #f3f4f6;
-  --text: #111827;
-  --text-dim: #6b7280;
-  --border: #e5e7eb;
+  --text: #0f172a;
+  --text-dim: #4b5563;
+  --border: #cbd2dc;
   --accent1: #2563eb;
   --accent2: #7c3aed;
   --accent3: #059669;
