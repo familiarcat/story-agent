@@ -31,6 +31,7 @@ export const DOMAIN_GROUPS: DomainGroup[] = [
       { href: '/agent', label: 'Agent Workspace', icon: '🛠️', hub: true, desc: 'The orchestrating hub — a Claude-Code-grade agentic loop on OpenRouter (read/edit/run/search/git), WorfGate-governed with interactive approvals.' },
       { href: '/chat', label: 'Chat', icon: '💬', desc: 'Ask the crew anything; Quark routes each turn to the cheapest adequate model.' },
       { href: '/docs', label: 'API Docs', icon: '📜', desc: 'The live crew-server OpenAPI surface, rendered with Swagger UI.' },
+      { href: '/vision', label: 'Vision', icon: '🖼️', desc: 'Analyze an image/screenshot with a Quark-selected vision model — describe, screenshot→stories, UI review, OCR.' },
     ],
   },
   {
