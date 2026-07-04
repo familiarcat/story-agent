@@ -18,6 +18,7 @@ import { gateLocalOp, type WorfTier } from './worfgate-local.js';
 import { EditSession, MUTATING_TOOLS, verifyTouched } from './edit-session.js';
 import { getSkillTheory } from '@story-agent/shared/skill-theory';
 import '../lib/skill-theories.js'; // register tool theories so the lens can read them
+import { repairToolCallArgs } from './tool-call-repair.js';
 
 export interface AgentEvent {
   type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens' | 'stall' | 'verify';
@@ -391,6 +392,11 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       const name = tc.function?.name;
       let parsed: Record<string, unknown> = {};
       try { parsed = JSON.parse(tc.function?.arguments || '{}'); } catch { /* leave empty */ }
+      // Repair the common cheap-model tool-call malformations (stringified JSON, flat apply_patch
+      // instead of {edits:[…]}, missing fields) BEFORE execution — so tier-3 self-corrects via the
+      // returned error instead of stalling. This is the edit-reliability lever for self-orchestration.
+      const repaired = repairToolCallArgs(name || '', tc.function?.arguments || parsed);
+      if (repaired.ok) parsed = repaired.args;
       emit({ type: 'tool_call', tool: name, args: parsed });
 
       const tool = TOOLS_BY_NAME[name] || tools.find(t => t.name === name);
@@ -399,7 +405,11 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       let tier: WorfTier = 'yellow';
       let remediations: string[] = [];
 
-      if (!tool) {
+      if (!repaired.ok) {
+        // Feed the repair error back as the tool result so the model retries with valid args.
+        output = `error: ${repaired.error}`;
+        ok = false;
+      } else if (!tool) {
         output = `error: unknown tool ${name}`;
         ok = false;
       } else {
