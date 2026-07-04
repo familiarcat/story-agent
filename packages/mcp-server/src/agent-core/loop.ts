@@ -19,6 +19,7 @@ import { EditSession, MUTATING_TOOLS, verifyTouched } from './edit-session.js';
 import { getSkillTheory } from '@story-agent/shared/skill-theory';
 import '../lib/skill-theories.js'; // register tool theories so the lens can read them
 import { repairToolCallArgs } from './tool-call-repair.js';
+import { nextEscalationTier } from './escalation-policy.js';
 
 export interface AgentEvent {
   type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens' | 'stall' | 'verify';
@@ -242,7 +243,11 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const editSession = new EditSession(workspace);
   let verifyAttempts = 0;
 
-  const model = quarkSelectModel(opts.tier ?? 3).id;
+  // Cost-optimal escalation: start on the cheapest adequate tier; only bump to a pricier model
+  // after repeated failed turns (nextEscalationTier three-strike). Most work stays cheap.
+  let currentTier = opts.tier ?? 3;
+  let model = quarkSelectModel(currentTier).id;
+  let consecutiveFailures = 0;
   emit({ type: 'model', model });
 
   const ctx: ToolContext = {
@@ -388,6 +393,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     if (msg.content) emit({ type: 'text', text: msg.content });
 
     // Execute each requested tool through the WorfGate governor.
+    let turnFailed = false;
     for (const tc of toolCalls) {
       const name = tc.function?.name;
       let parsed: Record<string, unknown> = {};
@@ -453,8 +459,20 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       }
 
       result.toolCalls.push({ tool: name, tier, remediations, ok });
+      if (!ok) turnFailed = true;
       emit({ type: 'tool_result', tool: name, text: output, tier });
       messages.push({ role: 'tool', tool_call_id: tc.id, content: output });
+    }
+
+    // Cost-optimal model escalation (three-strike): bump to a pricier tier only after repeated
+    // failed turns, then reset. A clean turn resets the counter — so premium models stay rare.
+    if (turnFailed) consecutiveFailures++; else consecutiveFailures = 0;
+    const escTier = nextEscalationTier(currentTier, consecutiveFailures);
+    if (escTier !== null) {
+      currentTier = escTier;
+      model = quarkSelectModel(currentTier).id;
+      consecutiveFailures = 0;
+      emit({ type: 'escalation', text: `repeated failures — escalating to tier ${currentTier} (${model})` });
     }
 
     if (result.totalTokens >= tokenBudget) {
