@@ -138,17 +138,20 @@ export function registerAhaTools(server: McpServer): void {
       releaseId: z.string().describe('Target release (sprint) id'),
       name: z.string(),
       description: z.string().optional(),
+      epic: z.string().optional().describe('Optional epic reference (e.g. JONAH-E-1) to link the story under — sets both the epic and the sprint in one call.'),
       confirm: z.boolean().optional().describe('true to execute (human-approved, or automated after agent verification)'),
     },
-    async ({ agentId, releaseId, name, description, confirm }) => {
+    async ({ agentId, releaseId, name, description, epic, confirm }) => {
       const authz = authorizeAhaWrite(agentId, 'aha:create-feature');
       if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
       // Auto-mode classification (crew governance): a draft feature create is AUTO.
       const { proceed, classification } = gateAhaWrite({ verb: 'create', resource: 'feature', publishedState: 'draft', agentId }, confirm);
       if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
-      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { releaseId, name, description }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
-      audit('create-feature', { agentId, releaseId, name, decision: classification.decision });
-      const res = await aha(`releases/${releaseId}/features`, { method: 'POST', body: JSON.stringify({ feature: { name, description } }) });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { releaseId, name, description, epic }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('create-feature', { agentId, releaseId, name, epic, decision: classification.decision });
+      const feature: Record<string, unknown> = { name, description };
+      if (epic) feature.epic = epic;  // Aha links both the epic and the sprint from the release-scoped create.
+      const res = await aha(`releases/${releaseId}/features`, { method: 'POST', body: JSON.stringify({ feature }) });
       return ok({ created: res.feature?.reference_num, name: res.feature?.name, by: agentId, autoMode: classification });
     },
   );
@@ -178,6 +181,79 @@ export function registerAhaTools(server: McpServer): void {
       audit('update-feature', { agentId, reference, fields: Object.keys(feature), decision: classification.decision });
       const res = await aha(`features/${reference}`, { method: 'PUT', body: JSON.stringify({ feature }) });
       return ok({ updated: res.feature?.reference_num, status: res.feature?.workflow_status?.name, by: agentId, autoMode: classification });
+    },
+  );
+
+  // ── CREATE RELEASE (sprint) ────────────────────────────────────────────────
+  server.tool(
+    'aha:create-release',
+    'Create a release (sprint) in a product. This is what unblocks the full hierarchy — features/epics need a release to live in. WorfGate: requires a verified agentId AND (for a draft) auto-proceeds; else dry-run preview. name + product prefix required; start/end dates optional.',
+    {
+      agentId: z.string().describe('Crew member performing the write (e.g. picard, riker) — verified against the Aha! role matrix'),
+      productPrefix: z.string().describe('Target product reference prefix, e.g. JONAH'),
+      name: z.string().describe('Release (sprint) name, e.g. "S1 · wk 1-4"'),
+      startDate: z.string().optional().describe('Sprint start date YYYY-MM-DD'),
+      endDate: z.string().optional().describe('Sprint end / release date YYYY-MM-DD'),
+      confirm: z.boolean().optional().describe('true to execute; omitted = dry-run after identity check'),
+    },
+    async ({ agentId, productPrefix, name, startDate, endDate, confirm }) => {
+      const authz = authorizeAhaWrite(agentId, 'aha:create-release');
+      if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const { proceed, classification } = gateAhaWrite({ verb: 'create', resource: 'release', publishedState: 'draft', agentId }, confirm);
+      if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { productPrefix, name, startDate, endDate }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('create-release', { agentId, productPrefix, name, decision: classification.decision });
+      const release: Record<string, unknown> = { name };
+      if (startDate) release.start_date = startDate;
+      if (endDate) release.release_date = endDate;
+      const res = await aha(`products/${productPrefix}/releases`, { method: 'POST', body: JSON.stringify({ release }) });
+      return ok({ created: res.release?.reference_num, id: res.release?.id, name: res.release?.name, by: agentId, autoMode: classification });
+    },
+  );
+
+  // ── CREATE EPIC ────────────────────────────────────────────────────────────
+  server.tool(
+    'aha:create-epic',
+    'Create an epic in a release (sprint). Epics group features/stories. WorfGate: verified agentId + auto-mode (draft create is AUTO); else dry-run preview.',
+    {
+      agentId: z.string().describe('Crew member performing the write (e.g. data, riker) — verified against the Aha! role matrix'),
+      releaseId: z.string().describe('Target release (sprint) id the epic belongs to'),
+      name: z.string().describe('Epic name'),
+      description: z.string().optional(),
+      confirm: z.boolean().optional().describe('true to execute; omitted = dry-run after identity check'),
+    },
+    async ({ agentId, releaseId, name, description, confirm }) => {
+      const authz = authorizeAhaWrite(agentId, 'aha:create-epic');
+      if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const { proceed, classification } = gateAhaWrite({ verb: 'create', resource: 'epic', publishedState: 'draft', agentId }, confirm);
+      if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { releaseId, name, description }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('create-epic', { agentId, releaseId, name, decision: classification.decision });
+      const res = await aha(`releases/${releaseId}/epics`, { method: 'POST', body: JSON.stringify({ epic: { name, description } }) });
+      return ok({ created: res.epic?.reference_num, id: res.epic?.id, name: res.epic?.name, by: agentId, autoMode: classification });
+    },
+  );
+
+  // ── CREATE REQUIREMENT (task) ──────────────────────────────────────────────
+  server.tool(
+    'aha:create-requirement',
+    'Create a requirement (task) under a feature (story). WorfGate: verified agentId + auto-mode (draft create is AUTO); else dry-run preview.',
+    {
+      agentId: z.string().describe('Crew member performing the write (e.g. yar, riker) — verified against the Aha! role matrix'),
+      featureRef: z.string().describe('Parent feature (story) reference, e.g. JONAH-1'),
+      name: z.string().describe('Requirement (task) name'),
+      description: z.string().optional(),
+      confirm: z.boolean().optional().describe('true to execute; omitted = dry-run after identity check'),
+    },
+    async ({ agentId, featureRef, name, description, confirm }) => {
+      const authz = authorizeAhaWrite(agentId, 'aha:create-requirement');
+      if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const { proceed, classification } = gateAhaWrite({ verb: 'create', resource: 'requirement', publishedState: 'draft', agentId }, confirm);
+      if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { featureRef, name, description }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('create-requirement', { agentId, featureRef, name, decision: classification.decision });
+      const res = await aha(`features/${featureRef}/requirements`, { method: 'POST', body: JSON.stringify({ requirement: { name, description } }) });
+      return ok({ created: res.requirement?.reference_num, id: res.requirement?.id, name: res.requirement?.name, by: agentId, autoMode: classification });
     },
   );
 

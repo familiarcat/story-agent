@@ -343,6 +343,36 @@ defineSkillTheory({
   how: { invocation: 'crew_analyze_image({ image, question?, extractIntent? })', annotations: { title: 'Crew Analyze Image', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'extractedText + vision model + the crew mission plan (image egresses to the vision provider; never logged).' },
 });
 
+defineSkillTheory({
+  tool: 'aha:create-release',
+  who: { owner: 'picard' },
+  what: { summary: 'Create a release (sprint) in an Aha product — the container features/epics need.', capabilities: ['gated release create (sprint)', 'optional start/release dates', 'unblocks the full Firm→Client→Project→Epic→Story→Task hierarchy'] },
+  when: { useWhen: ['Standing up the sprint timeline for a project', 'A product needs a release before features/epics can be created'], avoidWhen: ['A suitable release already exists'], preconditions: ['AHA credentials resolve', 'the product prefix exists'] },
+  where: { scope: ['aha', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Sprint=release is the top of the time axis; without a release create tool the crew could only make flat features (the Jonah limitation).', goalsServed: ['backlog structure', 'autonomy', 'traceability'] },
+  how: { invocation: 'aha:create-release({ agentId, productPrefix, name, startDate?, endDate?, confirm? })', annotations: { title: 'Aha Create Release', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, output: 'The created release (ref/id/name) or a dry-run preview; audited to RAG.' },
+});
+
+defineSkillTheory({
+  tool: 'aha:create-epic',
+  who: { owner: 'data' },
+  what: { summary: 'Create an epic in a release — the grouping layer for features/stories.', capabilities: ['gated epic create', 'epic belongs to a release (sprint)'] },
+  when: { useWhen: ['Grouping stories under a phase/epic within a sprint'], avoidWhen: ['The epic already exists'], preconditions: ['A target release id', 'AHA credentials resolve'] },
+  where: { scope: ['aha', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Epics give the backlog its structural spine (Epic→Story→Task); Data owns hierarchy consistency.', goalsServed: ['backlog structure', 'consistency'] },
+  how: { invocation: 'aha:create-epic({ agentId, releaseId, name, description?, confirm? })', annotations: { title: 'Aha Create Epic', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, output: 'The created epic (ref/id/name) or a dry-run preview; audited to RAG.' },
+});
+
+defineSkillTheory({
+  tool: 'aha:create-requirement',
+  who: { owner: 'yar' },
+  what: { summary: 'Create a requirement (task) under a feature (story) — the leaf of the hierarchy.', capabilities: ['gated requirement create', 'attaches acceptance/task detail to a story'] },
+  when: { useWhen: ['Breaking a story into concrete tasks/requirements'], avoidWhen: ['The story needs no sub-tasks'], preconditions: ['A parent feature reference', 'AHA credentials resolve'] },
+  where: { scope: ['aha', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Requirements are the executable leaves; Yar owns acceptance/requirements definition.', goalsServed: ['backlog structure', 'acceptance', 'traceability'] },
+  how: { invocation: 'aha:create-requirement({ agentId, featureRef, name, description?, confirm? })', annotations: { title: 'Aha Create Requirement', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, output: 'The created requirement (ref/id/name) or a dry-run preview; audited to RAG.' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
@@ -351,4 +381,5 @@ export const THEORIZED_TOOLS = [
   'crew_link_story_pr', 'crew_complete_story', 'worfgate_override_monitor',
   'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes', 'analyze_image',
   'run_shell', 'plan_then_execute', 'crew_analyze_image',
+  'aha:create-release', 'aha:create-epic', 'aha:create-requirement',
 ];
