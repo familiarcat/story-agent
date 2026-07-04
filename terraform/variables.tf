@@ -63,9 +63,21 @@ variable "runtime_secret_name" {
 }
 
 variable "acm_certificate_arn" {
-  description = "ACM cert for the HTTPS listener. If empty, only an HTTP:80 listener is created."
+  description = "Pre-existing ACM cert for the HTTPS listener. If empty AND domain_name is empty, only an HTTP:80 listener is created. Superseded by the cert Terraform provisions when domain_name is set."
   type        = string
   default     = ""
+}
+
+variable "domain_name" {
+  description = "Public subdomain to serve the app on (e.g. storyagent.pbradygeorgen.com). When set, Terraform provisions an ACM cert (DNS-validated in route53_zone_name), a Route53 A-ALIAS → the ALB, and switches the ALB to an HTTPS:443 listener with an HTTP:80→443 redirect. Empty = current HTTP:80 behavior."
+  type        = string
+  default     = ""
+}
+
+variable "route53_zone_name" {
+  description = "The Route53 public hosted zone that owns domain_name (e.g. pbradygeorgen.com). Only used when domain_name is set."
+  type        = string
+  default     = "pbradygeorgen.com"
 }
 
 variable "redis_transit_encryption" {

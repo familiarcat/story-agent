@@ -79,17 +79,34 @@ resource "aws_lb_target_group" "mcp_ws" {
 # as /mcp — so it reuses the existing mcp_http target group. No separate target group, container
 # port, or ECS load_balancer block → no slow ECS service replacement (crew deploy-optimization).
 
-# Listener — HTTPS if a cert is provided, else HTTP:80.
+# Primary listener — HTTPS:443 when a cert is available (var.domain_name provisioned OR a pre-existing
+# var.acm_certificate_arn), else HTTP:80. See locals in acm.tf.
 resource "aws_lb_listener" "main" {
   load_balancer_arn = aws_lb.main.arn
-  port              = var.acm_certificate_arn == "" ? 80 : 443
-  protocol          = var.acm_certificate_arn == "" ? "HTTP" : "HTTPS"
-  ssl_policy        = var.acm_certificate_arn == "" ? null : "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = var.acm_certificate_arn == "" ? null : var.acm_certificate_arn
+  port              = local.want_https ? 443 : 80
+  protocol          = local.want_https ? "HTTPS" : "HTTP"
+  ssl_policy        = local.want_https ? "ELBSecurityPolicy-TLS13-1-2-2021-06" : null
+  certificate_arn   = local.want_https ? local.effective_cert_arn : null
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.ui.arn
+  }
+}
+
+# When HTTPS is on, redirect all HTTP:80 traffic → HTTPS:443 (301) so the site is HTTPS-only.
+resource "aws_lb_listener" "http_redirect" {
+  count             = local.want_https ? 1 : 0
+  load_balancer_arn = aws_lb.main.arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 

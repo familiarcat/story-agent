@@ -3,9 +3,14 @@ output "alb_dns_name" {
   value       = aws_lb.main.dns_name
 }
 
+output "web_url" {
+  description = "Public web UI URL — the subdomain over HTTPS when domain_name is set, else the ALB over HTTP."
+  value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${aws_lb.main.dns_name}"
+}
+
 output "agent_endpoint_url" {
   description = "Set as VS Code setting storyAgent.chat.agentServiceUrl to use the deployed crew"
-  value       = "http://${aws_lb.main.dns_name}/agent"
+  value       = var.domain_name != "" ? "https://${var.domain_name}/agent" : "http://${aws_lb.main.dns_name}/agent"
 }
 
 output "ecs_cluster" {

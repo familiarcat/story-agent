@@ -107,7 +107,7 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   dynamic "ingress" {
-    for_each = var.acm_certificate_arn == "" ? [] : [1]
+    for_each = local.want_https ? [1] : []
     content {
       from_port   = 443
       to_port     = 443
