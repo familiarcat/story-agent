@@ -257,6 +257,110 @@ export function registerAhaTools(server: McpServer): void {
     },
   );
 
+  // ── UPDATE release / epic / requirement (mirror update-feature) ────────────
+  server.tool(
+    'aha:update-release',
+    'Update a release (sprint) by id — name, start/end dates. WorfGate: verified agentId; a date change is stakeholder-sensitive → CONFIRM, plain name edit → AUTO; else dry-run.',
+    {
+      agentId: z.string().describe('Crew member performing the write — verified against the Aha! role matrix'),
+      id: z.string().describe('Release (sprint) id to update'),
+      name: z.string().optional(),
+      startDate: z.string().optional().describe('Sprint start date YYYY-MM-DD'),
+      endDate: z.string().optional().describe('Sprint end / release date YYYY-MM-DD'),
+      confirm: z.boolean().optional(),
+    },
+    async ({ agentId, id, name, startDate, endDate, confirm }) => {
+      const authz = authorizeAhaWrite(agentId, 'aha:update-release');
+      if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const release: Record<string, unknown> = {};
+      if (name) release.name = name;
+      if (startDate) release.start_date = startDate;
+      if (endDate) release.release_date = endDate;
+      const { proceed, classification } = gateAhaWrite({ verb: 'update', resource: 'release', fieldsMutated: Object.keys(release), agentId }, confirm);
+      if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, id, wouldUpdate: release, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('update-release', { agentId, id, fields: Object.keys(release), decision: classification.decision });
+      const res = await aha(`releases/${id}`, { method: 'PUT', body: JSON.stringify({ release }) });
+      return ok({ updated: res.release?.reference_num, id: res.release?.id, name: res.release?.name, by: agentId, autoMode: classification });
+    },
+  );
+
+  server.tool(
+    'aha:update-epic',
+    'Update an epic by reference — name or description. WorfGate: verified agentId + auto-mode (plain field edit is AUTO); else dry-run.',
+    {
+      agentId: z.string().describe('Crew member performing the write — verified against the Aha! role matrix'),
+      reference: z.string().describe('Epic reference, e.g. JONAH-E-1'),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      confirm: z.boolean().optional(),
+    },
+    async ({ agentId, reference, name, description, confirm }) => {
+      const authz = authorizeAhaWrite(agentId, 'aha:update-epic');
+      if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const epic: Record<string, unknown> = {};
+      if (name) epic.name = name;
+      if (description) epic.description = description;
+      const { proceed, classification } = gateAhaWrite({ verb: 'update', resource: 'epic', fieldsMutated: Object.keys(epic), agentId }, confirm);
+      if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, reference, wouldUpdate: epic, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('update-epic', { agentId, reference, fields: Object.keys(epic), decision: classification.decision });
+      const res = await aha(`epics/${reference}`, { method: 'PUT', body: JSON.stringify({ epic }) });
+      return ok({ updated: res.epic?.reference_num, name: res.epic?.name, by: agentId, autoMode: classification });
+    },
+  );
+
+  server.tool(
+    'aha:update-requirement',
+    'Update a requirement (task) by reference — name or description. WorfGate: verified agentId + auto-mode (plain field edit is AUTO); else dry-run.',
+    {
+      agentId: z.string().describe('Crew member performing the write — verified against the Aha! role matrix'),
+      reference: z.string().describe('Requirement reference, e.g. JONAH-9-1'),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      confirm: z.boolean().optional(),
+    },
+    async ({ agentId, reference, name, description, confirm }) => {
+      const authz = authorizeAhaWrite(agentId, 'aha:update-requirement');
+      if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const requirement: Record<string, unknown> = {};
+      if (name) requirement.name = name;
+      if (description) requirement.description = description;
+      const { proceed, classification } = gateAhaWrite({ verb: 'update', resource: 'requirement', fieldsMutated: Object.keys(requirement), agentId }, confirm);
+      if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, reference, wouldUpdate: requirement, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      audit('update-requirement', { agentId, reference, fields: Object.keys(requirement), decision: classification.decision });
+      const res = await aha(`requirements/${reference}`, { method: 'PUT', body: JSON.stringify({ requirement }) });
+      return ok({ updated: res.requirement?.reference_num, name: res.requirement?.name, by: agentId, autoMode: classification });
+    },
+  );
+
+  // ── DELETE feature / epic / release / requirement ──────────────────────────
+  // Destructive: gateAhaWrite/classifyAhaAction BLOCKS verb:'delete' by design, so deletes are
+  // gated directly on an explicit confirm:true (identity-verified + audited; Aha has no undo).
+  const deleteTool = (name: string, kind: string, endpoint: (ref: string) => string) =>
+    server.tool(
+      name,
+      `Delete an Aha! ${kind} by reference. DESTRUCTIVE + irreversible (Aha has no undo): requires a verified agentId AND confirm:true; without confirm returns a dry-run preview.`,
+      {
+        agentId: z.string().describe('Crew member performing the delete — verified against the Aha! role matrix'),
+        reference: z.string().describe(`${kind} reference/id to delete`),
+        confirm: z.boolean().optional().describe('true to permanently delete; omitted = dry-run preview'),
+      },
+      async ({ agentId, reference, confirm }) => {
+        const authz = authorizeAhaWrite(agentId, name);
+        if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+        if (confirm !== true) return ok({ dryRun: true, agent: agentId, identity: authz.reason, wouldDelete: { kind, reference }, note: 'DESTRUCTIVE + irreversible — re-call with confirm:true to permanently delete.' });
+        audit(`delete-${kind}`, { agentId, reference });
+        await aha(endpoint(reference), { method: 'DELETE' });
+        return ok({ deleted: reference, kind, by: agentId });
+      },
+    );
+  deleteTool('aha:delete-feature', 'feature', (r) => `features/${r}`);
+  deleteTool('aha:delete-epic', 'epic', (r) => `epics/${r}`);
+  deleteTool('aha:delete-release', 'release', (r) => `releases/${r}`);
+  deleteTool('aha:delete-requirement', 'requirement', (r) => `requirements/${r}`);
+
   // ── CREW STATUS FEED → AHA STORY (auto-maintain the backlog from crew memory) ──
   server.tool(
     'crew_sync_to_aha',

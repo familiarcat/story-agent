@@ -373,6 +373,51 @@ defineSkillTheory({
   how: { invocation: 'aha:create-requirement({ agentId, featureRef, name, description?, confirm? })', annotations: { title: 'Aha Create Requirement', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }, output: 'The created requirement (ref/id/name) or a dry-run preview; audited to RAG.' },
 });
 
+// ── Aha CRUD completion: UPDATE + DELETE across the hierarchy ────────────────
+defineSkillTheory({
+  tool: 'aha:update-release',
+  who: { owner: 'picard' },
+  what: { summary: 'Update a release (sprint) — name or start/release dates.', capabilities: ['gated release edit', 'date change → CONFIRM, name → AUTO'] },
+  when: { useWhen: ['Renaming or re-dating a sprint'], avoidWhen: ['No change to apply'], preconditions: ['A release id', 'AHA credentials resolve'] },
+  where: { scope: ['aha', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Sprints shift; the timeline must be editable, with date changes escalated as stakeholder-visible.', goalsServed: ['backlog hygiene', 'traceability'] },
+  how: { invocation: 'aha:update-release({ agentId, id, name?, startDate?, endDate?, confirm? })', annotations: { title: 'Aha Update Release', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }, output: 'The updated release or a dry-run preview; audited.' },
+});
+defineSkillTheory({
+  tool: 'aha:update-epic',
+  who: { owner: 'data' },
+  what: { summary: 'Update an epic — name or description.', capabilities: ['gated epic edit (AUTO for plain fields)'] },
+  when: { useWhen: ['Refining an epic/phase title or scope note'], avoidWhen: ['No change to apply'], preconditions: ['An epic reference'] },
+  where: { scope: ['aha', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'The structural spine must stay consistent as understanding evolves; Data owns hierarchy consistency.', goalsServed: ['consistency', 'backlog hygiene'] },
+  how: { invocation: 'aha:update-epic({ agentId, reference, name?, description?, confirm? })', annotations: { title: 'Aha Update Epic', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }, output: 'The updated epic or a dry-run preview; audited.' },
+});
+defineSkillTheory({
+  tool: 'aha:update-requirement',
+  who: { owner: 'yar' },
+  what: { summary: 'Update a requirement (task) — name or description.', capabilities: ['gated requirement edit (AUTO for plain fields)'] },
+  when: { useWhen: ['Refining task/acceptance detail'], avoidWhen: ['No change to apply'], preconditions: ['A requirement reference'] },
+  where: { scope: ['aha', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+  why: { rationale: 'Acceptance detail is refined as work proceeds; Yar owns requirements definition.', goalsServed: ['acceptance', 'traceability'] },
+  how: { invocation: 'aha:update-requirement({ agentId, reference, name?, description?, confirm? })', annotations: { title: 'Aha Update Requirement', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }, output: 'The updated requirement or a dry-run preview; audited.' },
+});
+for (const [tool, kind, title] of [
+  ['aha:delete-feature', 'feature (story)', 'Aha Delete Feature'],
+  ['aha:delete-epic', 'epic', 'Aha Delete Epic'],
+  ['aha:delete-release', 'release (sprint)', 'Aha Delete Release'],
+  ['aha:delete-requirement', 'requirement (task)', 'Aha Delete Requirement'],
+] as const) {
+  defineSkillTheory({
+    tool,
+    who: { owner: 'worf' },
+    what: { summary: `Delete an Aha! ${kind} — destructive + irreversible.`, capabilities: ['identity-verified delete', 'confirm:true required', 'dry-run preview by default'] },
+    when: { useWhen: ['Removing an erroneous or superseded backlog item'], avoidWhen: ['The item may still be referenced', 'Unsure — Aha has no undo'], preconditions: ['A verified agentId', 'confirm:true for the live delete'] },
+    where: { scope: ['aha', 'crew'], surfaces: ['api', 'mcp'], sideEffects: 'external' },
+    why: { rationale: 'Completing CRUD needs a delete path, but destruction stays gated on explicit confirmation + audit since Aha has no undo; Worf owns the destructive gate.', goalsServed: ['backlog hygiene', 'security', 'accountability'] },
+    how: { invocation: `${tool}({ agentId, reference, confirm? })`, annotations: { title, readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }, output: 'Deletion result (dry-run preview unless confirm:true); audited.' },
+  });
+}
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
@@ -382,4 +427,6 @@ export const THEORIZED_TOOLS = [
   'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes', 'analyze_image',
   'run_shell', 'plan_then_execute', 'crew_analyze_image',
   'aha:create-release', 'aha:create-epic', 'aha:create-requirement',
+  'aha:update-release', 'aha:update-epic', 'aha:update-requirement',
+  'aha:delete-feature', 'aha:delete-epic', 'aha:delete-release', 'aha:delete-requirement',
 ];
