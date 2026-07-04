@@ -16,6 +16,13 @@ Chain of command (RAG `command-protocol-admiral-commodore-crew`):
 
 Flow: `prompt → recall RAG → crew deliberates → Commodore interprets → Admiral approves → crew/Commodore executes → store RAG`.
 
+## Naming conventions
+
+All crew- and Commodore-authored code follows the ratified standard in [docs/conventions.md](docs/conventions.md):
+camelCase functions/vars, PascalCase types, UPPER_SNAKE_CASE constants, kebab-case files, `<name>.test.ts` tests;
+new MCP tools are `snake_case` with a reserved prefix (`crew_*` / `aha_*` / `worfgate_*`) + a SkillTheory; SQL is
+snake_case ↔ TS DTOs camelCase at the boundary; identifiers never embed a secret value or a model name.
+
 ## The one rule: keep the premium lane thin
 
 Two **control lanes**, and the whole point is to spend as little as possible in the expensive one:
