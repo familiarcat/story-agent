@@ -29,7 +29,7 @@ export interface LocalGateResult {
 }
 
 const GREEN_TOOLS = new Set(['read_file', 'list_dir', 'search_code', 'git_status', 'git_diff', 'rag_recall', 'crew_deliberate']);
-const YELLOW_TOOLS = new Set(['write_file', 'edit_file', 'apply_patch', 'run_shell']);
+const YELLOW_TOOLS = new Set(['write_file', 'edit_file', 'apply_patch', 'run_shell', 'delete_file']);
 
 // Shell patterns that are irreversibly destructive at scale → red unless remediated away.
 const RED_SHELL = [

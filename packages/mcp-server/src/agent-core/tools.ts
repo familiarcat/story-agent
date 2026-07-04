@@ -12,6 +12,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { deleteFileTool } from './delete-file.js';
 
 const pexec = promisify(execFile);
 
@@ -224,7 +225,7 @@ const crew_deliberate: AgentTool = {
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
-  read_file, write_file, edit_file, apply_patch, list_dir, search_code, run_shell, git_status, git_diff, rag_recall, crew_deliberate,
+  read_file, write_file, edit_file, apply_patch, deleteFileTool, list_dir, search_code, run_shell, git_status, git_diff, rag_recall, crew_deliberate,
 ];
 
 export const TOOLS_BY_NAME: Record<string, AgentTool> = Object.fromEntries(AGENT_TOOLS.map(t => [t.name, t]));
