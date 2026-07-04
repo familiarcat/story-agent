@@ -4,6 +4,18 @@ This repo is driven by an 11-member OpenRouter "crew" (Star Trek TNG personas). 
 here — Claude Code, Story Agent, Continue, Copilot, Cursor — follows the same contract. The full
 project instructions live in [CLAUDE.md](CLAUDE.md); this file is the tool-agnostic summary.
 
+## Command protocol: Admiral → Commodore → Crew
+
+Chain of command (RAG `command-protocol-admiral-commodore-crew`):
+- **Admiral** = the human operator. Final authority; approves consequential / outward-facing / billable actions.
+- **Commodore** = the orchestrator agent (Claude Code / premium model). Interprets the crew's counsel, acts
+  autonomously on cheap + reversible work (recon, additive builds, verifies), and **escalates consequential,
+  outward-facing, or billable actions to the Admiral for approval** before executing. Keeps the premium lane thin.
+- **Crew** = the 11 OpenRouter officers. Hypothesize (`run_crew_mission_pipeline` / Observation Lounge) and
+  execute (agent-core loop); Picard synthesizes; each officer owns their domain.
+
+Flow: `prompt → recall RAG → crew deliberates → Commodore interprets → Admiral approves → crew/Commodore executes → store RAG`.
+
 ## The one rule: keep the premium lane thin
 
 Two **control lanes**, and the whole point is to spend as little as possible in the expensive one:
