@@ -333,6 +333,16 @@ defineSkillTheory({
   how: { invocation: 'plan_then_execute({ task, maxIterations?, clientId? })', annotations: { title: 'Plan Then Execute', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }, output: 'the crew plan + the AgentRunResult (iterations, tool calls, cost, escalation).' },
 });
 
+defineSkillTheory({
+  tool: 'crew_analyze_image',
+  who: { owner: 'troi' },
+  what: { summary: "The crew assesses an image's text content together (vision extract → full-crew deliberation).", capabilities: ['OCR/describe an image', 'Observation Lounge analysis of the extracted content', 'stored to RAG'] },
+  when: { useWhen: ['A screenshot/diagram/document image should be read AND deliberated by the crew', 'Turning visual content into a crew-owned assessment'], avoidWhen: ['The image holds sa_/client/secret or personal media not cleared for a 3rd-party vision provider'] },
+  where: { scope: ['llm', 'crew', 'rag'], surfaces: ['mcp', 'api'], sideEffects: 'external' },
+  why: { rationale: 'Composes multimodal vision with crew deliberation so the crew can reason over visual content, not just text.', goalsServed: ['multimodal capability', 'collaborative analysis'] },
+  how: { invocation: 'crew_analyze_image({ image, question?, extractIntent? })', annotations: { title: 'Crew Analyze Image', readOnlyHint: false, idempotentHint: false, openWorldHint: true }, output: 'extractedText + vision model + the crew mission plan (image egresses to the vision provider; never logged).' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
@@ -340,5 +350,5 @@ export const THEORIZED_TOOLS = [
   'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story', 'crew_start_story',
   'crew_link_story_pr', 'crew_complete_story', 'worfgate_override_monitor',
   'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes', 'analyze_image',
-  'run_shell', 'plan_then_execute',
+  'run_shell', 'plan_then_execute', 'crew_analyze_image',
 ];

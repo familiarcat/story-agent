@@ -34,6 +34,7 @@ import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
 import { registerAnalyzeImageTool } from './tools/analyze-image.js';
 import { registerRunShellTool, registerPlanThenExecuteTool } from './tools/run-shell.js';
+import { registerCrewAnalyzeImageTool } from './tools/crew-analyze-image.js';
 import { registerSkillTools } from './tools/skill-tools.js';
 import { applySkillAnnotations } from './lib/apply-skill-annotations.js';
 import { startAgentHttpServer, handleAgentRequest } from './agent-core/http-server.js';
@@ -65,6 +66,7 @@ registerWorfGateTools(server);  // 🛡️ Worf's credential broker (presence/au
 registerAnalyzeImageTool(server);  // 🖼️ multimodal vision — analyze_image (Quark-selected vision model)
 registerRunShellTool(server);  // 🖥️ governed shell exec (WorfGate green/yellow/red)
 registerPlanThenExecuteTool(server);  // 🔁 autonomous loop: crew plan → agent-core execute
+registerCrewAnalyzeImageTool(server);  // 🖼️🖖 crew assesses an image's text content together (vision → deliberation)
 registerSkillTools(server);  // 📚 5W1H skill-theory introspection (describe_skill / coverage)
 
 async function main() {
@@ -146,6 +148,7 @@ async function main() {
           registerAnalyzeImageTool(perRequestServer);  // 🖼️ multimodal vision over HTTP
           registerRunShellTool(perRequestServer);  // 🖥️ governed shell exec over HTTP
           registerPlanThenExecuteTool(perRequestServer);  // 🔁 autonomous loop over HTTP
+          registerCrewAnalyzeImageTool(perRequestServer);  // 🖼️🖖 crew image-content analysis over HTTP
           registerSkillTools(perRequestServer);  // 📚 skill-theory introspection over HTTP
 
           await perRequestServer.connect(httpTransport);
