@@ -1,0 +1,24 @@
+import { describe, it, expect } from 'vitest';
+import { buildMcpManifest } from './mcp-manifest.js';
+
+describe('buildMcpManifest', () => {
+  it('endpoints.mcp ends with /mcp', () => {
+    expect(buildMcpManifest('https://example.com').endpoints.mcp).toMatch(/\/mcp$/);
+  });
+
+  it('entryPoint is plan_then_execute', () => {
+    expect(buildMcpManifest('https://example.com').entryPoint).toBe('plan_then_execute');
+  });
+
+  it('crew is 11', () => {
+    expect(buildMcpManifest('https://example.com').crew).toBe(11);
+  });
+
+  it('trailing slash in baseUrl does not produce a double slash', () => {
+    expect(buildMcpManifest('https://example.com/').endpoints.mcp).toBe('https://example.com/mcp');
+  });
+
+  it('empty baseUrl yields relative /mcp', () => {
+    expect(buildMcpManifest('').endpoints.mcp).toBe('/mcp');
+  });
+});

@@ -38,6 +38,7 @@ import { registerCrewAnalyzeImageTool } from './tools/crew-analyze-image.js';
 import { registerSkillTools } from './tools/skill-tools.js';
 import { applySkillAnnotations } from './lib/apply-skill-annotations.js';
 import { startAgentHttpServer, handleAgentRequest } from './agent-core/http-server.js';
+import { buildMcpManifest } from './agent-core/mcp-manifest.js';
 import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
 import { initWorfGateCredentialProviders } from '@story-agent/shared/worfgate-credential-providers';
 import { createHttpAuthMiddleware, reportMissingCredentialsAtStartup } from './lib/http-auth-middleware.js';
@@ -110,6 +111,14 @@ async function main() {
       // crew is reachable via the existing target group — no extra container port / ECS service
       // replacement (crew deploy-optimization finding). Falls through to /mcp if not an agent route.
       if (await handleAgentRequest(req, res)) return;
+
+      // Discovery manifest (public, no secrets) — any MCP client / VS Code extension self-configures
+      // to reach the crew + Commodore from this one well-known endpoint (Commodore fabric, phase 2).
+      if (req.url === '/.well-known/mcp.json') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(buildMcpManifest(process.env.STORY_AGENT_PUBLIC_URL || ''), null, 2));
+        return;
+      }
 
       // Only expose the /mcp endpoint
       if (req.url !== '/mcp' && req.url !== '/mcp/') {
