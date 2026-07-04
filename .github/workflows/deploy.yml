@@ -183,26 +183,36 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true' }}
         run: |
           set -euo pipefail
-          echo "Waiting for ECS services to stabilize (running=desired, rollout COMPLETED)…"
-          if ! aws ecs wait services-stable --cluster story-agent \
-                 --services story-agent-mcp story-agent-ui --region "$AWS_REGION"; then
-            echo "::error::ECS services did not stabilize — rolled tasks are unhealthy. Deploy FAILED."
-            exit 1
-          fi
-          echo "::notice::ECS services stable (tasks healthy)."
+          echo "Waiting for ECS services to converge (rollout COMPLETED, running=desired)…"
+          # Drain-tolerant bounded poll (crew remediation, RAG 186). Replaces `aws ecs wait
+          # services-stable`, which fixed-times-out at ~10m while OLD tasks are still draining even
+          # though the NEW tasks are healthy — causing a false-red deploy. We wait for the PRIMARY
+          # deployment to report COMPLETED with running=desired, on a 20m budget.
+          deadline=$(( $(date +%s) + 1200 ))
+          while :; do
+            stable=1
+            for svc in story-agent-mcp story-agent-ui; do
+              read -r rollout running desired <<< "$(aws ecs describe-services \
+                --cluster story-agent --services "$svc" --region "$AWS_REGION" \
+                --query 'services[0].[deployments[?status==`PRIMARY`].rolloutState | [0], runningCount, desiredCount]' \
+                --output text)"
+              echo "  $svc → rollout=$rollout running=$running desired=$desired"
+              if [ "$rollout" != "COMPLETED" ] || [ "$running" != "$desired" ]; then stable=0; fi
+            done
+            if [ "$stable" = "1" ]; then echo "::notice::ECS services converged (rollout COMPLETED, running=desired)."; break; fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::ECS services did not converge within 20m — rolled tasks are unhealthy. Deploy FAILED."; exit 1
+            fi
+            sleep 15
+          done
+          # Liveness on a REAL route: the UI target group health-checks /dashboard (not /rag/health,
+          # which 404s). Non-fatal — convergence above is the gate. -L follows the HTTP:80→HTTPS:443
+          # redirect; -k tolerates the ALB-DNS cert mismatch (cert is issued for the subdomain).
           ALB=$(aws elbv2 describe-load-balancers --names story-agent-alb --region "$AWS_REGION" \
                   --query 'LoadBalancers[0].DNSName' --output text 2>/dev/null || echo "")
-          EXPECT=$(echo "${{ github.sha }}" | cut -c1-7)
           if [ -n "$ALB" ]; then
-            for i in $(seq 1 8); do
-              LIVE=$(curl -s --max-time 8 "http://$ALB/rag/health" | sed -n 's/.*"gitSha":"\([^"]*\)".*/\1/p' || true)
-              echo "live /rag/health gitSha=$LIVE expected=$EXPECT (try $i)"
-              if [ "$LIVE" = "$EXPECT" ]; then echo "::notice::Deploy verified live — /rag/health reports $LIVE"; exit 0; fi
-              sleep 12
-            done
-            echo "::warning::Could not confirm gitSha via ALB (may be internal/HTTPS-only); ECS-stable gate already passed."
-          else
-            echo "::warning::ALB DNS not resolved for live gitSha check; ECS-stable gate already passed."
+            CODE=$(curl -ksL -o /dev/null -w '%{http_code}' --max-time 12 "http://$ALB/dashboard" || echo "000")
+            if [ "$CODE" = "200" ]; then echo "::notice::Live check OK — UI /dashboard returned 200."; else echo "::warning::UI /dashboard returned $CODE (convergence gate already passed)."; fi
           fi
 
       # Standing guarantee for the live approval channel: assert the ElastiCache cluster still has
