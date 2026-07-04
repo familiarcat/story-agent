@@ -110,6 +110,13 @@ data "aws_iam_policy_document" "github_deploy" {
     resources = ["*"]
   }
   statement {
+    sid       = "Acm"
+    # Public ACM cert for the app subdomain (terraform/acm.tf). DNS validation uses route53:* above.
+    # RequestCertificate requires resource "*" (the cert ARN is unknown until the request succeeds).
+    actions   = ["acm:RequestCertificate", "acm:DescribeCertificate", "acm:ListCertificates", "acm:DeleteCertificate", "acm:AddTagsToCertificate", "acm:RemoveTagsFromCertificate", "acm:ListTagsForCertificate"]
+    resources = ["*"]
+  }
+  statement {
     sid       = "ReadSecrets"
     actions   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret", "secretsmanager:GetResourcePolicy"]
     resources = [local.secret_arn_pattern]

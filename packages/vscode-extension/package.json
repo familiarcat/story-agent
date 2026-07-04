@@ -214,7 +214,7 @@
         "storyAgent.dashboardUrl": {
           "type": "string",
           "default": "http://localhost:3000",
-          "description": "Base URL of the Story Agent Next.js dashboard."
+          "description": "Base URL of the Story Agent Next.js dashboard. Deployed: https://storyagent.pbradygeorgen.com"
         },
         "storyAgent.agileProvider": {
           "type": "string",
@@ -304,7 +304,7 @@
         "storyAgent.chat.ragServiceUrl": {
           "type": "string",
           "default": "http://localhost:3102",
-          "description": "URL of the Story Agent RAG read service (scripts/start-rag-service.ts). Provides crew cloud memory to the assistant without the extension holding the service_role key."
+          "description": "URL of the Story Agent RAG read service (scripts/start-rag-service.ts). Provides crew cloud memory to the assistant without the extension holding the service_role key. Deployed crew: https://storyagent.pbradygeorgen.com (the ALB routes /rag/* to the MCP service)."
         },
         "storyAgent.chat.ragServiceToken": {
           "type": "string",
@@ -314,7 +314,7 @@
         "storyAgent.chat.agentServiceUrl": {
           "type": "string",
           "default": "http://localhost:3103",
-          "description": "URL of the agent-core autonomous loop endpoint (MCP server started with STORY_AGENT_AGENT_PORT). Used by the /agent command. Falls back to the STORY_AGENT_AGENT_URL env var."
+          "description": "URL of the agent-core autonomous loop endpoint (MCP server started with STORY_AGENT_AGENT_PORT). Used by the /agent command. Falls back to the STORY_AGENT_AGENT_URL env var. Deployed crew: https://storyagent.pbradygeorgen.com/agent"
         },
         "storyAgent.chat.agentServiceToken": {
           "type": "string",

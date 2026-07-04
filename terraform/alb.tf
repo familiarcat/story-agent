@@ -95,11 +95,14 @@ resource "aws_lb_listener" "main" {
 }
 
 # When HTTPS is on, redirect all HTTP:80 traffic → HTTPS:443 (301) so the site is HTTPS-only.
+# depends_on: the main listener must move 80→443 FIRST (freeing port 80) before this :80 listener is
+# created — otherwise two listeners momentarily claim :80 and the ALB rejects with DuplicateListener.
 resource "aws_lb_listener" "http_redirect" {
   count             = local.want_https ? 1 : 0
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
+  depends_on        = [aws_lb_listener.main]
   default_action {
     type = "redirect"
     redirect {
