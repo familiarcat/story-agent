@@ -74,6 +74,25 @@ threshold (reuse the PROD-13 cost-observatory signal already in the loop).
 Execution split (per [[execution-boundary-crew-plans-cc-executes]]): Story Agent builds the additive modules
 (memory-linker, manifest handler); Claude Code does control-flow wiring (plan-then-execute.ts, index.ts routes).
 
+## Implementation log — refinements from the build
+
+**Phase ① SHIPPED** (linked RAG record). Refinements discovered while building:
+- Module: [unified-run.ts](../../packages/mcp-server/src/agent-core/unified-run.ts) — `buildUnifiedRunRecord` (pure),
+  `storeUnifiedRun`, `recallUnifiedRuns`. Wired into [plan-then-execute.ts](../../packages/mcp-server/src/agent-core/plan-then-execute.ts):
+  **recall-before** (prior `unified-run` summaries prepended to the mission input so the crew builds on past runs)
+  + **store-after** (the linked `{plan → execution → outcome}` record).
+- **Storage vehicle refinement:** RAG's `storeObservationMemory` requires an `ObservationDebateResult`, so the
+  record is wrapped in a one-round transcript (speaker `commodore`, the record JSON in `statement`, a human summary
+  in `consensusSummary`) tagged `['unified-run', clientId]`. `recallUnifiedRuns` filters by the `unified-run` tag and
+  returns the `consensusSummary` lines. No schema/table change needed — it rides the existing observation-memory store.
+- **missionId** scheme: `ptx-<ISO timestamp>`. `totalCostUSD` = plan + run; `finalText` truncated to 2000 chars.
+- **Authorship note:** the Story Agent loop *stalled cold* on this one (0 tool calls) — a reminder the boundary is
+  real; the Commodore authored phase ① directly. Additive modules the crew builds; this one it didn't.
+- **Pre-existing failing test flagged:** `approval-registry.test.ts > in-process fallback > resolveApproval delivers…`
+  fails at baseline (unrelated to this work) — add to the deployment/test remediation ([[deployment-remediation]] 186).
+
+Phases ②–⑤ (discovery manifest, per-client identity, concurrency registry, health-gate fix) remain — additive-first, on Admiral approval.
+
 ## Not doing (rejected as over-engineering for our stack)
 microVM/Nomad session sandboxing, JWT+Redis short-token revocation, dedicated queue lib, a billing UI, gRPC.
 Revisit only if real multi-tenant load demands it — Quark: don't pay for headroom we don't have.

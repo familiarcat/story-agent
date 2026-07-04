@@ -9,19 +9,30 @@
  */
 import { runMissionPipeline } from '../lib/crew-mission-pipeline.js';
 import { runAgentLoop, type AgentRunResult } from './loop.js';
+import { buildUnifiedRunRecord, storeUnifiedRun, recallUnifiedRuns, type UnifiedRunRecord } from './unified-run.js';
 
 export interface PlanThenExecuteResult {
   task: string;
   plan: { missionPlan: string; costUSD: number; topModel: string };
   run: AgentRunResult;
+  /** The linked {plan → execution → outcome} record stored to shared RAG (Commodore fabric, phase 1). */
+  unifiedRun: UnifiedRunRecord;
+  /** Short summaries of prior related runs recalled before planning (connective tissue). */
+  priorRuns: string[];
 }
 
 export async function planThenExecute(
   task: string,
   opts: { workspace?: string; clientId?: string | null; maxIterations?: number; tier?: number } = {},
 ): Promise<PlanThenExecuteResult> {
-  // Step 1 — crew deliberates a plan (frugal by default).
-  const mission = await runMissionPipeline(task);
+  // Step 0 — RECALL prior unified runs (connective tissue: build on past work, don't repeat it).
+  const priorRuns = await recallUnifiedRuns(task, opts.clientId ?? null, 5);
+  const priorContext = priorRuns.length
+    ? `PRIOR RELATED RUNS (from crew RAG — build on these, avoid repeating):\n${priorRuns.map(p => `- ${p}`).join('\n')}\n\n`
+    : '';
+
+  // Step 1 — crew deliberates a plan (frugal by default), informed by prior runs.
+  const mission = await runMissionPipeline(`${priorContext}TASK: ${task}`);
 
   // Step 2 — inject the plan as context by prepending it to the agent input.
   const input = [
@@ -42,9 +53,23 @@ export async function planThenExecute(
     maxIterations: opts.maxIterations ?? 20,
   });
 
+  // Step 4 — STORE the linked {plan → execution → outcome} record to shared RAG (the unification).
+  const timestamp = new Date().toISOString();
+  const unifiedRun = buildUnifiedRunRecord({
+    missionId: `ptx-${timestamp}`,
+    clientId: opts.clientId ?? null,
+    task,
+    plan: { missionPlan: mission.missionPlan, topModel: mission.topModel, costUSD: mission.efficiency.totalCostUSD },
+    run,
+    timestamp,
+  });
+  await storeUnifiedRun(unifiedRun);
+
   return {
     task,
     plan: { missionPlan: mission.missionPlan, costUSD: mission.efficiency.totalCostUSD, topModel: mission.topModel },
     run,
+    unifiedRun,
+    priorRuns,
   };
 }
