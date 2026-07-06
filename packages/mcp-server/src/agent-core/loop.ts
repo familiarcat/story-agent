@@ -12,7 +12,7 @@
  */
 import OpenAI from 'openai';
 import { randomUUID } from 'node:crypto';
-import { quarkSelectModel, MODEL_POOL } from '../lib/crew-team-assembly.js';
+import { quarkSelectModel, quarkCheapestAnthropic, MODEL_POOL } from '../lib/crew-team-assembly.js';
 import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
 import { gateLocalOp, type WorfTier } from './worfgate-local.js';
 import { EditSession, MUTATING_TOOLS, verifyTouched } from './edit-session.js';
@@ -470,9 +470,9 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     const escTier = nextEscalationTier(currentTier, consecutiveFailures);
     if (escTier !== null) {
       currentTier = escTier;
-      model = quarkSelectModel(currentTier).id;
+      model = quarkCheapestAnthropic().id;
       consecutiveFailures = 0;
-      emit({ type: 'escalation', text: `repeated failures — escalating to tier ${currentTier} (${model})` });
+      emit({ type: 'escalation', text: `repeated failures — escalating to cheapest Anthropic (${model})` });
     }
 
     if (result.totalTokens >= tokenBudget) {

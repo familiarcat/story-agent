@@ -45,6 +45,12 @@ export function quarkSelectModel(capabilityTier: number): PoolModel {
   return eligible[0] ?? MODEL_POOL.slice().sort((a, b) => b.tier - a.tier)[0];
 }
 
+/** QUARK: the cheapest Anthropic model in the pool. Used as the escalation target so that when the
+ *  loop must reach for Anthropic it picks the LEAST-cost Anthropic (haiku), never the priciest by default. */
+export function quarkCheapestAnthropic(): PoolModel {
+  return MODEL_POOL.filter(m => m.provider === 'Anthropic').sort((a, b) => blended(a) - blended(b))[0];
+}
+
 /** QUARK (vision): the vision model slug for a complexity — simple→gemini-flash, moderate→gpt-4o-mini,
  *  complex→gpt-4o (Anthropic thin, explicit only). Delegates to the shared routing (single source). */
 export function quarkSelectVisionModel(complexity: VisionComplexity, opts?: { anthropic?: boolean }): string {
