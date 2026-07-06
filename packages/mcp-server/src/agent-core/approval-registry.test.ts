@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { awaitApproval, resolveApproval } from './approval-registry';
+import { describe, it, expect, vi } from 'vitest';
+import { awaitApproval, resolveApproval } from './approval-registry.js';
+
+vi.mock('@story-agent/shared/db', () => ({ getRedis: () => Promise.resolve(null) }));
 
 /**
  * In-process fallback (no REDIS_URL): awaitApproval registers a waiter and resolveApproval
@@ -12,7 +14,7 @@ describe('approval-registry in-process fallback', () => {
     const id = 'approve-id';
     const decision = awaitApproval(id, 1000);
     // Let awaitApproval register its waiter (it awaits getRedis() first) before resolving.
-    await Promise.resolve();
+    await new Promise(r => setTimeout(r, 0));
     const reached = await resolveApproval(id, 'approve');
     expect(reached).toBe(true);
     await expect(decision).resolves.toBe('approve');
