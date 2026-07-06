@@ -26,6 +26,7 @@ const REPO = process.env.GITHUB_REPO || 'familiarcat/story-agent';
 const args = process.argv.slice(2);
 const APPLY = args.includes('--apply');
 const SKIP_SECRETS = args.includes('--skip-secrets');
+const FOLLOW = APPLY && !args.includes('--no-follow');
 
 const c = { dim: '\x1b[2m', red: '\x1b[31m', grn: '\x1b[32m', yel: '\x1b[33m', cyn: '\x1b[36m', rst: '\x1b[0m', bold: '\x1b[1m' };
 const h = (n: number, t: string) => console.log(`\n${c.bold}${c.cyn}━━ Phase ${n}: ${t}${c.rst}`);
@@ -87,7 +88,24 @@ if (!APPLY) {
 } else {
   warn('Dispatching the digest-pinned CI deploy (deploy.yml, apply=true) — this provisions billable AWS resources.');
   if (run('gh', ['workflow', 'run', 'deploy.yml', '--repo', REPO, '-f', 'apply=true'], { allowFail: true })) {
-    ok('Dispatched. Watch: gh run watch --repo ' + REPO);
+    ok('Dispatched.');
+    if (FOLLOW) {
+      info('Following the deploy — live step status (the run continues even if you detach):');
+      let runId = '';
+      for (let i = 0; i < 12 && !runId; i++) {
+        spawnSync('sleep', ['3']);
+        runId = capture('gh', ['run', 'list', '--repo', REPO, '--workflow', 'deploy.yml', '--event', 'workflow_dispatch', '--limit', '1', '--json', 'databaseId', '-q', '.[0].databaseId']);
+      }
+      if (runId) {
+        info(`Run ${runId} — streaming steps:`);
+        run('gh', ['run', 'watch', runId, '--repo', REPO, '--exit-status', '--interval', '10'], { allowFail: true });
+        run('gh', ['run', 'view', runId, '--repo', REPO], { allowFail: true });
+      } else {
+        warn('Could not resolve the run id; watch manually: gh run watch --repo ' + REPO);
+      }
+    } else {
+      info('Watch: gh run watch --repo ' + REPO);
+    }
   } else {
     warn('Dispatch failed — ensure `gh auth status` is healthy and deploy.yml exists on the default branch.');
   }
