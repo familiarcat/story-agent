@@ -10,6 +10,9 @@
 import { runMissionPipeline } from '../lib/crew-mission-pipeline.js';
 import { runAgentLoop, type AgentRunResult } from './loop.js';
 import { buildUnifiedRunRecord, storeUnifiedRun, recallUnifiedRuns, type UnifiedRunRecord } from './unified-run.js';
+import { RunRegistry } from './run-registry.js';
+
+
 
 export interface PlanThenExecuteResult {
   task: string;
@@ -25,6 +28,12 @@ export async function planThenExecute(
   task: string,
   opts: { workspace?: string; clientId?: string | null; maxIterations?: number; tier?: number } = {},
 ): Promise<PlanThenExecuteResult> {
+  const startedAt = Date.now();
+  const missionId = `ptx-${new Date(startedAt).toISOString()}`;
+  RunRegistry.register(missionId, opts.clientId ?? 'anonymous', startedAt);
+
+  try {
+
   // Step 0 — RECALL prior unified runs (connective tissue: build on past work, don't repeat it).
   const priorRuns = await recallUnifiedRuns(task, opts.clientId ?? null, 5);
   const priorContext = priorRuns.length
@@ -54,9 +63,9 @@ export async function planThenExecute(
   });
 
   // Step 4 — STORE the linked {plan → execution → outcome} record to shared RAG (the unification).
-  const timestamp = new Date().toISOString();
+  const timestamp = new Date(startedAt).toISOString();
   const unifiedRun = buildUnifiedRunRecord({
-    missionId: `ptx-${timestamp}`,
+    missionId,
     clientId: opts.clientId ?? null,
     task,
     plan: { missionPlan: mission.missionPlan, topModel: mission.topModel, costUSD: mission.efficiency.totalCostUSD },
@@ -72,4 +81,7 @@ export async function planThenExecute(
     unifiedRun,
     priorRuns,
   };
+} finally {
+  RunRegistry.complete(missionId);
+}
 }
