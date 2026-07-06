@@ -12,6 +12,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { guardListen } from '../lib/port-guard.js';
 import { handleChatRequest } from './chat.js';
 import { recordCost, costSummary } from './cost-ledger.js';
+import { resolveClientId } from './client-identity.js';
 import { handleAhaRequest } from './aha-http.js';
 import { runAgentLoop } from './loop.js';
 import { buildBridges } from './bridges.js';
@@ -196,7 +197,7 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
-    const clientId = body.clientId ?? null;
+    const clientId = body.clientId ?? resolveClientId(req.headers as Record<string, string | string[] | undefined>);
     try {
       const result = await runAgentLoop(input, {
         workspace: body.workspace,

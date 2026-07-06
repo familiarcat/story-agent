@@ -42,6 +42,8 @@ export interface CrewRunEntry {
   members?: number;
   label?: string;
   ts?: string;
+  /** Optional identifier for client attribution (added vX.Y.Z) */
+  clientId?: string;
 }
 
 export type LedgerEntry = DecisionEntry | CrewRunEntry;

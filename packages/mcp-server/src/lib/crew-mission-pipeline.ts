@@ -68,7 +68,7 @@ export interface MissionPipelineResult {
   topModel: string;
 }
 
-export async function runMissionPipeline(nlInput: string): Promise<MissionPipelineResult> {
+export async function runMissionPipeline(nlInput: string, clientId?: string | null): Promise<MissionPipelineResult> {
   if (!OR_KEY) throw new Error('CREW_LLM_APPROVED_KEY not set');
   const ledger: CallResult[] = [];
 
@@ -115,7 +115,7 @@ export async function runMissionPipeline(nlInput: string): Promise<MissionPipeli
   // control-lane reporter shows real crew spend (not just the hook's delegation intent). Best-effort.
   try {
     recordCrewRun(process.env.CLAUDE_PROJECT_DIR || process.cwd(), {
-      costUSD: finalTotalUSD, members: plan.team.length, label: 'run_crew_mission_pipeline',
+      costUSD: finalTotalUSD, members: plan.team.length, label: 'run_crew_mission_pipeline', ...(clientId ? { clientId } : {}),
     });
   } catch { /* never block a mission on telemetry */ }
 
