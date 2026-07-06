@@ -41,7 +41,7 @@ export async function planThenExecute(
     : '';
 
   // Step 1 — crew deliberates a plan (frugal by default), informed by prior runs.
-  const mission = await runMissionPipeline(`${priorContext}TASK: ${task}`);
+  const mission = await runMissionPipeline(`${priorContext}TASK: ${task}`, opts.clientId ?? null);
 
   // Step 2 — inject the plan as context by prepending it to the agent input.
   const input = [
