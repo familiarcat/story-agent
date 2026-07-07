@@ -10,10 +10,19 @@
  *        npx tsx scripts/worfgate-terraform.ts init -upgrade
  */
 import 'dotenv/config';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { resolveWorfGateCredentialAsync } from '../packages/shared/src/worfgate-credentials.js';
 
 const AWS_CREDS = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'AWS_SESSION_TOKEN'] as const;
+
+function runTerraformInit(dir: string, env: Record<string, string>) {
+  console.error(`🧱 Terraform init in ${dir}`);
+  const init = spawnSync('terraform', [`-chdir=${dir}`, 'init', '-input=false'], { stdio: 'inherit', env });
+  if (init.status !== 0) {
+    console.error(`❌ Terraform init failed with exit code ${init.status ?? 1}`);
+    process.exit(init.status ?? 1);
+  }
+}
 
 async function main() {
   let args = process.argv.slice(2);
@@ -38,6 +47,10 @@ async function main() {
 
   // Don't let an ambient AWS_PROFILE override the brokered static keys.
   delete env.AWS_PROFILE;
+
+  if (args[0] && ['plan', 'apply', 'validate'].includes(args[0])) {
+    runTerraformInit(dir, env);
+  }
 
   const tf = spawn('terraform', [`-chdir=${dir}`, ...args], { stdio: 'inherit', env });
   tf.on('close', (code) => process.exit(code ?? 1));

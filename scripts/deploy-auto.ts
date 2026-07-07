@@ -75,8 +75,10 @@ if (SKIP_SECRETS) {
 }
 
 // ── Phase 3: terraform plan (non-billable preview) ─────────────────────────
-h(3, 'Terraform plan — preview (non-billable, WorfGate-brokered)');
-run('npx', ['tsx', 'scripts/worfgate-terraform.ts', 'plan'], { allowFail: true });
+h(3, 'Terraform plan — preview (non-billable, WorfGate-brokered)');if (!run('npx', ['tsx', 'scripts/worfgate-terraform.ts', 'init'])) {
+  console.error('❌ Terraform init failed; aborting deploy-auto.');
+  process.exit(1);
+}run('npx', ['tsx', 'scripts/worfgate-terraform.ts', 'plan'], { allowFail: true });
 
 // ── Phase 4: apply (BILLABLE) ──────────────────────────────────────────────
 h(4, 'Apply — create/update the Fargate stack (BILLABLE)');

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { lcars } from '../../lib/lcars';
 import { LcarsScreen, LcarsPanel, LcarsStat, LcarsBar } from '../../components/Lcars';
 
+import type { LaneStatusMarker } from '@story-agent/shared';
+
 interface Summary {
   turns: number;
   totalUSD: number;
@@ -15,8 +17,16 @@ interface Summary {
   recent: Array<{ timestamp: string; surface: string; model: string; provider: string; costUSD: number }>;
 }
 
+interface CacheFallback {
+  source: 'cache';
+  offlineMarker: LaneStatusMarker;
+  note?: string;
+}
+
+type CostResponse = Summary | CacheFallback;
+
 export default function CostPage() {
-  const [data, setData] = useState<Summary | null>(null);
+  const [data, setData] = useState<CostResponse | null>(null);
   const [err, setErr] = useState<string>('');
 
   async function load() {
@@ -31,7 +41,7 @@ export default function CostPage() {
 
   return (
     <LcarsScreen title="💰 Cost Observatory · Quark" status="OpenRouter pool · auto-refresh 10s">
-      {err && (
+      {err && !data && (
         <LcarsPanel title="Signal lost" color={lcars.danger}>
           <div style={{ color: lcars.danger, fontSize: '0.85rem', letterSpacing: 'normal' }}>⚠️ {err}</div>
           <div style={{ fontSize: '0.72rem', color: lcars.textDim, marginTop: 6, letterSpacing: 'normal' }}>
@@ -40,7 +50,23 @@ export default function CostPage() {
         </LcarsPanel>
       )}
 
-      {data && (
+      {data && 'offlineMarker' in data && (
+        <LcarsPanel title="Cached lane status" color={lcars.neonCarrot}>
+          <div style={{ fontSize: '0.92rem', marginBottom: 10 }}>{data.note ?? 'Showing the last known lane status from .claude/control-lane-status.json.'}</div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Current lane</span><strong>{data.offlineMarker.headline}</strong>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+              <LcarsStat label="Crew spend" value={`$${data.offlineMarker.crewActualCostUSD.toFixed(4)}`} accent={lcars.goldenTanoi} />
+              <LcarsStat label="Crew decisions" value={`${data.offlineMarker.crewDecisions}`} accent={lcars.anakiwa} />
+              <LcarsStat label="Delegation rate" value={`${data.offlineMarker.delegationRatePct}%`} accent={lcars.tanoi} />
+            </div>
+          </div>
+        </LcarsPanel>
+      )}
+
+      {data && !('offlineMarker' in data) && (
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
             <LcarsStat label={`Total spend (${data.turns} turns)`} value={`$${data.totalUSD.toFixed(4)}`} accent={lcars.goldenTanoi} />

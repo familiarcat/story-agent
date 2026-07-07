@@ -56,6 +56,7 @@
     "db:push": "npx tsx scripts/worfgate-db-push.ts",
     "db:push:dry": "npx tsx scripts/worfgate-db-push.ts --dry-run",
     "tf": "npx tsx scripts/worfgate-terraform.ts",
+    "tf:init": "npx tsx scripts/worfgate-terraform.ts init",
     "tf:plan": "npx tsx scripts/worfgate-terraform.ts plan",
     "deploy:bootstrap-oidc": "bash scripts/bootstrap-oidc.sh",
     "deploy:backend": "bash scripts/setup-tf-backend.sh",

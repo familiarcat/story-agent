@@ -25,36 +25,55 @@ export function registerCrewMissionTools(server: McpServer): void {
     {
       input: z.string().describe('The natural-language request / mission brief for the crew to plan.'),
       clientId: z.string().optional().describe('Optional client org ID to scope RAG storage (e.g. "familiarcat").'),
+      storyId: z.string().optional().describe('Optional mission/story ID for RAG persistence. Defaults to mission-pipeline.'),
+      missionReference: z.string().optional().describe('Optional mission reference for linked memory records.'),
+      history: z.array(z.object({ role: z.enum(['system', 'user', 'assistant']), content: z.string() })).optional().describe('Optional prior chat context to save with crew deliberation.'),
       store: z.boolean().optional().default(true).describe('If true (default), store goals + plan + efficiency to cloud RAG.'),
     },
-    async ({ input, clientId, store }) => {
+    async ({ input, clientId, storyId, missionReference, history, store }) => {
       try {
         const result = await runMissionPipeline(input);
         const resolvedClientId = clientId ?? null;
+        const resolvedStoryId = storyId ?? 'mission-pipeline';
+        const resolvedMissionReference = missionReference ?? resolvedStoryId;
 
         if (store) {
-          // Shape the pipeline output into an ObservationDebateResult for RAG storage.
+          const rounds: Array<{ title: string; entries: Array<{ speakerId: string; position: 'support'; statement: string; evidence: string[] }> }> = [];
+
+          if (history && history.length) {
+            rounds.push({
+              title: 'Chat history',
+              entries: history.map((h) => ({
+                speakerId: h.role,
+                position: 'support',
+                statement: h.content,
+                evidence: [`role:${h.role}`],
+              })),
+            });
+          }
+
+          rounds.push({
+            title: `Picard intake (${result.topModel}) — distilled goals`,
+            entries: [{
+              speakerId: 'picard',
+              position: 'support',
+              statement: result.goals,
+              evidence: result.team.map((m) => `${m.crewId} (${m.domain}) → ${m.model} [${m.provider}] · tier ${m.capabilityTier}`),
+            }],
+          });
+
+          rounds.push({
+            title: 'Crew contributions (Observation Lounge)',
+            entries: result.contributions.map((c) => ({
+              speakerId: c.crewId,
+              position: 'support',
+              statement: c.text,
+              evidence: [`model: ${c.model}`, `cost: $${c.costUSD.toFixed(5)}`],
+            })),
+          });
+
           const transcript = {
-            rounds: [
-              {
-                title: `Picard intake (${result.topModel}) — distilled goals`,
-                entries: [{
-                  speakerId: 'picard',
-                  position: 'support' as const,
-                  statement: result.goals,
-                  evidence: result.team.map(m => `${m.crewId} (${m.domain}) → ${m.model} [${m.provider}] · tier ${m.capabilityTier}`),
-                }],
-              },
-              {
-                title: 'Crew contributions (Observation Lounge)',
-                entries: result.contributions.map(c => ({
-                  speakerId: c.crewId,
-                  position: 'support' as const,
-                  statement: c.text,
-                  evidence: [`model: ${c.model}`, `cost: $${c.costUSD.toFixed(5)}`],
-                })),
-              },
-            ],
+            rounds,
             consensusSummary: result.missionPlan,
             unresolvedRisks: [],
             finalDecision: 'approved' as const,
@@ -65,11 +84,11 @@ export function registerCrewMissionTools(server: McpServer): void {
           };
 
           await storeObservationMemory({
-            storyId: 'mission-pipeline',
+            storyId: resolvedStoryId,
             clientId: resolvedClientId,
             source: 'mcp',
             transcript,
-            missionReference: 'mission-pipeline',
+            missionReference: resolvedMissionReference,
             tags: ['mission-pipeline', 'observation-lounge', 'cost-optimized', resolvedClientId ?? 'global'],
           });
         }
