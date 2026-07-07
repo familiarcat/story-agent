@@ -81,6 +81,23 @@ async function main() {
   writeFileSync(filename, markdown);
   console.log(`📄 Transcript written to ${filename}`);
 
+  console.log('\n=== Observation Lounge Transcript ===\n');
+  console.log('# Observation Lounge — Aha Revisions for VS Code Plugin & Dashboard');
+  console.log(`Date: ${new Date().toISOString().slice(0, 10)}`);
+  console.log(`Cost: $${result.efficiency.totalCostUSD.toFixed(4)} (${result.efficiency.totalTokens} tokens)`);
+  console.log(`Top model: ${result.topModel}`);
+  console.log('\n## Brief\n');
+  console.log(BRIEF);
+  console.log('\n## Crew Contributions\n');
+  for (const c of result.contributions) {
+    console.log(`### ${c.crewId} — ${c.model} ($${c.costUSD.toFixed(4)})`);
+    console.log(c.text);
+    console.log('');
+  }
+  console.log('## Mission Plan\n');
+  console.log(result.missionPlan);
+  console.log('\n=== End of Observation Lounge Transcript ===\n');
+
   const debate = toDebate(result);
   const obs = await storeObservationMemory({ storyId: 'aha-revisions-observation-lounge', source: 'mcp', transcript: debate, tags: ['aha-revisions', 'vscode-plugin', 'ui-services'] });
   console.log(`✅ Stored observation memory: ${obs.id}`);
