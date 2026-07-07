@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { awaitApproval, resolveApproval } from './approval-registry';
+import { awaitApproval, resolveApproval } from './approval-registry.js';
 
 /**
  * Crew infra-integration #3 — prove the Redis-backed approval round-trip (the path that is unverified

@@ -39,6 +39,7 @@ skipIfNotTesting('Crew Collaboration Integration', () => {
       testPolicy: 'changed-files plus smoke',
       reviewers: 'crew',
       sharedMemories: [],
+      acceptanceCriteria: story.acceptanceCriteria,
     });
 
     expect(plan.crew.length).toBe(11);

@@ -606,7 +606,9 @@ export function startObservationMemorySyncWorker(options?: {
   const batchSize = options?.batchSize ?? REDIS_SYNC_BATCH_SIZE;
 
   _memorySyncTimer = setInterval(() => {
-    void flushObservationMemoryQueue(batchSize).catch(() => {
+    void flushObservationMemoryQueue(batchSize).catch((e) => {
+        _memorySyncStats.lastSyncError = e instanceof Error ? e.message : String(e);
+        _memorySyncStats.lastSyncErrorAt = new Date().toISOString();
       // Queue remains intact on errors; retries happen on next interval.
     });
   }, intervalMs);

@@ -24,6 +24,7 @@ const sampleStory: StoryRecord = {
   updatedAt: new Date().toISOString(),
   notes: 'contains regulated references',
   clientId: 'client-int',
+  acceptanceCriteria: 'Given/When/Then acceptance',
 };
 
 describe('client scope controlled-data policy', () => {

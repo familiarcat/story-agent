@@ -16,7 +16,7 @@ describe.skipIf(!BASE)('agent /agent SSE contract (live server)', () => {
   it('GET /agent/health is ok', async () => {
     const res = await fetch(`${BASE}/agent/health`);
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await res.json() as { ok: boolean };
     expect(body.ok).toBe(true);
   });
 
