@@ -488,19 +488,43 @@ export async function flushObservationMemoryQueue(batchSize = REDIS_SYNC_BATCH_S
     return { synced: 0, remaining };
   }
 
-  throwOnError(
-    await (await db()).from('sa_observation_memories').upsert(payloads, {
-      onConflict: 'transcript_hash',
-    })
-  );
+  // Dedupe by transcript_hash within the batch: a single Postgres ON CONFLICT command cannot update
+  // the same target row twice (error 21000), and the queue can accumulate repeats of the same memory.
+  // Keep the last occurrence per hash; the queue still drains all processed entries below.
+  const byHash = new Map<string, ObservationMemoryPayload>();
+  for (const p of payloads) byHash.set(p.transcript_hash, p);
+  const uniquePayloads = [...byHash.values()];
+
+  // Upsert the batch; on failure (e.g. a poison row — FK violation on client_id, malformed data)
+  // fall back to per-row so a single bad memory can't block the whole queue forever. Poison rows are
+  // counted + skipped (they'd fail on every retry); good rows still sync and the queue drains.
+  const dbc = await db();
+  let synced = 0;
+  let skipped = 0;
+  const batch = await dbc.from('sa_observation_memories').upsert(uniquePayloads, { onConflict: 'transcript_hash' });
+  if (!batch.error) {
+    synced = uniquePayloads.length;
+  } else {
+    for (const p of uniquePayloads) {
+      const one = await dbc.from('sa_observation_memories').upsert(p, { onConflict: 'transcript_hash' });
+      if (one.error) skipped += 1;
+      else synced += 1;
+    }
+  }
 
   await client.lTrim(REDIS_SYNC_QUEUE_KEY, queueItems.length, -1);
   const remaining = await client.lLen(REDIS_SYNC_QUEUE_KEY);
-  _memorySyncStats.lastSyncAt = new Date().toISOString();
-  _memorySyncStats.lastSyncErrorAt = null;
-  _memorySyncStats.lastSyncError = null;
-  _memorySyncStats.totalSynced += payloads.length;
-  return { synced: payloads.length, remaining };
+  _memorySyncStats.totalSynced += synced;
+  if (skipped > 0) {
+    _memorySyncStats.totalFailures += skipped;
+    _memorySyncStats.lastSyncErrorAt = new Date().toISOString();
+    _memorySyncStats.lastSyncError = `${skipped} row(s) skipped (constraint violation)`;
+  } else {
+    _memorySyncStats.lastSyncAt = new Date().toISOString();
+    _memorySyncStats.lastSyncErrorAt = null;
+    _memorySyncStats.lastSyncError = null;
+  }
+  return { synced, remaining };
 }
 
 export async function getObservationMemorySyncDiagnostics(): Promise<{
