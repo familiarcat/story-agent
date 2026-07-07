@@ -121,7 +121,7 @@ resource "aws_lb_listener_rule" "mcp_http" {
     target_group_arn = aws_lb_target_group.mcp_http.arn
   }
   condition {
-    path_pattern { values = ["/mcp", "/mcp/*", "/rag/*"] }
+    path_pattern { values = ["/mcp", "/mcp/*", "/rag/*", "/.well-known/mcp.json"] }
   }
 }
 
