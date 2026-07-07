@@ -8,7 +8,7 @@
  * 4. Verifying data isolation
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
   storeCrewPersonalMemory,
   getCrewPersonalMemories,
@@ -62,7 +62,8 @@ describe('Multi-Project Crew Memory Integration Tests', () => {
 
       expect(memoryId).toBeDefined();
       expect(typeof memoryId).toBe('number');
-      createdMemoryIds.push(memoryId);
+      if (memoryId === null) throw new Error('Memory ID should not be null');
+      createdMemoryIds.push(memoryId!);
     });
 
     it('should allow Data to store schema design decisions on Project A', async () => {
@@ -84,7 +85,7 @@ describe('Multi-Project Crew Memory Integration Tests', () => {
       });
 
       expect(memoryId).toBeDefined();
-      createdMemoryIds.push(memoryId);
+      createdMemoryIds.push(memoryId!);
     });
 
     it('should allow Geordi to store performance baselines on Project A', async () => {
@@ -107,7 +108,7 @@ describe('Multi-Project Crew Memory Integration Tests', () => {
       });
 
       expect(memoryId).toBeDefined();
-      createdMemoryIds.push(memoryId);
+      createdMemoryIds.push(memoryId!);
     });
 
     it('should retrieve all Project A memories for each crew member', async () => {
@@ -179,7 +180,7 @@ describe('Multi-Project Crew Memory Integration Tests', () => {
       });
 
       expect(memoryId).toBeDefined();
-      createdMemoryIds.push(memoryId);
+      createdMemoryIds.push(memoryId!);
     });
 
     it('should maintain complete data isolation between projects', async () => {
@@ -260,7 +261,7 @@ describe('Multi-Project Crew Memory Integration Tests', () => {
       });
 
       expect(memoryId).toBeDefined();
-      createdMemoryIds.push(memoryId);
+      createdMemoryIds.push(memoryId!);
 
       // Search by tag
       const results = await searchCrewPersonalMemories(
@@ -301,7 +302,7 @@ describe('Multi-Project Crew Memory Integration Tests', () => {
       });
 
       expect(memoryId).toBeDefined();
-      createdMemoryIds.push(memoryId);
+      createdMemoryIds.push(memoryId!);
     });
   });
 
