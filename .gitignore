@@ -43,3 +43,4 @@ terraform/.terraform/
 
 # Pitch PDF build intermediates (diagrams are embedded in the PDFs)
 docs/pitch/diagrams/
+.claude/async-status.jsonl

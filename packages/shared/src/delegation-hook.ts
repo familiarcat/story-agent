@@ -14,6 +14,7 @@
 import { appendFileSync } from 'node:fs';
 import { scoreDelegation } from './delegation-router.js';
 import { readLedger, summarizeLanes, writeStatusMarker } from './control-lane.js';
+import { readAsyncState, formatAsyncSnapshot, pruneAsyncLog } from './async-status.js';
 
 function readStdin(): Promise<string> {
   return new Promise((resolve) => {
@@ -51,6 +52,17 @@ async function main() {
     );
     // Refresh the control-lane marker so any AI tool/UI can show the current lane + cost split.
     writeStatusMarker(dir, summarizeLanes(readLedger(dir)), new Date().toISOString());
+  } catch { /* ignore */ }
+
+  // Async status: on EVERY prompt, surface a compact progress report of all in-flight async work
+  // (crew missions, agent-core runs, background jobs) so "update responses" are visible as they
+  // execute. Silent when nothing is in-flight/recent, so quiet sessions stay quiet. Best-effort.
+  try {
+    const dir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    const now = Date.now();
+    pruneAsyncLog(dir, now);
+    const snapshot = formatAsyncSnapshot(readAsyncState(dir, now), now);
+    if (snapshot) process.stdout.write(snapshot + '\n');
   } catch { /* ignore */ }
 
   if (d.route === 'delegate') {

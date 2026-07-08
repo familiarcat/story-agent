@@ -12,7 +12,7 @@
  * everything else runs on cheaper providers. Reuses assembleAndOptimize (Riker+Quark).
  */
 import { assembleAndOptimize, quarkSelectModel, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
-import { recordCrewRun } from '@story-agent/shared';
+import { recordCrewRun, beginAsync, heartbeatAsync, endAsync } from '@story-agent/shared';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
@@ -72,56 +72,71 @@ export async function runMissionPipeline(nlInput: string, clientId?: string | nu
   if (!OR_KEY) throw new Error('CREW_LLM_APPROVED_KEY not set');
   const ledger: CallResult[] = [];
 
-  // 1. PICARD intake (top-tier) — distill goals, retain intent.
-  const intake = await call(TOP_MODEL,
-    'You are Captain Picard. Read the request and distill it into the crew\'s working brief. Output exactly:\nGOALS: <2-4 crisp goals, retaining the user\'s intended outcome>\nCONCEPTS: <key concepts/constraints>\nKeep it tight.',
-    nlInput, 240);
-  ledger.push(intake);
-  const goals = intake.text;
+  // Async status: register this mission as in-flight so `pnpm status` and the prompt hook can show
+  // it live (and derive a timeout if it silently hangs). Best-effort — never blocks the mission.
+  const asyncDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const asyncId = beginAsync(asyncDir,
+    { kind: 'mission', label: 'run_crew_mission_pipeline', timeoutMs: 180_000, ...(clientId ? { clientId } : {}) },
+    Date.now());
 
-  // 2 + 3. RIKER assembles + QUARK optimizes models (deterministic engine). FRUGAL caps officer
-  // deliberation at tier-3 (deepseek) — no frontier escalation, the prior run's cost+latency driver.
-  const plan = assembleAndOptimize(goals + '\n' + nlInput, FRUGAL ? 3 : 4);
-
-  // 4. CREW executes — each member contributes on their Quark-assigned model (lounge style).
-  const contributions = await Promise.all(plan.team.map(async (m) => {
-    const r = await call(m.model,
-      `You are ${m.crewId} (${m.domain}) of the Story Agent crew, in the Observation Lounge. Contribute YOUR domain's part toward the goals: a concrete position + one concern/resolution. 2-3 sentences.`,
-      `GOALS:\n${goals}`, 160);
-    ledger.push(r);
-    return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
-  }));
-
-  // 5. QUARK efficiency report — isolate cost across the crew.
-  const perMember: Record<string, number> = {};
-  const perProvider: Record<string, number> = {};
-  for (const m of plan.team) {
-    const c = contributions.find(x => x.crewId === m.crewId)?.costUSD ?? 0;
-    perMember[m.crewId] = Number(c.toFixed(5));
-    perProvider[m.provider] = Number(((perProvider[m.provider] ?? 0) + c).toFixed(5));
-  }
-  const totalCostUSD = Number(ledger.reduce((s, r) => s + r.costUSD, 0).toFixed(5));
-  const totalTokens = ledger.reduce((s, r) => s + r.tokensIn + r.tokensOut, 0);
-
-  // 6. PICARD mission plan (top-tier) — synthesize a concrete plan to autonomously execute.
-  const planResp = await call(TOP_MODEL,
-    'You are Captain Picard on the highest-tier model. Synthesize the crew\'s contributions into a concrete MISSION PLAN: an ordered list of steps the crew will autonomously execute, each tagged with the owning crew member. When a step searches or counts files, make it RECURSIVE and complete (e.g. `find <dir> -name` or `rg`; do NOT use `-maxdepth 1` or other shallow limits) unless the task explicitly scopes it. End with "Make it so."',
-    `GOALS:\n${goals}\n\nCREW CONTRIBUTIONS:\n${contributions.map(c => `${c.crewId}: ${c.text}`).join('\n')}`, 360);
-  ledger.push(planResp);
-
-  const finalTotalUSD = Number(ledger.reduce((s, r) => s + r.costUSD, 0).toFixed(5));
-
-  // Control-lane ledger: record this CONFIRMED crew activation with its ACTUAL cost, so the
-  // control-lane reporter shows real crew spend (not just the hook's delegation intent). Best-effort.
   try {
-    recordCrewRun(process.env.CLAUDE_PROJECT_DIR || process.cwd(), {
-      costUSD: finalTotalUSD, members: plan.team.length, label: 'run_crew_mission_pipeline', ...(clientId ? { clientId } : {}),
-    });
-  } catch { /* never block a mission on telemetry */ }
+    // 1. PICARD intake (top-tier) — distill goals, retain intent.
+    const intake = await call(TOP_MODEL,
+      'You are Captain Picard. Read the request and distill it into the crew\'s working brief. Output exactly:\nGOALS: <2-4 crisp goals, retaining the user\'s intended outcome>\nCONCEPTS: <key concepts/constraints>\nKeep it tight.',
+      nlInput, 240);
+    ledger.push(intake);
+    const goals = intake.text;
+    heartbeatAsync(asyncDir, asyncId, { progress: 20 }, Date.now());
 
-  return {
-    goals, team: plan.team, contributions,
-    efficiency: { perMember, perProvider, totalCostUSD: finalTotalUSD, totalTokens },
-    missionPlan: planResp.text, topModel: TOP_MODEL,
-  };
+    // 2 + 3. RIKER assembles + QUARK optimizes models (deterministic engine). FRUGAL caps officer
+    // deliberation at tier-3 (deepseek) — no frontier escalation, the prior run's cost+latency driver.
+    const plan = assembleAndOptimize(goals + '\n' + nlInput, FRUGAL ? 3 : 4);
+
+    // 4. CREW executes — each member contributes on their Quark-assigned model (lounge style).
+    const contributions = await Promise.all(plan.team.map(async (m) => {
+      const r = await call(m.model,
+        `You are ${m.crewId} (${m.domain}) of the Story Agent crew, in the Observation Lounge. Contribute YOUR domain's part toward the goals: a concrete position + one concern/resolution. 2-3 sentences.`,
+        `GOALS:\n${goals}`, 160);
+      ledger.push(r);
+      return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
+    }));
+    heartbeatAsync(asyncDir, asyncId, { progress: 65 }, Date.now());
+
+    // 5. QUARK efficiency report — isolate cost across the crew.
+    const perMember: Record<string, number> = {};
+    const perProvider: Record<string, number> = {};
+    for (const m of plan.team) {
+      const c = contributions.find(x => x.crewId === m.crewId)?.costUSD ?? 0;
+      perMember[m.crewId] = Number(c.toFixed(5));
+      perProvider[m.provider] = Number(((perProvider[m.provider] ?? 0) + c).toFixed(5));
+    }
+    const totalTokens = ledger.reduce((s, r) => s + r.tokensIn + r.tokensOut, 0);
+
+    // 6. PICARD mission plan (top-tier) — synthesize a concrete plan to autonomously execute.
+    const planResp = await call(TOP_MODEL,
+      'You are Captain Picard on the highest-tier model. Synthesize the crew\'s contributions into a concrete MISSION PLAN: an ordered list of steps the crew will autonomously execute, each tagged with the owning crew member. When a step searches or counts files, make it RECURSIVE and complete (e.g. `find <dir> -name` or `rg`; do NOT use `-maxdepth 1` or other shallow limits) unless the task explicitly scopes it. End with "Make it so."',
+      `GOALS:\n${goals}\n\nCREW CONTRIBUTIONS:\n${contributions.map(c => `${c.crewId}: ${c.text}`).join('\n')}`, 360);
+    ledger.push(planResp);
+    heartbeatAsync(asyncDir, asyncId, { progress: 90 }, Date.now());
+
+    const finalTotalUSD = Number(ledger.reduce((s, r) => s + r.costUSD, 0).toFixed(5));
+
+    // Control-lane ledger: record this CONFIRMED crew activation with its ACTUAL cost, so the
+    // control-lane reporter shows real crew spend (not just the hook's delegation intent). Best-effort.
+    try {
+      recordCrewRun(asyncDir, {
+        costUSD: finalTotalUSD, members: plan.team.length, label: 'run_crew_mission_pipeline', ...(clientId ? { clientId } : {}),
+      });
+    } catch { /* never block a mission on telemetry */ }
+
+    endAsync(asyncDir, asyncId, 'done', Date.now());
+    return {
+      goals, team: plan.team, contributions,
+      efficiency: { perMember, perProvider, totalCostUSD: finalTotalUSD, totalTokens },
+      missionPlan: planResp.text, topModel: TOP_MODEL,
+    };
+  } catch (err) {
+    endAsync(asyncDir, asyncId, 'failed', Date.now());
+    throw err;
+  }
 }
