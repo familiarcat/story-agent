@@ -20,6 +20,14 @@ What it does (all on cost-optimized OpenRouter models, ~$0.002–0.003, live in 
 
 Generated decks land in `docs/pitch/presentations/<slug>/` (gitignored — regenerate on demand). For a scope with little RAG history, pass `--brief` with a short markdown file describing it.
 
+### The system pitching itself, top down — `pnpm present:book`
+
+```bash
+pnpm present:book -- [--minutes 3]
+```
+
+Builds an **interlinked pitch book** at [`pitch-book/`](./pitch-book/): a top-level cover/directory deck plus one deck per architectural pillar (Orchestration, Cost & Routing, Security, Memory, Delivery, Infra & Ops). The orchestration is the directed flow: **Riker assembles a team per pillar** (`assembleAndOptimize`), **all teams commit** (a barrier — every pillar's crew is finalized), **then the whole set of pillar×officer drafts splits into parallel execution** (one flat `Promise.all`). Decks are cross-linked in **both HTML and PDF** — the cover links to each pillar (HTML · PDF), each pillar links back to the cover (`../index.html` · `../deck.pdf`). Open [`pitch-book/index.html`](./pitch-book/index.html).
+
 ---
 
 ## Curated decks (committed)

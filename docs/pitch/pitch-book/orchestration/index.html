@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Story Agent — Orchestration &amp; the Crew</title>
+<style>
+  :root{ --ink:#1a202c; --muted:#4a5568; --accent:#2b6cb0; --accent2:#2c5282; --bg:#fff; --panel:#f7fafc; --border:#cbd5e0; --gold:#b7791f; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:#0b1220;overflow:hidden}
+  #deck{position:fixed;inset:0}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:5vh 7vw;background:var(--bg);opacity:0;pointer-events:none;transition:opacity .35s ease;overflow:auto}
+  .slide.active{opacity:1;pointer-events:auto;z-index:2}
+  .slide h1{font-size:clamp(30px,5vw,60px);margin:0 0 .18em;line-height:1.04}
+  .slide h2{font-size:clamp(24px,3.6vw,44px);margin:0 0 .45em;color:var(--accent);line-height:1.08}
+  .slide p,.slide li{font-size:clamp(17px,1.95vw,27px);line-height:1.5}
+  .lead{font-size:clamp(19px,2.3vw,30px);color:var(--muted)}
+  .kicker{font-size:clamp(13px,1.35vw,17px);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:.5em;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .owner{background:#edf2f7;color:var(--accent2);border-radius:999px;padding:.15em .8em;font-size:.85em;letter-spacing:.06em}
+  ul{margin:.3em 0;padding-left:1.15em} li{margin:.42em 0}
+  .value{margin-top:.7em;background:#ebf8ff;border-left:6px solid var(--accent);padding:12px 18px;border-radius:8px;font-size:clamp(16px,1.8vw,24px)}
+  .value b{color:var(--accent2)}
+  .big{font-weight:800} .accent{color:var(--accent)}
+  .quote{font-size:clamp(24px,3.2vw,44px);font-weight:800;line-height:1.2;border-left:8px solid var(--accent);padding-left:26px}
+  .fine{font-size:clamp(13px,1.3vw,17px);color:var(--muted)}
+  .agenda{columns:2;column-gap:48px;margin-top:.4em} .agenda li{break-inside:avoid;font-size:clamp(15px,1.7vw,22px)}
+  .diagram-wrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:.4em}
+  .diagram{flex:1;min-height:0;border:1px solid var(--border);border-radius:12px;background:#fcfdff;position:relative;overflow:hidden}
+  .diagram .mermaid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .diagram svg{width:100%!important;height:100%!important;max-width:none!important}
+  .dhint{font-size:13px;color:var(--muted);margin-top:6px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:stretch;margin-top:.4em}
+  .cols .diagram-wrap{height:46vh;margin-top:0}
+  #bar{position:fixed;left:0;right:0;bottom:0;height:6px;background:#e2e8f0;z-index:50}#barfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#4299e1);transition:width .35s}
+  #hud{position:fixed;top:14px;right:16px;display:flex;gap:10px;align-items:center;z-index:60;font-variant-numeric:tabular-nums}
+  #timer{background:rgba(15,23,42,.86);color:#fff;padding:6px 12px;border-radius:8px;font-weight:700;font-size:15px}#timer.warn{background:var(--gold)}#timer.over{background:#c53030}
+  #count{background:rgba(15,23,42,.86);color:#cbd5e0;padding:6px 10px;border-radius:8px;font-size:13px}
+  .btn{background:rgba(15,23,42,.86);color:#fff;border:0;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer}.btn:hover{background:var(--accent)}
+  #notes{position:fixed;left:0;right:0;bottom:6px;max-height:34vh;overflow:auto;background:#0f172a;color:#e2e8f0;padding:16px 7vw;z-index:55;transform:translateY(102%);transition:transform .3s;font-size:16px;line-height:1.55;border-top:3px solid var(--accent)}#notes.show{transform:translateY(0)}
+  @media print{
+    html,body{overflow:visible;height:auto;background:#fff}
+    #hud,#bar,#notes,.dhint{display:none!important}
+    #deck{position:static;inset:auto}
+    .slide{position:relative;inset:auto;opacity:1!important;page-break-after:always;height:auto;min-height:94vh;display:flex}
+    .diagram-wrap{height:58vh} .cols .diagram-wrap{height:42vh} .diagram{min-height:320px}
+    .slide:last-child{page-break-after:auto}
+    [id^=svg-pan-zoom-controls]{display:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="deck"></div>
+<div id="hud">
+  <button class="btn" id="notesBtn" title="Speaker notes (N)">Notes</button>
+  <button class="btn" id="tBtn" title="Timer (T)">▶ Timer</button>
+  <span id="timer">--:--</span><span id="count">1 / 1</span>
+</div>
+<div id="bar"><div id="barfill"></div></div>
+<div id="notes"></div>
+<script src="../../presentation/vendor/mermaid.min.js"></script>
+<script src="../../presentation/vendor/svg-pan-zoom.min.js"></script>
+<script>
+/* Generic deck engine. Content is injected at build time by scripts/present.mjs. */
+const SLIDES = [["<div class=\"kicker\"><span>Story Agent · Pillar</span></div><h1>Orchestration &amp; the Crew</h1>\n      <p class=\"lead\">How this pillar works and why it matters.</p>\n      <p class=\"fine\">Team assembled by Riker: Jean-Luc Picard, William Thomas Riker, Geordi La Forge.</p>\n      <p class=\"fine\"><a href=\"../index.html\">↑ Story Agent overview (HTML)</a> · <a href=\"../deck.pdf\">↑ overview (PDF)</a></p>","This is the \"Orchestration & the Crew\" pillar. Walk the sections, then return to the overview."],["<div class=\"kicker\"><span>Orchestration &amp; the Crew</span></div><h2>At a glance</h2><div class=\"diagram-wrap\"><div class=\"diagram\"><pre class=\"mermaid\" data-key=\"control\">flowchart LR\n  U([NL request]) --> MCP{{\"Model Context Protocol\"}}\n  MCP --> ORCH[\"Thin premium orchestrator\"]\n  ORCH -->|deliberate| PIPE[\"Crew Mission Pipeline\"]\n  ORCH -->|code| LOOP[\"agent-core loop\"]\n  PIPE --> QUARK[\"Quark routing\"]\n  LOOP --> QUARK\n  QUARK --> OR[(\"OpenRouter\")]\n  LOOP -. every op .-> WG[\"WorfGate\"]\n  PIPE -. recall/store .-> RAG[(\"pgvector RAG\")]</pre></div><div class=\"dhint\">↕ scroll to zoom · drag to pan · reset (Z)</div></div>","Diagram for Orchestration & the Crew. Zoom/pan live during Q&A."],["<div class=\"kicker\"><span>1 / 3</span><span class=\"owner\">Jean-Luc Picard · command</span></div>\n      <h2>Orchestration as Command Discipline</h2><ul><li>Precision delegation: Orchestrator assigns tasks to the cheapest adequate model, enforcing cost discipline without compromising capability (Anthropic reserved for tier-4 only)</li><li>Secure execution: WorfGate brokers credentials and auto-remediates failures (green/yellow/red) while ensuring secrets never persist</li><li>Compound learning: RAG architecture (pgvector) creates a recall→act→store loop that improves with use, portable across deployments</li></ul>\n      <div class=\"value\"><b>Why it matters:</b> You get tiered autonomy—premium orchestration directing cost-optimized labor—with full transparency at ~$0.003/deliberation.</div>","<b>Jean-Luc Picard:</b> Orchestration isn’t just routing—it’s command-grade oversight. We treat model selection like starship assignments: right tool, right post, no waste. Control-lane telemetry ensures every cent is auditable, while async-status keeps clients in the loop. Shadow-testing proves we don’t overpromise autonomy."],["<div class=\"kicker\"><span>2 / 3</span><span class=\"owner\">William Thomas Riker · implementation</span></div>\n      <h2>Orchestration with Cost Control</h2><ul><li>Precision routing: Quark selects cheapest adequate model per task, enforcing budget discipline without sacrificing capability (Anthropic reserved for tier-4 only)</li><li>Governed execution: WorfGate brokers credentials + auto-remediates failures (green/yellow/red), while async-status provides live progress tracking + timeout guardrails</li><li>Auditable control lane: Per-deliberation cost attribution (~$0.002-0.003) with MCP-standardized tooling ensures transparency at scale</li></ul>\n      <div class=\"value\"><b>Why it matters:</b> You get high-grade orchestration (premium model) directing a cost-optimized crew, with real-time financial and operational guardrails.</div>","<b>William Thomas Riker:</b> Highlight the dual focus—orchestration isn’t just about coordination, but cost-aware coordination. WorfGate’s auto-remediation reduces operational toil, while Quark’s routing decisions compound savings. Reference clients see 3-5x cost efficiency vs. monolithic model approaches."],["<div class=\"kicker\"><span>3 / 3</span><span class=\"owner\">Geordi La Forge · infrastructure</span></div>\n      <h2>Infrastructure That Won't Let You Down</h2><ul><li>Auto-remediating governor: Credential-safe (WorfGate) + real-time health checks (green/yellow/red) with automatic rollback for degraded performance</li><li>Precision routing: Quark ensures cost-efficient model selection (cheapest adequate per task) while maintaining SLA-grade response times</li><li>Observability built-in: Control-lane telemetry tracks deliberation cost ($0.002–0.003/op) and async-status provides live progress with timeout guardrails</li></ul>\n      <div class=\"value\"><b>Why it matters:</b> Your crew stays online, on-budget, and observable—even when scaling to 150+ tools across 41 skill theories.</div>","<b>Geordi La Forge:</b> This isn’t just about uptime—it’s about *responsible* uptime. WorfGate prevents credential leaks, Quark prevents cost overruns, and the governor ensures failures self-heal before users notice. Every layer is instrumented to prove reliability."],["<div class=\"kicker\"><span>End of pillar</span></div><h2>Orchestration &amp; the Crew — recap</h2>\n      <ul><li><b>Jean-Luc Picard:</b> Orchestration as Command Discipline</li><li><b>William Thomas Riker:</b> Orchestration with Cost Control</li><li><b>Geordi La Forge:</b> Infrastructure That Won't Let You Down</li></ul>\n      <p class=\"fine\"><a href=\"../index.html\">↑ Back to Story Agent overview (HTML)</a> · <a href=\"../deck.pdf\">↑ overview (PDF)</a></p>","Recap, then return to the book cover to pick the next pillar."]];
+const TIMER_SECONDS = 180;
+
+const deck=document.getElementById('deck');
+SLIDES.forEach(([html])=>{const s=document.createElement('section');s.className='slide';s.innerHTML=html;deck.appendChild(s);});
+const slides=[...document.querySelectorAll('.slide')];let cur=0;const zoomers={};
+function fitActive(){slides[cur].querySelectorAll('svg').forEach(svg=>{const z=zoomers[svg.dataset.zkey];if(z){try{z.resize();z.fit();z.center();}catch(e){}}});}
+function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===cur));document.getElementById('count').textContent=(cur+1)+' / '+slides.length;document.getElementById('barfill').style.width=(cur/Math.max(1,slides.length-1)*100)+'%';document.getElementById('notes').innerHTML=(SLIDES[cur]&&SLIDES[cur][1])||'<i>No notes.</i>';fitActive();}
+function go(n){cur=Math.max(0,Math.min(slides.length-1,n));render();history.replaceState(null,'','#'+(cur+1));}
+function initial(){const h=parseInt(location.hash.replace('#',''),10);return(h>=1&&h<=slides.length)?h-1:0;}
+mermaid.initialize({startOnLoad:false,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis',useMaxWidth:false}});
+window.addEventListener('load',async()=>{try{await mermaid.run({querySelector:'.mermaid'});}catch(e){console.error(e);}
+  document.querySelectorAll('.mermaid').forEach(pre=>{const svg=pre.querySelector('svg');if(!svg)return;const k=pre.dataset.key||('d'+Math.random());svg.dataset.zkey=k;svg.removeAttribute('style');try{zoomers[k]=svgPanZoom(svg,{zoomEnabled:true,controlIconsEnabled:true,fit:true,center:true,minZoom:0.4,maxZoom:12,zoomScaleSensitivity:0.35});}catch(e){}});
+  cur=initial();render();});
+let left=TIMER_SECONDS,tick=null;
+function fmt(s){const m=Math.floor(Math.abs(s)/60),ss=Math.abs(s)%60;return(s<0?'-':'')+m+':'+String(ss).padStart(2,'0');}
+function paint(){const t=document.getElementById('timer');t.textContent=fmt(left);t.className=left<=0?'over':left<=90?'warn':'';}
+function toggleT(){if(tick){clearInterval(tick);tick=null;document.getElementById('tBtn').textContent='▶ Timer';}else{document.getElementById('tBtn').textContent='⏸ Timer';tick=setInterval(()=>{left--;paint();},1000);}}
+document.getElementById('tBtn').onclick=toggleT;
+document.getElementById('notesBtn').onclick=()=>document.getElementById('notes').classList.toggle('show');
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(cur+1);}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
+  else if(e.key==='Home')go(0);else if(e.key==='End')go(slides.length-1);
+  else if(k==='n')document.getElementById('notes').classList.toggle('show');
+  else if(k==='t')toggleT();else if(k==='r'){left=TIMER_SECONDS;paint();if(tick){clearInterval(tick);tick=null;document.getElementById('tBtn').textContent='▶ Timer';}}
+  else if(k==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  else if(k==='z')fitActive();});
+paint();
+</script>
+</body>
+</html>

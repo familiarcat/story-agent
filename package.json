@@ -76,6 +76,7 @@
     "status:watch": "npx tsx scripts/async-status.ts --watch",
     "status:json": "npx tsx scripts/async-status.ts --json",
     "present": "node scripts/present.mjs",
+    "present:book": "node scripts/present-book.mjs",
     "figma:themes": "npx tsx scripts/figma-to-client-theme.ts",
     "figma:themes:dry": "npx tsx scripts/figma-to-client-theme.ts --dry-run",
     "activate": "npx tsx scripts/activate-changes.ts",
