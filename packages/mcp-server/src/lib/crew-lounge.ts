@@ -156,14 +156,33 @@ CLOSING: [One sentence — your signature statement that captures your perspecti
 function parseLoungeResponse(raw: string, crewId: CrewId): Omit<CrewLoungeStatement, 'crewId' | 'fullName' | 'rank' | 'role'> {
   const extract = (key: string): string => {
     const match = raw.match(new RegExp(`${key}:\\s*([\\s\\S]*?)(?=\\n[A-Z_]+:|$)`));
-    return match ? match[1].trim() : `[${key} not provided by ${crewId}]`;
+    return match ? match[1].trim() : '';
   };
 
+  const projectGoalPerspective = extract('PROJECT_GOAL');
+  const selfReferentialRole = extract('SELF_REFERENTIAL_ROLE');
+  const nextStepsAfterDeliberation = extract('NEXT_STEPS');
+  const closingStatement = extract('CLOSING');
+
+  // Robustness: cost-optimized models (tier-3 deepseek et al.) sometimes ignore the exact label
+  // format and return plain prose. Rather than blanking the officer with "[X not provided]"
+  // placeholders (which silences them in the transcript), surface their actual response so their
+  // voice still carries. Only the fields the model DID label stay structured.
+  const prose = raw.trim();
+  if (!projectGoalPerspective && !selfReferentialRole && !nextStepsAfterDeliberation && prose) {
+    return {
+      projectGoalPerspective: prose,
+      selfReferentialRole: '',
+      nextStepsAfterDeliberation: '',
+      closingStatement: closingStatement || CREW_PERSONAS[crewId].canonicalQuotes[0] || '',
+    };
+  }
+
   return {
-    projectGoalPerspective: extract('PROJECT_GOAL'),
-    selfReferentialRole: extract('SELF_REFERENTIAL_ROLE'),
-    nextStepsAfterDeliberation: extract('NEXT_STEPS'),
-    closingStatement: extract('CLOSING'),
+    projectGoalPerspective: projectGoalPerspective || `[PROJECT_GOAL not provided by ${crewId}]`,
+    selfReferentialRole,
+    nextStepsAfterDeliberation,
+    closingStatement: closingStatement || CREW_PERSONAS[crewId].canonicalQuotes[0] || '',
   };
 }
 

@@ -23,6 +23,13 @@ export interface PoolModel {
   costIn: number;    // USD / 1M input tokens (approx)
   costOut: number;   // USD / 1M output tokens (approx)
   supportsVision?: boolean; // multimodal — accepts image_url content parts
+  /**
+   * Vision-only best-effort entry: NOT eligible for general text routing (quarkSelectModel).
+   * Kept in the pool only so the vision path can reference it; the text selector skips it so a
+   * cheap-but-text-unusable slug can't win the cost sort. (google/gemini-flash-1.5 currently 404s
+   * on OpenRouter for chat-completions, which silently degraded tier-2 crew to demo text.)
+   */
+  visionOnly?: boolean;
 }
 
 // Verified-available models, cost-ranked. Quark picks from here — Anthropic is not privileged.
@@ -33,7 +40,9 @@ export const MODEL_POOL: PoolModel[] = [
   { id: 'anthropic/claude-haiku-4.5', provider: 'Anthropic', tier: 3, costIn: 1.0, costOut: 5.0, supportsVision: true },
   { id: 'anthropic/claude-sonnet-4.6', provider: 'Anthropic', tier: 4, costIn: 3.0, costOut: 15.0, supportsVision: true },
   // ── Vision tier (multimodal). Routed by quarkSelectVisionModel; gemini is best-effort (runVisionAnalysis falls back). ──
-  { id: 'google/gemini-flash-1.5', provider: 'Google', tier: 2, costIn: 0.075, costOut: 0.30, supportsVision: true },
+  // visionOnly: excluded from text routing — it 404s on OpenRouter chat-completions and was being
+  // picked as the cheapest tier-2 text model, silently degrading tier-2 crew to canned demo text.
+  { id: 'google/gemini-flash-1.5', provider: 'Google', tier: 2, costIn: 0.075, costOut: 0.30, supportsVision: true, visionOnly: true },
   { id: 'openai/gpt-4o', provider: 'OpenAI', tier: 3, costIn: 2.5, costOut: 10.0, supportsVision: true },
 ];
 
@@ -41,8 +50,8 @@ const blended = (m: PoolModel) => m.costIn + m.costOut; // simple cost proxy for
 
 /** QUARK: cheapest model in the pool meeting (>=) the required capability tier. */
 export function quarkSelectModel(capabilityTier: number): PoolModel {
-  const eligible = MODEL_POOL.filter(m => m.tier >= capabilityTier).sort((a, b) => blended(a) - blended(b));
-  return eligible[0] ?? MODEL_POOL.slice().sort((a, b) => b.tier - a.tier)[0];
+  const eligible = MODEL_POOL.filter(m => m.tier >= capabilityTier && !m.visionOnly).sort((a, b) => blended(a) - blended(b));
+  return eligible[0] ?? MODEL_POOL.slice().filter(m => !m.visionOnly).sort((a, b) => b.tier - a.tier)[0];
 }
 
 /** QUARK: the cheapest Anthropic model in the pool. Used as the escalation target so that when the

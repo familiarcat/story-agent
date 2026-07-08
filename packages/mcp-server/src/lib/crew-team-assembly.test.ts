@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escalatedTierForBusinessTier, effectiveCapabilityTier, quarkSelectModelForRequester, crewBaseTier } from './crew-team-assembly.js';
+import { escalatedTierForBusinessTier, effectiveCapabilityTier, quarkSelectModelForRequester, crewBaseTier, quarkSelectModel, MODEL_POOL } from './crew-team-assembly.js';
 
 describe('tier-aware LLM escalation (business tier → OpenRouter model tier)', () => {
   it('enterprise → frontier tier 4; commercial → cost tier 3; none → 0 (no escalation)', () => {
@@ -22,5 +22,17 @@ describe('tier-aware LLM escalation (business tier → OpenRouter model tier)', 
     expect(ent.tier).toBe(4);                       // leader/frontier (e.g. anthropic sonnet)
     expect(com.tier).toBeGreaterThanOrEqual(3);     // cost-optimized (e.g. deepseek)
     expect(com.costIn).toBeLessThan(ent.costIn);    // commercial never silently pulls frontier $
+  });
+
+  it('text routing never selects a visionOnly slug (regression: dead google/gemini-flash-1.5 404 → demo fallback)', () => {
+    // gemini-flash-1.5 is the cheapest tier-2 entry by blended cost, but 404s on chat-completions.
+    // quarkSelectModel must skip visionOnly entries at every tier so text crew get a live model.
+    for (let tier = 1; tier <= 4; tier++) {
+      expect(quarkSelectModel(tier).visionOnly).toBeFalsy();
+    }
+    // Tier-2 crew (obrien/troi/crusher/uhura/quark) resolve to the cheapest LIVE text model.
+    expect(quarkSelectModel(2).id).toBe('meta-llama/llama-3.3-70b-instruct');
+    // Guard: the visionOnly slug is still present in the pool (available to the vision path).
+    expect(MODEL_POOL.some(m => m.id === 'google/gemini-flash-1.5' && m.visionOnly)).toBe(true);
   });
 });
