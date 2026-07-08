@@ -40,3 +40,6 @@ terraform/.terraform/
 .claude/delegation-audit.jsonl
 .claude/control-lane-status.json
 .claude/settings.local.json
+
+# Pitch PDF build intermediates (diagrams are embedded in the PDFs)
+docs/pitch/diagrams/

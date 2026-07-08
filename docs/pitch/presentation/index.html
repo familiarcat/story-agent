@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Story Agent — Presentation</title>
+<style>
+  :root{
+    --ink:#1a202c; --muted:#4a5568; --accent:#2b6cb0; --accent2:#2c5282;
+    --bg:#ffffff; --panel:#f7fafc; --border:#cbd5e0; --crew:#276749; --anthropic:#b7791f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:#0b1220;overflow:hidden}
+  #deck{position:fixed;inset:0}
+  .slide{
+    position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:5vh 7vw;background:var(--bg);opacity:0;pointer-events:none;
+    transition:opacity .35s ease;overflow:auto;
+  }
+  .slide.active{opacity:1;pointer-events:auto;z-index:2}
+  .slide h1{font-size:clamp(28px,4.6vw,56px);margin:0 0 .2em;line-height:1.05}
+  .slide h2{font-size:clamp(22px,3.2vw,40px);margin:0 0 .5em;color:var(--accent);line-height:1.1}
+  .slide h3{font-size:clamp(16px,1.7vw,22px);color:var(--accent2);margin:.2em 0}
+  .slide p,.slide li{font-size:clamp(15px,1.7vw,23px);line-height:1.5;color:var(--ink)}
+  .lead{font-size:clamp(17px,2vw,26px);color:var(--muted)}
+  .kicker{font-size:clamp(12px,1.2vw,15px);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:.6em}
+  ul{margin:.3em 0 .3em 0;padding-left:1.1em}
+  li{margin:.35em 0}
+  .big{font-weight:800}
+  .accent{color:var(--accent)}
+  .pill{display:inline-block;padding:.12em .6em;border-radius:999px;font-size:.7em;font-weight:700;vertical-align:middle}
+  .pill.crew{background:#c6f6d5;color:var(--crew)} .pill.anth{background:#fefcbf;color:var(--anthropic)}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:.4em}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+  .card h3{margin-top:0}
+  .quote{font-size:clamp(20px,2.6vw,34px);font-weight:700;line-height:1.25;border-left:6px solid var(--accent);padding-left:22px;color:var(--ink)}
+  .fine{font-size:clamp(12px,1.2vw,15px);color:var(--muted)}
+  /* diagram */
+  .diagram-wrap{flex:1;min-height:0;display:flex;flex-direction:column}
+  .diagram{flex:1;min-height:0;border:1px solid var(--border);border-radius:12px;background:#fcfdff;position:relative;overflow:hidden}
+  .diagram .mermaid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .diagram svg{width:100%!important;height:100%!important;max-width:none!important}
+  .dhint{font-size:12px;color:var(--muted);margin-top:6px}
+  /* chrome */
+  #bar{position:fixed;left:0;right:0;bottom:0;height:5px;background:#e2e8f0;z-index:50}
+  #barfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#4299e1);transition:width .35s}
+  #hud{position:fixed;top:14px;right:16px;display:flex;gap:10px;align-items:center;z-index:60;font-variant-numeric:tabular-nums}
+  #timer{background:rgba(15,23,42,.86);color:#fff;padding:6px 12px;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:.03em}
+  #timer.warn{background:#b7791f}#timer.over{background:#c53030}
+  #count{background:rgba(15,23,42,.86);color:#cbd5e0;padding:6px 10px;border-radius:8px;font-size:13px}
+  .btn{background:rgba(15,23,42,.86);color:#fff;border:0;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer}
+  .btn:hover{background:var(--accent)}
+  #notes{position:fixed;left:0;right:0;bottom:5px;max-height:34vh;overflow:auto;background:#0f172a;color:#e2e8f0;
+    padding:16px 7vw;z-index:55;transform:translateY(102%);transition:transform .3s;font-size:15px;line-height:1.55;border-top:3px solid var(--accent)}
+  #notes.show{transform:translateY(0)}
+  #notes b{color:#90cdf4}
+  #help{position:fixed;inset:0;background:rgba(8,12,22,.92);color:#e2e8f0;z-index:80;display:none;align-items:center;justify-content:center}
+  #help.show{display:flex}
+  #help .box{background:#111a2e;border:1px solid #2d3b55;border-radius:14px;padding:26px 34px;max-width:560px}
+  #help kbd{background:#243049;border:1px solid #3a4a6a;border-radius:6px;padding:2px 8px;font-family:ui-monospace,monospace;font-size:13px}
+  #help table{width:100%;border-collapse:collapse}#help td{padding:7px 6px;border-bottom:1px solid #22304a}
+  @media print{ #hud,#bar,#notes,#help,.dhint{display:none!important} .slide{position:relative;opacity:1!important;page-break-after:always;height:auto;min-height:96vh} }
+</style>
+</head>
+<body>
+<div id="deck"></div>
+
+<div id="hud">
+  <button class="btn" id="notesBtn" title="Speaker notes (N)">Notes</button>
+  <button class="btn" id="tBtn" title="Start/pause timer (T)">▶ Timer</button>
+  <span id="timer">05:00</span>
+  <span id="count">1 / 1</span>
+</div>
+<div id="bar"><div id="barfill"></div></div>
+<div id="notes"></div>
+<div id="help"><div class="box">
+  <h2 style="color:#90cdf4;margin-top:0">Keyboard</h2>
+  <table>
+    <tr><td><kbd>→</kbd> / <kbd>Space</kbd></td><td>Next slide</td><td><kbd>←</kbd></td><td>Previous</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Speaker notes</td><td><kbd>T</kbd></td><td>Start / pause 5-min timer</td></tr>
+    <tr><td><kbd>R</kbd></td><td>Reset timer</td><td><kbd>F</kbd></td><td>Fullscreen</td></tr>
+    <tr><td><kbd>Z</kbd></td><td>Reset diagram zoom</td><td><kbd>?</kbd></td><td>This help</td></tr>
+  </table>
+  <p class="fine" style="color:#8aa0c0">Diagrams: scroll/pinch to zoom, drag to pan, on-canvas controls to reset.</p>
+</div></div>
+
+<!-- vendored, offline -->
+<script src="vendor/mermaid.min.js"></script>
+<script src="vendor/svg-pan-zoom.min.js"></script>
+<script>
+/* ------------------------------------------------------------------ *
+ * Story Agent — self-contained pitch deck.
+ * Slides + speaker notes derived from docs/pitch/elevator-pitch.md.
+ * Diagrams render live via mermaid and get true zoom/pan via svg-pan-zoom.
+ * ------------------------------------------------------------------ */
+
+const DIAGRAMS = {
+  control: `flowchart TB
+  U([Natural-language request]) --> MCP{{"Model Context Protocol<br/>Claude Code · Cursor · Copilot"}}
+  MCP --> ORCH["Thin premium orchestrator<br/>decide · dispatch · verify"]
+  ORCH -->|deliberate| PIPE["Crew Mission Pipeline<br/>Picard→Riker→Quark→crew→Picard"]
+  ORCH -->|code| LOOP["agent-core loop<br/>read · edit · run"]
+  PIPE --> QUARK["Quark routing<br/>cheapest adequate model"]
+  LOOP --> QUARK
+  QUARK --> OR[("OpenRouter<br/>DeepSeek · Llama · OpenAI · Anthropic")]
+  LOOP -. every op .-> WG["WorfGate<br/>green/yellow/red + credential broker"]
+  PIPE -. recall / store .-> RAG[("Supabase pgvector RAG<br/>compounding memory")]
+  LOOP -. recall / store .-> RAG
+  QUARK --> DONE([Costed plan / merged code])
+  WG --> DONE`,
+  lanes: `flowchart TB
+  L["control-lane ledger<br/>(pnpm lanes: $ saved vs frontier baseline)"]
+  subgraph ANTHROPIC["ANTHROPIC lane (thin)"]
+    O["Orchestrate<br/>decide · dispatch · verify"]
+  end
+  subgraph CREW["CREW lane (cheap OpenRouter — does the work)"]
+    D["Deliberate · plan"] --> E["Read · edit · run"]
+  end
+  O -->|delegate token-heavy work| D
+  E -->|result to verify| O
+  L -. measures .-> O
+  L -. measures .-> E`,
+  routing: `flowchart TD
+  T[Task + role] --> TIER{Required<br/>capability tier?}
+  TIER -->|tier 2 · routine| T2["meta-llama/llama-3.3-70b<br/>or gpt-4o-mini"]
+  TIER -->|tier 3 · advanced| T3["deepseek-chat<br/>or claude-haiku"]
+  TIER -->|"tier 4 · frontier<br/>(arch / security)"| T4["claude-sonnet-4.6"]
+  T2 --> PICK[Cheapest model<br/>meeting the tier wins]
+  T3 --> PICK
+  T4 --> PICK
+  PICK --> NOTE[/"Anthropic is a pool member, NOT the default"/]`,
+  loop: `flowchart LR
+  P([Prompt]) --> R["Recall relevant memory<br/>(rag_recall)"]
+  R --> A["Deliberate / act<br/>on cheap crew models"]
+  A --> G["WorfGate governs<br/>the action"]
+  G --> S["Store durable conclusions<br/>to pgvector RAG"]
+  S -. next prompt builds on it .-> P`
+};
+
+const diagram = (key, hint) =>
+  `<div class="diagram-wrap"><div class="diagram"><pre class="mermaid" data-key="${key}">${DIAGRAMS[key]}</pre></div>
+   <div class="dhint">↕ scroll / pinch to zoom · drag to pan · on-canvas controls to reset (Z)${hint?` — ${hint}`:''}</div></div>`;
+
+/* [ html, speaker-notes ] per slide */
+const SLIDES = [
+  [`<div class="kicker">Autonomous coding assistant · principal-engineer overview</div>
+    <h1>Story&nbsp;Agent</h1>
+    <p class="lead">A self-hosted alternative to Claude Code / Copilot where the <span class="big accent">expensive model does almost none of the work.</span></p>
+    <p class="fine">An 11-member specialized-agent “crew” on OpenRouter · ~61k LOC TypeScript · ~150 MCP tools · AWS Fargate.</p>`,
+   `Open confident and plain. <b>“Every team using an AI coding assistant today pays the same bill: a frontier model charges premium rates for every token — whether it's an architectural decision or renaming a variable. Story Agent is my answer: a self-hosted autonomous coding assistant where the expensive model does almost none of the work.”</b> (~0:30)`],
+
+  [`<div class="kicker">The problem</div>
+    <h2>Frontier models are expensive <em>and</em> a black box</h2>
+    <ul>
+      <li><b>Expensive</b> — every token billed at premium rates, regardless of difficulty.</li>
+      <li><b>Opaque</b> — you can't see <em>why</em> it did what it did.</li>
+      <li><b>Forgetful</b> — it doesn't remember what it learned yesterday.</li>
+    </ul>
+    <p class="lead">I wanted something <span class="accent big">cheaper, auditable, and that compounds.</span></p>`,
+   `<b>“The problem with a single frontier model is twofold: it's expensive, and it's a black box — you can't see why it did what it did, and it doesn't remember what it learned yesterday. I wanted something cheaper, auditable, and that compounds over time.”</b> (~1:00)`],
+
+  [`<div class="kicker">What it is</div>
+    <h2>A crew of specialists — the premium model just orchestrates</h2>
+    <p>Eleven specialized agents, each with a role, a domain, and <em>its own</em> model. They deliberate, plan, and write code together.</p>
+    <p class="lead"><span class="pill anth">🅰️ premium</span> decides &amp; verifies &nbsp;·&nbsp; <span class="pill crew">🖖 crew</span> does the heavy lifting on cheap models.</p>
+    <p class="fine">A swarm of specialists, not freelancers — every handoff has a cost and quality check.</p>`,
+   `<b>“It's built around a metaphor that turned out to be good engineering — an eleven-member crew of specialized agents, each with its own model, that deliberate, plan, and write code together. The premium model is just the orchestrator: it decides and verifies; the crew does the heavy lifting on cheap models.”</b> (~1:30)`],
+
+  [`<div class="kicker">How it works — step by step</div>
+    <h2>Control flow</h2>
+    ${diagram('control','a request enters via MCP, is routed to the cheapest capable model, wrapped by governance + memory')}`,
+   `Trace it left-to-right / top-down. <b>“A request arrives over the Model Context Protocol — the open standard — so the same crew plugs into Claude Code, Cursor, or Copilot unchanged. The orchestrator hands it to the crew mission pipeline: one agent distills the goal, another assembles the specialists, and a cost officer assigns each the cheapest model that can do their part. Most work lands on DeepSeek or Llama; the frontier model is reserved for the hardest architecture and security calls. For coding, an agentic loop reads, edits, and runs on that same cheap model.”</b> (~2:30)`],
+
+  [`<div class="kicker">Two things wrap every action</div>
+    <h2>Governance &amp; memory</h2>
+    <div class="grid3" style="grid-template-columns:1fr 1fr">
+      <div class="card"><h3>🛡️ WorfGate</h3><p>Brokers every credential (never logged) and classifies every file/shell op <b>green / yellow / red</b>. Risky ops are <b>auto-remediated</b> — paths clamped, <code>--force</code> downgraded — not just blocked.</p></div>
+      <div class="card"><h3>🧠 Memory (RAG)</h3><p>Before acting, the crew <b>recalls</b> what it learned on past missions from a vector DB; after, it <b>stores</b> its conclusions. So it gets better the more you use it.</p></div>
+    </div>`,
+   `<b>“Two things wrap every action. First, a security gate: it brokers every credential — secrets are never logged — and classifies every file-and-shell op green, yellow, or red. A risky command isn't just blocked; it's auto-remediated, so the agent keeps moving safely instead of stalling. Second, memory: it recalls what it learned before acting and stores its conclusions after — so the system gets better the more you use it.”</b> (~3:15)`],
+
+  [`<div class="kicker">The money slide</div>
+    <h2>Two lanes — keep the premium one thin</h2>
+    ${diagram('lanes','a full 11-member deliberation ≈ two-tenths of a cent, measured — not a frontier bill')}`,
+   `This is the core argument. <b>“The reason for all of this is one lever: cost, with proof. Because the premium model only orchestrates — and I measure exactly when the cheap crew is driving versus the expensive one — a full eleven-member deliberation costs a fraction of a cent, on the order of two-tenths of a cent, instead of a frontier bill. And every decision lands on an audit trail.”</b> (~3:50)`],
+
+  [`<div class="kicker">Cost, mechanically</div>
+    <h2>Quark routes to the cheapest adequate model</h2>
+    ${diagram('routing','Anthropic is a pool member, not the default — frontier only for tier-4 arch/security')}`,
+   `If asked how routing works: <b>“A cost officer maps each task to a capability tier and picks the cheapest model in a multi-provider pool that meets it. Routine work goes to Llama or GPT-4o-mini, advanced work to DeepSeek, and only tier-4 architecture and security calls reach the frontier Anthropic model. Anthropic is a pool member, not the default.”</b> (skip if short on time)`],
+
+  [`<div class="kicker">Why a client cares</div>
+    <h2>Three concrete benefits</h2>
+    <div class="grid3">
+      <div class="card"><h3>💸 Cost you can see</h3><p>Savings vs a frontier baseline are <b>computed and reported</b>, not promised.</p></div>
+      <div class="card"><h3>🔐 Governance</h3><p>Every credential access &amp; autonomous action is <b>audited and policy-gated</b>; clients isolated with their own policy + memory.</p></div>
+      <div class="card"><h3>📈 It compounds</h3><p>Knowledge persists across sessions and <b>across different AI tools</b> — the memory is the portable brain, not the vendor.</p></div>
+    </div>`,
+   `<b>“For a client, that's three concrete things. One — cost control you can see: savings versus a frontier baseline are computed and reported, not promised. Two — governance: every credential access and autonomous action is audited and policy-gated, which matters for regulated work, and clients are isolated with their own policies and memory. Three — it compounds: knowledge persists across sessions and even across different AI tools.”</b> (~4:25)`],
+
+  [`<div class="kicker">Why it gets better</div>
+    <h2>The compounding loop</h2>
+    ${diagram('loop','recall → act → govern → store; the next prompt builds on the last')}`,
+   `Optional reinforcement of the “compounds” point — the recall→act→govern→store loop is what makes each mission cheaper and smarter than the last. (skip if short on time)`],
+
+  [`<div class="kicker">Honest close</div>
+    <p class="quote">“Keep the expensive model thin; make the cost of every decision visible.”</p>
+    <p class="lead">It runs today — the crew deliberates and writes code. A defined <b>shadow test</b> gates full autonomy; that bar isn't cleared yet — and I can tell you exactly what it is.</p>
+    <p class="fine">Same discipline I bring to systems generally: push work to the cheapest place that can do it correctly, and make correctness and cost observable.</p>`,
+   `Close with candor — it earns trust. <b>“I'll be straight about maturity: it runs today, and I've defined a shadow test to decide when it's reliable enough to fully replace the premium driver — that bar isn't cleared yet. But the architecture is the point: keep the expensive model thin, delegate to a cheap, governed, self-improving crew, and make the cost of every decision visible. That's a pattern any team drowning in AI spend can adopt.”</b> (~5:00)`],
+
+  [`<div class="kicker">Appendix · verified facts</div>
+    <h2>By the numbers</h2>
+    <ul>
+      <li>11-member crew · 4 packages (mcp-server, shared, ui/Next.js, vscode-extension) · ~61k LOC TS</li>
+      <li>~150 MCP tool registrations · 41 skill-theory definitions · MCP SDK ^1.12.0</li>
+      <li>Multi-provider pool (Meta · OpenAI · DeepSeek · Anthropic · Google) · pgvector RAG (64-dim)</li>
+      <li>Deliberation ≈ <b>$0.002–0.0028</b> · Innovation Lounge ≈ <b>$0.04</b> · embeddings ≈ $0.02/1M tok</li>
+    </ul>
+    <p class="fine"><b>Don't overclaim:</b> shadow-test is a go-<em>criterion</em>, not a passed result · cost figures are per-deliberation micro-costs · Jonah/Bayer are illustrative clients · README still describes the older Aha product.</p>`,
+   `Backup slide for Q&A. All figures verified against the codebase; the caveats keep you honest if pressed on maturity or production usage.`]
+];
+
+/* ---- build DOM ---- */
+const deck = document.getElementById('deck');
+SLIDES.forEach(([html],i)=>{
+  const s=document.createElement('section');
+  s.className='slide'; s.dataset.i=i; s.innerHTML=html;
+  deck.appendChild(s);
+});
+const slides=[...document.querySelectorAll('.slide')];
+let cur=0;
+const zoomers={}; // key -> svgPanZoom instance
+
+function render(){
+  const el=document.getElementById('count');
+  slides.forEach((s,i)=>s.classList.toggle('active',i===cur));
+  el.textContent=`${cur+1} / ${slides.length}`;
+  document.getElementById('barfill').style.width=`${(cur)/(slides.length-1)*100}%`;
+  document.getElementById('notes').innerHTML=SLIDES[cur][1]||'<i>No notes.</i>';
+  // fit any diagram on the now-active slide
+  slides[cur].querySelectorAll('.mermaid[data-rendered] svg').forEach(svg=>{
+    const z=zoomers[svg.dataset.zkey];
+    if(z){ try{ z.resize(); z.fit(); z.center(); }catch(e){} }
+  });
+}
+function go(n){ cur=Math.max(0,Math.min(slides.length-1,n)); render(); history.replaceState(null,'',`#${cur+1}`); }
+function initialSlide(){ const h=parseInt(location.hash.replace('#',''),10); return (h>=1&&h<=slides.length)?h-1:0; }
+
+/* ---- mermaid render + pan/zoom ---- */
+mermaid.initialize({startOnLoad:false,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis',useMaxWidth:false}});
+window.addEventListener('load',async()=>{
+  try{ await mermaid.run({querySelector:'.mermaid'}); }catch(e){ console.error('mermaid',e); }
+  document.querySelectorAll('.mermaid').forEach(pre=>{
+    const svg=pre.querySelector('svg'); if(!svg) return;
+    const key=pre.dataset.key; svg.dataset.zkey=key; pre.setAttribute('data-rendered','1');
+    svg.removeAttribute('style');
+    try{
+      zoomers[key]=svgPanZoom(svg,{zoomEnabled:true,controlIconsEnabled:true,fit:true,center:true,
+        minZoom:0.4,maxZoom:12,zoomScaleSensitivity:0.35,dblClickZoomEnabled:true});
+    }catch(e){ console.error('panzoom',e); }
+  });
+  cur=initialSlide();
+  render();
+});
+
+/* ---- 5-minute pacing timer ---- */
+let total=300, left=300, tick=null;
+function fmt(s){const m=Math.floor(Math.abs(s)/60),ss=Math.abs(s)%60;return`${s<0?'-':''}${m}:${String(ss).padStart(2,'0')}`;}
+function paint(){const t=document.getElementById('timer');t.textContent=fmt(left);
+  t.className=left<=0?'over':left<=60?'warn':'';}
+function toggleTimer(){ if(tick){clearInterval(tick);tick=null;document.getElementById('tBtn').textContent='▶ Timer';}
+  else{document.getElementById('tBtn').textContent='⏸ Timer';tick=setInterval(()=>{left--;paint();},1000);} }
+function resetTimer(){left=total;paint();if(tick){clearInterval(tick);tick=null;document.getElementById('tBtn').textContent='▶ Timer';}}
+
+/* ---- controls ---- */
+document.getElementById('tBtn').onclick=toggleTimer;
+document.getElementById('notesBtn').onclick=()=>document.getElementById('notes').classList.toggle('show');
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(cur+1);}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
+  else if(e.key==='Home')go(0); else if(e.key==='End')go(slides.length-1);
+  else if(e.key.toLowerCase()==='n')document.getElementById('notes').classList.toggle('show');
+  else if(e.key.toLowerCase()==='t')toggleTimer();
+  else if(e.key.toLowerCase()==='r')resetTimer();
+  else if(e.key.toLowerCase()==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  else if(e.key.toLowerCase()==='z'){const z=Object.values(zoomers);slides[cur].querySelectorAll('svg').forEach(svg=>{const zz=zoomers[svg.dataset.zkey];if(zz){zz.resize();zz.fit();zz.center();}});}
+  else if(e.key==='?')document.getElementById('help').classList.toggle('show');
+  else if(e.key==='Escape')document.getElementById('help').classList.remove('show');
+});
+paint();
+</script>
+</body>
+</html>
