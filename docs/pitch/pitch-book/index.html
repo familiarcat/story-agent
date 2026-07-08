@@ -36,10 +36,15 @@
   #timer{background:rgba(15,23,42,.86);color:#fff;padding:6px 12px;border-radius:8px;font-weight:700;font-size:15px}#timer.warn{background:var(--gold)}#timer.over{background:#c53030}
   #count{background:rgba(15,23,42,.86);color:#cbd5e0;padding:6px 10px;border-radius:8px;font-size:13px}
   .btn{background:rgba(15,23,42,.86);color:#fff;border:0;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer}.btn:hover{background:var(--accent)}
-  #notes{position:fixed;left:0;right:0;bottom:6px;max-height:34vh;overflow:auto;background:#0f172a;color:#e2e8f0;padding:16px 7vw;z-index:55;transform:translateY(102%);transition:transform .3s;font-size:16px;line-height:1.55;border-top:3px solid var(--accent)}#notes.show{transform:translateY(0)}
+  .intro{font-size:clamp(15px,1.7vw,21px);line-height:1.45;color:var(--muted);margin:.1em 0 .7em;max-width:64ch}
+  #nav{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:60;display:flex;gap:10px;align-items:center}
+  .navbtn{background:var(--accent);color:#fff;border:0;width:48px;height:48px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
+  .navbtn:hover{background:var(--accent2)} .navbtn:disabled{opacity:.3;cursor:default;box-shadow:none}
+  #navcount{background:rgba(15,23,42,.86);color:#e2e8f0;padding:9px 16px;border-radius:999px;font-size:15px;font-variant-numeric:tabular-nums}
   @media print{
     html,body{overflow:visible;height:auto;background:#fff}
-    #hud,#bar,#notes,.dhint{display:none!important}
+    #hud,#bar,#nav,.dhint{display:none!important}
+    .intro{color:#333}
     #deck{position:static;inset:auto}
     .slide{position:relative;inset:auto;opacity:1!important;page-break-after:always;height:auto;min-height:94vh;display:flex}
     .diagram-wrap{height:58vh} .cols .diagram-wrap{height:42vh} .diagram{min-height:320px}
@@ -51,12 +56,15 @@
 <body>
 <div id="deck"></div>
 <div id="hud">
-  <button class="btn" id="notesBtn" title="Speaker notes (N)">Notes</button>
-  <button class="btn" id="tBtn" title="Timer (T)">▶ Timer</button>
-  <span id="timer">--:--</span><span id="count">1 / 1</span>
+  <button class="btn" id="tBtn" title="Start/pause timer (T)">▶ Timer</button>
+  <span id="timer">--:--</span>
 </div>
 <div id="bar"><div id="barfill"></div></div>
-<div id="notes"></div>
+<div id="nav">
+  <button class="navbtn" id="prev" title="Previous (←)" aria-label="Previous slide">‹</button>
+  <span id="navcount">1 / 1</span>
+  <button class="navbtn" id="next" title="Next (→)" aria-label="Next slide">›</button>
+</div>
 <script src="../presentation/vendor/mermaid.min.js"></script>
 <script src="../presentation/vendor/svg-pan-zoom.min.js"></script>
 <script>
@@ -65,10 +73,12 @@ const SLIDES = [["<div class=\"kicker\"><span>Interlinked pitch book · authored
 const TIMER_SECONDS = 180;
 
 const deck=document.getElementById('deck');
-SLIDES.forEach(([html])=>{const s=document.createElement('section');s.className='slide';s.innerHTML=html;deck.appendChild(s);});
+SLIDES.forEach(([html,notes])=>{const s=document.createElement('section');s.className='slide';s.innerHTML=html;
+  const h=s.querySelector('h2'); if(h&&notes){const p=document.createElement('p');p.className='intro';p.innerHTML=notes;h.insertAdjacentElement('afterend',p);}
+  deck.appendChild(s);});
 const slides=[...document.querySelectorAll('.slide')];let cur=0;const zoomers={};
 function fitActive(){slides[cur].querySelectorAll('svg').forEach(svg=>{const z=zoomers[svg.dataset.zkey];if(z){try{z.resize();z.fit();z.center();}catch(e){}}});}
-function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===cur));document.getElementById('count').textContent=(cur+1)+' / '+slides.length;document.getElementById('barfill').style.width=(cur/Math.max(1,slides.length-1)*100)+'%';document.getElementById('notes').innerHTML=(SLIDES[cur]&&SLIDES[cur][1])||'<i>No notes.</i>';fitActive();}
+function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===cur));document.getElementById('navcount').textContent=(cur+1)+' / '+slides.length;document.getElementById('barfill').style.width=(cur/Math.max(1,slides.length-1)*100)+'%';document.getElementById('prev').disabled=cur===0;document.getElementById('next').disabled=cur===slides.length-1;fitActive();}
 function go(n){cur=Math.max(0,Math.min(slides.length-1,n));render();history.replaceState(null,'','#'+(cur+1));}
 function initial(){const h=parseInt(location.hash.replace('#',''),10);return(h>=1&&h<=slides.length)?h-1:0;}
 mermaid.initialize({startOnLoad:false,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis',useMaxWidth:false}});
@@ -80,12 +90,12 @@ function fmt(s){const m=Math.floor(Math.abs(s)/60),ss=Math.abs(s)%60;return(s<0?
 function paint(){const t=document.getElementById('timer');t.textContent=fmt(left);t.className=left<=0?'over':left<=90?'warn':'';}
 function toggleT(){if(tick){clearInterval(tick);tick=null;document.getElementById('tBtn').textContent='▶ Timer';}else{document.getElementById('tBtn').textContent='⏸ Timer';tick=setInterval(()=>{left--;paint();},1000);}}
 document.getElementById('tBtn').onclick=toggleT;
-document.getElementById('notesBtn').onclick=()=>document.getElementById('notes').classList.toggle('show');
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
 addEventListener('keydown',e=>{const k=e.key.toLowerCase();
   if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(cur+1);}
   else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
   else if(e.key==='Home')go(0);else if(e.key==='End')go(slides.length-1);
-  else if(k==='n')document.getElementById('notes').classList.toggle('show');
   else if(k==='t')toggleT();else if(k==='r'){left=TIMER_SECONDS;paint();if(tick){clearInterval(tick);tick=null;document.getElementById('tBtn').textContent='▶ Timer';}}
   else if(k==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
   else if(k==='z')fitActive();});

@@ -50,34 +50,37 @@
   #count{background:rgba(15,23,42,.86);color:#cbd5e0;padding:6px 10px;border-radius:8px;font-size:13px}
   .btn{background:rgba(15,23,42,.86);color:#fff;border:0;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer}
   .btn:hover{background:var(--accent)}
-  #notes{position:fixed;left:0;right:0;bottom:5px;max-height:34vh;overflow:auto;background:#0f172a;color:#e2e8f0;
-    padding:16px 7vw;z-index:55;transform:translateY(102%);transition:transform .3s;font-size:15px;line-height:1.55;border-top:3px solid var(--accent)}
-  #notes.show{transform:translateY(0)}
-  #notes b{color:#90cdf4}
+  .intro{font-size:clamp(15px,1.7vw,21px);line-height:1.45;color:var(--muted);margin:.1em 0 .7em;max-width:64ch}
+  #nav{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:60;display:flex;gap:10px;align-items:center}
+  .navbtn{background:var(--accent);color:#fff;border:0;width:48px;height:48px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center}
+  .navbtn:hover{background:var(--accent2)} .navbtn:disabled{opacity:.3;cursor:default;box-shadow:none}
+  #navcount{background:rgba(15,23,42,.86);color:#e2e8f0;padding:9px 16px;border-radius:999px;font-size:15px;font-variant-numeric:tabular-nums}
   #help{position:fixed;inset:0;background:rgba(8,12,22,.92);color:#e2e8f0;z-index:80;display:none;align-items:center;justify-content:center}
   #help.show{display:flex}
   #help .box{background:#111a2e;border:1px solid #2d3b55;border-radius:14px;padding:26px 34px;max-width:560px}
   #help kbd{background:#243049;border:1px solid #3a4a6a;border-radius:6px;padding:2px 8px;font-family:ui-monospace,monospace;font-size:13px}
   #help table{width:100%;border-collapse:collapse}#help td{padding:7px 6px;border-bottom:1px solid #22304a}
-  @media print{ #hud,#bar,#notes,#help,.dhint{display:none!important} .slide{position:relative;opacity:1!important;page-break-after:always;height:auto;min-height:96vh} }
+  @media print{ #hud,#bar,#nav,#help,.dhint{display:none!important} .intro{color:#333} .slide{position:relative;opacity:1!important;page-break-after:always;height:auto;min-height:96vh} }
 </style>
 </head>
 <body>
 <div id="deck"></div>
 
 <div id="hud">
-  <button class="btn" id="notesBtn" title="Speaker notes (N)">Notes</button>
   <button class="btn" id="tBtn" title="Start/pause timer (T)">▶ Timer</button>
   <span id="timer">05:00</span>
-  <span id="count">1 / 1</span>
 </div>
 <div id="bar"><div id="barfill"></div></div>
-<div id="notes"></div>
+<div id="nav">
+  <button class="navbtn" id="prev" title="Previous (←)" aria-label="Previous slide">‹</button>
+  <span id="navcount">1 / 1</span>
+  <button class="navbtn" id="next" title="Next (→)" aria-label="Next slide">›</button>
+</div>
 <div id="help"><div class="box">
   <h2 style="color:#90cdf4;margin-top:0">Keyboard</h2>
   <table>
     <tr><td><kbd>→</kbd> / <kbd>Space</kbd></td><td>Next slide</td><td><kbd>←</kbd></td><td>Previous</td></tr>
-    <tr><td><kbd>N</kbd></td><td>Speaker notes</td><td><kbd>T</kbd></td><td>Start / pause 5-min timer</td></tr>
+    <tr><td>◀ ▶ / click</td><td>Prev / next slide</td><td><kbd>T</kbd></td><td>Start / pause 5-min timer</td></tr>
     <tr><td><kbd>R</kbd></td><td>Reset timer</td><td><kbd>F</kbd></td><td>Fullscreen</td></tr>
     <tr><td><kbd>Z</kbd></td><td>Reset diagram zoom</td><td><kbd>?</kbd></td><td>This help</td></tr>
   </table>
@@ -223,9 +226,11 @@ const SLIDES = [
 
 /* ---- build DOM ---- */
 const deck = document.getElementById('deck');
-SLIDES.forEach(([html],i)=>{
+SLIDES.forEach(([html,notes],i)=>{
   const s=document.createElement('section');
   s.className='slide'; s.dataset.i=i; s.innerHTML=html;
+  // Notes are the slide's topical intro → show them in the body, as a lead under the title.
+  const h=s.querySelector('h2'); if(h&&notes){const p=document.createElement('p');p.className='intro';p.innerHTML=notes;h.insertAdjacentElement('afterend',p);}
   deck.appendChild(s);
 });
 const slides=[...document.querySelectorAll('.slide')];
@@ -233,11 +238,11 @@ let cur=0;
 const zoomers={}; // key -> svgPanZoom instance
 
 function render(){
-  const el=document.getElementById('count');
   slides.forEach((s,i)=>s.classList.toggle('active',i===cur));
-  el.textContent=`${cur+1} / ${slides.length}`;
+  document.getElementById('navcount').textContent=`${cur+1} / ${slides.length}`;
   document.getElementById('barfill').style.width=`${(cur)/(slides.length-1)*100}%`;
-  document.getElementById('notes').innerHTML=SLIDES[cur][1]||'<i>No notes.</i>';
+  document.getElementById('prev').disabled=cur===0;
+  document.getElementById('next').disabled=cur===slides.length-1;
   // fit any diagram on the now-active slide
   slides[cur].querySelectorAll('.mermaid[data-rendered] svg').forEach(svg=>{
     const z=zoomers[svg.dataset.zkey];
@@ -275,12 +280,12 @@ function resetTimer(){left=total;paint();if(tick){clearInterval(tick);tick=null;
 
 /* ---- controls ---- */
 document.getElementById('tBtn').onclick=toggleTimer;
-document.getElementById('notesBtn').onclick=()=>document.getElementById('notes').classList.toggle('show');
+document.getElementById('prev').onclick=()=>go(cur-1);
+document.getElementById('next').onclick=()=>go(cur+1);
 addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(cur+1);}
   else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
   else if(e.key==='Home')go(0); else if(e.key==='End')go(slides.length-1);
-  else if(e.key.toLowerCase()==='n')document.getElementById('notes').classList.toggle('show');
   else if(e.key.toLowerCase()==='t')toggleTimer();
   else if(e.key.toLowerCase()==='r')resetTimer();
   else if(e.key.toLowerCase()==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
