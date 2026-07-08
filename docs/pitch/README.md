@@ -1,6 +1,28 @@
 # Story Agent — Pitch & Presentation System
 
-A complete, self-contained kit for explaining the project in a ~5-minute technical interview.
+A complete, self-contained kit for explaining the project — plus a **reusable generator** that builds a crew-authored deck for **any scope** (the whole system, a client, a project, or a story).
+
+## Generate a deck for any scope — `pnpm present`
+
+```bash
+pnpm present -- --scope system                                  # whole-project summary
+pnpm present -- --scope client  --name "Jonah" [--client jonah] # client proposal
+pnpm present -- --scope project --name "PM Dashboard" --brief brief.md
+pnpm present -- --scope story   --name "Aha branching"  --brief brief.md
+#   optional: --title "…"  --audience "…"  --minutes 8  --slug my-deck  --out <dir>  --no-store
+```
+
+What it does (all on cost-optimized OpenRouter models, ~$0.002–0.003, live in `pnpm status`):
+1. **Resolves the scope** and picks a section preset (system = 11 officer domains; client = value/fit/security/cost/roadmap; project = overview/architecture/plan/quality/infra/cost; story = problem/approach/plan/acceptance/impact).
+2. **Gathers grounded facts** — built-in platform capabilities + RAG recall for the scope (`getRelevantObservationMemories`) + an optional `--brief <file>` for scope-specific detail.
+3. **The full crew fans out in parallel**, each officer drafting one section.
+4. **Assembles a self-contained deck** (`scripts/lib/deck-template.html`) → `docs/pitch/presentations/<slug>/index.html` + `deck.pdf`, reusing the shared vendored libs. Result is stored to RAG.
+
+Generated decks land in `docs/pitch/presentations/<slug>/` (gitignored — regenerate on demand). For a scope with little RAG history, pass `--brief` with a short markdown file describing it.
+
+---
+
+## Curated decks (committed)
 
 ## Contents
 
