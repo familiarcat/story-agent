@@ -18,7 +18,8 @@ CONVERGE ON:
 3. Riker/Geordi: for lever (B), the real build: an Anthropic-/v1/messages-compatible shim that translates to OpenRouter chat-completions, runs quarkSelectModel for complexity/cost routing, preserves tool-use + streaming. Where it lives, how Claude Code points at it (ANTHROPIC_BASE_URL), the parity risks, and a go/no-go.
 4. Quark: the actual cost math. For a typical Claude Code task, estimate Anthropic-direct $ vs (A) delegation $ vs (B) proxy $. Which lever yields the biggest verified savings, and the break-even.
 5. Worf: security — a proxy sees every prompt + Anthropic-style traffic; credential brokering, audit, client isolation. Governance floor.
-6. Troi: operator experience — they expect "cheaper automatically." What is the least-surprising path that delivers that feeling.
+6. WorfGate posture check: before any recommendation is finalized, evaluate current WorfGate posture, credential availability, audit trail, and whether the proposed change requires explicit WorfGate approval. Recommended changes should be framed as WorfGate-gated and safe.
+7. Troi: operator experience — they expect "cheaper automatically." What is the least-surprising path that delivers that feeling.
 Picard ends with an ORDERED, decisive recommendation: pick (A), (B), or both-in-sequence, with the first 3 concrete steps. FRUGAL + terse.`;
 const r = await runMissionPipeline(BRIEF);
 const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'');
