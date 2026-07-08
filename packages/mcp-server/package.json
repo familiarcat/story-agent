@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "tsc -p tsconfig.build.json && node --watch dist/src/index.js",
+    "dev": "concurrently --names TSC,NODE --colors cyan,magenta \"tsc -p tsconfig.build.json -w --preserveWatchOutput\" \"node --watch dist/src/index.js\"",
     "start": "node dist/src/index.js",
     "test": "vitest run",
     "test:unit": "RUN_MODE=unit vitest run",

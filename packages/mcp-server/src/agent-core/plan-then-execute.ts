@@ -7,7 +7,7 @@
  * Plan injection: runAgentLoop has no systemContext param, so the crew's missionPlan is PREPENDED to
  * the agent input (crew ruling). The agent then performs the plan with tools.
  */
-import { runMissionPipeline } from '../lib/crew-mission-pipeline.js';
+import { runMissionPipeline, type MissionPipelineResult } from '../lib/crew-mission-pipeline.js';
 import { runAgentLoop, type AgentRunResult } from './loop.js';
 import { buildUnifiedRunRecord, storeUnifiedRun, recallUnifiedRuns, type UnifiedRunRecord } from './unified-run.js';
 import { RunRegistry } from './run-registry.js';
@@ -16,6 +16,7 @@ import { RunRegistry } from './run-registry.js';
 
 export interface PlanThenExecuteResult {
   task: string;
+  mission: MissionPipelineResult;
   plan: { missionPlan: string; costUSD: number; topModel: string };
   run: AgentRunResult;
   /** The linked {plan → execution → outcome} record stored to shared RAG (Commodore fabric, phase 1). */
@@ -76,6 +77,7 @@ export async function planThenExecute(
 
   return {
     task,
+    mission,
     plan: { missionPlan: mission.missionPlan, costUSD: mission.efficiency.totalCostUSD, topModel: mission.topModel },
     run,
     unifiedRun,

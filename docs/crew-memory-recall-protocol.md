@@ -46,6 +46,9 @@ persistence + `clientId`-scoped for isolation.
 
 1. **Recall first** — `rag_recall` (agent), or `getRelevantObservationMemories` / `recall_taught_tools`
    (scripts/tools), keyed to the task. Cite what you found.
+  For **chat-client integration work**, also recall the saved client-capability matrix decision and
+  review [docs/chat-client-capability-matrix.md](./chat-client-capability-matrix.md) before choosing
+  a lane or recommending a client configuration.
 2. **Act** — via the crew (`runMissionPipeline`) or the agent-core loop, per the dogfooding mandate.
 3. **Store** — durable conclusions back to RAG (`storeObservationMemory` + a per-member note), tagged
    for recall.

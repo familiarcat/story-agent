@@ -12,6 +12,12 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "languageModelChatProviders": [
+      {
+        "vendor": "story-agent",
+        "displayName": "Story Agent"
+      }
+    ],
     "chatParticipants": [
       {
         "id": "story-agent.agent",
@@ -320,6 +326,11 @@
           "type": "string",
           "default": "",
           "description": "Optional bearer token for the agent-core endpoint (matches AGENT_SERVICE_TOKEN). Falls back to the AGENT_SERVICE_TOKEN env var."
+        },
+        "storyAgent.chat.nativeProviderEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the experimental VS Code-native Story Agent chat provider lane. This adds Story Agent as a model provider in the Chat view while preserving the existing participant-based path."
         },
         "storyAgent.chat.clientId": {
           "type": "string",

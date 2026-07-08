@@ -64,3 +64,13 @@ printf '%s\n' \
 
 A `tools/list` result with ~132 tools (including `run_crew_mission_pipeline`) means the crew is
 reachable. If empty: build the server, and confirm `CREW_LLM_APPROVED_KEY` is in your shell env.
+
+## Relationship to chat lanes
+
+MCP is the tool and orchestration lane for Story Agent. It is not the same as the canonical chat-model lane.
+
+- Claude Code should continue to use MCP for tools, crew memory, Aha, WorfGate, and mission execution.
+- Story Agent's NL chat brain is served separately through the server-side chat endpoints.
+- VS Code-native chat integration and OpenAI-compatible external-client integration should adapt into the canonical chat brain instead of trying to turn MCP itself into a generic chat transport.
+
+See [docs/chat-integration-architecture.md](./chat-integration-architecture.md) for the full multi-lane model.

@@ -134,23 +134,98 @@ function workspacePath(): string | undefined {
 
 export interface ChatOnceResult { ok: boolean; answer?: string; model?: string; tier?: number; costUSD?: number; }
 
+export interface CrewChatResult extends ChatOnceResult {
+  provider?: string;
+  tokensIn?: number;
+  tokensOut?: number;
+  sources?: string[];
+  promptOptimization?: {
+    applied: boolean;
+    originalChars: number;
+    optimizedChars: number;
+    netCharDelta: number;
+    rules: string[];
+  };
+  crewSelfOrganization?: {
+    enabled: boolean;
+    goals: string;
+    missionPlan: string;
+    topModel: string;
+    totalCostUSD: number;
+    totalTokens: number;
+    providerCosts: Record<string, number>;
+    teams: Array<{ teamId: string; label: string; members: string[]; domains: string[]; memoryHits: number }>;
+    members: Array<{ crewId: string; domain: string; teamIds: string[]; memoryHits: number; memoryTitles: string[] }>;
+  };
+  costAnalysis?: {
+    mode?: 'chat' | 'plan-then-execute';
+    chatCostUSD: number;
+    chatTokensIn: number;
+    chatTokensOut: number;
+    chatTotalTokens: number;
+    crewPreparationCostUSD: number;
+    crewPreparationTokens: number;
+    executionRunCostUSD?: number;
+    executionRunTokens?: number;
+    totalCostUSD: number;
+    totalTokens: number;
+    provider: string;
+    optimizationRules: string[];
+  };
+  executionActivation?: {
+    activated: boolean;
+    phrase: 'make-it-so' | 'next-steps';
+    task: string;
+    priorRuns: string[];
+    missionId: string;
+    iterations: number;
+    toolCalls: number;
+    escalated: boolean;
+    stalled: boolean;
+  };
+}
+
+export async function chatWithCrew(
+  message: string,
+  opts?: { clientId?: string | null; history?: Array<{ role: string; content: string }> },
+): Promise<CrewChatResult> {
+  const clientId = opts?.clientId;
+  for (const base of agentCandidates()) {
+    try {
+      const resp = await fetch(base + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, clientId: clientId ?? null, history: opts?.history ?? [] }),
+      });
+      if (!resp.ok) continue;
+      const d: any = await resp.json();
+      return {
+        ok: true,
+        answer: d.answer,
+        model: d.model,
+        tier: d.tier,
+        costUSD: d.costUSD,
+        provider: d.provider,
+        tokensIn: d.tokensIn,
+        tokensOut: d.tokensOut,
+        sources: d.sources,
+        promptOptimization: d.promptOptimization,
+        crewSelfOrganization: d.crewSelfOrganization,
+        costAnalysis: d.costAnalysis,
+        executionActivation: d.executionActivation,
+      };
+    } catch { /* next candidate */ }
+  }
+  return { ok: false };
+}
+
 /**
  * One-shot canonical chat (no stream) — POSTs to the crew brain /chat (Quark-optimized model),
  * trying the configured/cloud endpoint then the local loop. Used by inline chat (Ctrl+I).
  */
 export async function chatOnce(message: string, clientId?: string | null): Promise<ChatOnceResult> {
-  for (const base of agentCandidates()) {
-    try {
-      const resp = await fetch(base + '/chat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, clientId: clientId ?? null }),
-      });
-      if (!resp.ok) continue;
-      const d: any = await resp.json();
-      return { ok: true, answer: d.answer, model: d.model, tier: d.tier, costUSD: d.costUSD };
-    } catch { /* next candidate */ }
-  }
-  return { ok: false };
+  const result = await chatWithCrew(message, { clientId });
+  return { ok: result.ok, answer: result.answer, model: result.model, tier: result.tier, costUSD: result.costUSD };
 }
 
 export interface ChatTurnResult { ok: boolean; model?: string; costUSD?: number; }
@@ -169,22 +244,22 @@ export async function runChatTurn(
 ): Promise<ChatTurnResult> {
   const c = vscode.workspace.getConfiguration('storyAgent');
   const clientId = process.env.STORY_AGENT_CLIENT_ID || c.get<string>('chat.clientId') || null;
-  for (const base of agentCandidates()) {
-    try {
-      const resp = await fetch(base + '/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, clientId, history: history ?? [] }),
-      });
-      if (!resp.ok) continue;
-      const d: any = await resp.json();
-      if (token.isCancellationRequested) return { ok: true };
-      stream.markdown(`${d.answer ?? ''}\n\n`);
-      stream.markdown(`_◇ ${d.model} · tier ${d.tier} · $${(d.costUSD ?? 0).toFixed(5)} (Quark-optimized)_`);
-      return { ok: true, model: d.model, costUSD: d.costUSD };
-    } catch { /* try next candidate */ }
-  }
-  return { ok: false };
+  const result = await chatWithCrew(message, { clientId, history });
+  if (!result.ok) return { ok: false };
+  if (token.isCancellationRequested) return { ok: true };
+  stream.markdown(`${result.answer ?? ''}\n\n`);
+  const promptRules = result.promptOptimization?.rules?.length ? ` · optimize:${result.promptOptimization.rules.join(',')}` : '';
+  const teamSummary = result.crewSelfOrganization?.teams?.length
+    ? ` · teams:${result.crewSelfOrganization.teams.map((team) => `${team.teamId}[${team.members.join('+')}]`).join(' / ')}`
+    : '';
+  const activationSummary = result.executionActivation?.activated
+    ? ` · activated:${result.executionActivation.phrase} (${result.executionActivation.toolCalls} tools/${result.executionActivation.iterations} turns)`
+    : '';
+  const costSummary = result.costAnalysis
+    ? ` · total $${result.costAnalysis.totalCostUSD.toFixed(5)} (${result.costAnalysis.totalTokens} tok; chat $${result.costAnalysis.chatCostUSD.toFixed(5)} + crew $${result.costAnalysis.crewPreparationCostUSD.toFixed(5)}${result.costAnalysis.executionRunCostUSD != null ? ` + run $${result.costAnalysis.executionRunCostUSD.toFixed(5)}` : ''})`
+    : ` · $${(result.costUSD ?? 0).toFixed(5)}`;
+  stream.markdown(`_◇ ${result.model} · tier ${result.tier}${costSummary}${promptRules}${teamSummary}${activationSummary} (Quark-optimized)_`);
+  return { ok: true, model: result.model, costUSD: result.costUSD };
 }
 
 export interface AgentTurnResult {

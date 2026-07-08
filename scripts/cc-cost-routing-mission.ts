@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { runMissionPipeline } from '../packages/mcp-server/src/lib/crew-mission-pipeline.js';
-import { storeObservationMemory, storeCrewPersonalMemory, embeddingSource } from '../packages/shared/src/db.js';
+import { runMissionPipeline } from '../packages/mcp-server/dist/src/lib/crew-mission-pipeline.js';
+import { storeObservationMemory, storeCrewPersonalMemory, embeddingSource } from '../packages/shared/dist/src/db.js';
 (async () => {
 const BRIEF = `Observation Lounge: the operator wants Claude Code (Anthropic) prompts to cost LESS by leaning on OUR OpenRouter/Quark crew. Diagnose WHY it doesn't happen automatically today and design the architecture that actually cuts the cost.
 

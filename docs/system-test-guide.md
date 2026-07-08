@@ -32,10 +32,12 @@ pnpm dev
 This brings up the MCP server (stdio) + agent-core SSE (**:3103**) + RAG read service (**:3102**) +
 web UI (**:3000**).
 
+`pnpm dev` is the canonical local parity path: chat clients, the web UI, and Story Agent orchestration all target the same local Story Agent brain on `http://localhost:3103`, which is where Quark routing and OpenRouter-backed memory-aware chat behavior live.
+
 **Or two terminals (for debugging):**
 ```bash
 # Terminal 1 — MCP + agent + RAG
-STORY_AGENT_AGENT_PORT=3103 pnpm --filter @story-agent/mcp-server dev
+pnpm mcp
 # Terminal 2 — web UI
 STORY_AGENT_AGENT_URL=http://localhost:3103 STORY_AGENT_RAG_URL=http://localhost:3102 \
   pnpm --filter @story-agent/ui dev

@@ -41,6 +41,15 @@
   .diagram .mermaid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
   .diagram svg{width:100%!important;height:100%!important;max-width:none!important}
   .dhint{font-size:12px;color:var(--muted);margin-top:6px}
+  .dexpand{position:absolute;top:8px;right:8px;z-index:6;background:rgba(43,108,176,.94);color:#fff;border:0;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer}
+  .dexpand:hover{background:var(--accent2)}
+  #dmodal{position:fixed;inset:0;background:#0b1220;z-index:100;display:none;flex-direction:column}
+  #dmodal.show{display:flex}
+  #dmodal .mbar{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;color:#cbd5e0;font-size:14px}
+  #dmodal .mclose{background:#243049;color:#fff;border:0;border-radius:8px;padding:8px 16px;font-size:15px;cursor:pointer}
+  #dmodal .mclose:hover{background:var(--accent)}
+  #dmodal .mstage{flex:1;min-height:0;margin:0 18px 18px}
+  #dmodal .mstage svg{width:100%!important;height:100%!important;max-width:none!important}
   /* chrome */
   #bar{position:fixed;left:0;right:0;bottom:0;height:5px;background:#e2e8f0;z-index:50}
   #barfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#4299e1);transition:width .35s}
@@ -60,7 +69,7 @@
   #help .box{background:#111a2e;border:1px solid #2d3b55;border-radius:14px;padding:26px 34px;max-width:560px}
   #help kbd{background:#243049;border:1px solid #3a4a6a;border-radius:6px;padding:2px 8px;font-family:ui-monospace,monospace;font-size:13px}
   #help table{width:100%;border-collapse:collapse}#help td{padding:7px 6px;border-bottom:1px solid #22304a}
-  @media print{ #hud,#bar,#nav,#help,.dhint{display:none!important} .intro{color:#333} .slide{position:relative;opacity:1!important;page-break-after:always;height:auto;min-height:96vh} }
+  @media print{ #hud,#bar,#nav,#help,#dmodal,.dexpand,.dhint{display:none!important} .intro{color:#333} .slide{position:relative;opacity:1!important;page-break-after:always;height:auto;min-height:96vh} }
 </style>
 </head>
 <body>
@@ -76,6 +85,7 @@
   <span id="navcount">1 / 1</span>
   <button class="navbtn" id="next" title="Next (→)" aria-label="Next slide">›</button>
 </div>
+<div id="dmodal"><div class="mbar"><span>Diagram — scroll to zoom · drag to pan · Esc to close</span><button class="mclose" aria-label="Close">Close ✕</button></div><div class="mstage"></div></div>
 <div id="help"><div class="box">
   <h2 style="color:#90cdf4;margin-top:0">Keyboard</h2>
   <table>
@@ -236,6 +246,7 @@ SLIDES.forEach(([html,notes],i)=>{
 const slides=[...document.querySelectorAll('.slide')];
 let cur=0;
 const zoomers={}; // key -> svgPanZoom instance
+const dsrc={};let modalZ=null;let moc=0;
 
 function render(){
   slides.forEach((s,i)=>s.classList.toggle('active',i===cur));
@@ -255,19 +266,25 @@ function initialSlide(){ const h=parseInt(location.hash.replace('#',''),10); ret
 /* ---- mermaid render + pan/zoom ---- */
 mermaid.initialize({startOnLoad:false,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis',useMaxWidth:false}});
 window.addEventListener('load',async()=>{
+  document.querySelectorAll('.mermaid').forEach((pre,i)=>{pre.id=pre.id||('dg'+i);dsrc[pre.id]=pre.textContent;});
   try{ await mermaid.run({querySelector:'.mermaid'}); }catch(e){ console.error('mermaid',e); }
   document.querySelectorAll('.mermaid').forEach(pre=>{
     const svg=pre.querySelector('svg'); if(!svg) return;
-    const key=pre.dataset.key; svg.dataset.zkey=key; pre.setAttribute('data-rendered','1');
+    const key=pre.dataset.key||pre.id; svg.dataset.zkey=key; pre.setAttribute('data-rendered','1');
     svg.removeAttribute('style');
     try{
       zoomers[key]=svgPanZoom(svg,{zoomEnabled:true,controlIconsEnabled:true,fit:true,center:true,
         minZoom:0.4,maxZoom:12,zoomScaleSensitivity:0.35,dblClickZoomEnabled:true});
     }catch(e){ console.error('panzoom',e); }
+    const d=pre.closest('.diagram'); if(d){const b=document.createElement('button');b.className='dexpand';b.type='button';b.textContent='⛶ Expand';b.onclick=()=>openModal(pre.id);d.appendChild(b);}
   });
   cur=initialSlide();
   render();
 });
+async function openModal(id){const src=dsrc[id];if(!src)return;const stage=document.querySelector('#dmodal .mstage');stage.innerHTML='';document.getElementById('dmodal').classList.add('show');try{const r=await mermaid.render('mo'+(++moc),src);stage.innerHTML=r.svg;const s=stage.querySelector('svg');if(s){s.removeAttribute('style');modalZ=svgPanZoom(s,{zoomEnabled:true,controlIconsEnabled:true,fit:true,center:true,minZoom:0.3,maxZoom:24,zoomScaleSensitivity:0.35,dblClickZoomEnabled:true});setTimeout(()=>{try{modalZ.resize();modalZ.fit();modalZ.center();}catch(e){}},60);}}catch(e){console.error(e);}}
+function closeModal(){document.getElementById('dmodal').classList.remove('show');if(modalZ){try{modalZ.destroy();}catch(e){}modalZ=null;}document.querySelector('#dmodal .mstage').innerHTML='';}
+document.querySelector('#dmodal .mclose').onclick=closeModal;
+document.getElementById('dmodal').addEventListener('click',e=>{if(e.target.id==='dmodal')closeModal();});
 
 /* ---- 5-minute pacing timer ---- */
 let total=300, left=300, tick=null;
@@ -283,6 +300,7 @@ document.getElementById('tBtn').onclick=toggleTimer;
 document.getElementById('prev').onclick=()=>go(cur-1);
 document.getElementById('next').onclick=()=>go(cur+1);
 addEventListener('keydown',e=>{
+  if(document.getElementById('dmodal').classList.contains('show')){if(e.key==='Escape')closeModal();return;}
   if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(cur+1);}
   else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
   else if(e.key==='Home')go(0); else if(e.key==='End')go(slides.length-1);

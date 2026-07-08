@@ -10,7 +10,7 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { guardListen } from '../lib/port-guard.js';
-import { handleChatRequest } from './chat.js';
+import { handleChatRequest, handleOpenAICompatibleChatRequest } from './chat.js';
 import { recordCost, costSummary } from './cost-ledger.js';
 import { resolveClientId } from './client-identity.js';
 import { handleAhaRequest } from './aha-http.js';
@@ -77,6 +77,7 @@ const APPROVAL_TIMEOUT_MS = Number(process.env.AGENT_APPROVAL_TIMEOUT_MS || 180_
  * replacement (crew deploy-optimization finding).
  */
 export async function handleAgentRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  if (await handleOpenAICompatibleChatRequest(req, res)) return true; // external OpenAI-compatible facade
   if (await handleChatRequest(req, res)) return true; // canonical Quark-optimized /chat
   if (await handleAhaRequest(req, res)) return true;  // Aha products (single source, cached)
   const url = (req.url || '').split('?')[0];
@@ -87,6 +88,7 @@ export async function handleAgentRequest(req: IncomingMessage, res: ServerRespon
 
 export function startAgentHttpServer(port: number) {
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (await handleOpenAICompatibleChatRequest(req, res)) return; // minimal OpenAI-compatible /v1/chat/completions
     if (await handleChatRequest(req, res)) return; // canonical Quark-optimized /chat
     if (await handleAhaRequest(req, res)) return;  // Aha products (single source, cached)
     await serveAgent(req, res, (req.url || '').split('?')[0], port);

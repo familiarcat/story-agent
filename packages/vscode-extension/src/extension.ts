@@ -9,6 +9,7 @@ import { registerReviewChanges } from './reviewChanges';
 import { registerInlineChat } from './inlineChat';
 import { connectProviderInteractive } from './oauth';
 import { runNodeActions } from './selectionActions';
+import { registerNativeChatProvider } from './nativeChatProvider';
 
 function dashboardBase(): string {
   return vscode.workspace.getConfiguration('storyAgent').get<string>('dashboardUrl') ?? 'http://localhost:3000';
@@ -187,6 +188,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ── Chat participant ──────────────────────────────────────────────────────
   registerParticipant(context);
+
+  // ── Optional VS Code-native chat provider lane ────────────────────────────
+  registerNativeChatProvider(context);
 }
 
 export function deactivate(): void {

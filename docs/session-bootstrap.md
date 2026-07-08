@@ -12,6 +12,10 @@ source; its RAG twin (tags: `bootstrap`, `session-restart`, `onboarding`) is wha
    `crew:store-memory`. One-time setup: `scripts/setup-claude-mcp.sh` (build + verify + pre-approve).
 2. **Recall** — `crew:get-relevant-memories` (or `rag_recall`) for the task, plus the `bootstrap` tag
    for this file's twin. Cite prior rulings; don't re-litigate.
+  For chat-integration and client-routing tasks, also consult the saved client-capability matrix and
+  the repo artifacts [docs/chat-client-capability-matrix.md](./chat-client-capability-matrix.md),
+  [docs/chat-client-implementation-roadmap.md](./chat-client-implementation-roadmap.md), and
+  [docs/chat-client-integration-recipes.md](./chat-client-integration-recipes.md) before planning changes.
 3. **Act** — route substantive reasoning to the crew (`run_crew_mission_pipeline` / agent-core loop on
    OpenRouter). Anthropic/the host tool is the ORCHESTRATOR: dispatch → verify (build/test) → final-mile.
 4. **Store** — `crew:store-memory` durable conclusions after acting. The loop compounds only if each
