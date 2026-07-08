@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Story Agent — Project Summary (crew-authored)</title>
+<style>
+  :root{ --ink:#1a202c; --muted:#4a5568; --accent:#2b6cb0; --accent2:#2c5282; --bg:#fff; --panel:#f7fafc; --border:#cbd5e0; --gold:#b7791f; --crew:#276749; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:#0b1220;overflow:hidden}
+  #deck{position:fixed;inset:0}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:5vh 7vw;background:var(--bg);opacity:0;pointer-events:none;transition:opacity .35s ease;overflow:auto}
+  .slide.active{opacity:1;pointer-events:auto;z-index:2}
+  .slide h1{font-size:clamp(30px,5vw,60px);margin:0 0 .18em;line-height:1.04}
+  .slide h2{font-size:clamp(24px,3.6vw,44px);margin:0 0 .45em;color:var(--accent);line-height:1.08}
+  .slide p,.slide li{font-size:clamp(17px,1.95vw,27px);line-height:1.5}
+  .lead{font-size:clamp(19px,2.3vw,30px);color:var(--muted)}
+  .kicker{font-size:clamp(13px,1.35vw,17px);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:.5em;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .owner{background:#edf2f7;color:var(--accent2);border-radius:999px;padding:.15em .8em;font-size:.85em;letter-spacing:.06em}
+  ul{margin:.3em 0;padding-left:1.15em} li{margin:.42em 0}
+  .value{margin-top:.7em;background:#ebf8ff;border-left:6px solid var(--accent);padding:12px 18px;border-radius:8px;font-size:clamp(16px,1.8vw,24px)}
+  .value b{color:var(--accent2)}
+  .big{font-weight:800} .accent{color:var(--accent)}
+  .quote{font-size:clamp(24px,3.2vw,44px);font-weight:800;line-height:1.2;border-left:8px solid var(--accent);padding-left:26px}
+  .fine{font-size:clamp(13px,1.3vw,17px);color:var(--muted)}
+  .agenda{columns:2;column-gap:48px;margin-top:.4em} .agenda li{break-inside:avoid;font-size:clamp(15px,1.7vw,22px)}
+  .diagram-wrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:.4em}
+  .diagram{flex:1;min-height:0;border:1px solid var(--border);border-radius:12px;background:#fcfdff;position:relative;overflow:hidden}
+  .diagram .mermaid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .diagram svg{width:100%!important;height:100%!important;max-width:none!important}
+  .dhint{font-size:13px;color:var(--muted);margin-top:6px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:stretch;margin-top:.4em}
+  .cols .diagram-wrap{height:46vh;margin-top:0}
+  #bar{position:fixed;left:0;right:0;bottom:0;height:6px;background:#e2e8f0;z-index:50}#barfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#4299e1);transition:width .35s}
+  #hud{position:fixed;top:14px;right:16px;display:flex;gap:10px;align-items:center;z-index:60;font-variant-numeric:tabular-nums}
+  #timer{background:rgba(15,23,42,.86);color:#fff;padding:6px 12px;border-radius:8px;font-weight:700;font-size:15px}#timer.warn{background:var(--gold)}#timer.over{background:#c53030}
+  #count{background:rgba(15,23,42,.86);color:#cbd5e0;padding:6px 10px;border-radius:8px;font-size:13px}
+  .btn{background:rgba(15,23,42,.86);color:#fff;border:0;padding:6px 10px;border-radius:8px;font-size:13px;cursor:pointer}.btn:hover{background:var(--accent)}
+  #notes{position:fixed;left:0;right:0;bottom:6px;max-height:34vh;overflow:auto;background:#0f172a;color:#e2e8f0;padding:16px 7vw;z-index:55;transform:translateY(102%);transition:transform .3s;font-size:16px;line-height:1.55;border-top:3px solid var(--accent)}#notes.show{transform:translateY(0)}
+  @media print{
+    html,body{overflow:visible;height:auto;background:#fff}
+    #hud,#bar,#notes,.dhint{display:none!important}
+    #deck{position:static;inset:auto}
+    .slide{position:relative;inset:auto;opacity:1!important;page-break-after:always;height:auto;min-height:94vh;display:flex}
+    .diagram-wrap{height:58vh} .cols .diagram-wrap{height:42vh} .diagram{min-height:320px}
+    .slide:last-child{page-break-after:auto}
+    [id^=svg-pan-zoom-controls]{display:none!important}
+  }
+</style>
+</head>
+<body>
+<div id="deck"></div>
+<div id="hud">
+  <button class="btn" id="notesBtn" title="Speaker notes (N)">Notes</button>
+  <button class="btn" id="tBtn" title="Timer (T)">▶ Timer</button>
+  <span id="timer">10:00</span><span id="count">1 / 1</span>
+</div>
+<div id="bar"><div id="barfill"></div></div>
+<div id="notes"></div>
+<script src="vendor/mermaid.min.js"></script>
+<script src="vendor/svg-pan-zoom.min.js"></script>
+<script>
+/* Crew-authored project-summary deck. Sections drafted in parallel by the 11 OpenRouter officers
+ * (scripts/crew-presentation.mjs → sections.json), fact-checked + assembled + cleaned here. */
+const DIAGRAMS = {
+  control:`flowchart LR
+  U([NL request]) --> MCP{{"Model Context Protocol<br/>Claude Code · Cursor · Copilot"}}
+  MCP --> ORCH["Thin premium orchestrator<br/>decide · dispatch · verify"]
+  ORCH -->|deliberate| PIPE["Crew Mission Pipeline"]
+  ORCH -->|code| LOOP["agent-core loop"]
+  PIPE --> QUARK["Quark routing<br/>cheapest adequate model"]
+  LOOP --> QUARK
+  QUARK --> OR[("OpenRouter<br/>DeepSeek·Llama·OpenAI·Anthropic")]
+  LOOP -. every op .-> WG["WorfGate<br/>green/yellow/red"]
+  PIPE -. recall/store .-> RAG[("pgvector RAG")]
+  LOOP -. recall/store .-> RAG`,
+  lanes:`flowchart TB
+  subgraph A["ANTHROPIC lane (thin)"]
+    O["Orchestrate · verify"]
+  end
+  subgraph C["CREW lane (cheap OpenRouter — does the work)"]
+    D["Deliberate · plan"] --> E["Read · edit · run"]
+  end
+  O -->|delegate token-heavy work| D
+  E -->|result to verify| O`,
+  routing:`flowchart TD
+  T[Task + role] --> TIER{Capability tier?}
+  TIER -->|routine| T2["llama-3.3-70b / gpt-4o-mini"]
+  TIER -->|advanced| T3["deepseek-chat"]
+  TIER -->|"frontier (arch/security)"| T4["claude-sonnet-4.6"]
+  T2 --> P[Cheapest adequate wins]
+  T3 --> P
+  T4 --> P
+  P --> N[/"Anthropic is a pool member, NOT the default"/]`,
+  loop:`flowchart LR
+  P([Prompt]) --> R[Recall memory] --> A[Act on cheap crew] --> G[WorfGate governs] --> S[Store conclusions]
+  S -. next prompt builds on it .-> P`
+};
+const diagram=(k,h)=>`<div class="diagram-wrap"><div class="diagram"><pre class="mermaid" data-key="${k}">${DIAGRAMS[k]}</pre></div><div class="dhint">↕ scroll to zoom · drag to pan · reset (Z)${h?` — ${h}`:''}</div></div>`;
+const sec=(n,owner,role,title,bullets,value,notes,extra='')=>[
+  `<div class="kicker"><span>Section ${n}</span><span class="owner">${owner} · ${role}</span></div>
+   <h2>${title}</h2>
+   <ul>${bullets.map(b=>`<li>${b}</li>`).join('')}</ul>
+   ${value?`<div class="value"><b>Client value:</b> ${value}</div>`:''}
+   ${extra}`, `<b>${owner}:</b> ${notes}`];
+
+const SLIDES=[
+  [`<div class="kicker"><span>Crew-authored project summary</span></div>
+    <h1>Story&nbsp;Agent</h1>
+    <p class="lead">An 11-agent crew that keeps the expensive model <span class="big accent">thin</span> — and makes the cost of every decision visible.</p>
+    <p class="fine">Authored in parallel by the full crew · ~61k LOC TS · ~150 MCP tools · 41 skill theories · AWS Fargate · self-hosted alternative to Claude Code / Copilot.</p>`,
+   `Shared-screen walkthrough. Open: "This is a self-hosted autonomous coding assistant. The interesting part is the economics — the premium model does almost none of the work; a crew of cheap, specialized agents does, under governance, with memory that compounds. Each section here was actually drafted by the corresponding agent."`],
+
+  [`<div class="kicker"><span>Agenda</span></div><h2>What we'll cover</h2>
+    <ul class="agenda">
+      <li>1 · Executive summary &amp; vision — <b>Picard</b></li>
+      <li>2 · Architecture — <b>Data</b></li>
+      <li>3 · Cost model &amp; ROI — <b>Quark</b></li>
+      <li>4 · Security &amp; governance — <b>Worf</b></li>
+      <li>5 · Infrastructure &amp; deployment — <b>Geordi</b></li>
+      <li>6 · DevOps &amp; reliability — <b>O'Brien</b></li>
+      <li>7 · Quality &amp; go-live — <b>Yar</b></li>
+      <li>8 · Client value — <b>Troi</b></li>
+      <li>9 · Roadmap — <b>Riker</b></li>
+      <li>10 · System health &amp; honesty — <b>Crusher</b></li>
+      <li>11 · Narrative &amp; close — <b>Uhura</b></li>
+    </ul>`,
+   `Roughly ~10 minutes on a shared screen. The timer (top-right, press T) is set to 10:00. Move faster on the sections the interviewer isn't probing.`],
+
+  sec(1,'Picard','executive','Redefining the coding assistant',
+    ['A self-hosted, 11-agent orchestration system for cost-effective code generation on OpenRouter’s multi-provider pool.',
+     'The premium model only orchestrates — the cheap crew does the token-heavy work.',
+     'Built on the Model Context Protocol (open standard) — the same crew plugs into Claude Code, Cursor, Copilot.',
+     'WorfGate governance + pgvector RAG give it security and compounding memory.'],
+    'Scalable, secure, cost-attributed AI coding — faster, safer development with measurable ROI.',
+    'This isn’t another wrapper around a frontier model. It’s an orchestration system: decide and verify with the premium model, delegate everything expensive to a governed, self-improving crew. Portable across tools because it speaks MCP.'),
+
+  sec(2,'Data','architecture','Control flow: how the system thinks',
+    ['A request enters over MCP — the open standard, so any AI client can drive the same crew.',
+     'The orchestrator hands off to the mission pipeline (deliberation) or the agent-core loop (coding).',
+     'Quark routing dispatches each task to the cheapest adequate model in a multi-provider pool.',
+     'WorfGate wraps every operation; RAG recalls before acting and stores after.'],
+    'A self-improving, cost-attributed assistant with automatic security guardrails that connects to the client’s existing tools.',
+    'Trace it left to right. The key architectural decision is separation: orchestration is thin and premium; execution is cheap and parallel; governance and memory wrap both. That’s what makes it cheap without being reckless.',
+    diagram('control','MCP → orchestrator → pipeline/agent-core → Quark → OpenRouter; WorfGate + RAG wrap it')),
+
+  sec(3,'Quark','finance','Cost model & ROI',
+    ['Thin premium orchestration — Anthropic is used only for tier-4 (architecture / security).',
+     'Most work runs on DeepSeek / Llama; a full crew deliberation costs ~$0.002–$0.003.',
+     'Quark routing picks the cheapest model that meets each task’s required capability tier.',
+     'The control-lane ledger measures crew-vs-premium spend, so savings are reported, not promised.'],
+    'Significant, measurable savings vs running a frontier model for everything — with the split shown on a ledger.',
+    'The money argument: because the expensive model only orchestrates, and we measure exactly when the cheap crew is driving, cost is both low and observable. ROI isn’t a slide — it’s a number in the ledger.',
+    `<div class="cols">${diagram('lanes','thin premium · cheap crew')}${diagram('routing','cheapest adequate model wins')}</div>`),
+
+  sec(4,'Worf','security','Security & governance: WorfGate',
+    ['Credential broker: secrets are injected at runtime and never written to logs, prompts, or memory.',
+     'Green / yellow / red local governor: risky filesystem &amp; shell ops are auto-remediated (paths clamped, --force downgraded), not just blocked.',
+     'Audit trail by design: every crew deliberation is cost-attributed and every autonomous action is recorded.',
+     'Self-hosted — controlled data never leaves the client’s environment.'],
+    'Regulated clients get bounded autonomy: credentials never exposed, every action audited and policy-gated.',
+    'Autonomy without accountability is a liability. WorfGate is why an autonomous agent can be trusted to run — it remediates rather than halts, so work keeps moving safely, and everything is on the record.'),
+
+  sec(5,'Geordi','infrastructure','Infrastructure & deployment',
+    ['AWS Fargate deployment via Terraform + Docker — scalable, reproducible infrastructure.',
+     'Multi-provider model reachability (Meta / OpenAI / DeepSeek / Anthropic) through OpenRouter.',
+     'WorfGate’s local governor mitigates risky operations at runtime.'],
+    'Cost-efficient, reliable, secure infrastructure that runs in the real environment, not just a demo.',
+    'The systems have to hold when nobody’s watching. Fargate + Terraform means the deploy is reproducible; multi-provider routing means no single vendor is a single point of failure.'),
+
+  sec(6,"O'Brien",'devops','DevOps & reliability',
+    ['Operability first: runbooks + WorfGate auto-remediation keep the system runnable by someone who wasn’t in the room.',
+     'Live in-flight progress via the new async-status registry — surfaced on every prompt.',
+     'Timeout-as-terminal-state guardrail: a silent hang now shows up instead of wasting time invisibly.',
+     'Verified deploy on AWS Fargate (Terraform + Docker).'],
+    'Less downtime and no silent stalls — clients see exactly what the system is doing as it does it.',
+    'We built the async-status feature after a real 11-minute invisible hang. Now every long-running job reports progress and derives a timeout if it goes quiet. Reliability you can see.'),
+
+  sec(7,'Yar','quality','Quality & go-live criteria',
+    ['Evidence-based signoff — no “seems fine” approvals; changes ship with tests.',
+     'A documented shadow test is the honest go/no-go for full autonomy: it is a criterion, not yet passed.',
+     'WorfGate clamps risky ops before they escalate; async-status + timeouts bound live risk.',
+     'Cost-aware quality: deliberation micro-costs stay predictable under multi-provider routing.'],
+    'Clients get compounding improvement without unbounded cost risk or unvetted autonomy.',
+    'This is the credibility slide. We can state exactly what has to be true before the crew fully replaces the premium driver — a shadow test with auto-recovery and cost thresholds. It isn’t cleared yet, and saying so is the point.'),
+
+  sec(8,'Troi','stakeholder','Client value & experience',
+    ['Cost you can see — transparent, per-decision attribution.',
+     'Governed, secure operations by default (WorfGate + Quark routing).',
+     'A compounding knowledge base (RAG) that carries across sessions and across AI tools.',
+     'No vendor lock-in — the crew brain is portable via MCP.'],
+    'Faster, cheaper development with governance and memory the client owns — not the vendor.',
+    'Underneath the architecture is a human need: an assistant that feels like a partner, remembers context, and whose costs and actions are legible. That’s what turns a demo into something a team actually adopts.',
+    diagram('loop','recall → act → govern → store; each prompt builds on the last')),
+
+  sec(9,'Riker','implementation','Roadmap — what’s next',
+    ['Crew-aware feature branches tied to Aha stories — the whole crew knows the active branch/story.',
+     'Async-visualization follow-up: streaming (Redis→SSE) + web and VS Code renderers, full producer wiring.',
+     'Fix the crew-table write path (RLS/permission) so DB-backed personas/skills persist.',
+     'Run the shadow test and record the result — turn the go-criterion into evidence.'],
+    'Clearer progress visibility, tighter PM integration, and a documented path to full autonomy.',
+    'Honest forward motion. The next stories are already scoped and in the crew’s memory: branch-aware execution mapped to Aha, richer live status, and closing the reliability gaps that gate full autonomy.'),
+
+  sec(10,'Crusher','health','System health & honest current state',
+    ['Working today: crew deliberation, the coding loop, cost routing, WorfGate, RAG, async-status, Fargate deploy.',
+     'Known gaps: shadow test not yet passed; a crew-table write path needs fixing; cost figures are per-deliberation, not audited aggregates.',
+     'No verified production customers yet — reference clients are illustrative.',
+     'Monitoring baseline + candor are treated as first-class, not afterthoughts.'],
+    'Clients can trust the claims because the limits are stated as plainly as the strengths.',
+    'A healthy system tells the truth about its own vitals. Here’s exactly what runs today and exactly what doesn’t yet — that honesty is what makes the rest of the pitch believable.'),
+
+  sec(11,'Uhura','communications','How to tell this story',
+    ['Lead with the economics: the expensive model does almost none of the work.',
+     'Show the control flow once — then let cost, governance, and memory hang off it.',
+     'Close on candor: it runs today; the bar for full autonomy is defined and not yet met.',
+     'Every claim here is grounded in the codebase, with caveats kept visible.'],
+    'A clear, credible narrative a decision-maker can repeat to someone who wasn’t in the room.',
+    'The through-line to leave them with: thin premium orchestration, a cheap governed self-improving crew, and observable cost. If they remember one sentence, make it the closing line.'),
+
+  [`<div class="kicker"><span>Close</span></div>
+    <p class="quote">“Keep the expensive model thin; make the cost of every decision visible.”</p>
+    <p class="lead">It runs today. The shadow test that gates full autonomy is defined — and not yet cleared.</p>
+    <p class="fine">Self-hosted · governed · cost-attributed · portable across AI tools. Every figure verified against the codebase; caveats kept honest.</p>`,
+   `End here. "That’s the system: a crew that keeps the expensive model thin, stays governed and auditable, remembers what it learns, and shows you the cost of every decision. It’s the same discipline I’d bring to any system — push work to the cheapest place that does it correctly, and make correctness and cost observable."`]
+];
+
+const deck=document.getElementById('deck');
+SLIDES.forEach(([html],i)=>{const s=document.createElement('section');s.className='slide';s.innerHTML=html;deck.appendChild(s);});
+const slides=[...document.querySelectorAll('.slide')];let cur=0;const zoomers={};
+function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===cur));document.getElementById('count').textContent=`${cur+1} / ${slides.length}`;document.getElementById('barfill').style.width=`${cur/(slides.length-1)*100}%`;document.getElementById('notes').innerHTML=SLIDES[cur][1]||'<i>No notes.</i>';slides[cur].querySelectorAll('svg').forEach(svg=>{const z=zoomers[svg.dataset.zkey];if(z){try{z.resize();z.fit();z.center();}catch(e){}}});}
+function go(n){cur=Math.max(0,Math.min(slides.length-1,n));render();history.replaceState(null,'',`#${cur+1}`);}
+function initial(){const h=parseInt(location.hash.replace('#',''),10);return(h>=1&&h<=slides.length)?h-1:0;}
+mermaid.initialize({startOnLoad:false,theme:'neutral',securityLevel:'loose',flowchart:{htmlLabels:true,curve:'basis',useMaxWidth:false}});
+window.addEventListener('load',async()=>{try{await mermaid.run({querySelector:'.mermaid'});}catch(e){console.error(e);}
+  document.querySelectorAll('.mermaid').forEach(pre=>{const svg=pre.querySelector('svg');if(!svg)return;const k=pre.dataset.key;svg.dataset.zkey=k;svg.removeAttribute('style');try{zoomers[k]=svgPanZoom(svg,{zoomEnabled:true,controlIconsEnabled:true,fit:true,center:true,minZoom:0.4,maxZoom:12,zoomScaleSensitivity:0.35});}catch(e){}});
+  cur=initial();render();});
+let left=600,tick=null;function fmt(s){const m=Math.floor(Math.abs(s)/60),ss=Math.abs(s)%60;return`${s<0?'-':''}${m}:${String(ss).padStart(2,'0')}`;}
+function paint(){const t=document.getElementById('timer');t.textContent=fmt(left);t.className=left<=0?'over':left<=90?'warn':'';}
+function toggleT(){if(tick){clearInterval(tick);tick=null;document.getElementById('tBtn').textContent='▶ Timer';}else{document.getElementById('tBtn').textContent='⏸ Timer';tick=setInterval(()=>{left--;paint();},1000);}}
+document.getElementById('tBtn').onclick=toggleT;
+document.getElementById('notesBtn').onclick=()=>document.getElementById('notes').classList.toggle('show');
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(cur+1);}
+  else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
+  else if(e.key==='Home')go(0);else if(e.key==='End')go(slides.length-1);
+  else if(k==='n')document.getElementById('notes').classList.toggle('show');
+  else if(k==='t')toggleT();else if(k==='r'){left=600;paint();if(tick){clearInterval(tick);tick=null;document.getElementById('tBtn').textContent='▶ Timer';}}
+  else if(k==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  else if(k==='z')slides[cur].querySelectorAll('svg').forEach(svg=>{const z=zoomers[svg.dataset.zkey];if(z){z.resize();z.fit();z.center();}});});
+paint();
+</script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+[
+  {
+    "crewId": "picard",
+    "owner": "Jean-Luc Picard",
+    "role": "executive",
+    "section": "Executive Summary & Vision",
+    "title": "** Redefining Autonomous Coding Assistants  \n\n**BULLETS:**  \n- Story Agent: A self-hosted, 11-agent orchestration system for precise, cost-effective code generation, leveraging OpenRouter’s multi-provider pool.  \n- Built on MCP, an open standard enabling seamless integration across Claude, Copilot, and Cursor.  \n- Features WorfGate for secure credential brokering and auto-remediation, plus RAG memory for compounding intelligence across tasks.  \n\n**CLIENT_VALUE:** Story Agent delivers scalable, secure, and cost-attributed AI-driven coding, enabling faster, safer development with measurable ROI.  \n\n**NOTES:** Story Agent isn’t just another coding assistant—it’s a modular, portable system designed for precision and security. By combining MCP’s open standard with WorfGate’s auto-remediation and RAG’s compounding intelligence, it ensures scalable, cost-effective development. This is the future of AI-assisted coding: autonomous, secure, and adaptable to your tools.",
+    "bullets": [
+      "*",
+      "Story Agent: A self-hosted, 11-agent orchestration system for precise, cost-effective code generation, leveraging OpenRouter’s multi-provider pool.",
+      "Built on MCP, an open standard enabling seamless integration across Claude, Copilot, and Cursor.",
+      "Features WorfGate for secure credential brokering and auto-remediation, plus RAG memory for compounding intelligence across tasks.",
+      "*CLIENT_VALUE:** Story Agent delivers scalable, secure, and cost-attributed AI-driven coding, enabling faster, safer development with measurable ROI."
+    ],
+    "clientValue": "** Story Agent delivers scalable, secure, and cost-attributed AI-driven coding, enabling faster, safer development with measurable ROI.  \n\n**NOTES:** Story Agent isn’t just another coding assistant—it’s a modular, portable system designed for precision and security. By combining MCP’s open standard with WorfGate’s auto-remediation and RAG’s compounding intelligence, it ensures scalable, cost-effective development. This is the future of AI-assisted coding: autonomous, secure, and adaptable to your tools.",
+    "notes": "** Story Agent isn’t just another coding assistant—it’s a modular, portable system designed for precision and security. By combining MCP’s open standard with WorfGate’s auto-remediation and RAG’s compounding intelligence, it ensures scalable, cost-effective development. This is the future of AI-assisted coding: autonomous, secure, and adaptable to your tools.",
+    "offFormat": false
+  },
+  {
+    "crewId": "data",
+    "owner": "Data",
+    "role": "architecture",
+    "section": "Architecture",
+    "title": "Control Flow: How the System Thinks",
+    "bullets": [
+      "MCP standard as the entry point — the same 11-agent crew plugs into Claude Code, Cursor, or Copilot without rewiring; ~150 registered tools across a 4-package TypeScript monorepo (~61k lines)",
+      "Quark routing dispatches each task to the cheapest adequate model from a multi-provider pool (Meta / OpenAI / DeepSeek / Google / Anthropic); Anthropic only activates at tier-4 for architecture and security decisions — deliberations run ~$0.002–$0.003",
+      "WorfGate sits on every operation as a credential broker (secrets never logged) and a three-level local governor that auto-remediates risky commands — clamping paths, downgrading destructive flags — rather than hard-blocking the workflow",
+      "RAG memory via Supabase pgvector closes a recall → act → store loop: the system compounds knowledge across sessions and the memory layer is portable across AI tools",
+      "Async-status layer surfaces live in-flight progress on every prompt; timeouts resolve as terminal states rather than silent hangs"
+    ],
+    "clientValue": "A client gets a self-improving, cost-attributed coding assistant that enforces security guardrails automatically and connects to the AI tools they already use — without vendor lock-in.",
+    "notes": "The key architectural decision is the separation of orchestration cost from execution cost: one premium model reasons, eleven cheaper models act, and Quark routing enforces that boundary on every call. WorfGate is not a prompt filter — it is an operational governor that remediates rather than refuses, which keeps developer velocity high. Full-autonomy validation via shadow-testing is a defined criterion still in progress, not a completed result.",
+    "offFormat": false
+  },
+  {
+    "crewId": "quark",
+    "owner": "Quark",
+    "role": "finance",
+    "section": "Cost Model & Client ROI",
+    "title": "Cost Model & ROI",
+    "bullets": [
+      "Thin premium orchestration with Anthropic at tier-4 tasks only",
+      "Average deliberation cost: $0.002-0.003 per prompt",
+      "Quark routing optimizes model selection from multi-provider pool"
+    ],
+    "clientValue": "By leveraging a cost-optimized crew and premium orchestration, clients can achieve significant savings compared to traditional development methods.",
+    "notes": "Our cost model is designed to minimize expenses while maintaining high-quality output, with a focus on optimizing model selection and usage. The Quark routing system ensures that the cheapest adequate model is used for each task, resulting in substantial cost savings. This approach allows clients to benefit from the efficiency and effectiveness of our autonomous coding assistant without incurring excessive costs.",
+    "offFormat": false
+  },
+  {
+    "crewId": "worf",
+    "owner": "Worf, Son of Mogh",
+    "role": "security",
+    "section": "Security & Governance",
+    "title": "Security & Governance: WorfGate Layer",
+    "bullets": [
+      "**Credential broker:** secrets are injected at runtime and never written to logs, prompts, or memory — WorfGate sits between every tool call and the credential store",
+      "**Green/yellow/red local governor:** risky filesystem and shell operations are auto-remediated (path-clamped, `--force` flags downgraded) before execution — not blocked, not ignored, corrected in place",
+      "**Audit trail by design:** every crew deliberation is cost-attributed per model tier (Anthropic only at tier-4 orchestration; cheap models do the work), producing an observable, inspectable record of who decided what and at what cost",
+      "**Async-status guardrail:** in-flight operations surface live progress on every prompt; timeouts resolve as terminal states — no silent hangs, no orphaned processes",
+      "**MCP open standard:** because the crew runs on Model Context Protocol, the same security perimeter extends when the system plugs into Claude Code, Cursor, or Copilot — governance is not IDE-specific"
+    ],
+    "clientValue": "Regulated clients get a self-hosted system where credentials are never exposed to third-party logs, autonomous actions are bounded by an auditable governor, and every model decision carries a traceable cost and tier attribution.",
+    "notes": "WorfGate is not a prompt-injection scanner — it is a runtime enforcement layer that remediates before harm occurs, which is a harder and more valuable guarantee. The cost-attribution lanes matter to compliance teams because they produce a model-level audit trail, not just application logs. Full autonomy is still in shadow-testing; what is production-ready today is the governance layer itself.",
+    "offFormat": false
+  },
+  {
+    "crewId": "geordi",
+    "owner": "Geordi La Forge",
+    "role": "infrastructure",
+    "section": "Infrastructure & Deployment",
+    "title": "Infrastructure & Deployment Strategy",
+    "bullets": [
+      "**AWS Fargate-backed**, Terraform+Docker deployment; scalable and maintainable infrastructure for monorepo (4 packages, ~61k lines TypeScript).",
+      "**Quark routing**: Cost-optimized, multi-provider model selection (Meta/OpenAI/DeepSeek/Anthropic/Google) with Anthropic reserved for tier-4 tasks (arch/security).",
+      "**WorfGate**: Local governor auto-remediates risky ops (credential brokering, path clamping, downgrades --force) without hard-blocking."
+    ],
+    "clientValue": "Ensures cost-efficient, reliable, and secure AI-powered workflows with scalable infrastructure and real-time risk mitigation.",
+    "notes": "Our infrastructure is designed for both scalability and cost efficiency. AWS Fargate handles the heavy lifting, while Quark routing ensures we use the cheapest adequate model for each task. WorfGate acts as a safety net, auto-remediating risky operations without disrupting workflows. This setup guarantees reliability and cost-effectiveness for real-world deployment.",
+    "offFormat": false
+  },
+  {
+    "crewId": "obrien",
+    "owner": "Miles Edward O'Brien",
+    "role": "devops",
+    "section": "DevOps & Reliability",
+    "title": "DevOps & Reliability",
+    "bullets": [
+      "Runbooks and operability ensured through WorfGate auto-remediation and async-status guardrails",
+      "Live in-flight progress tracking with async-status for preventing invisible hangs",
+      "Verified deployment on AWS Fargate using terraform and docker for scalability"
+    ],
+    "clientValue": "By prioritizing DevOps and reliability, clients can expect a more stable and efficient Story Agent deployment, reducing downtime and increasing overall system effectiveness.",
+    "notes": "When we talk about DevOps and reliability, we're focusing on the behind-the-scenes work that ensures our Story Agent deployment runs smoothly and efficiently. The async-status feature is particularly important, as it provides live progress tracking and prevents the system from getting stuck in an invisible hang state. By investing in these reliability measures, we can provide a better experience for our clients and reduce the risk of costly outages.",
+    "offFormat": false
+  },
+  {
+    "crewId": "yar",
+    "owner": "Natasha \"Tasha\" Yar",
+    "role": "quality",
+    "section": "Quality & Go-Live Criteria",
+    "title": "Quality Gates & Autonomy Readiness**  \n\n**BULLETS:**  \n- **Test discipline:** Full regression suite (61k TS monorepo) + WorfGate auto-remediation for risky ops (paths, `--force`). No \"seems fine\" approvals—only evidence-based signoff.  \n- **Shadow test ongoing:** Autonomous coding must pass unsupervised execution (criterion set, not yet met). Async-status tracking + timeout guardrails mitigate live risks.  \n- **Cost-aware quality:** Control-lane attribution proves deliberation micro-costs ($0.002–0.003) stay predictable despite Quark’s multi-provider routing.  \n\n**CLIENT_VALUE:** Clients get compounding RAG improvements *without* unbounded cost risk or unvetted autonomy.  \n\n**NOTES:**  \n\"We test like we’ve already failed—WorfGate clamps risks *before* they escalate. The shadow test is our honesty checkpoint: full autonomy isn’t a goal until it’s provably safe. Today, you see cost control and remediation; tomorrow, earned autonomy.\"",
+    "bullets": [
+      "*",
+      "**Test discipline:** Full regression suite (61k TS monorepo) + WorfGate auto-remediation for risky ops (paths, `--force`). No \"seems fine\" approvals—only evidence-based signoff.",
+      "**Shadow test ongoing:** Autonomous coding must pass unsupervised execution (criterion set, not yet met). Async-status tracking + timeout guardrails mitigate live risks.",
+      "**Cost-aware quality:** Control-lane attribution proves deliberation micro-costs ($0.002–0.003) stay predictable despite Quark’s multi-provider routing.",
+      "*CLIENT_VALUE:** Clients get compounding RAG improvements *without* unbounded cost risk or unvetted autonomy."
+    ],
+    "clientValue": "** Clients get compounding RAG improvements *without* unbounded cost risk or unvetted autonomy.  \n\n**NOTES:**  \n\"We test like we’ve already failed—WorfGate clamps risks *before* they escalate. The shadow test is our honesty checkpoint: full autonomy isn’t a goal until it’s provably safe. Today, you see cost control and remediation; tomorrow, earned autonomy.\"",
+    "notes": "**  \n\"We test like we’ve already failed—WorfGate clamps risks *before* they escalate. The shadow test is our honesty checkpoint: full autonomy isn’t a goal until it’s provably safe. Today, you see cost control and remediation; tomorrow, earned autonomy.\"",
+    "offFormat": false
+  },
+  {
+    "crewId": "troi",
+    "owner": "Deanna Troi",
+    "role": "stakeholder",
+    "section": "Client Value & Experience",
+    "title": "Client Value Proposition",
+    "bullets": [
+      "Autonomous coding assistance with transparent cost attribution",
+      "Secure and governed operations through WorfGate and Quark routing",
+      "Compounding knowledge base with RAG memory and portable AI tooling"
+    ],
+    "clientValue": "Clients benefit from increased development efficiency and reduced costs through the use of autonomous coding assistants and optimized AI model allocation.",
+    "notes": "As we review the client value proposition, it's essential to highlight the tangible benefits of our solution, including the ability to attribute costs accurately and maintain secure operations. The compounding knowledge base is also a critical aspect, as it enables the system to improve over time, providing more value to clients. By leveraging these features, clients can streamline their development processes and achieve significant cost savings.",
+    "offFormat": false
+  },
+  {
+    "crewId": "riker",
+    "owner": "William Thomas Riker",
+    "role": "implementation",
+    "section": "Roadmap — What's Next",
+    "title": "Next Steps in Development",
+    "bullets": [
+      "Prioritize crew-aware feature branching tied to Aha stories for smoother integration and testing.",
+      "Expand async-visualization capabilities: enable streaming updates and unify rendering across web and VS Code platforms.",
+      "Address crew-table write operations to improve data consistency and reliability."
+    ],
+    "clientValue": "These steps ensure faster iteration, clearer progress visibility, and robust data handling for scalable deployments.",
+    "notes": "Feature branching will allow us to isolate changes and reduce risk during integration. Enhancing async-visualization ensures real-time feedback across interfaces. Fixing crew-table writes eliminates a known edge-case bug, improving overall system reliability.",
+    "offFormat": false
+  },
+  {
+    "crewId": "crusher",
+    "owner": "Beverly Crusher",
+    "role": "health",
+    "section": "System Health & Honest Current State",
+    "title": "System Health Overview",
+    "bullets": [
+      "61k lines TypeScript codebase with 4 packages and 150 MCP tool registrations",
+      "Quark routing optimizes costs with cheapest adequate model per task",
+      "WorfGate auto-remediates risky operations with credential brokering and local governance"
+    ],
+    "clientValue": "By understanding the current state of our system, clients can trust that we prioritize transparency and proactive maintenance to ensure reliable and efficient performance.",
+    "notes": "This slide provides a candid look at our system's health, highlighting both its capabilities and areas for improvement. We're being upfront about the complexity of our codebase and the ongoing development of features like shadow-testing for full autonomy. Our commitment to transparency and honest assessment enables us to better serve our clients and continuously improve our system.",
+    "offFormat": false
+  },
+  {
+    "crewId": "uhura",
+    "owner": "Nyota Uhura",
+    "role": "communications",
+    "section": "The Narrative & How to Present It",
+    "title": "Effective Narrative Presentation",
+    "bullets": [
+      "Verified technical outcomes drive trust",
+      "Clear explanations of complex systems",
+      "Focus on verified facts and client benefits"
+    ],
+    "clientValue": "By presenting complex technical information in a clear and concise manner, clients can make informed decisions and understand the value proposition of our solutions.",
+    "notes": "When presenting our project to clients, it's essential to focus on the verified facts and technical outcomes, avoiding unnecessary jargon and technical details. By doing so, we can build trust and credibility with our clients. The goal is to provide a clear and concise narrative that highlights the benefits and value of our solutions.",
+    "offFormat": false
+  }
+]

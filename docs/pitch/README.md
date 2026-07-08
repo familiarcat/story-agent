@@ -6,7 +6,8 @@ A complete, self-contained kit for explaining the project in a ~5-minute technic
 
 | File | What it is | Best for |
 |---|---|---|
-| [`presentation/index.html`](./presentation/index.html) | **Interactive slide deck** — real slides, live **zoom/pan** mermaid diagrams, speaker notes, 5-min pacing timer | **Presenting live** |
+| [`presentation/summary.html`](./presentation/summary.html) | **Crew-authored Project Summary deck** — 14 slides, one section per officer (drafted in parallel by all 11 via `scripts/crew-presentation.mjs`), live zoom/pan diagrams, speaker notes, 10-min timer | **Shared-screen walkthrough** |
+| [`presentation/index.html`](./presentation/index.html) | **Interactive elevator deck** — real slides, live **zoom/pan** mermaid diagrams, speaker notes, 5-min pacing timer | Fast 5-min pitch |
 | [`elevator-pitch.md`](./elevator-pitch.md) / `.pdf` | The 5-minute spoken script + diagrams + feature rationale + client benefit + honest caveats | Reading / handout |
 | [`system-analysis.md`](./system-analysis.md) / `.pdf` | Deeper file-cited architecture overview + current-state assessment + next steps | Follow-up / deep dive |
 
