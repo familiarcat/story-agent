@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { lcars } from '../../lib/lcars';
+import { headlineSystem, normalizeModelLabel } from '../../lib/headline-system';
 import { LcarsScreen, LcarsPanel, LcarsStat, LcarsBar } from '../../components/Lcars';
 
 import type { LaneStatusMarker } from '@story-agent/shared';
@@ -42,7 +43,7 @@ export default function CostPage() {
   return (
     <LcarsScreen title="💰 Cost Observatory · Quark" status="OpenRouter pool · auto-refresh 10s">
       {err && !data && (
-        <LcarsPanel title="Signal lost" color={lcars.danger}>
+        <LcarsPanel title={headlineSystem.panels.signalLost} color={lcars.danger}>
           <div style={{ color: lcars.danger, fontSize: '0.85rem', letterSpacing: 'normal' }}>⚠️ {err}</div>
           <div style={{ fontSize: '0.72rem', color: lcars.textDim, marginTop: 6, letterSpacing: 'normal' }}>
             Start the crew brain (<code>STORY_AGENT_AGENT_PORT=3103 pnpm --filter @story-agent/mcp-server start</code>) or set <code>STORY_AGENT_AGENT_URL</code> to the deployed ALB.
@@ -51,16 +52,16 @@ export default function CostPage() {
       )}
 
       {data && 'offlineMarker' in data && (
-        <LcarsPanel title="Cached lane status" color={lcars.neonCarrot}>
+        <LcarsPanel title={headlineSystem.panels.laneSnapshot} color={lcars.neonCarrot}>
           <div style={{ fontSize: '0.92rem', marginBottom: 10 }}>{data.note ?? 'Showing the last known lane status from .claude/control-lane-status.json.'}</div>
           <div style={{ display: 'grid', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Current lane</span><strong>{data.offlineMarker.headline}</strong>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-              <LcarsStat label="Crew spend" value={`$${data.offlineMarker.crewActualCostUSD.toFixed(4)}`} accent={lcars.goldenTanoi} />
-              <LcarsStat label="Crew decisions" value={`${data.offlineMarker.crewDecisions}`} accent={lcars.anakiwa} />
-              <LcarsStat label="Delegation rate" value={`${data.offlineMarker.delegationRatePct}%`} accent={lcars.tanoi} />
+              <LcarsStat label={headlineSystem.stats.crewCostUsd} value={`$${data.offlineMarker.crewActualCostUSD.toFixed(4)}`} accent={lcars.goldenTanoi} />
+              <LcarsStat label={headlineSystem.stats.crewDecisionCount} value={`${data.offlineMarker.crewDecisions}`} accent={lcars.anakiwa} />
+              <LcarsStat label={headlineSystem.stats.delegationRatePct} value={`${data.offlineMarker.delegationRatePct}%`} accent={lcars.tanoi} />
             </div>
           </div>
         </LcarsPanel>
@@ -69,12 +70,12 @@ export default function CostPage() {
       {data && !('offlineMarker' in data) && (
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-            <LcarsStat label={`Total spend (${data.turns} turns)`} value={`$${data.totalUSD.toFixed(4)}`} accent={lcars.goldenTanoi} />
-            <LcarsStat label={`Saved vs ${data.baseline.model.split('/')[1] ?? data.baseline.model}`} value={`${data.baseline.savedPct}%`} accent={lcars.anakiwa} />
-            <LcarsStat label="Tokens ↑in ↓out" value={`↑${data.tokensIn.toLocaleString()} ↓${data.tokensOut.toLocaleString()}`} accent={lcars.tanoi} />
+            <LcarsStat label={headlineSystem.stats.totalCostTurns(data.turns)} value={`$${data.totalUSD.toFixed(4)}`} accent={lcars.goldenTanoi} />
+            <LcarsStat label={headlineSystem.stats.savingsVsBaseline(normalizeModelLabel(data.baseline.model))} value={`${data.baseline.savedPct}%`} accent={lcars.anakiwa} />
+            <LcarsStat label={headlineSystem.stats.tokenThroughput} value={`↑${data.tokensIn.toLocaleString()} ↓${data.tokensOut.toLocaleString()}`} accent={lcars.tanoi} />
           </div>
 
-          <LcarsPanel title="By model · Quark's picks" color={lcars.neonCarrot}>
+          <LcarsPanel title={headlineSystem.panels.modelDistribution} color={lcars.neonCarrot}>
             {Object.entries(data.perModel).sort((a, b) => b[1].costUSD - a[1].costUSD).map(([m, v]) => (
               <div key={m} style={{ marginBottom: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', letterSpacing: 'normal' }}>
@@ -89,7 +90,7 @@ export default function CostPage() {
             {!Object.keys(data.perModel).length && <p style={{ color: lcars.textDim, fontSize: '0.8rem', letterSpacing: 'normal' }}>No turns yet — use the chat or agent to populate.</p>}
           </LcarsPanel>
 
-          <LcarsPanel title="Recent turns" color={lcars.lilac}>
+          <LcarsPanel title={headlineSystem.panels.recentEvents} color={lcars.lilac}>
             <div style={{ fontSize: '0.76rem', color: lcars.tanoi, letterSpacing: 'normal' }}>
               {data.recent.map((e, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', borderBottom: `1px solid ${lcars.eggplant}` }}>
