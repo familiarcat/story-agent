@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Story Agent — Project Summary (crew-authored)</title>
 <style>
-  :root{ --ink:#1a202c; --muted:#4a5568; --accent:#2b6cb0; --accent2:#2c5282; --bg:#fff; --panel:#f7fafc; --border:#cbd5e0; --gold:#b7791f; --crew:#276749; }
+  :root{ --ink:#24292f; --muted:#57606a; --accent:#0969da; --accent2:#0550ae; --bg:#fff; --panel:#f6f8fa; --border:#d0d7de; --gold:#9a6700; --crew:#1a7f37; }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:#0b1220;overflow:hidden}
   #deck{position:fixed;inset:0}
@@ -40,6 +40,23 @@
   #dmodal .mstage svg{width:100%!important;height:100%!important;max-width:none!important}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:stretch;margin-top:.4em}
   .cols .diagram-wrap{height:46vh;margin-top:0}
+  .gha-wrap{margin-top:.65em;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .gha-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+  .gha-title{font-size:clamp(15px,1.6vw,20px);font-weight:700;margin:0;color:var(--ink)}
+  .gha-sub{font-size:clamp(12px,1.2vw,15px);color:var(--muted);margin-top:4px}
+  .gha-pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{font-size:12px;line-height:1;border-radius:999px;padding:7px 10px;border:1px solid var(--border);background:#fff;color:var(--muted);font-weight:700;letter-spacing:.02em}
+  .pill.ok{background:#dafbe1;border-color:#aceebb;color:#116329}
+  .pill.run{background:#ddf4ff;border-color:#b6e3ff;color:#0550ae}
+  .gha-jobs{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .gha-job{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 11px}
+  .gha-job .n{font-size:13px;font-weight:700;color:var(--ink)}
+  .gha-job .m{margin-top:4px;font-size:12px;color:var(--muted)}
+  .gha-steps{margin-top:12px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 11px}
+  .gha-steps .t{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px}
+  .gha-steps ul{margin:0;padding-left:1.1em}
+  .gha-steps li{font-size:13px;line-height:1.4;margin:.2em 0;color:var(--muted)}
+  .gha-link{margin-top:8px;font-size:12px;color:var(--muted);word-break:break-all}
   #bar{position:fixed;left:0;right:0;bottom:0;height:6px;background:#e2e8f0;z-index:50}#barfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#4299e1);transition:width .35s}
   #hud{position:fixed;top:14px;right:16px;display:flex;gap:10px;align-items:center;z-index:60;font-variant-numeric:tabular-nums}
   #timer{background:rgba(15,23,42,.86);color:#fff;padding:6px 12px;border-radius:8px;font-weight:700;font-size:15px}#timer.warn{background:var(--gold)}#timer.over{background:#c53030}
@@ -116,6 +133,53 @@ const DIAGRAMS = {
   P([Prompt]) --> R[Recall memory] --> A[Act on cheap crew] --> G[WorfGate governs] --> S[Store conclusions]
   S -. next prompt builds on it .-> P`
 };
+
+const RUN_28986239063 = {
+  id: 28986239063,
+  name: 'deploy-fargate',
+  runNumber: 205,
+  status: 'completed',
+  conclusion: 'success',
+  event: 'workflow_dispatch',
+  updatedAt: '2026-07-09T01:11:37Z',
+  url: 'https://github.com/familiarcat/story-agent/actions/runs/28986239063',
+  jobs: [
+    { name: 'security_gate', status: 'completed', conclusion: 'success' },
+    { name: 'detect', status: 'completed', conclusion: 'success' },
+    { name: 'build_mcp', status: 'completed', conclusion: 'success' },
+    { name: 'build_ui', status: 'completed', conclusion: 'success' },
+    { name: 'deploy', status: 'completed', conclusion: 'success' },
+  ],
+  deployStepHighlights: [
+    'Resolve image refs (built digest, else REUSE the currently-deployed image)',
+    'Terraform init + plan',
+    'Terraform apply',
+    'Post-deploy health gate (apply only)',
+    'Verify Redis security posture (live)',
+  ],
+};
+
+function ghaRunViz(run){
+  const jobs = run.jobs.map(j=>`<div class="gha-job"><div class="n">${j.name}</div><div class="m">${j.status} · ${j.conclusion}</div></div>`).join('');
+  const steps = run.deployStepHighlights.map(s=>`<li>${s}</li>`).join('');
+  return `
+  <div class="gha-wrap">
+    <div class="gha-head">
+      <div>
+        <p class="gha-title">${run.name} · run #${run.runNumber}</p>
+        <div class="gha-sub">${run.event} · updated ${run.updatedAt}</div>
+      </div>
+      <div class="gha-pills">
+        <span class="pill run">run ${run.id}</span>
+        <span class="pill ok">${run.status} · ${run.conclusion}</span>
+      </div>
+    </div>
+    <div class="gha-jobs">${jobs}</div>
+    <div class="gha-steps"><div class="t">Deploy step highlights</div><ul>${steps}</ul></div>
+    <div class="gha-link">${run.url}</div>
+  </div>`;
+}
+
 const diagram=(k,h)=>`<div class="diagram-wrap"><div class="diagram"><pre class="mermaid" data-key="${k}">${DIAGRAMS[k]}</pre></div><div class="dhint">↕ scroll to zoom · drag to pan · reset (Z)${h?` — ${h}`:''}</div></div>`;
 const sec=(n,owner,role,title,bullets,value,notes,extra='')=>[
   `<div class="kicker"><span>Section ${n}</span><span class="owner">${owner} · ${role}</span></div>
@@ -194,7 +258,8 @@ const SLIDES=[
      'Timeout-as-terminal-state guardrail: a silent hang now shows up instead of wasting time invisibly.',
      'Verified deploy on AWS Fargate (Terraform + Docker).'],
     'Less downtime and no silent stalls — clients see exactly what the system is doing as it does it.',
-    'We built the async-status feature after a real 11-minute invisible hang. Now every long-running job reports progress and derives a timeout if it goes quiet. Reliability you can see.'),
+    'We built the async-status feature after a real 11-minute invisible hang. Now every long-running job reports progress and derives a timeout if it goes quiet. Reliability you can see.',
+    ghaRunViz(RUN_28986239063)),
 
   sec(7,'Yar','quality','Quality & go-live criteria',
     ['Evidence-based signoff — no “seems fine” approvals; changes ship with tests.',

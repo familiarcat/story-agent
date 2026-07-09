@@ -27,6 +27,8 @@ const args = process.argv.slice(2);
 const APPLY = args.includes('--apply');
 const SKIP_SECRETS = args.includes('--skip-secrets');
 const FOLLOW = APPLY && !args.includes('--no-follow');
+const FOLLOW_INTERVAL_SECONDS = Number(process.env.DEPLOY_FOLLOW_INTERVAL_SECONDS || 8);
+const FOLLOW_MAX_POLLS = Number(process.env.DEPLOY_FOLLOW_MAX_POLLS || 120);
 
 const c = { dim: '\x1b[2m', red: '\x1b[31m', grn: '\x1b[32m', yel: '\x1b[33m', cyn: '\x1b[36m', rst: '\x1b[0m', bold: '\x1b[1m' };
 const h = (n: number, t: string) => console.log(`\n${c.bold}${c.cyn}━━ Phase ${n}: ${t}${c.rst}`);
@@ -45,6 +47,79 @@ function run(cmd: string, cmdArgs: string[], opts: { allowFail?: boolean } = {})
 function capture(cmd: string, cmdArgs: string[]): string {
   const r = spawnSync(cmd, cmdArgs, { encoding: 'utf8' });
   return r.status === 0 ? (r.stdout || '').trim() : '';
+}
+
+function captureJson<T>(cmd: string, cmdArgs: string[], envExtra?: Record<string, string>): T | null {
+  const r = spawnSync(cmd, cmdArgs, {
+    encoding: 'utf8',
+    env: { ...process.env, ...(envExtra || {}) },
+  });
+  if (r.status !== 0) return null;
+  const raw = (r.stdout || '').trim();
+  if (!raw) return null;
+  try { return JSON.parse(raw) as T; } catch { return null; }
+}
+
+interface RunSummary {
+  status: string;
+  conclusion: string | null;
+  updated_at: string;
+  html_url: string;
+}
+
+interface JobSummary {
+  name: string;
+  status: string;
+  conclusion: string | null;
+}
+
+function followRunInChatFormat(runId: string): boolean {
+  const ghEnv = { TERM: 'dumb', GH_PAGER: 'cat', PAGER: 'cat' };
+  let lastSignature = '';
+
+  for (let i = 0; i < FOLLOW_MAX_POLLS; i++) {
+    const run = captureJson<RunSummary>(
+      'gh',
+      ['api', `repos/${REPO}/actions/runs/${runId}`, '--jq', '{status: .status, conclusion: .conclusion, updated_at: .updated_at, html_url: .html_url}'],
+      ghEnv,
+    );
+
+    if (!run) {
+      warn(`Polling failed for run ${runId}; retrying.`);
+      spawnSync('sleep', [String(FOLLOW_INTERVAL_SECONDS)]);
+      continue;
+    }
+
+    const jobs = captureJson<JobSummary[]>(
+      'gh',
+      ['api', `repos/${REPO}/actions/runs/${runId}/jobs`, '--jq', '.jobs | map({name: .name, status: .status, conclusion: .conclusion})'],
+      ghEnv,
+    ) ?? [];
+
+    const signature = JSON.stringify({ status: run.status, conclusion: run.conclusion, jobs });
+    if (signature !== lastSignature) {
+      lastSignature = signature;
+      console.log('');
+      console.log('CHAT DEPLOY STATUS');
+      console.log(`run: ${runId}`);
+      console.log(`status: ${run.status}`);
+      console.log(`conclusion: ${run.conclusion ?? 'pending'}`);
+      console.log(`updated_at: ${run.updated_at}`);
+      console.log(`url: ${run.html_url}`);
+      if (jobs.length) {
+        console.log('jobs:');
+        for (const job of jobs) {
+          console.log(`- ${job.name}: ${job.status}${job.conclusion ? ` (${job.conclusion})` : ''}`);
+        }
+      }
+    }
+
+    if (run.status === 'completed') return run.conclusion === 'success';
+    spawnSync('sleep', [String(FOLLOW_INTERVAL_SECONDS)]);
+  }
+
+  warn(`Polling limit reached for run ${runId}; monitor manually: ${`https://github.com/${REPO}/actions/runs/${runId}`}`);
+  return false;
 }
 
 console.log(`\n${c.bold}🚀 Story Agent — automated deployment (${APPLY ? `${c.red}BILLABLE apply${c.rst}${c.bold}` : 'prep + plan only'})${c.rst}`);
@@ -92,18 +167,19 @@ if (!APPLY) {
   if (run('gh', ['workflow', 'run', 'deploy.yml', '--repo', REPO, '-f', 'apply=true'], { allowFail: true })) {
     ok('Dispatched.');
     if (FOLLOW) {
-      info('Following the deploy — live step status (the run continues even if you detach):');
+      info('Following the deploy — chat-style polling (non-interactive, pager-safe):');
       let runId = '';
       for (let i = 0; i < 12 && !runId; i++) {
         spawnSync('sleep', ['3']);
         runId = capture('gh', ['run', 'list', '--repo', REPO, '--workflow', 'deploy.yml', '--event', 'workflow_dispatch', '--limit', '1', '--json', 'databaseId', '-q', '.[0].databaseId']);
       }
       if (runId) {
-        info(`Run ${runId} — streaming steps:`);
-        run('gh', ['run', 'watch', runId, '--repo', REPO, '--exit-status', '--interval', '10'], { allowFail: true });
-        run('gh', ['run', 'view', runId, '--repo', REPO], { allowFail: true });
+        info(`Run ${runId} — emitting chat-friendly snapshots until completion:`);
+        const okFollow = followRunInChatFormat(runId);
+        if (okFollow) ok('Deploy run completed successfully.');
+        else warn('Deploy run did not report success before polling completed.');
       } else {
-        warn('Could not resolve the run id; watch manually: gh run watch --repo ' + REPO);
+        warn('Could not resolve the run id; poll manually with: TERM=dumb GH_PAGER=cat PAGER=cat gh run list --repo ' + REPO);
       }
     } else {
       info('Watch: gh run watch --repo ' + REPO);

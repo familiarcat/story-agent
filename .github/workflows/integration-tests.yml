@@ -41,6 +41,8 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: DDD boundary check
+        run: pnpm ddd:check:ci
       - name: Build shared (cross-package imports resolve to dist)
         run: pnpm --filter @story-agent/shared run build
       - name: Approval pub/sub round-trip (real Redis)

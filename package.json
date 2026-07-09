@@ -67,6 +67,7 @@
     "deploy:cleanup-orphans:apply": "bash scripts/cleanup-orphaned-stack.sh --apply",
     "deploy:auto": "npx tsx scripts/deploy-auto.ts",
     "deploy:mission": "npx tsx scripts/deploy-automation-mission.ts",
+    "ddd:check": "npx tsx scripts/check-ddd-boundaries.ts",
     "activation:status": "npx tsx scripts/activation-status.ts",
     "tokens:build": "npx tsx scripts/build-tokens.ts",
     "tokens:check": "npx tsx scripts/build-tokens.ts --check",
@@ -83,7 +84,8 @@
     "figma:themes": "npx tsx scripts/figma-to-client-theme.ts",
     "figma:themes:dry": "npx tsx scripts/figma-to-client-theme.ts --dry-run",
     "activate": "npx tsx scripts/activate-changes.ts",
-    "activate:full": "npx tsx scripts/activate-changes.ts --full"
+    "activate:full": "npx tsx scripts/activate-changes.ts --full",
+    "ddd:check:ci": "pnpm ddd:check"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
