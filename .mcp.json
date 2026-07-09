@@ -8,7 +8,7 @@
         "user-session-id": "${STORY_AGENT_MCP_SESSION_ID}",
         "x-client-id": "familiarcat"
       },
-      "comment": "Hosted Story Agent MCP over HTTP. WorfGate security headers are required: Bearer token + user-session-id. x-client-id scopes policy resolution."
+      "comment": "Hosted Story Agent MCP over HTTP (default). WorfGate security headers are required: Bearer token + user-session-id; x-client-id scopes policy resolution. Use `pnpm run mcp:connect:hosted` to keep hosted default or `pnpm run mcp:connect:local` to switch back to local stdio."
     },
     "aha": {
       "type": "http",
