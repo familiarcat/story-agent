@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { groupName, iamEntitlementsEnabled, addUserToGroup, type GroupLevel } from '@story-agent/shared';
+import { groupName, type GroupLevel } from '@story-agent/shared';
+import { iamEntitlementsEnabled, addUserToGroup } from '@story-agent/shared/iam-identity-center';
 
 /**
  * Human entitlement tools (crew reorg — docs/runbooks/aws-iam-entitlements.md). The crew automates

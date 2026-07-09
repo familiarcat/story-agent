@@ -5,6 +5,9 @@ Derived by the OpenRouter crew in the Observation Lounge (transcript:
 deployments are self-documenting. One command, daemon-free, WorfGate-brokered, with the single
 billable step gated.
 
+Related migration guidance:
+- [docs/runbooks/mcp-tool-compatibility-migration.md](runbooks/mcp-tool-compatibility-migration.md) — MCP tool-name compatibility rollout, tests, and terminal-verified deploy sequence.
+
 ## TL;DR
 
 ```bash

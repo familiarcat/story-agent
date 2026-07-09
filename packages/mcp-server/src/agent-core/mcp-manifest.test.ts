@@ -21,4 +21,12 @@ describe('buildMcpManifest', () => {
   it('empty baseUrl yields relative /mcp', () => {
     expect(buildMcpManifest('').endpoints.mcp).toBe('/mcp');
   });
+
+  it('includes tool-name compatibility guidance for legacy clients', () => {
+    const manifest = buildMcpManifest('https://example.com');
+    expect(manifest.toolNameCompatibility.legacyDelimiter).toBe(':');
+    expect(manifest.toolNameCompatibility.normalizedPattern).toBe('^[A-Za-z0-9_.-]+$');
+    expect(manifest.toolNameCompatibility.examples.length).toBeGreaterThan(0);
+    expect(manifest.toolNameCompatibility.examples[0]?.legacy).toMatch(/:/);
+  });
 });

@@ -33,6 +33,10 @@
       "import": "./dist/src/worfgate-credential-providers.js",
       "types": "./dist/src/worfgate-credential-providers.d.ts"
     },
+    "./iam-identity-center": {
+      "import": "./dist/src/iam-identity-center.js",
+      "types": "./dist/src/iam-identity-center.d.ts"
+    },
     "./skill-theory": {
       "import": "./dist/src/skill-theory.js",
       "types": "./dist/src/skill-theory.d.ts"

@@ -29,7 +29,7 @@ import { registerAhaTools } from './tools/aha-tools.js';
 import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
 import { registerInnovationLoungeTools } from './tools/innovation-lounge-tools.js';
 import { registerEntitlementTools } from './tools/entitlement-tools.js';
-import { wireLiveEntitlementResolver } from '@story-agent/shared';
+import { wireLiveEntitlementResolver } from '@story-agent/shared/iam-identity-center';
 import { registerClientTools } from './tools/client-tools.js';
 import { registerWorfGateTools } from './tools/worfgate-tools.js';
 import { registerAnalyzeImageTool } from './tools/analyze-image.js';
@@ -37,6 +37,7 @@ import { registerRunShellTool, registerPlanThenExecuteTool } from './tools/run-s
 import { registerCrewAnalyzeImageTool } from './tools/crew-analyze-image.js';
 import { registerSkillTools } from './tools/skill-tools.js';
 import { applySkillAnnotations } from './lib/apply-skill-annotations.js';
+import { installMcpToolNamePolicy } from './lib/mcp-tool-name-policy.js';
 import { startAgentHttpServer, handleAgentRequest } from './agent-core/http-server.js';
 import { buildMcpManifest } from './agent-core/mcp-manifest.js';
 import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
@@ -47,6 +48,8 @@ const server = new McpServer({
   name: 'story-agent',
   version: '1.0.0',
 });
+
+installMcpToolNamePolicy(server);
 
 applySkillAnnotations(server);  // 📚 inject 5W1H theory → MCP ToolAnnotations on every registration
 registerStoryTools(server);
@@ -141,6 +144,7 @@ async function main() {
             name: 'story-agent',
             version: '1.0.0',
           });
+          installMcpToolNamePolicy(perRequestServer);
           applySkillAnnotations(perRequestServer);  // 📚 theory → MCP annotations over HTTP
           registerStoryTools(perRequestServer);
           registerRepoTools(perRequestServer);
