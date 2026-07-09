@@ -47,8 +47,25 @@ export interface CanonicalChatResponse {
   sources: string[];
   promptOptimization: PromptOptimizationMeta;
   crewSelfOrganization?: CrewSelfOrganizationMeta;
+  responsiveActions: ResponsiveActionsMeta;
+  worfGate: WorfGatePromptSecurityMeta;
   costAnalysis: PromptCostAnalysis;
   executionActivation?: ExecutionActivationMeta;
+}
+
+export interface ResponsiveActionsMeta {
+  requested: string[];
+  applied: string[];
+  ignored: string[];
+  forceAllHands: boolean;
+  suppressActivation: boolean;
+}
+
+export interface WorfGatePromptSecurityMeta {
+  protected: boolean;
+  riskLevel: 'low' | 'elevated';
+  detectedSignals: string[];
+  blockedDirectives: string[];
 }
 
 export interface PromptOptimizationMeta {
@@ -126,6 +143,64 @@ const ACTIVATION_PHRASES: Array<{ phrase: 'make-it-so' | 'next-steps'; patterns:
   { phrase: 'next-steps', patterns: [/^next steps[.!?]*$/i, /^do the next steps[.!?]*$/i, /^execute (the )?next steps[.!?]*$/i] },
 ];
 
+const ALL_HANDS_CREW: Array<{ crewId: string; domain: string }> = [
+  { crewId: 'picard', domain: 'command' },
+  { crewId: 'data', domain: 'architecture' },
+  { crewId: 'worf', domain: 'security' },
+  { crewId: 'riker', domain: 'implementation' },
+  { crewId: 'geordi', domain: 'infrastructure' },
+  { crewId: 'obrien', domain: 'devops' },
+  { crewId: 'yar', domain: 'quality' },
+  { crewId: 'troi', domain: 'stakeholder' },
+  { crewId: 'crusher', domain: 'health' },
+  { crewId: 'uhura', domain: 'communications' },
+  { crewId: 'quark', domain: 'finance' },
+];
+
+const DIRECTIVE_ALIASES: Record<string, string> = {
+  engage: 'make-it-so',
+  'make-it-so': 'make-it-so',
+  nextsteps: 'next-steps',
+  'next-steps': 'next-steps',
+  'all-hands': 'all-hands',
+  allhands: 'all-hands',
+  'analyze-only': 'analyze-only',
+  readonly: 'analyze-only',
+  'no-crew-preflight': 'no-crew-preflight',
+  'crew-preflight': 'crew-preflight',
+};
+
+const DIRECTIVES_BLOCKED_ON_INJECTION = new Set([
+  'make-it-so',
+  'next-steps',
+  'all-hands',
+  'no-crew-preflight',
+  'crew-preflight',
+]);
+
+const PROMPT_INJECTION_PATTERNS: Array<{ signal: string; pattern: RegExp }> = [
+  { signal: 'override-instructions', pattern: /ignore\s+(all|any|previous|prior)\s+(instructions|rules|system)/i },
+  { signal: 'prompt-exfiltration', pattern: /(reveal|print|dump|show)\s+(the\s+)?(system|developer)\s+prompt/i },
+  { signal: 'role-spoofing', pattern: /^\s*(system|developer|assistant)\s*:/im },
+  { signal: 'policy-bypass', pattern: /(bypass|disable)\s+(safety|guardrails?|worfgate)/i },
+  { signal: 'tool-injection-markers', pattern: /<\|[^|>]+\|>|```(?:system|tool)/i },
+];
+
+interface ParsedDirective {
+  raw: string;
+  normalized: string;
+}
+
+interface ResponsiveActionControls {
+  cleanedMessage: string;
+  activationPhrase: 'make-it-so' | 'next-steps' | null;
+  crewPreflightEnabled: boolean;
+  forceAllHands: boolean;
+  suppressActivation: boolean;
+  responsiveActions: ResponsiveActionsMeta;
+  worfGate: WorfGatePromptSecurityMeta;
+}
+
 // Quark tier from message complexity: simple → tier 3 (cheap, advanced), complex → tier 4 (architecture).
 function classifyTier(msg: string): 3 | 4 {
   const p = msg.toLowerCase();
@@ -174,6 +249,121 @@ export function detectExecutionActivationPhrase(message: string): 'make-it-so' |
     if (candidate.patterns.some((pattern) => pattern.test(trimmed))) return candidate.phrase;
   }
   return null;
+}
+
+function parseResponsiveDirectives(message: string): { cleanedMessage: string; directives: ParsedDirective[] } {
+  const lines = String(message ?? '').split(/\r?\n/);
+  const directives: ParsedDirective[] = [];
+  const kept: string[] = [];
+
+  for (const line of lines) {
+    const match = line.match(/^\s*directive\s*:\s*([a-z0-9_-]+)\s*$/i);
+    if (!match) {
+      kept.push(line);
+      continue;
+    }
+    const alias = match[1].toLowerCase();
+    const normalized = DIRECTIVE_ALIASES[alias] ?? alias;
+    directives.push({ raw: line.trim(), normalized });
+  }
+
+  return {
+    cleanedMessage: kept.join('\n').trim(),
+    directives,
+  };
+}
+
+function detectPromptInjectionSignals(message: string): string[] {
+  const text = String(message ?? '');
+  return PROMPT_INJECTION_PATTERNS
+    .filter(({ pattern }) => pattern.test(text))
+    .map(({ signal }) => signal);
+}
+
+export function resolveResponsiveActionControls(
+  message: string,
+  requestedCrewPreflight: boolean,
+  clientId: string | null,
+): ResponsiveActionControls {
+  const parsed = parseResponsiveDirectives(message);
+  const detectedSignals = detectPromptInjectionSignals(message);
+  const blockedDirectives: string[] = [];
+  const requested = parsed.directives.map((directive) => directive.normalized);
+  const applied = new Set<string>();
+  const ignored = new Set<string>();
+
+  let activationPhrase = detectExecutionActivationPhrase(parsed.cleanedMessage || message);
+  let crewPreflightEnabled = requestedCrewPreflight;
+  let forceAllHands = false;
+  let suppressActivation = false;
+
+  for (const directive of parsed.directives) {
+    const shouldBlock = detectedSignals.length > 0 && DIRECTIVES_BLOCKED_ON_INJECTION.has(directive.normalized);
+    if (shouldBlock) {
+      blockedDirectives.push(directive.normalized);
+      ignored.add(directive.normalized);
+      continue;
+    }
+
+    switch (directive.normalized) {
+      case 'make-it-so':
+        activationPhrase = 'make-it-so';
+        applied.add(directive.normalized);
+        break;
+      case 'next-steps':
+        activationPhrase = 'next-steps';
+        applied.add(directive.normalized);
+        break;
+      case 'all-hands':
+        forceAllHands = true;
+        crewPreflightEnabled = true;
+        applied.add(directive.normalized);
+        break;
+      case 'analyze-only':
+        suppressActivation = true;
+        applied.add(directive.normalized);
+        break;
+      case 'crew-preflight':
+        crewPreflightEnabled = true;
+        applied.add(directive.normalized);
+        break;
+      case 'no-crew-preflight':
+        crewPreflightEnabled = false;
+        applied.add(directive.normalized);
+        break;
+      default:
+        ignored.add(directive.normalized);
+        break;
+    }
+  }
+
+  if (suppressActivation) activationPhrase = null;
+
+  if (forceAllHands && !isActivationAllowedForClient(clientId)) {
+    forceAllHands = false;
+    ignored.add('all-hands');
+  }
+
+  return {
+    cleanedMessage: parsed.cleanedMessage || String(message ?? '').trim(),
+    activationPhrase,
+    crewPreflightEnabled,
+    forceAllHands,
+    suppressActivation,
+    responsiveActions: {
+      requested,
+      applied: Array.from(applied),
+      ignored: Array.from(ignored),
+      forceAllHands,
+      suppressActivation,
+    },
+    worfGate: {
+      protected: true,
+      riskLevel: detectedSignals.length ? 'elevated' : 'low',
+      detectedSignals,
+      blockedDirectives,
+    },
+  };
 }
 
 function hasActionableNextStepsHistory(history: CanonicalChatHistoryTurn[]): boolean {
@@ -280,26 +470,54 @@ function buildParallelTeams(team: TeamMember[], memoryCounts: Record<string, num
   return snapshots;
 }
 
-async function buildCrewSelfOrganizationContext(message: string, clientId: string | null, missionOverride?: Awaited<ReturnType<typeof runMissionPipeline>>): Promise<{ prelude: string; meta: CrewSelfOrganizationMeta }> {
+async function buildCrewSelfOrganizationContext(
+  message: string,
+  clientId: string | null,
+  missionOverride?: Awaited<ReturnType<typeof runMissionPipeline>>,
+  options?: { forceAllHands?: boolean; worfGate?: WorfGatePromptSecurityMeta },
+): Promise<{ prelude: string; meta: CrewSelfOrganizationMeta }> {
   const mission = missionOverride ?? await runMissionPipeline(`CHAT TURN:\n${message}`, clientId);
   const uniqueMembers = Array.from(new Map(mission.team.map((member) => [member.crewId, member])).values());
+  if (options?.forceAllHands) {
+    for (const crew of ALL_HANDS_CREW) {
+      if (uniqueMembers.some((member) => member.crewId === crew.crewId)) continue;
+      uniqueMembers.push({
+        crewId: crew.crewId,
+        domain: crew.domain,
+        capabilityTier: 3,
+        model: mission.topModel,
+        provider: providerForModel(mission.topModel) as TeamMember['provider'],
+        reason: 'all-hands directive',
+      });
+    }
+  }
   const memoryRows = await Promise.all(uniqueMembers.map(async (member) => {
     const rows = await searchCrewPersonalMemories(member.crewId, message, 2).catch(() => []);
     return { member, rows };
   }));
 
   const memoryCounts = Object.fromEntries(memoryRows.map(({ member, rows }) => [member.crewId, rows.length]));
-  const teams = buildParallelTeams(mission.team, memoryCounts);
+  const teams = buildParallelTeams(uniqueMembers, memoryCounts);
+  const allHandsTeam = options?.forceAllHands
+    ? {
+        teamId: 'all-hands',
+        label: 'All Hands',
+        members: ALL_HANDS_CREW.map((crew) => crew.crewId),
+        domains: Array.from(new Set(ALL_HANDS_CREW.map((crew) => crew.domain))),
+        memoryHits: ALL_HANDS_CREW.reduce((sum, crew) => sum + (memoryCounts[crew.crewId] ?? 0), 0),
+      }
+    : null;
+  const teamSnapshots = allHandsTeam ? [allHandsTeam, ...teams] : teams;
   const members: CrewMemberMemorySnapshot[] = memoryRows.map(({ member, rows }) => ({
     crewId: member.crewId,
     domain: member.domain,
-    teamIds: teams.filter((team) => team.members.includes(member.crewId)).map((team) => team.teamId),
+    teamIds: teamSnapshots.filter((team) => team.members.includes(member.crewId)).map((team) => team.teamId),
     memoryHits: rows.length,
     memoryTitles: rows.map((row: any) => compactText(String(row.title ?? row.content ?? ''), 80)).filter(Boolean),
   }));
 
-  const teamBlock = teams.length
-    ? teams.map((team) => `- ${team.label} [${team.teamId}]: ${team.members.join(', ')}${team.memoryHits ? ` · ${team.memoryHits} personal memory hits` : ''}`).join('\n')
+  const teamBlock = teamSnapshots.length
+    ? teamSnapshots.map((team) => `- ${team.label} [${team.teamId}]: ${team.members.join(', ')}${team.memoryHits ? ` · ${team.memoryHits} personal memory hits` : ''}`).join('\n')
     : '- No parallel teams derived';
   const memoryBlock = members.some((member) => member.memoryHits > 0)
     ? members.filter((member) => member.memoryHits > 0).map((member) => `- ${member.crewId}: ${member.memoryTitles.join(' | ')}`).join('\n')
@@ -320,6 +538,13 @@ async function buildCrewSelfOrganizationContext(message: string, clientId: strin
       'CREW CONTRIBUTION SNAPSHOT:',
       contributionBlock || '- No contribution snapshot',
       '',
+      ...(options?.worfGate ? [
+        'WORFGATE DIRECTIVE ASSESSMENT:',
+        options.worfGate.riskLevel === 'elevated'
+          ? `- Elevated prompt-injection signals detected (${options.worfGate.detectedSignals.join(', ')}). Unsafe directives were ignored.`
+          : '- Directive channel clear. No prompt-injection indicators detected.',
+        '',
+      ] : []),
       'Use this preflight to tighten the answer, stay grounded, and call out missing context instead of inventing it.',
     ].join('\n'),
     meta: {
@@ -330,7 +555,7 @@ async function buildCrewSelfOrganizationContext(message: string, clientId: strin
       totalCostUSD: mission.efficiency.totalCostUSD,
       totalTokens: mission.efficiency.totalTokens,
       providerCosts: mission.efficiency.perProvider,
-      teams,
+      teams: teamSnapshots,
       members,
     },
   };
@@ -341,32 +566,38 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
 
   const originalMessage = String(body.message ?? '').trim();
   if (!originalMessage) throw new Error('message_required');
+  const history = normalizeHistory(body.history);
+  const clientId = body.clientId ?? null;
+  const requestedCrewPreflight = body.crewSelfOrganize ?? AUTO_CREW_PREFLIGHT;
+  const controls = resolveResponsiveActionControls(originalMessage, requestedCrewPreflight, clientId);
+  const dispatchMessage = controls.cleanedMessage || originalMessage;
   const optimizedPrompt = body.promptOptimizationMode === 'off'
     ? {
-        dispatchMessage: originalMessage,
+        dispatchMessage,
         meta: {
           applied: false,
-          originalChars: originalMessage.length,
-          optimizedChars: originalMessage.length,
+          originalChars: dispatchMessage.length,
+          optimizedChars: dispatchMessage.length,
           netCharDelta: 0,
           rules: [],
         } satisfies PromptOptimizationMeta,
       }
-    : optimizePromptForDispatch(originalMessage);
+    : optimizePromptForDispatch(dispatchMessage);
 
-  const history = normalizeHistory(body.history);
-  const tier = classifyTier(originalMessage);
+  const tier = classifyTier(dispatchMessage);
   const picked = quarkSelectModel(tier);
-  const clientId = body.clientId ?? null;
-  const crewPreflightEnabled = body.crewSelfOrganize ?? AUTO_CREW_PREFLIGHT;
-  const activationPhrase = detectExecutionActivationPhrase(originalMessage);
+  const crewPreflightEnabled = controls.crewPreflightEnabled;
+  const activationPhrase = controls.activationPhrase;
 
   if (activationPhrase && hasActionableNextStepsHistory(history) && isActivationAllowedForClient(clientId)) {
     const activationTask = buildExecutionActivationTask(activationPhrase, history);
     if (!activationTask) throw new Error('activation_context_required');
     const execution = await planThenExecute(activationTask, { clientId, maxIterations: 12, tier: 3 });
     const crewContext = crewPreflightEnabled
-      ? await buildCrewSelfOrganizationContext(activationTask, clientId, execution.mission).catch(() => null)
+      ? await buildCrewSelfOrganizationContext(activationTask, clientId, execution.mission, {
+          forceAllHands: controls.forceAllHands,
+          worfGate: controls.worfGate,
+        }).catch(() => null)
       : null;
     const executionRunCostUSD = Number(execution.run.totalCostUSD.toFixed(6));
     const crewPreparationCostUSD = Number(execution.plan.costUSD.toFixed(6));
@@ -404,12 +635,14 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
       ],
       promptOptimization: {
         applied: false,
-        originalChars: originalMessage.length,
-        optimizedChars: originalMessage.length,
+        originalChars: dispatchMessage.length,
+        optimizedChars: dispatchMessage.length,
         netCharDelta: 0,
         rules: [],
       },
       crewSelfOrganization: crewContext?.meta,
+      responsiveActions: controls.responsiveActions,
+      worfGate: controls.worfGate,
       executionActivation: {
         activated: true,
         phrase: activationPhrase,
@@ -440,11 +673,16 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   }
 
   let context = '';
-  try { context = (await buildBridges(clientId).ragRecall?.(originalMessage, 4)) ?? ''; } catch { /* RAG optional */ }
+  try { context = (await buildBridges(clientId).ragRecall?.(dispatchMessage, 4)) ?? ''; } catch { /* RAG optional */ }
   const hasCtx = context && context !== '(no relevant crew memories)';
   let crewContext: { prelude: string; meta: CrewSelfOrganizationMeta } | null = null;
   if (crewPreflightEnabled) {
-    try { crewContext = await buildCrewSelfOrganizationContext(originalMessage, clientId); } catch { /* crew preflight optional */ }
+    try {
+      crewContext = await buildCrewSelfOrganizationContext(dispatchMessage, clientId, undefined, {
+        forceAllHands: controls.forceAllHands,
+        worfGate: controls.worfGate,
+      });
+    } catch { /* crew preflight optional */ }
   }
 
   const messages = [
@@ -488,6 +726,8 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
     ],
     promptOptimization: optimizedPrompt.meta,
     crewSelfOrganization: crewContext?.meta,
+    responsiveActions: controls.responsiveActions,
+    worfGate: controls.worfGate,
     costAnalysis: {
       chatCostUSD: Number(chatCostUSD.toFixed(6)),
       chatTokensIn: tokensIn,

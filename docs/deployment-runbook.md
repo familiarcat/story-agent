@@ -7,6 +7,7 @@ billable step gated.
 
 Related migration guidance:
 - [docs/runbooks/mcp-tool-compatibility-migration.md](runbooks/mcp-tool-compatibility-migration.md) — MCP tool-name compatibility rollout, tests, and terminal-verified deploy sequence.
+- [docs/runbooks/deployment-execution-ledger.md](runbooks/deployment-execution-ledger.md) — historical success/failure outcomes, go/no-go criteria, and post-deploy build/E2E verification workflow.
 
 ## TL;DR
 

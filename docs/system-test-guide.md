@@ -116,6 +116,10 @@ curl -s "localhost:3000/api/crew/memories?crew=data"     # → { success:true, m
 > ✅ PASS: all three return JSON (not a connection error); the lounge endpoint lists ≥1 session
 > after step 2.
 
+Deployment parity note:
+
+- For deployment-focused validation and historical run evidence (including cancelled runs, alternate-buffer mitigation, and go/no-go criteria), use [docs/runbooks/deployment-execution-ledger.md](runbooks/deployment-execution-ledger.md).
+
 ---
 
 ## 7. Activation notes

@@ -86,9 +86,10 @@
     "activate:full": "npx tsx scripts/activate-changes.ts --full"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/ws": "^8.18.1",
-    "dotenv": "^16.4.7",
     "concurrently": "^9.1.0",
+    "dotenv": "^16.4.7",
     "typescript": "^5.7.2"
   }
 }
