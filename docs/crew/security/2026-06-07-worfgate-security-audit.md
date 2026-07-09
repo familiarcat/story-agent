@@ -257,6 +257,17 @@ All systems are go."
 
 ---
 
+## 🔁 Operational Verification Addendum (2026-07-09)
+
+Security governance for runtime safety controls now includes the WorfGate post-change verification protocol
+documented in [worfgate-break-glass.md](../../worfgate-break-glass.md).
+
+This protocol is the required runbook when agent-core ordering controls or memory transcript safety guards
+change. It defines reload steps, governed smoke checks, and acceptance criteria for transcript preflight and
+order-gate audit visibility.
+
+---
+
 **Audit Completed**: 2026-06-07  
 **Reviewer**: Worf (Security, Veto Authority)  
 **Decision**: ✅ **APPROVED FOR PRODUCTION**  

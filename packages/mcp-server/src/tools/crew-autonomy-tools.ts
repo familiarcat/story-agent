@@ -1169,10 +1169,13 @@ async function performArchitecturalReview(projectId: string, reviewType: string)
 
 async function planStoryExecution(storyId: string, includeRiskAnalysis: boolean) {
   const memories = await getRelevantCrewMemories('implementation', undefined, 5);
+  const unresolvedRisks = memories.flatMap(m => (Array.isArray((m as any)?.transcript?.unresolvedRisks)
+    ? (m as any).transcript.unresolvedRisks.filter((risk: unknown): risk is string => typeof risk === 'string')
+    : []));
   return { 
     storyId, 
     plan: 'Sequence generated from historical patterns', 
-    risks: includeRiskAnalysis ? memories.flatMap(m => m.transcript.unresolvedRisks).slice(0, 3) : [] 
+    risks: includeRiskAnalysis ? unresolvedRisks.slice(0, 3) : [] 
   };
 }
 

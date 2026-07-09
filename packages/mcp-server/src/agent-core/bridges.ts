@@ -41,6 +41,9 @@ export function buildBridges(
     // rag_recall can surface "we did a similar task before, here's how it went" on future runs.
     recordFeedback: async (card) => {
       const postureLine = `WorfGate 🟢${card.posture.green}/🟡${card.posture.yellow}/🔴${card.posture.red}`;
+      const orderLine = card.orderAudit
+        ? `OrderGate token ${card.orderAudit.token} — precondition:${card.orderAudit.preconditionSatisfied ? 'met' : 'missing'}, blockedMutations:${card.orderAudit.blockedMutations}`
+        : 'OrderGate token unavailable';
       // Self-healing: a stalled run is recorded as a "stall card" so the crew can RESEARCH recurring
       // stalls and propose a fix themselves (recall via the 'stall' tag).
       await storeObservationMemory({
@@ -50,15 +53,27 @@ export function buildBridges(
         transcript: {
           rounds: [{
             title: card.stalled ? 'Agent run (STALL detected + self-nudged)' : 'Agent run',
-            entries: [{ speakerId: 'agent-core', position: 'support', statement: card.input, evidence: [`model:${card.model}`, `lens:${card.lens}`, `tools:${card.toolsUsed.join(',')}`, `stalled:${card.stalled}`] }],
+            entries: [{ speakerId: 'agent-core', position: 'support', statement: card.input, evidence: [`model:${card.model}`, `lens:${card.lens}`, `tools:${card.toolsUsed.join(',')}`, `stalled:${card.stalled}`, orderLine, ...(card.orderAudit?.steps?.slice(-5) ?? []).map((s) => `step:${s}`)] }],
           }],
-          consensusSummary: `${card.outcome} — ${postureLine}, ${card.iterations} turns, ${card.toolsUsed.length} tools, ~$${card.costUSD.toFixed(5)}${card.escalated ? ', escalated' : ''}${card.stalled ? ', STALLED→nudged' : ''}.`,
+          consensusSummary: `${card.outcome} — ${postureLine}, ${orderLine}, ${card.iterations} turns, ${card.toolsUsed.length} tools, ~$${card.costUSD.toFixed(5)}${card.escalated ? ', escalated' : ''}${card.stalled ? ', STALLED→nudged' : ''}.`,
           unresolvedRisks: card.stalled ? ['finish/iterate stall: model produced text with 0 tool calls on an actionable task'] : [],
-          finalDecision: 'approved',
-          actionItems: card.toolsUsed,
+          finalDecision: card.orderAudit && !card.orderAudit.preconditionSatisfied && card.orderAudit.blockedMutations > 0 ? 'revise' : 'approved',
+          actionItems: [
+            ...card.toolsUsed,
+            ...(card.orderAudit ? [`order-gate-token:${card.orderAudit.token}`, `order-gate-blocked:${card.orderAudit.blockedMutations}`] : []),
+          ],
         },
         missionReference: card.stalled ? 'agent-stall' : 'agent-run',
-        tags: ['agent-run', 'feedback-card', 'self-learning', card.model, clientId ?? 'global', ...(card.stalled ? ['stall'] : [])],
+        tags: [
+          'agent-run',
+          'feedback-card',
+          'self-learning',
+          'order-gate',
+          card.model,
+          clientId ?? 'global',
+          ...(card.stalled ? ['stall'] : []),
+          ...(card.orderAudit && card.orderAudit.blockedMutations > 0 ? ['order-gate-blocked'] : ['order-gate-pass']),
+        ],
       });
     },
   };

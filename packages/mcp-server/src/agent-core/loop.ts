@@ -109,6 +109,12 @@ export interface AgentFeedbackCard {
   stalled: boolean;
   outcome: string;
   clientId: string | null;
+  orderAudit?: {
+    token: string;
+    preconditionSatisfied: boolean;
+    blockedMutations: number;
+    steps: string[];
+  };
 }
 
 const ESCALATION_SIGNALS = ['architect', 'security', 'migration', 'refactor', 'privilege', 'multi-client', 'concurrency', 'rls', 'auth', 'schema design', 'breaking change', 'rollback'];
@@ -131,6 +137,7 @@ function providerOf(model: string): string {
 
 // Always-available tools: orient (read/search/list) + escalate. The lens focuses everything else.
 const LENS_CORE = new Set(['read_file', 'list_dir', 'search_code', 'crew_deliberate']);
+const ORIENTING_TOOLS = new Set(['read_file', 'list_dir', 'search_code', 'rag_recall', 'crew_deliberate', 'git_status', 'git_diff']);
 // Read-only tools for toolPolicy="read-only"
 const READ_ONLY_TOOLS = new Set(['read_file','list_dir','search_code','git_status','git_diff','rag_recall','crew_deliberate']);
 // Intent → tool affinities (problem topology). The lens reads the request + each tool's 5W1H theory.
@@ -242,6 +249,10 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const maxVerifyRetries = opts.maxVerifyRetries ?? 2;
   const editSession = new EditSession(workspace);
   let verifyAttempts = 0;
+  const orderToken = randomUUID().slice(0, 8);
+  let sawOrientationStep = false;
+  let blockedMutations = 0;
+  const orderedSteps: string[] = [];
 
   // Cost-optimal escalation: start on the cheapest adequate tier; only bump to a pricier model
   // after repeated failed turns (nextEscalationTier three-strike). Most work stays cheap.
@@ -296,6 +307,12 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
           toolsUsed: result.toolCalls.map(t => t.tool), posture,
           costUSD: result.totalCostUSD, tokens: result.totalTokens, iterations: result.iterations,
           escalated: result.escalated, stalled: result.stalled, outcome: result.finalText.slice(0, 500), clientId: opts.clientId ?? null,
+          orderAudit: {
+            token: orderToken,
+            preconditionSatisfied: sawOrientationStep,
+            blockedMutations,
+            steps: orderedSteps.slice(-20),
+          },
         });
       } catch { /* self-learning is best-effort — never fail the run on a memory write */ }
     }
@@ -396,6 +413,8 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     let turnFailed = false;
     for (const tc of toolCalls) {
       const name = tc.function?.name;
+      const stepToken = `${orderToken}:${result.iterations}.${result.toolCalls.length + 1}`;
+      if (name) orderedSteps.push(`${stepToken}:${name}`);
       let parsed: Record<string, unknown> = {};
       try { parsed = JSON.parse(tc.function?.arguments || '{}'); } catch { /* leave empty */ }
       // Repair the common cheap-model tool-call malformations (stringified JSON, flat apply_patch
@@ -410,6 +429,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       let ok = true;
       let tier: WorfTier = 'yellow';
       let remediations: string[] = [];
+      const mutatingBeforeRead = !!(name && MUTATING_TOOLS.has(name) && !sawOrientationStep);
 
       if (!repaired.ok) {
         // Feed the repair error back as the tool result so the model retries with valid args.
@@ -418,6 +438,16 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       } else if (!tool) {
         output = `error: unknown tool ${name}`;
         ok = false;
+      } else if (mutatingBeforeRead) {
+        blockedMutations++;
+        output = `Order-of-operations gate blocked '${name}' (${stepToken}): call at least one orienting tool first (read_file, list_dir, search_code, rag_recall, git_status, git_diff).`;
+        ok = false;
+        tier = 'yellow';
+        remediations = [
+          'Run an orienting tool before mutating operations to establish current state.',
+          `Order token: ${stepToken}`,
+        ];
+        emit({ type: 'escalation', tool: name, text: output });
       } else {
         const gate = gateLocalOp(name, parsed, workspace);
         tier = gate.tier;
@@ -457,6 +487,8 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
           }
         }
       }
+
+      if (ok && name && ORIENTING_TOOLS.has(name)) sawOrientationStep = true;
 
       result.toolCalls.push({ tool: name, tier, remediations, ok });
       if (!ok) turnFailed = true;

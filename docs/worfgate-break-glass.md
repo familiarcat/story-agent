@@ -5,6 +5,8 @@
 > never a silent backdoor. Every override is monitored by the whole crew in the Observation Lounge.
 > Implemented in [worfgate-credentials.ts](../packages/shared/src/worfgate-credentials.ts).
 
+Related security audit: [crew/security/2026-06-07-worfgate-security-audit.md](crew/security/2026-06-07-worfgate-security-audit.md).
+
 ## What it is
 WorfGate normally authorizes a credential by crew identity + a per-credential **operation allowlist**
 (`CredentialSpec.operations`). The break-glass lets O'Brien use a **registered** credential for an
@@ -55,3 +57,36 @@ worfgate_override_monitor({ sinceHours? })   // default 24h
 ```
 Call it during/after an Observation Lounge session to monitor O'Brien's break-glass use. (Requires an
 `/mcp` reconnect / `pnpm mcp` restart to load the new tool.)
+
+## Post-change verification protocol (WorfGate-governed)
+
+Use this when safety/ordering guards are added to MCP tools or agent-core logic.
+
+### Scope
+- Confirms runtime reload is active for MCP tools.
+- Confirms transcript preflight normalization paths do not crash on partial legacy rows.
+- Confirms order-of-operations controls are active and auditable.
+
+### Procedure
+1. Reload runtime surfaces:
+  - Restart MCP runtime (`pnpm mcp`) and reconnect clients (`/mcp`).
+2. Run memory smoke checks (must return JSON, no runtime throw):
+  - `summarize_crew_memory_trends({ lookbackDays: 30, limit: 10 })`
+  - `crew_observation_lounge_status({ scenario: "post-restart verification", perCrewMemoryLimit: 1 })`
+3. Run a WorfGate-lane shell sanity check:
+  - `run_shell("node -e \"console.log('noop sanity')\"")`
+4. Review output for:
+  - No `unresolvedRisks is not iterable` failures.
+  - No `Cannot read properties of undefined (reading 'slice'/'trim')` failures.
+  - Tier/remediation envelope present for governed calls.
+
+### Expected acceptance
+- Tool responses are structured JSON (or declared payload artifacts) without transcript-shape exceptions.
+- WorfGate governance metadata appears on governed execution paths.
+- New order/audit metadata is persisted in feedback cards (`order-gate` tags and token lines).
+
+### Verification log
+- `2026-07-09`: Transcript preflight + order gate rollout verified live.
+  - `summarize_crew_memory_trends` returned successfully.
+  - `crew_observation_lounge_status` returned successfully.
+  - WorfGate-governed `run_shell` sanity check succeeded (`exitCode: 0`, `tier: yellow`).

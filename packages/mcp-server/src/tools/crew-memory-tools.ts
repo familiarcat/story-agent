@@ -19,6 +19,21 @@ import {
  * Enables the crew to learn collectively from past missions and identify trends.
  */
 export async function registerCrewMemoryTools(server: McpServer) {
+  const transcriptList = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []);
+  const preflightTranscript = (transcript: any) => {
+    const t = transcript ?? {};
+    const unresolvedRisks = transcriptList(t.unresolvedRisks);
+    const actionItems = transcriptList(t.actionItems);
+    const finalDecision = typeof t.finalDecision === 'string' ? t.finalDecision : 'revise';
+    const consensusSummary = typeof t.consensusSummary === 'string' ? t.consensusSummary : '';
+    const auditTags: string[] = [];
+    if (!Array.isArray(t.unresolvedRisks)) auditTags.push('preflight-normalized:unresolvedRisks');
+    if (!Array.isArray(t.actionItems)) auditTags.push('preflight-normalized:actionItems');
+    if (typeof t.finalDecision !== 'string') auditTags.push('preflight-normalized:finalDecision');
+    if (typeof t.consensusSummary !== 'string') auditTags.push('preflight-normalized:consensusSummary');
+    return { unresolvedRisks, actionItems, finalDecision, consensusSummary, auditTags };
+  };
+
   server.tool(
     'crew_observation_lounge_status',
     'Generate an Observation Lounge formatted crew roll-call using current project runtime status plus imported legacy crew memories from ai-enterprise-os when available.',
@@ -443,27 +458,36 @@ To verify the integrity of this manifest, validate the signature below against t
       const roleParticipation = new Map<string, number>();
       const consensusPatterns: string[] = [];
       const unresolvedTrends: string[] = [];
+      const preflightAudit = { normalizedFields: 0, normalizedRows: 0, tags: new Set<string>() };
 
       for (const memory of recentMemories) {
+        const normalized = preflightTranscript((memory as any)?.transcript);
+        const unresolvedRisks = normalized.unresolvedRisks;
+        if (normalized.auditTags.length > 0) {
+          preflightAudit.normalizedRows += 1;
+          preflightAudit.normalizedFields += normalized.auditTags.length;
+          normalized.auditTags.forEach(tag => preflightAudit.tags.add(tag));
+        }
+
         // Track decision distribution
-        const decision = memory.transcript.finalDecision as keyof typeof allDecisions;
+        const decision = normalized.finalDecision as keyof typeof allDecisions;
         if (decision in allDecisions) {
           allDecisions[decision] = (allDecisions[decision] ?? 0) + 1;
         }
 
         // Aggregate risks
-        for (const risk of memory.transcript.unresolvedRisks) {
+        for (const risk of unresolvedRisks) {
           allRisks.set(risk, (allRisks.get(risk) ?? 0) + 1);
         }
 
         // Track consensus patterns
-        if (memory.transcript.consensusSummary) {
-          consensusPatterns.push(memory.transcript.consensusSummary);
+        if (normalized.consensusSummary.trim().length > 0) {
+          consensusPatterns.push(normalized.consensusSummary);
         }
 
         // Track unresolved risks
-        if (memory.transcript.unresolvedRisks.length > 0) {
-          unresolvedTrends.push(...memory.transcript.unresolvedRisks);
+        if (unresolvedRisks.length > 0) {
+          unresolvedTrends.push(...unresolvedRisks);
         }
       }
 
@@ -485,6 +509,11 @@ To verify the integrity of this manifest, validate the signature below against t
         topRisks,
         consensusThemes: Array.from(new Set(consensusPatterns)).slice(0, 3),
         unresolvedRiskFrequency: unresolvedTrends.length,
+        preflightAudit: {
+          normalizedRows: preflightAudit.normalizedRows,
+          normalizedFields: preflightAudit.normalizedFields,
+          tags: Array.from(preflightAudit.tags),
+        },
         recommendations: [
           ...(topRisks.length > 0
             ? [`Focus on recurring risks: ${topRisks
@@ -542,27 +571,45 @@ To verify the integrity of this manifest, validate the signature below against t
       const summary = {
         scenario,
         relevantMemoriesFound: relevantMemories.length,
+        preflightAudit: {
+          normalizedRows: 0,
+          normalizedFields: 0,
+          tags: [] as string[],
+        },
         memories: relevantMemories.map(m => ({
+          __normalized: preflightTranscript(m.transcript),
           date: m.createdAt,
-          finalDecision: m.transcript.finalDecision,
-          consensusSummary: m.transcript.consensusSummary,
-          unresolvedRisks: m.transcript.unresolvedRisks.slice(0, 3),
-          actionItems: m.transcript.actionItems.slice(0, 2),
+          finalDecision: preflightTranscript(m.transcript).finalDecision,
+          consensusSummary: preflightTranscript(m.transcript).consensusSummary,
+          unresolvedRisks: preflightTranscript(m.transcript).unresolvedRisks.slice(0, 3),
+          actionItems: preflightTranscript(m.transcript).actionItems.slice(0, 2),
           similarity: m.similarity?.toFixed(3),
         })),
         synthesizedInsight:
           relevantMemories.length > 0
             ? `Based on ${relevantMemories.length} prior memories, crew has ${
-                relevantMemories.filter(m => m.transcript.finalDecision === 'approved').length
-              } approved and ${relevantMemories.filter(m => m.transcript.finalDecision === 'revise').length} revision-required scenarios in similar contexts. Key recurring risks: ${Array.from(
+                relevantMemories.filter(m => m.transcript?.finalDecision === 'approved').length
+              } approved and ${relevantMemories.filter(m => m.transcript?.finalDecision === 'revise').length} revision-required scenarios in similar contexts. Key recurring risks: ${Array.from(
                 new Set(
                   relevantMemories
-                    .flatMap(m => m.transcript.unresolvedRisks)
+                    .flatMap(m => transcriptList(m.transcript?.unresolvedRisks))
                     .slice(0, 3)
                 )
               ).join(', ')}`
             : 'No prior relevant memories found. This may be a novel scenario for the crew.',
       };
+
+      for (const memory of summary.memories as Array<any>) {
+        const tags = memory.__normalized.auditTags as string[];
+        if (tags.length > 0) {
+          summary.preflightAudit.normalizedRows += 1;
+          summary.preflightAudit.normalizedFields += tags.length;
+          for (const tag of tags) {
+            if (!summary.preflightAudit.tags.includes(tag)) summary.preflightAudit.tags.push(tag);
+          }
+        }
+        delete memory.__normalized;
+      }
 
       return {
         content: [{
