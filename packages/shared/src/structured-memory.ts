@@ -35,8 +35,8 @@ function rank(source: MemorySource): number {
   return SOURCE_AUTHORITY[source] ?? 0;
 }
 
-function decisionId(statement: string): string {
-  const input = statement.trim().toLowerCase();
+function decisionId(statement: unknown): string {
+  const input = String(statement ?? '').trim().toLowerCase();
   let hash = 0;
   for (let i = 0; i < input.length; i += 1) {
     hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
@@ -192,40 +192,49 @@ export function buildStructuredMemoryPatchFromDebate(input: {
 }): StructuredMemoryPatch {
   const source = input.source ?? 'assistant';
   const owner = input.owner ?? 'assistant';
+  const finalDecision = input.debate?.finalDecision ?? 'revise';
+  const consensusSummary = String(input.debate?.consensusSummary ?? '').trim();
+  const unresolvedRisks = Array.isArray(input.debate?.unresolvedRisks)
+    ? input.debate.unresolvedRisks
+    : [];
+  const actionItems = Array.isArray(input.debate?.actionItems)
+    ? input.debate.actionItems
+    : [];
+  const decisionStatement = consensusSummary || `Decision: ${finalDecision}`;
 
   const facts: MemoryFact[] = [
     {
       key: 'observation.finalDecision',
-      value: input.debate.finalDecision,
+      value: finalDecision,
       source,
       confidence: 0.9,
-      evidence: input.debate.consensusSummary,
+      evidence: consensusSummary,
     },
   ];
 
   const decisions: MemoryDecision[] = [
     {
-      id: decisionId(input.debate.consensusSummary || input.debate.finalDecision),
-      statement: input.debate.consensusSummary || `Decision: ${input.debate.finalDecision}`,
-      status: input.debate.finalDecision === 'approved' ? 'accepted' : 'proposed',
+      id: decisionId(decisionStatement),
+      statement: decisionStatement,
+      status: finalDecision === 'approved' ? 'accepted' : 'proposed',
       owner,
       source,
       confidence: 0.85,
-      evidence: input.debate.actionItems.join('; '),
+      evidence: actionItems.join('; '),
     },
   ];
 
-  const constraints: MemoryConstraint[] = input.debate.unresolvedRisks.map((risk, idx) => ({
+  const constraints: MemoryConstraint[] = unresolvedRisks.map((risk, idx) => ({
     key: `risk.${idx + 1}`,
     rule: `Mitigate risk: ${risk}`,
     naturalLanguage: `Avoid unresolved risk: ${risk}`,
     source,
     confidence: 0.75,
     enforcement: 'soft',
-    evidence: input.debate.consensusSummary,
+    evidence: consensusSummary,
   }));
 
-  const openQuestions: MemoryQuestion[] = input.debate.unresolvedRisks.map((risk, idx) => ({
+  const openQuestions: MemoryQuestion[] = unresolvedRisks.map((risk, idx) => ({
     key: `question.risk.${idx + 1}`,
     question: `How will we address risk: ${risk}?`,
     blocking: true,
