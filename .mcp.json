@@ -1,8 +1,14 @@
 {
   "mcpServers": {
     "story-agent": {
-      "command": "scripts/mcp-crew-stdio.sh",
-      "comment": "OpenRouter crew over stdio — run_crew_mission_pipeline, crew memory recall/store, Aha, WorfGate, skills. The wrapper sources crew secrets. Lets Claude Code call the crew directly instead of tsx mission scripts. See docs/claude-code-mcp.md."
+      "type": "http",
+      "url": "http://story-agent-alb-651393427.us-east-2.elb.amazonaws.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${STORY_AGENT_MCP_BEARER}",
+        "user-session-id": "${STORY_AGENT_MCP_SESSION_ID}",
+        "x-client-id": "familiarcat"
+      },
+      "comment": "Hosted Story Agent MCP over HTTP. WorfGate security headers are required: Bearer token + user-session-id. x-client-id scopes policy resolution."
     },
     "aha": {
       "type": "http",
@@ -11,13 +17,19 @@
     "figma": {
       "type": "http",
       "url": "http://127.0.0.1:3845/mcp",
-      "comment": "Official Figma MCP — LOCAL desktop server (loopback only, no external egress). Crew-selected + crew-approved (evaluate_tool_for_crew: figma-mcp-local — 3 approvals, qualityScore 1.00). The REMOTE server (https://mcp.figma.com/mcp) was Worf-vetoed for external-egress / controlled-data leakage. Read-only design→code context feeding the crew's Figma→LCARS scaffold pipeline. REQUIRES the Figma desktop app running with Dev Mode MCP enabled (Figma → Preferences → Enable Dev Mode MCP Server). Scope: non-controlled UI frames only, never sa_*/client data. See docs/figma-design-pipeline.md."
+      "comment": "Official Figma MCP \u2014 LOCAL desktop server (loopback only, no external egress). Crew-selected + crew-approved (evaluate_tool_for_crew: figma-mcp-local \u2014 3 approvals, qualityScore 1.00). The REMOTE server (https://mcp.figma.com/mcp) was Worf-vetoed for external-egress / controlled-data leakage. Read-only design\u2192code context feeding the crew's Figma\u2192LCARS scaffold pipeline. REQUIRES the Figma desktop app running with Dev Mode MCP enabled (Figma \u2192 Preferences \u2192 Enable Dev Mode MCP Server). Scope: non-controlled UI frames only, never sa_*/client data. See docs/figma-design-pipeline.md."
     },
     "figma-context": {
       "command": "npx",
-      "args": ["-y", "figma-developer-mcp", "--stdio"],
-      "env": { "FIGMA_API_KEY": "${FIGMA_API_KEY}" },
-      "comment": "GLips Figma-Context-MCP (io.github.GLips/Figma-Context-MCP) — stdio-local, crew-approved (evaluate_tool_for_crew: figma-context-mcp-glips — 3 approvals, qualityScore 1.00, adopt-first per RAG 139). Feeds richer Figma layout data (nodes/constraints/typography/spacing) to geordi's LCARS scaffold pipeline. Auth = a READ-ONLY Figma personal access token (File content: Read) via FIGMA_API_KEY, governed by the WorfGate registry (op figma:read), centralized in ~/.alexai-secrets (NOT ~/.zshrc — the non-interactive crew lane must resolve it), never committed; egress = Figma API only. Set FIGMA_API_KEY, then reconnect (/mcp) to activate. See docs/mcp-candidates-ui-management.md + docs/worfgate-break-glass.md."
+      "args": [
+        "-y",
+        "figma-developer-mcp",
+        "--stdio"
+      ],
+      "env": {
+        "FIGMA_API_KEY": "${FIGMA_API_KEY}"
+      },
+      "comment": "GLips Figma-Context-MCP (io.github.GLips/Figma-Context-MCP) \u2014 stdio-local, crew-approved (evaluate_tool_for_crew: figma-context-mcp-glips \u2014 3 approvals, qualityScore 1.00, adopt-first per RAG 139). Feeds richer Figma layout data (nodes/constraints/typography/spacing) to geordi's LCARS scaffold pipeline. Auth = a READ-ONLY Figma personal access token (File content: Read) via FIGMA_API_KEY, governed by the WorfGate registry (op figma:read), centralized in ~/.alexai-secrets (NOT ~/.zshrc \u2014 the non-interactive crew lane must resolve it), never committed; egress = Figma API only. Set FIGMA_API_KEY, then reconnect (/mcp) to activate. See docs/mcp-candidates-ui-management.md + docs/worfgate-break-glass.md."
     }
   }
 }

@@ -79,6 +79,8 @@
     "chat:start": "STORY_AGENT_AGENT_PORT=3103 pnpm --filter @story-agent/mcp-server dev",
     "chat:smoke": "node scripts/smoke-openai-facade.mjs",
     "chat:probe-optimization": "node scripts/probe-chat-optimization.mjs",
+    "mcp:connect:hosted": "zsh scripts/setup-hosted-mcp.sh",
+    "mcp:connect:local": "zsh scripts/setup-local-mcp.sh",
     "present": "node scripts/present.mjs",
     "present:book": "node scripts/present-book.mjs",
     "figma:themes": "npx tsx scripts/figma-to-client-theme.ts",
