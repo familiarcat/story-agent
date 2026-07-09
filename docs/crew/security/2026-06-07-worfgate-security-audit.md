@@ -266,6 +266,10 @@ This protocol is the required runbook when agent-core ordering controls or memor
 change. It defines reload steps, governed smoke checks, and acceptance criteria for transcript preflight and
 order-gate audit visibility.
 
+The formal adversarial model is defined in the Worf-Yar joint protocol section of
+[worfgate-break-glass.md](../../worfgate-break-glass.md), requiring both Worf policy validation and Yar
+stress-test rebuttal before a security verdict is considered complete.
+
 ---
 
 **Audit Completed**: 2026-06-07  

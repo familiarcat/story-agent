@@ -90,3 +90,34 @@ Use this when safety/ordering guards are added to MCP tools or agent-core logic.
   - `summarize_crew_memory_trends` returned successfully.
   - `crew_observation_lounge_status` returned successfully.
   - WorfGate-governed `run_shell` sanity check succeeded (`exitCode: 0`, `tier: yellow`).
+
+## Worf-Yar joint security protocol (adversarial alignment)
+
+This protocol formalizes the productive tension between Worf (policy rigor) and Yar (failure-mode realism).
+Both roles are security authorities from different angles, and both are required for final adjudication.
+
+### Role contract
+- Worf: defines hard constraints, veto boundaries, and non-negotiable security policy.
+- Yar: challenges assumptions with ambiguity, edge-case, and sequencing stress tests.
+- Picard/Data/Troi: arbitrate deadlocks using evidence quality, architecture coherence, and stakeholder clarity.
+
+### Required review sequence
+1. WorfGate policy check:
+  - Validate secrets handling, scope boundaries, path disclosure posture, and governance tags.
+2. Yar adversarial challenge:
+  - Probe malformed input handling, ordering assumptions, partial/legacy data behavior, and operator bypass pressure.
+3. Reconciliation brief:
+  - Document where Worf is too rigid and where Yar is too permissive.
+  - Resolve with explicit acceptance criteria and measurable follow-up checks.
+4. Shared memory writeback:
+  - Store verdict plus argument trail to observation memory so future adjudication reuses proven rulings.
+
+### Pass criteria
+- A change is "secure" only when it passes both Worf policy compliance and Yar adversarial stress checks.
+- "Blocked" is not "resolved" without a documented remediation path and verification owner.
+- Every exception must include a bounded reason, audit token, and rollback-ready procedure.
+
+### Anti-patterns to reject
+- Worf-only gate success without adversarial replay.
+- Yar-only stress findings without policy boundary mapping.
+- Closing security review on narrative confidence instead of reproducible evidence.
