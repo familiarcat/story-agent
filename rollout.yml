@@ -1,0 +1,77 @@
+# rollout.yml - Single Source of Truth for Section 31 Phase 3 Deployment
+# Schema Version: 1.0
+# TPM Attestation Required: true
+
+# Required TPM Attestation Fields
+tpm_sig: ""  # To be populated by TPM signing infrastructure
+chain_of_custody_hash: ""  # To be populated by TPM signing infrastructure
+
+# Workstream Namespaces
+obrien:
+  phases:
+    week1:
+      description: "Dogfood with crew + 10 trusted testers (forced OpenRouter, daily rollback drills)"
+      canary_weight: 0.01
+      rollback_automation: "scripts/rollback_dogfood.sh"
+    week2:
+      description: "1% canary to GitHub Copilot users (A/B test vs. control group)"
+      canary_weight: 0.01
+      promotion_rules:
+        opt_out_rate: "<2%"
+        error_rate: "<0.1%"
+      rollback_automation: "scripts/rollback_canary.sh"
+    week3:
+      description: "10% rollout if canary success criteria met"
+      canary_weight: 0.10
+      promotion_rules:
+        opt_out_rate: "<2%"
+        error_rate: "<0.1%"
+      rollback_automation: "scripts/rollback_week3.sh"
+    week4:
+      description: "Full rollout with killswitch hot-deployable via Riker's command override"
+      canary_weight: 1.00
+      killswitch: "scripts/killswitch.sh"
+
+yar:
+  token_validation:
+    checksum_enabled: true
+    alert_threshold: 0.01
+    auto_fallback_threshold: 3
+    auto_fallback_window: "5m"
+    dashboard:
+      fidelity_meter_target: 0.9999
+
+troi:
+  ux:
+    status_bar_toggle: "OpenRouter (default) ↔ Copilot"
+    workspace_setting: "storyAgent.routing.defaultProvider"
+    telemetry:
+      opt_out_rates: true
+      error_counts: true
+      sentiment_feedback: true
+    synthetic_tests:
+      enabled: true
+      monitoring_interval: "24/7"
+
+quark:
+  cost_dashboard:
+    live_token_expenditure: true
+    savings_vs_copilot: true
+    anomaly_detection:
+      threshold: "2σ"
+    roi_analysis: true
+    feature_breakdown: ["ask", "agent", "inline_chat", "review"]
+
+# Critical Approval Gates (Picard's Conditions)
+gates:
+  week2_canary:
+    - "Worf's TPM-backed signing is deployed"
+    - "Troi's telemetry shows zero opt-out spikes during dogfood"
+    - "Yar certifies token capture at 99.99% fidelity"
+
+# Merge Conflict Prevention
+merge_conflict_prevention:
+  workstream_namespaces: ["obrien", "yar", "troi", "quark"]
+  cross_workstream_review_quorum:
+    required_sign_offs: ["Data", "Troi"]
+    automated_ci_job: "validate_rollout_schema"
