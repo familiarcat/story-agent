@@ -102,6 +102,7 @@ export async function linkStoryToPR(input: {
   await linkAhaStoryToPR(input.ref, input.prUrl, input.prTitle);
   await updateAhaStoryStatus(input.ref, 'In code review');
   void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'linked', resourceId: input.ref });
+  void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'status_changed', resourceId: input.ref, meta: { status_to: 'In code review' } });
   return { ref: input.ref, prUrl: input.prUrl, linked: true };
 }
 
