@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import type { AhaSprint, AhaStory, CrewMissionPlan, ObservationDebateResult, ObservationMemoryRecord } from '@story-agent/shared';
 import { buildResumePayload, streamFrames } from '@/lib/stream-transport';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import HierarchyPicker from './components/HierarchyPicker';
+import StoryReferenceInput from './components/StoryReferenceInput';
+import { StoryDetailForm } from './components/StoryDetailForm';
+import { CreateStoryFlow } from './components/CreateStoryFlow';
+import { EMPTY_SELECTION, type HierarchySelection } from './components/types';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,16 +148,19 @@ export default function ObservationLoungePage() {
   const [kickoff, setKickoff] = useState('');
   const [copied, setCopied] = useState(false);
   const [lastFrameTimestamp, setLastFrameTimestamp] = useState<string | null>(null);
+  const [selection, setSelection] = useState<HierarchySelection>(EMPTY_SELECTION);
+  const [createInSprint, setCreateInSprint] = useState<string | null>(null);
 
   const set = (key: keyof WizardState, val: unknown) => setW(s => ({ ...s, [key]: val }));
 
   // Step 1 → 2: fetch story + brief
-  const loadStory = useCallback(async () => {
-    if (!w.referenceNum.trim()) { setError('Story reference required (e.g. STORY-123 or Aha URL)'); return; }
+  const loadStory = useCallback(async (refOverride?: string) => {
+    const ref = (refOverride ?? w.referenceNum).trim();
+    if (!ref) { setError('Story reference required (e.g. STORY-123 or Aha URL)'); return; }
     setLoading(true); setError(null);
     try {
       const params = new URLSearchParams({
-        referenceNum: w.referenceNum.trim(),
+        referenceNum: ref,
         ...(w.repoFullName ? { repoFullName: w.repoFullName } : {}),
         ...(w.targetBranch ? { targetBranch: w.targetBranch } : {}),
         ...(w.techStack ? { techStack: w.techStack } : {}),
@@ -170,7 +178,7 @@ export default function ObservationLoungePage() {
 
       for await (const frame of streamFrames({
         url: `/api/aha/observation-lounge/stream?${params.toString()}`,
-        payload: buildResumePayload(w.referenceNum.trim(), undefined, lastFrameTimestamp),
+        payload: buildResumePayload(ref, undefined, lastFrameTimestamp),
       })) {
         setLastFrameTimestamp(frame.ts);
         if (frame.type === 'final_result' && typeof frame.data.content === 'string') {
@@ -253,26 +261,57 @@ export default function ObservationLoungePage() {
 
       <StepIndicator current={step} />
 
-      {/* ── STEP 1: Load story ──────────────────────────────────────────── */}
+      {/* ── STEP 1: Load story — typeahead + hierarchy picker + detail/create (crew story-picker mission) ── */}
       {step === 1 && (
-        <div className="card">
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.85rem' }}>Step 1 — Load Mission Story</h2>
-          <Field label="Story Reference Number or Aha URL" col>
-            <input
-              value={w.referenceNum}
-              onChange={e => set('referenceNum', e.target.value)}
-              placeholder="e.g. STORY-123 or full Aha URL"
-              style={{ ...inputStyle, fontFamily: 'monospace' }}
-              onKeyDown={e => e.key === 'Enter' && void loadStory()}
-              autoFocus
-            />
-          </Field>
-          {error && <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: 8 }}>{error}</div>}
-          <div style={{ marginTop: '1rem' }}>
-            <button className="btn btn-primary" onClick={loadStory} disabled={loading}>
-              {loading ? 'Fetching from Aha…' : 'Load Story →'}
-            </button>
+        <div className="stack">
+          <div className="card">
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.85rem' }}>Step 1 — Load Mission Story</h2>
+            <Field label="Story Reference Number or Aha URL" col>
+              <StoryReferenceInput
+                value={w.referenceNum}
+                onChange={ref => set('referenceNum', ref)}
+                projectId={selection.projectId}
+              />
+            </Field>
+            {error && <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: 8 }}>{error}</div>}
+            <div style={{ marginTop: '1rem' }}>
+              <button className="btn btn-primary" onClick={() => void loadStory()} disabled={loading}>
+                {loading ? 'Fetching from Aha…' : 'Load Story →'}
+              </button>
+            </div>
           </div>
+
+          <div className="card">
+            <h3>Browse the hierarchy</h3>
+            <p className="meta" style={{ marginBottom: 'var(--space-3)' }}>
+              Client → Project → Sprint → Story, live from Aha. Selecting a project scopes the autocomplete above.
+            </p>
+            <HierarchyPicker
+              onSelectionChange={sel => {
+                setSelection(sel);
+                if (sel.sprintId !== createInSprint) setCreateInSprint(null);
+                if (sel.storyReferenceNum) set('referenceNum', sel.storyReferenceNum);
+              }}
+              onCreateStoryIntent={sprintId => setCreateInSprint(sprintId)}
+            />
+          </div>
+
+          {createInSprint ? (
+            <CreateStoryFlow
+              sprintId={createInSprint}
+              onCreated={story => {
+                set('referenceNum', story.referenceNum);
+                setSelection(s => ({ ...s, storyId: story.referenceNum, storyReferenceNum: story.referenceNum }));
+                setCreateInSprint(null);
+              }}
+              onCancel={() => setCreateInSprint(null)}
+            />
+          ) : (
+            <StoryDetailForm
+              selection={selection}
+              onUse={ref => { set('referenceNum', ref); void loadStory(ref); }}
+            />
+          )}
         </div>
       )}
 

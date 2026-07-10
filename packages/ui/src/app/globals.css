@@ -181,6 +181,18 @@ input[type="checkbox"], .checkbox { accent-color: var(--accent1); width: var(--s
 /* Inline keyword chip */
 .tag { display: inline-block; font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border-radius: var(--radius); background: color-mix(in srgb, var(--accent2) 15%, var(--surface)); color: var(--text); }
 
+/* Typeahead / menu dropdown surfaces (crew story-picker mission) */
+.dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 320px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 24px color-mix(in srgb, var(--bg) 60%, transparent); z-index: 150; }
+.dropdown-item { display: block; width: 100%; text-align: left; padding: var(--space-2) var(--space-3); background: transparent; border: none; color: var(--text); font-family: var(--font); font-size: var(--text-sm); cursor: pointer; }
+.dropdown-item:hover, .dropdown-item[aria-selected="true"] { background: color-mix(in srgb, var(--accent1) 18%, var(--surface)); }
+
+/* Worf-gate confirm modal (dry-run preview → explicit confirm) */
+.worf-gate-overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--bg) 70%, transparent); display: flex; align-items: center; justify-content: center; z-index: 300; }
+.worf-gate-panel { max-width: 560px; width: calc(100% - var(--space-8)); max-height: 80vh; overflow-y: auto; }
+.worf-gate-payload { font-size: var(--text-xs); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3); overflow-x: auto; color: var(--text-dim); }
+.worf-gate-actions { display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-4); }
+.worf-gate-error { background: color-mix(in srgb, var(--danger) 22%, var(--surface)); color: var(--danger); }
+
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
 th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }

@@ -27,6 +27,7 @@ export interface AhaClient {
   listSprints(projectId: string): Promise<AhaSprint[]>;
   getSprint(releaseId: string): Promise<AhaSprint>;
   getSprintStories(releaseId: string): Promise<AhaSprintStory[]>;
+  createFeature(releaseId: string, input: { name: string; description?: string }): Promise<AhaStory>;
   getRoadmap(projectId: string): Promise<{
     project: AhaProject;
     releases: Array<AhaSprint & { stories: AhaSprintStory[] }>;
@@ -146,6 +147,12 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
     async getSprint(releaseId) {
       const data = await get(`releases/${releaseId}`);
       return mapRelease(data.release as Record<string, unknown>);
+    },
+    async createFeature(releaseId, input) {
+      const data = await send('POST', `releases/${releaseId}/features`, {
+        feature: { name: input.name, ...(input.description ? { description: input.description } : {}) },
+      });
+      return mapFeatureToStory(data.feature as Record<string, unknown>);
     },
   };
 }
