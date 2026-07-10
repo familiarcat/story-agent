@@ -4,6 +4,7 @@
  */
 
 import * as vscode from 'vscode';
+import { TIER_ICONS, formatRefLabel } from '@story-agent/shared/ui-tokens';
 import { getProjectHierarchy, listAhaProjects, type AhaProject, type AhaSprint, type AhaSprintStory, type AhaStory } from '../aha';
 
 interface ProjectHierarchyData {
@@ -180,7 +181,7 @@ class ProjectTreeItem extends vscode.TreeItem {
     super(project.name, vscode.TreeItemCollapsibleState.Collapsed);
     this.contextValue = 'ahaProject';
     this.tooltip = `Project: ${project.name}\nReference Prefix: ${project.referencePrefix || 'N/A'}`;
-    this.iconPath = new vscode.ThemeIcon('project');
+    this.iconPath = new vscode.ThemeIcon(TIER_ICONS.project);
     this.command = {
       title: 'Open Project',
       command: 'story-agent.openAhaProject',
@@ -222,7 +223,7 @@ class ReleaseTreeItem extends vscode.TreeItem {
         : 0;
     this.tooltip = `Sprint: ${release.name}\n${release.doneStoryPoints}/${release.totalStoryPoints} points done (${progress}%)\nStart: ${release.startDate || 'N/A'}\nEnd: ${release.endDate || 'N/A'}`;
     this.description = `${progress}% done`;
-    this.iconPath = new vscode.ThemeIcon('rocket');
+    this.iconPath = new vscode.ThemeIcon(TIER_ICONS.release);
     this.command = {
       title: 'Open Sprint',
       command: 'story-agent.openAhaSprint',
@@ -291,11 +292,11 @@ class StoryTreeItem extends vscode.TreeItem {
     const storyPoints =
       'storyPoints' in story ? ` (${(story as any).storyPoints} pts)` : '';
 
-    super(`${refNum}: ${story.name}${storyPoints}`);
+    super(`${formatRefLabel(refNum, story.name)}${storyPoints}`);
     this._projectId = projectId;
     this.contextValue = 'ahaStory';
     this.tooltip = story.url;
-    this.iconPath = new vscode.ThemeIcon('list-ordered');
+    this.iconPath = new vscode.ThemeIcon(TIER_ICONS.story);
     this.command = {
       title: 'Open Story',
       command: 'story-agent.openAhaStory',

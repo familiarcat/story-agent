@@ -1,32 +1,36 @@
 /**
  * Shared design tokens — bridged to the semantic CSS-variable theme contract (globals.css, crew
- * theme-system mission RAG MEM 50). Values resolve to var(--*) so anything consuming these tokens is
- * THEME-DRIVEN (lcars / dark / light) with no edits. `onAccent` is text on an accent fill.
+ * theme-system mission RAG MEM 50), with semantic names sourced from the cross-surface
+ * @story-agent/shared/ui-tokens contract (UI-UNIFY-TIERS lounge ruling). Values resolve to var(--*)
+ * so anything consuming these tokens is THEME-DRIVEN (lcars / dark / light) with no edits.
+ * `onAccent` is text on an accent fill.
  */
+import { DASHBOARD_TOKEN_BINDINGS } from '@story-agent/shared/ui-tokens';
+
 export const color = {
-  text: 'var(--text)',
-  muted: 'var(--text-dim)',
+  text: DASHBOARD_TOKEN_BINDINGS.text,
+  muted: DASHBOARD_TOKEN_BINDINGS.muted,
   faint: 'var(--text-dim)',
-  border: 'var(--border)',
-  surface: 'var(--bg)',
-  card: 'var(--surface)',
-  primary: 'var(--accent4)', // user / actions
+  border: DASHBOARD_TOKEN_BINDINGS.border,
+  surface: DASHBOARD_TOKEN_BINDINGS.surface,
+  card: DASHBOARD_TOKEN_BINDINGS.card,
+  primary: DASHBOARD_TOKEN_BINDINGS.primary, // user / actions
   agent: 'var(--ok)', // assistant / success
-  accent: 'var(--accent3)', // tool calls
+  accent: DASHBOARD_TOKEN_BINDINGS.accent, // tool calls
   cost: 'var(--warn)',
   escalation: 'var(--accent3)',
-  onAccent: 'var(--on-accent)',
+  onAccent: DASHBOARD_TOKEN_BINDINGS.onAccent,
   // error banner
   errBg: 'var(--surface-2)',
   errBorder: 'var(--border)',
-  errText: 'var(--danger)',
+  errText: DASHBOARD_TOKEN_BINDINGS.danger,
 } as const;
 
 /** WorfGate governance tiers → palette. green=allow · yellow=remediated · red=blocked. */
 export const tier = {
-  green: 'var(--ok)',
-  yellow: 'var(--warn)',
-  red: 'var(--danger)',
+  green: DASHBOARD_TOKEN_BINDINGS.ok,
+  yellow: DASHBOARD_TOKEN_BINDINGS.warn,
+  red: DASHBOARD_TOKEN_BINDINGS.danger,
 } as const;
 
 export const font = {

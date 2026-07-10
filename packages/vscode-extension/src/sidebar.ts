@@ -1,4 +1,10 @@
 import * as vscode from 'vscode';
+import { randomBytes } from 'crypto';
+import { webviewTokenStyle } from '@story-agent/shared/ui-tokens';
+
+function getNonce(): string {
+  return randomBytes(16).toString('base64');
+}
 
 export class StorySidebarProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
@@ -74,19 +80,23 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
   }
 
   private _buildHtml(): string {
+    // No CSP added: the existing markup relies on inline onclick handlers and a style attribute,
+    // which a nonce-based CSP would disable. The token block is still a nonce'd static <style>.
+    const nonce = getNonce();
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Story Agent</title>
-  <style>
+  ${webviewTokenStyle(nonce)}
+  <style nonce="${nonce}">
     *, *::before, *::after { box-sizing: border-box; }
 
     body {
       font-family: var(--vscode-font-family);
       font-size: 12px;
-      color: var(--vscode-foreground);
+      color: var(--sa-text);
       background: transparent;
       margin: 0;
       padding: 10px 8px;
@@ -97,7 +107,7 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-descriptionForeground));
+      color: var(--sa-muted);
       margin: 0 0 6px;
     }
 
@@ -106,7 +116,7 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
     label {
       display: block;
       font-size: 11px;
-      color: var(--vscode-descriptionForeground);
+      color: var(--sa-muted);
       margin-bottom: 3px;
     }
 
@@ -143,8 +153,8 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     .btn-primary {
-      background: var(--vscode-button-background);
-      color: var(--vscode-button-foreground);
+      background: var(--sa-primary);
+      color: var(--sa-onAccent);
     }
     .btn-primary:hover { background: var(--vscode-button-hoverBackground); }
     .btn-primary:active { opacity: 0.85; }
@@ -157,13 +167,13 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
 
     .divider {
       border: none;
-      border-top: 1px solid var(--vscode-panel-border);
+      border-top: 1px solid var(--sa-border);
       margin: 10px 0;
     }
 
     .tip {
       font-size: 11px;
-      color: var(--vscode-descriptionForeground);
+      color: var(--sa-muted);
       margin-top: 2px;
       line-height: 1.5;
     }
@@ -171,13 +181,13 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
     code {
       font-family: var(--vscode-editor-font-family);
       font-size: 11px;
-      background: var(--vscode-textCodeBlock-background);
+      background: var(--sa-card);
       padding: 1px 3px;
       border-radius: 2px;
     }
 
     .error {
-      color: var(--vscode-errorForeground);
+      color: var(--sa-danger);
       font-size: 11px;
       margin-top: 4px;
     }

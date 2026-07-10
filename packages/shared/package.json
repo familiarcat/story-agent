@@ -56,6 +56,10 @@
     "./aha-events": {
       "import": "./dist/src/aha-events.js",
       "types": "./dist/src/aha-events.d.ts"
+    },
+    "./ui-tokens": {
+      "import": "./dist/src/ui-tokens.js",
+      "types": "./dist/src/ui-tokens.d.ts"
     }
   },
   "scripts": {

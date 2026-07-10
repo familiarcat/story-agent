@@ -3,6 +3,12 @@
  */
 
 import * as vscode from 'vscode';
+import { randomBytes } from 'crypto';
+import { space, webviewTokenStyle } from '@story-agent/shared/ui-tokens';
+
+function getNonce(): string {
+  return randomBytes(16).toString('base64');
+}
 
 // Local type definition (mirrors @story-agent/shared)
 interface CrewExecution {
@@ -129,6 +135,9 @@ export class StoryExecutionPanel {
   }
 
   private renderState(state: CrewExecutionState): string {
+    // No CSP added: the progress-fill width is an inline style attribute, which a
+    // nonce-based CSP would disable. Token injection stays a nonce'd static <style>.
+    const nonce = getNonce();
     const crewHtml = state.crewExecutions
       .map(
         (execution: unknown) => {
@@ -177,72 +186,73 @@ export class StoryExecutionPanel {
       <!DOCTYPE html>
       <html>
       <head>
-        <style>
+        ${webviewTokenStyle(nonce)}
+        <style nonce="${nonce}">
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell;
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 12px;
+            color: var(--sa-text);
+            background-color: var(--sa-surface);
+            padding: ${space(3)};
             margin: 0;
           }
           h1 {
             margin-top: 0;
             font-size: 18px;
-            margin-bottom: 8px;
+            margin-bottom: ${space(2)};
           }
           .status-line {
             display: flex;
-            gap: 16px;
-            margin-bottom: 12px;
+            gap: ${space(4)};
+            margin-bottom: ${space(3)};
             font-size: 12px;
-            color: var(--vscode-descriptionForeground);
+            color: var(--sa-muted);
           }
           .phase {
             font-weight: bold;
-            color: var(--vscode-textLink-foreground);
+            color: var(--sa-accent);
           }
           .next-step {
-            background-color: var(--vscode-editor-inactiveSelectionBackground);
-            padding: 8px;
+            background-color: var(--sa-card);
+            padding: ${space(2)};
             border-radius: 4px;
-            margin-bottom: 12px;
+            margin-bottom: ${space(3)};
             font-weight: 500;
           }
           .progress-bar {
             width: 100%;
             height: 4px;
-            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            background-color: var(--sa-card);
             border-radius: 2px;
             overflow: hidden;
-            margin-bottom: 12px;
+            margin-bottom: ${space(3)};
           }
           .progress-fill {
             height: 100%;
-            background-color: var(--vscode-terminal-ansiGreen);
+            background-color: var(--sa-ok);
             transition: width 0.3s;
           }
           .crew-section {
-            margin-bottom: 12px;
+            margin-bottom: ${space(3)};
           }
           .crew-member {
-            border: 1px solid var(--vscode-panel-border);
+            border: 1px solid var(--sa-border);
             border-radius: 4px;
-            padding: 8px;
-            margin-bottom: 8px;
+            padding: ${space(2)};
+            margin-bottom: ${space(2)};
           }
           .crew-member.pending {
-            border-color: var(--vscode-terminal-ansiGray);
+            border-color: var(--sa-muted);
           }
           .crew-member.executing {
-            border-color: var(--vscode-terminal-ansiBlue);
-            background-color: var(--vscode-editor-inactiveSelectionBackground);
+            border-color: var(--sa-accent);
+            background-color: var(--sa-card);
           }
           .crew-member.complete {
-            border-color: var(--vscode-terminal-ansiGreen);
+            border-color: var(--sa-ok);
           }
           .crew-member.vetoed {
-            border-color: var(--vscode-terminal-ansiRed);
-            background-color: rgba(255, 0, 0, 0.05);
+            border-color: var(--sa-danger);
+            background-color: color-mix(in srgb, var(--sa-danger) 5%, transparent);
           }
           .crew-header {
             display: flex;
@@ -262,7 +272,7 @@ export class StoryExecutionPanel {
           }
           .crew-findings {
             font-size: 12px;
-            color: var(--vscode-descriptionForeground);
+            color: var(--sa-muted);
             margin-top: 6px;
           }
           .findings-text {
@@ -271,48 +281,48 @@ export class StoryExecutionPanel {
           }
           .recommendations {
             margin: 6px 0;
-            padding-left: 16px;
+            padding-left: ${space(4)};
           }
           .recommendations strong {
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: ${space(1)};
           }
           .recommendations ul {
             margin: 0;
-            padding-left: 16px;
+            padding-left: ${space(4)};
           }
           .recommendations li {
             margin: 2px 0;
           }
           .confidence {
             font-weight: 500;
-            color: var(--vscode-textLink-foreground);
-            margin-top: 4px;
+            color: var(--sa-accent);
+            margin-top: ${space(1)};
           }
           .veto {
-            color: var(--vscode-terminal-ansiRed);
+            color: var(--sa-danger);
             font-weight: bold;
-            margin-top: 4px;
+            margin-top: ${space(1)};
           }
           .cost {
-            color: var(--vscode-descriptionForeground);
+            color: var(--sa-muted);
             font-size: 11px;
-            margin-top: 4px;
+            margin-top: ${space(1)};
           }
           .blockers {
-            background-color: rgba(255, 0, 0, 0.1);
-            border: 1px solid var(--vscode-terminal-ansiRed);
+            background-color: color-mix(in srgb, var(--sa-danger) 10%, transparent);
+            border: 1px solid var(--sa-danger);
             border-radius: 4px;
-            padding: 8px;
-            margin-top: 12px;
-            color: var(--vscode-terminal-ansiRed);
+            padding: ${space(2)};
+            margin-top: ${space(3)};
+            color: var(--sa-danger);
           }
           .footer {
-            margin-top: 12px;
+            margin-top: ${space(3)};
             font-size: 11px;
-            color: var(--vscode-descriptionForeground);
+            color: var(--sa-muted);
             display: flex;
-            gap: 12px;
+            gap: ${space(3)};
           }
         </style>
       </head>
@@ -366,22 +376,24 @@ export class StoryExecutionPanel {
   }
 
   private renderLoading(): string {
+    const nonce = getNonce();
     return `
       <!DOCTYPE html>
       <html>
       <head>
-        <style>
+        ${webviewTokenStyle(nonce)}
+        <style nonce="${nonce}">
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 20px;
+            color: var(--sa-text);
+            background-color: var(--sa-surface);
+            padding: ${space(5)};
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: ${space(3)};
           }
           h1 { margin: 0; font-size: 18px; }
-          .loading { color: var(--vscode-descriptionForeground); }
+          .loading { color: var(--sa-muted); }
         </style>
       </head>
       <body>
