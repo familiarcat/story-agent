@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerTreeDataProvider('storyAgent.crewCopilot', crewCopilotProvider)
   );
 
-  const projectStructureProvider = new AhaProjectStructureProvider();
+  const projectStructureProvider = new AhaProjectStructureProvider(context);
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('storyAgent.projectStructure', projectStructureProvider)
   );

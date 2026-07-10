@@ -35,7 +35,7 @@ export class AhaProjectStructureProvider
   private projectHierarchies: Map<string, ProjectHierarchyData> = new Map();
   private selectedProjectId: string | null = null;
 
-  constructor() {
+  constructor(private context?: vscode.ExtensionContext) {
     this.loadProjects();
   }
 
@@ -88,6 +88,8 @@ export class AhaProjectStructureProvider
       const hierarchy = this.projectHierarchies.get(element.project.id);
       if (!hierarchy) return [];
 
+      this.context?.workspaceState.update('aha.lastActiveProjectId', element.project.id);
+
       const items: ProjectStructureItem[] = [];
 
       // Add releases
@@ -97,6 +99,7 @@ export class AhaProjectStructureProvider
             new ReleaseTreeItem(
               r.release,
               r.storiesByStatus,
+              element.project.id,
               this.onDidChangeTreeDataEmitter
             )
         )
@@ -107,6 +110,7 @@ export class AhaProjectStructureProvider
         items.push(
           new BacklogGroupTreeItem(
             hierarchy.unreleasedStories,
+            element.project.id,
             this.onDidChangeTreeDataEmitter
           )
         );
@@ -119,21 +123,21 @@ export class AhaProjectStructureProvider
     if (element instanceof ReleaseTreeItem) {
       return Object.entries(element.storiesByStatus).map(
         ([status, stories]) =>
-          new StatusGroupTreeItem(status, stories, this.onDidChangeTreeDataEmitter)
+          new StatusGroupTreeItem(status, stories, element.projectId, this.onDidChangeTreeDataEmitter)
       );
     }
 
     // Status group level: show individual stories
     if (element instanceof StatusGroupTreeItem) {
       return element.stories.map(
-        (s) => new StoryTreeItem(s, this.onDidChangeTreeDataEmitter)
+        (s) => new StoryTreeItem(s, element.projectId, this.onDidChangeTreeDataEmitter)
       );
     }
 
     // Backlog group level: show stories
     if (element instanceof BacklogGroupTreeItem) {
       return element.stories.map(
-        (s) => new StoryTreeItem(s, this.onDidChangeTreeDataEmitter)
+        (s) => new StoryTreeItem(s, element.projectId, this.onDidChangeTreeDataEmitter)
       );
     }
 
@@ -193,6 +197,7 @@ class ReleaseTreeItem extends vscode.TreeItem {
   constructor(
     readonly release: AhaSprint,
     readonly storiesByStatus: Record<string, AhaSprintStory[]>,
+    readonly projectId: string,
     private onDidChangeTreeData: vscode.EventEmitter<
       ProjectStructureItem | undefined | null | void
     >
@@ -234,6 +239,7 @@ class StatusGroupTreeItem extends vscode.TreeItem {
   constructor(
     readonly status: string,
     readonly stories: AhaSprintStory[],
+    readonly projectId: string,
     private onDidChangeTreeData: vscode.EventEmitter<
       ProjectStructureItem | undefined | null | void
     >
@@ -255,6 +261,7 @@ class StatusGroupTreeItem extends vscode.TreeItem {
 class BacklogGroupTreeItem extends vscode.TreeItem {
   constructor(
     readonly stories: AhaStory[],
+    readonly projectId: string,
     private onDidChangeTreeData: vscode.EventEmitter<
       ProjectStructureItem | undefined | null | void
     >
@@ -271,8 +278,11 @@ class BacklogGroupTreeItem extends vscode.TreeItem {
 }
 
 class StoryTreeItem extends vscode.TreeItem {
+  private readonly _projectId: string;
+
   constructor(
     readonly story: AhaSprintStory | AhaStory,
+    projectId: string,
     private onDidChangeTreeData: vscode.EventEmitter<
       ProjectStructureItem | undefined | null | void
     >
@@ -282,6 +292,7 @@ class StoryTreeItem extends vscode.TreeItem {
       'storyPoints' in story ? ` (${(story as any).storyPoints} pts)` : '';
 
     super(`${refNum}: ${story.name}${storyPoints}`);
+    this._projectId = projectId;
     this.contextValue = 'ahaStory';
     this.tooltip = story.url;
     this.iconPath = new vscode.ThemeIcon('list-ordered');
@@ -290,6 +301,10 @@ class StoryTreeItem extends vscode.TreeItem {
       command: 'story-agent.openAhaStory',
       arguments: [story.url],
     };
+  }
+
+  get projectId(): string {
+    return this._projectId;
   }
 
   getTreeItem(): vscode.TreeItem {

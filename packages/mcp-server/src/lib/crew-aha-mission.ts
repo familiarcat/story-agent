@@ -13,6 +13,8 @@
 import { storeObservationMemory } from '@story-agent/shared/db';
 import type { ObservationDebateResult } from '@story-agent/shared';
 import { resolveAhaCredentials } from '@story-agent/shared/aha-credentials';
+// cross-surface sync (AHA-SYNC-TIERS)
+import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
 import { authorizeAhaWrite, getCrewAhaRole } from './crew-aha-roles.js';
 import { gateAhaWrite } from './crew-aha-automode.js';
 
@@ -35,7 +37,15 @@ async function ahaCreateFeature(releaseId: string, name: string, description?: s
     body: JSON.stringify({ feature: { name, description } }),
   });
   if (!resp.ok) throw new Error(`Aha! ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
-  return ((await resp.json()) as any)?.feature;
+  const feature = ((await resp.json()) as any)?.feature;
+  void emitAhaEventSafe({
+    actor: 'mcp',
+    resourceType: 'story',
+    operation: 'created',
+    resourceId: String(feature?.reference_num ?? feature?.id ?? ''),
+    meta: { sprint_id: releaseId },
+  });
+  return feature;
 }
 
 function memory(storyRef: string, summary: string, participants: string[], consensus: string, decisions: string[]): ObservationDebateResult {

@@ -4,6 +4,8 @@ import { getAgileProvider } from '../providers/index.js';
 import { executeAutonomousCrewMission } from '../lib/crew-coordinator.js';
 import { getRelevantObservationMemories, storeObservationMemory } from '@story-agent/shared/db';
 import { enforceWorfGateOutbound } from '../lib/worfgate.js';
+// cross-surface sync (AHA-SYNC-TIERS)
+import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
 
 export function registerStoryTools(server: McpServer) {
   server.tool(
@@ -73,6 +75,7 @@ export function registerStoryTools(server: McpServer) {
       });
 
       await getAgileProvider().updateStoryStatus(storyId, statusName);
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'status_changed', resourceId: storyId, meta: { status_to: statusName } });
       return {
         content: [{
           type: 'text',
@@ -101,6 +104,7 @@ export function registerStoryTools(server: McpServer) {
       });
 
       await getAgileProvider().addStoryComment(storyId, commentBody);
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'linked', resourceId: storyId });
       return {
         content: [{
           type: 'text',

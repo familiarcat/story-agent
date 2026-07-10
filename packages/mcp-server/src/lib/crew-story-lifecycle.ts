@@ -9,6 +9,8 @@ import { execSync } from 'node:child_process';
 import { executeAhaStoryWithMemory } from './crew-aha-mission.js';
 import { ahaRefToBranchName, slugify } from './git-aha-branching.js';
 import { linkAhaStoryToPR, updateAhaStoryStatus } from './aha.js';
+// cross-surface sync (AHA-SYNC-TIERS)
+import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
 
 export interface StartStoryResult {
   dryRun?: boolean;
@@ -99,6 +101,7 @@ export async function linkStoryToPR(input: {
 
   await linkAhaStoryToPR(input.ref, input.prUrl, input.prTitle);
   await updateAhaStoryStatus(input.ref, 'In code review');
+  void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'linked', resourceId: input.ref });
   return { ref: input.ref, prUrl: input.prUrl, linked: true };
 }
 
@@ -115,6 +118,7 @@ export async function completeStory(input: {
   }
 
   await updateAhaStoryStatus(input.ref, 'Shipped');
+  void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'status_changed', resourceId: input.ref, meta: { status_to: 'Shipped' } });
   let deleted = false;
   try {
     execSync('git branch -d ' + input.branch, { cwd: input.cwd ?? process.cwd(), stdio: 'pipe' });

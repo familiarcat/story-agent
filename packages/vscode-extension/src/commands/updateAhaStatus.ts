@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { fetchAhaStory } from '../aha';
+import { getWorkflowStatuses } from '../lib/ahaStatusCache';
 
-// The extension Aha client exposes no workflow-status list, so offer the canonical fixed set.
-const STATUSES = ['Under consideration', 'In development', 'Ready to ship', 'Shipped'];
+// Fallback when Aha's live workflow-status list can't be fetched (network/auth/proxy down).
+const FALLBACK_STATUSES = ['Under consideration', 'In development', 'Ready to ship', 'Shipped'];
 
 export function resolveDashboardBase(): string {
   const cfg = vscode.workspace.getConfiguration('storyAgent');
@@ -19,7 +20,8 @@ export function registerUpdateAhaStatus(
 ): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('story-agent.updateAhaStoryStatus', async (item?: unknown) => {
-      const fromItem = (item as { story?: { referenceNum?: string } } | undefined)?.story?.referenceNum;
+      const itemArg = item as { story?: { referenceNum?: string }; projectId?: string } | undefined;
+      const fromItem = itemArg?.story?.referenceNum;
       const input = fromItem ?? await vscode.window.showInputBox({
         prompt: 'Aha story reference (e.g. PROD-11)',
         placeHolder: 'PROD-11',
@@ -33,8 +35,17 @@ export function registerUpdateAhaStatus(
         current = (await fetchAhaStory(reference)).workflowStatus;
       } catch { /* current status is a nicety — the pick works without it */ }
 
+      const projectId = itemArg?.projectId ?? context.workspaceState.get<string>('aha.lastActiveProjectId');
+      let statuses = projectId ? await getWorkflowStatuses(projectId) : null;
+      if (!statuses) {
+        if (projectId) {
+          vscode.window.showWarningMessage('Could not fetch workflow statuses from Aha; using defaults.');
+        }
+        statuses = FALLBACK_STATUSES.map((name) => ({ name, id: name }));
+      }
+
       const picked = await vscode.window.showQuickPick(
-        STATUSES.map((s) => ({ label: s, description: s === current ? 'current' : undefined })),
+        statuses.map((s) => ({ label: s.name, description: s.name === current ? 'current' : undefined })),
         { placeHolder: `New status for ${reference}${current ? ` (currently: ${current})` : ''}` },
       );
       if (!picked) return;

@@ -104,3 +104,12 @@ export async function listAhaProjects() {
 export async function getProjectHierarchy(projectId: string) {
   return client().getHierarchy(projectId);
 }
+
+/** Raw workflow-status list for a project, via the same proxy-first transport as everything else. */
+export async function fetchWorkflowStatuses(projectId: string): Promise<{ name: string; id: string }[]> {
+  const { domain } = getConfigSafe();
+  const res = await proxyFirstFetch()(`https://${domain}/api/v1/products/${projectId}/workflow_statuses`);
+  if (!res.ok) throw new Error(`Aha API error ${res.status}: ${await res.text()}`);
+  const data = (await res.json()) as { workflow_statuses?: Array<{ id: string | number; name: string }> };
+  return (data.workflow_statuses ?? []).map((s) => ({ id: String(s.id), name: s.name }));
+}
