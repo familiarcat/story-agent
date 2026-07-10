@@ -10,7 +10,7 @@ Use MCP when the client supports tool calling and wants access to the crew's too
 
 - Primary audience: Claude Code and other MCP-aware clients
 - Entry point: [.mcp.json](../.mcp.json)
-- Docs: [docs/claude-code-mcp.md](./claude-code-mcp.md)
+- Docs: [docs/setup/claude-code-mcp.md](./claude-code-mcp.md)
 - Purpose: tools and orchestration
 - Non-goal: replacing the chat model backend for every client
 
@@ -104,7 +104,7 @@ Do not treat MCP as the same thing as the chat-model provider. MCP is the tool a
 
 ## Related artifacts
 
-- [docs/chat-client-capability-matrix.md](./chat-client-capability-matrix.md)
-- [docs/chat-client-implementation-roadmap.md](./chat-client-implementation-roadmap.md)
-- [docs/chat-client-integration-recipes.md](./chat-client-integration-recipes.md)
-- [docs/chat-client-rollout-checklist.md](./chat-client-rollout-checklist.md)
+- [docs/design/chat-client-guide.md](./chat-client-capability-matrix.md)
+- [docs/design/chat-client-guide.md](./chat-client-implementation-roadmap.md)
+- [docs/design/chat-client-recipes.md](./chat-client-integration-recipes.md)
+- [docs/design/chat-client-rollout-checklist.md](./chat-client-rollout-checklist.md)

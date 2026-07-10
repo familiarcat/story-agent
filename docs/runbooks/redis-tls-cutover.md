@@ -112,5 +112,5 @@ REDIS_URL="rediss://:${TF_VAR_redis_auth_token}@${ENDPOINT}:6379" \
 ## Done = ready for the front end
 
 When steps 3–6 are green, the approval pub/sub path is encrypted and verified end-to-end, and the
-backend contract in [docs/agent-sse-contract.md](../agent-sse-contract.md) is stable for the UI to
+backend contract in [docs/architecture/agent-sse-contract.md](../agent-sse-contract.md) is stable for the UI to
 consume. That is the gate to move from infra/backend to front-end work.

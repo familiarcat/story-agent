@@ -9,7 +9,7 @@ GROUND TRUTH (verified in the repo just now):
 - UI (packages/ui/src/app): home page.tsx is thin (49 lines); dashboard/page.tsx (325 lines); layout.tsx + components/NavBar.tsx are the shell. Surfaces today: / , /agent (Claude-Code-grade loop), /chat, /cost, /learnings, /observation-lounge, /sprint, /story/[storyId], /story/new, /crew/memories, /dashboard, /docs.
 - UI↔Aha today is HAND-BUILT: 8 routes under /api/aha/* (hierarchy, roadmap, sprints, projects, stories, story, sprint-stories, observation-lounge) — NOT generated, NOT full parity.
 - Server-side Aha integration: aha-tools.ts (10 MCP tools) wraps the Aha REST API; writes are Worf-gated (dry-run review + confirm:true + audit), reads open.
-- Aha concept map (docs/aha-nomenclature.md): familiarcat FIRM → Client → Project(=Aha Initiative) → Epic → Story(=Aha Feature) → Task(=Aha Requirement); Sprint = Aha Release. Clients are DB rows (never hardcoded).
+- Aha concept map (docs/setup/aha-nomenclature.md): familiarcat FIRM → Client → Project(=Aha Initiative) → Epic → Story(=Aha Feature) → Task(=Aha Requirement); Sprint = Aha Release. Clients are DB rows (never hardcoded).
 - Everything runs on the OpenRouter crew; the agent-core /agent loop + WorfGate + RAG are the spine; the VS Code extension + web portals consume the same endpoints.
 
 CONVERGE ON (terse, decisive, FRUGAL):

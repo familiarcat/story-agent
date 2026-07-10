@@ -16,9 +16,9 @@ This checklist assumes the current Story Agent architecture:
 
 Before configuring a client:
 
-1. Read [docs/chat-client-capability-matrix.md](./chat-client-capability-matrix.md)
+1. Read [docs/design/chat-client-guide.md](./chat-client-capability-matrix.md)
 2. Confirm the client's natural CRUD and tool model
-3. Read [docs/chat-client-integration-recipes.md](./chat-client-integration-recipes.md)
+3. Read [docs/design/chat-client-recipes.md](./chat-client-integration-recipes.md)
 4. Confirm you are not trying to force a client into the wrong lane
 
 Decision rule:
@@ -65,7 +65,7 @@ If it fails:
 
 ## 4. Configure the client
 
-Apply the appropriate recipe from [docs/chat-client-integration-recipes.md](./chat-client-integration-recipes.md).
+Apply the appropriate recipe from [docs/design/chat-client-recipes.md](./chat-client-integration-recipes.md).
 
 Minimum facade values:
 

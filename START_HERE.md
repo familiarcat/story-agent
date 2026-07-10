@@ -7,16 +7,16 @@ Welcome! This guide helps you navigate the story-agent monorepo and understand t
 ### New to the Project?
 1. Read [README.md](README.md) for project overview
 2. Review [docs/setup/QUICK_START_AUTOMATION.md](docs/setup/QUICK_START_AUTOMATION.md) for environment setup
-3. Check [docs/DOCUMENTATION_GUIDE.md](docs/DOCUMENTATION_GUIDE.md) to understand the RAG system
+3. Check [docs/meta/documentation-guide.md](docs/meta/documentation-guide.md) to understand the RAG system
 
 ### Setting Up Development Environment?
 → [docs/setup/QUICK_START_AUTOMATION.md](docs/setup/QUICK_START_AUTOMATION.md)
 
 ### Working with Multiple Clients?
-→ [docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md)
+→ [docs/architecture/monorepo.md](docs/architecture/monorepo.md)
 
 ### Understanding Crew Personal Memories?
-→ [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md)
+→ [docs/knowledge/crew-memory-guide.md](docs/knowledge/crew-memory-guide.md)
 
 ### Understanding Crew System?
 → [docs/crew/CREW_MEMORIES_GUIDE.md](docs/crew/CREW_MEMORIES_GUIDE.md)
@@ -75,7 +75,7 @@ docs/
 ### I'm Managing a Client Project
 
 1. **View projects**: Run `npm run project:list`
-2. **Learn multi-client architecture**: Read [docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md)
+2. **Learn multi-client architecture**: Read [docs/architecture/monorepo.md](docs/architecture/monorepo.md)
 3. **Understand crew assignments**: Run `npm run project:crew <project-id>`
 4. **Create new project**: Copy from `projects/template-project/`
 5. **Configure environment**: Edit `.env` with project credentials
@@ -90,7 +90,7 @@ docs/
 
 1. **Understand your domains**: Check [docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md](docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md)
 2. **Review baseline memories**: Read [docs/crew/CREW_MEMORIES_GUIDE.md](docs/crew/CREW_MEMORIES_GUIDE.md)
-3. **Store personal memories**: Read [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md)
+3. **Store personal memories**: Read [docs/knowledge/crew-memory-guide.md](docs/knowledge/crew-memory-guide.md)
 4. **Search for docs during tasks**: Use RAG system (built-in to MCP tools)
 
 ### I'm Operating Systems
@@ -152,11 +152,11 @@ npm run test                   # Run all tests
 - [docs/setup/SUPABASE_SETUP.md](docs/setup/SUPABASE_SETUP.md) — Database configuration
 
 **Multi-client architecture**:
-- [docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md) — Multi-project structure
+- [docs/architecture/monorepo.md](docs/architecture/monorepo.md) — Multi-project structure
 - [projects/client-pctms/README.md](projects/client-pctms/README.md) — Example project setup
 
 **Crew personal memories**:
-- [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md) — Individual learning storage
+- [docs/knowledge/crew-memory-guide.md](docs/knowledge/crew-memory-guide.md) — Individual learning storage
 
 **Crew system**:
 - [docs/crew/CREW_MEMORIES_GUIDE.md](docs/crew/CREW_MEMORIES_GUIDE.md) — Baseline knowledge
@@ -171,11 +171,11 @@ npm run test                   # Run all tests
 - [docs/automation/DELIVERY_SUMMARY_AUTOMATION.md](docs/automation/DELIVERY_SUMMARY_AUTOMATION.md) — What was delivered
 
 **Testing & Mission Examples**:
-- [docs/AUTONOMOUS_CREW_MISSION_TEST.md](docs/AUTONOMOUS_CREW_MISSION_TEST.md) — Complete mission example
+- [docs/testing/autonomous-crew-mission-test.md](docs/testing/autonomous-crew-mission-test.md) — Complete mission example
 - [docs/testing/TESTING.md](docs/testing/TESTING.md) — Test procedures
 
 **Documentation system**:
-- [docs/DOCUMENTATION_GUIDE.md](docs/DOCUMENTATION_GUIDE.md) — How to use RAG & docs
+- [docs/meta/documentation-guide.md](docs/meta/documentation-guide.md) — How to use RAG & docs
 
 ---
 
@@ -284,12 +284,12 @@ story-agent/                           # Root monorepo
 **Choose your next action:**
 
 - 👨‍💻 [Setup development environment](docs/setup/QUICK_START_AUTOMATION.md)
-- 🌍 [Setup multi-client projects](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md)
-- 🧠 [Learn crew personal memories](docs/CREW_PERSONAL_MEMORIES_GUIDE.md)
+- 🌍 [Setup multi-client projects](docs/architecture/monorepo.md)
+- 🧠 [Learn crew personal memories](docs/knowledge/crew-memory-guide.md)
 - 📊 [Understand automation tools](docs/automation/MIGRATION_AUTOMATION.md)
 - 🎯 [Learn domain-driven design](docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md)
 - 👥 [Review crew system](docs/crew/CREW_MEMORIES_GUIDE.md)
-- 📖 [Explore all documentation](docs/DOCUMENTATION_GUIDE.md)
+- 📖 [Explore all documentation](docs/meta/documentation-guide.md)
 
 ---
 

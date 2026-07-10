@@ -162,12 +162,12 @@ last_updated: "2026-06-07"
 
 **Implementation**:
 **Core Documentation**:
-- ✅ `docs/CREW_MANIFEST.md` (900+ lines) — All 11 crew members
-- ✅ `docs/CREW_MEMORY_QUICK_START.md` — User guide
-- ✅ `docs/IMPLEMENTATION_COMPLETE.md` — Technical details
-- ✅ `docs/CREW_VERIFICATION_AND_UI_INTEROPERABILITY.md` — Verification report
-- ✅ `docs/WEB_VSCODE_INTEROPERABILITY_GUIDE.md` — User workflows
-- ✅ `docs/EXECUTIVE_SUMMARY.md` — High-level overview
+- ✅ `docs/crew/manifest.md` (900+ lines) — All 11 crew members
+- ✅ `docs/knowledge/crew-memory-guide.md` — User guide
+- ✅ `docs/status/completions/implementation-complete.md` — Technical details
+- ✅ `docs/status/completions/crew-verification-and-ui-interoperability.md` — Verification report
+- ✅ `docs/testing/web-vscode-interoperability.md` — User workflows
+- ✅ `docs/status/completions/executive-summary.md` — High-level overview
 - ✅ `COMPLETION_REPORT.md` — Session summary
 
 **Project Documentation**:
@@ -228,7 +228,7 @@ last_updated: "2026-06-07"
 ### Crew Sign-Off Document (NEW)
 **Status**: ✅ CREATED & FINALIZED
 
-- ✅ `docs/OBSERVATION_LOUNGE_CREW_SIGN_OFF.md`
+- ✅ `docs/observation-lounge/crew-sign-off.md`
 - ✅ All 11 crew members reviewed
 - ✅ Unanimous approval (11/11)
 - ✅ Formal sign-off document

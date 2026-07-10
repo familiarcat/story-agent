@@ -73,4 +73,4 @@ MCP is the tool and orchestration lane for Story Agent. It is not the same as th
 - Story Agent's NL chat brain is served separately through the server-side chat endpoints.
 - VS Code-native chat integration and OpenAI-compatible external-client integration should adapt into the canonical chat brain instead of trying to turn MCP itself into a generic chat transport.
 
-See [docs/chat-integration-architecture.md](./chat-integration-architecture.md) for the full multi-lane model.
+See [docs/architecture/chat-integration.md](./chat-integration-architecture.md) for the full multi-lane model.

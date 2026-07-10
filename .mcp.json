@@ -17,7 +17,7 @@
     "figma": {
       "type": "http",
       "url": "http://127.0.0.1:3845/mcp",
-      "comment": "Official Figma MCP \u2014 LOCAL desktop server (loopback only, no external egress). Crew-selected + crew-approved (evaluate_tool_for_crew: figma-mcp-local \u2014 3 approvals, qualityScore 1.00). The REMOTE server (https://mcp.figma.com/mcp) was Worf-vetoed for external-egress / controlled-data leakage. Read-only design\u2192code context feeding the crew's Figma\u2192LCARS scaffold pipeline. REQUIRES the Figma desktop app running with Dev Mode MCP enabled (Figma \u2192 Preferences \u2192 Enable Dev Mode MCP Server). Scope: non-controlled UI frames only, never sa_*/client data. See docs/figma-design-pipeline.md."
+      "comment": "Official Figma MCP \u2014 LOCAL desktop server (loopback only, no external egress). Crew-selected + crew-approved (evaluate_tool_for_crew: figma-mcp-local \u2014 3 approvals, qualityScore 1.00). The REMOTE server (https://mcp.figma.com/mcp) was Worf-vetoed for external-egress / controlled-data leakage. Read-only design\u2192code context feeding the crew's Figma\u2192LCARS scaffold pipeline. REQUIRES the Figma desktop app running with Dev Mode MCP enabled (Figma \u2192 Preferences \u2192 Enable Dev Mode MCP Server). Scope: non-controlled UI frames only, never sa_*/client data. See docs/design/figma-pipeline.md."
     },
     "figma-context": {
       "command": "npx",
@@ -29,7 +29,7 @@
       "env": {
         "FIGMA_API_KEY": "${FIGMA_API_KEY}"
       },
-      "comment": "GLips Figma-Context-MCP (io.github.GLips/Figma-Context-MCP) \u2014 stdio-local, crew-approved (evaluate_tool_for_crew: figma-context-mcp-glips \u2014 3 approvals, qualityScore 1.00, adopt-first per RAG 139). Feeds richer Figma layout data (nodes/constraints/typography/spacing) to geordi's LCARS scaffold pipeline. Auth = a READ-ONLY Figma personal access token (File content: Read) via FIGMA_API_KEY, governed by the WorfGate registry (op figma:read), centralized in ~/.alexai-secrets (NOT ~/.zshrc \u2014 the non-interactive crew lane must resolve it), never committed; egress = Figma API only. Set FIGMA_API_KEY, then reconnect (/mcp) to activate. See docs/mcp-candidates-ui-management.md + docs/worfgate-break-glass.md."
+      "comment": "GLips Figma-Context-MCP (io.github.GLips/Figma-Context-MCP) \u2014 stdio-local, crew-approved (evaluate_tool_for_crew: figma-context-mcp-glips \u2014 3 approvals, qualityScore 1.00, adopt-first per RAG 139). Feeds richer Figma layout data (nodes/constraints/typography/spacing) to geordi's LCARS scaffold pipeline. Auth = a READ-ONLY Figma personal access token (File content: Read) via FIGMA_API_KEY, governed by the WorfGate registry (op figma:read), centralized in ~/.alexai-secrets (NOT ~/.zshrc \u2014 the non-interactive crew lane must resolve it), never committed; egress = Figma API only. Set FIGMA_API_KEY, then reconnect (/mcp) to activate. See docs/setup/mcp-candidates-ui-management.md + docs/runbooks/worfgate-break-glass.md."
     },
     "shadcn-ui": {
       "command": "npx",

@@ -6,7 +6,7 @@ Today we implemented the complete crew personal memory system with MCP tools, UI
 
 ## 👥 CREW MANIFEST GENERATED
 
-Created **[docs/CREW_MANIFEST.md](docs/CREW_MANIFEST.md)** — Complete profiles of all 11 crew members:
+Created **[docs/crew/manifest.md](docs/crew/manifest.md)** — Complete profiles of all 11 crew members:
 
 ### The 11 Crew Members
 
@@ -348,7 +348,7 @@ Commit: ef4b624
 Message: feat: implement crew personal memory MCP tools, UI dashboard, and integration tests
 
 Files changed:
-+ docs/CREW_MANIFEST.md
++ docs/crew/manifest.md
 + packages/mcp-server/src/tools/crew-memory-tools.ts (6 tools added)
 + packages/ui/src/app/crew/memories/page.tsx (dashboard)
 + packages/ui/src/app/api/crew/memories/*.ts (5 routes)
@@ -371,10 +371,10 @@ Files changed:
 
 See these guides for complete details:
 
-- [docs/CREW_MANIFEST.md](docs/CREW_MANIFEST.md) — 11 crew members
-- [docs/CREW_PERSONAL_MEMORIES_GUIDE.md](docs/CREW_PERSONAL_MEMORIES_GUIDE.md) — Usage guide
-- [docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md) — Architecture
-- [docs/MONOREPO_TRANSFORMATION_SUMMARY.md](docs/MONOREPO_TRANSFORMATION_SUMMARY.md) — Executive summary
+- [docs/crew/manifest.md](docs/crew/manifest.md) — 11 crew members
+- [docs/knowledge/crew-memory-guide.md](docs/knowledge/crew-memory-guide.md) — Usage guide
+- [docs/architecture/monorepo.md](docs/architecture/monorepo.md) — Architecture
+- [docs/architecture/monorepo.md](docs/architecture/monorepo.md) — Executive summary
 
 ---
 

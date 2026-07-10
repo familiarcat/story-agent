@@ -1,13 +1,16 @@
-# Deployment Runbook — `pnpm deploy:auto` (crew-blessed)
+# Deployment Runbook
 
-Derived by the OpenRouter crew in the Observation Lounge (transcript:
-[docs/observation-lounge/](observation-lounge/)) and recorded to the RAG system so future
-deployments are self-documenting. One command, daemon-free, WorfGate-brokered, with the single
-billable step gated.
+One-command, daemon-free, WorfGate-brokered deploy to AWS Fargate, with the single billable step
+gated. Derived by the OpenRouter crew in the Observation Lounge (transcript:
+[docs/observation-lounge/](../observation-lounge/)) and recorded to the RAG system
+(`automated-docker-deploy`) so future deployments are self-documenting.
+
+Every deploy builds ARM64 images in CI, pushes to ECR, and applies Terraform with the **exact
+built image digest** — no local Docker, no `:latest` drift.
 
 Related migration guidance:
-- [docs/runbooks/mcp-tool-compatibility-migration.md](runbooks/mcp-tool-compatibility-migration.md) — MCP tool-name compatibility rollout, tests, and terminal-verified deploy sequence.
-- [docs/runbooks/deployment-execution-ledger.md](runbooks/deployment-execution-ledger.md) — historical success/failure outcomes, go/no-go criteria, and post-deploy build/E2E verification workflow.
+- [mcp-tool-compatibility-migration.md](mcp-tool-compatibility-migration.md) — MCP tool-name compatibility rollout, tests, and terminal-verified deploy sequence.
+- [deployment-execution-ledger.md](deployment-execution-ledger.md) — historical success/failure outcomes, go/no-go criteria, and post-deploy build/E2E verification workflow.
 
 ## TL;DR
 
@@ -30,6 +33,53 @@ from `process.env`. Secrets are never printed, never copied, never committed.
 | 4 | **Apply** | Geordi/Quark | **YES** | only with `--apply`: dispatches `deploy.yml apply=true`; CI builds + **digest-pins** images |
 | 5 | Post-apply | O'Brien | no | set `REDIS_URL` to the ElastiCache endpoint |
 
+## Phase details
+
+### Phase 1 — OIDC bootstrap (one-time, USER-GATED, non-billable)
+
+The CI deploy role is created *by* Terraform, but CI needs it to authenticate — so bootstrap it
+once with WorfGate-brokered AWS creds (creates only the OIDC provider + IAM role, no billable
+infra). `pnpm deploy:auto` runs this automatically; to run it standalone:
+
+```bash
+bash scripts/bootstrap-oidc.sh        # or: pnpm deploy:bootstrap-oidc
+```
+
+It prints `AWS_DEPLOY_ROLE_ARN` and auto-sets the GitHub repo **variables** (set them manually if
+needed):
+- `AWS_DEPLOY_ROLE_ARN` = (printed)
+- `AWS_REGION` = `us-east-2`
+- `ECR_REGISTRY` = `<account>.dkr.ecr.us-east-2.amazonaws.com`
+
+Until these are set, the CI deploy job skips cleanly — no red CI.
+
+### Phase 2 — Secrets
+
+Bootstrap the `story-agent/aha` + `story-agent/runtime` secrets before the first apply
+(`pnpm run aws-secrets:put`, idempotent).
+
+### Phase 4 — CI pipeline (hands-free)
+
+`.github/workflows/deploy.yml` runs on push (paths: packages/docker/terraform) and on
+`workflow_dispatch`:
+1. OIDC auth (assumes `AWS_DEPLOY_ROLE_ARN`) → ECR login
+2. `docker buildx` ARM64 build + push (mcp + ui), GHA layer cache
+3. Terraform plan **pinned to the freshly-built digests** (`-var mcp_image=…@sha256:…`)
+4. `terraform apply` — **gated on `workflow_dispatch` input `apply=true`** (push runs only build+plan)
+
+So routine pushes build+plan automatically; the billable apply stays an explicit dispatch. The
+first `apply=true` dispatch is billable — it creates the 32-resource stack.
+
+### Phase 5 — Post-apply
+
+Put the ElastiCache endpoint into Secrets Manager `story-agent/runtime` as `REDIS_URL`, and make
+it available locally:
+
+```bash
+echo 'export REDIS_URL=redis://<elasticache-endpoint>:6379' >> ~/.alexai-secrets/api-keys.env
+gh run watch --repo familiarcat/story-agent     # follow the CI deploy
+```
+
 ## Principles (from the crew)
 
 - **WorfGate is the sole credential boundary** (Worf, Data): all AWS/ECR/Terraform access flows
@@ -42,12 +92,10 @@ from `process.env`. Secrets are never printed, never copied, never committed.
   your laptop; no idle infra.
 - **Verify + fail fast** (Crusher): health checks post-deploy; rollback on breach.
 
-## After apply
+## Local alternative (if you prefer building locally)
 
-```bash
-echo 'export REDIS_URL=redis://<elasticache-endpoint>:6379' >> ~/.alexai-secrets/api-keys.env
-gh run watch --repo familiarcat/story-agent     # follow the CI deploy
-```
+Start Docker Desktop, then `pnpm tf apply` (WorfGate-brokered) after a local
+`docker buildx … --push`. The CI path is preferred — no daemon needed.
 
 ## Re-deliberate / re-record
 

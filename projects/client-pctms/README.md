@@ -217,9 +217,9 @@ npm run db:health-check
 
 ## Related Documentation
 
-- [MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](../../docs/MONOREPO_MULTI_CLIENT_ARCHITECTURE.md)
+- [MONOREPO_MULTI_CLIENT_ARCHITECTURE.md](../../docs/architecture/monorepo.md)
 - [DOMAIN_DRIVEN_CREW_GUIDE.md](../../docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md)
-- [AUTONOMOUS_CREW_MISSION_TEST.md](../../docs/AUTONOMOUS_CREW_MISSION_TEST.md)
+- [AUTONOMOUS_CREW_MISSION_TEST.md](../../docs/testing/autonomous-crew-mission-test.md)
 
 ## Support
 

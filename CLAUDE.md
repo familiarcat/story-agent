@@ -23,7 +23,7 @@ analysis, deliberation, and planning. Concretely:
   tool, or `npx tsx scripts/innovation-lounge.ts`): each of the 11 invents an original project in
   their canonical persona, the crew debates, Picard resolves a portfolio (pursue now/next/park).
   Generative + deliberative (vs the self-reflection Observation Lounge). Stored to RAG, frugal (~$0.04).
-  Full guide: [docs/innovation-lounge.md](docs/innovation-lounge.md).
+  Full guide: [docs/crew/innovation-lounge.md](docs/crew/innovation-lounge.md).
 - **Anthropic is a POOL MEMBER, not the default.** Never hardcode Anthropic as the primary model.
   Quark selects the cheapest adequate model per task (DeepSeek / Llama / OpenAI for most work;
   Anthropic only for tier-4 architecture/security). See "LLM routing" below.
@@ -37,18 +37,18 @@ Anthropic session. Anthropic's role is ORCHESTRATION ONLY: dispatch → verify (
 final mile only if the loop stalls. Editing/analyzing directly in-session is the exception (loop
 unavailable, or a ≤few-line deterministic fix the loop stalled on) — call it out when you do it. See
 the live-feedback + ask-first approval + self-healing-stall methodology in
-[docs/crew-live-feedback-and-approvals.md](docs/crew-live-feedback-and-approvals.md).
+[docs/crew/live-feedback-and-approvals.md](docs/crew/live-feedback-and-approvals.md).
 
 **Reach the crew via MCP, not tsx scripts (when connected).** The repo registers a `story-agent` MCP
 server ([.mcp.json](.mcp.json) → [scripts/mcp-crew-stdio.sh](scripts/mcp-crew-stdio.sh)) exposing the
 crew's tools directly to Claude Code: `run_crew_mission_pipeline` (Observation Lounge engine),
 `crew:get-relevant-memories` / `crew:store-memory` (the recall→store protocol), per-officer tools,
 Aha, WorfGate, skills. PREFER these MCP tools over writing `tsx` mission scripts. Activate once with a
-Claude Code restart + approve (`/mcp`). Full guide: [docs/claude-code-mcp.md](docs/claude-code-mcp.md).
+Claude Code restart + approve (`/mcp`). Full guide: [docs/setup/claude-code-mcp.md](docs/setup/claude-code-mcp.md).
 
 **When does Story Agent become PRIMARY (retiring Claude Code as driver)?** Per the full-crew lounge,
 the single go-criterion is multi-file edit reliability. The decision is made by the documented
-**shadow test** ([docs/shadow-test-story-agent-primary.md](docs/shadow-test-story-agent-primary.md)):
+**shadow test** ([docs/crew/shadow-test-primary.md](docs/crew/shadow-test-primary.md)):
 run the same agent-core loop on the same tasks via tier-3 (deepseek) vs an `anthropic/*` control,
 compare auto-recovery/correctness/cost from `AgentRunResult`. GO when Lane A ≥90% auto-recovery at
 parity correctness and ≤~80% of Lane B cost. Until GO: front-door = Story Agent, orchestrator = Claude Code.
@@ -78,7 +78,7 @@ and STORE durable conclusions after.** The crew compounds only if each turn buil
 knows. Loop: `prompt → recall → act → store → next prompt recalls it`.
 
 - **New session? Recall the BOOTSTRAP first** (tags `bootstrap`/`session-restart`, or read
-  [docs/session-bootstrap.md](docs/session-bootstrap.md)): the tool-agnostic restart protocol — connect
+  [docs/meta/session-bootstrap.md](docs/meta/session-bootstrap.md)): the tool-agnostic restart protocol — connect
   the `story-agent` MCP, recall, act on the crew, store. The crew RAG is the portable brain so a session
   resumes in ANY AI tool (Claude Code, Story Agent, Continue, Copilot, Cursor).
 
@@ -87,7 +87,7 @@ knows. Loop: `prompt → recall → act → store → next prompt recalls it`.
   taught tools, persona context). Don't re-litigate decisions already in RAG.
 - **Store after:** `storeObservationMemory` (crew-wide) + a per-member `storeCrewPersonalMemory`,
   tagged for recall. Mission pipeline results store automatically.
-- Full protocol + consumers: [docs/crew-memory-recall-protocol.md](docs/crew-memory-recall-protocol.md).
+- Full protocol + consumers: [docs/crew/memory-recall-protocol.md](docs/crew/memory-recall-protocol.md).
 
 ## LLM routing (Quark)
 
@@ -102,7 +102,7 @@ knows. Loop: `prompt → recall → act → store → next prompt recalls it`.
   model — **reusing the OpenRouter crew key by default** (`openai/text-embedding-3-small`, OpenRouter
   serves `/embeddings`), so real RAG is active with NO new secret. Precedence: `EMBEDDING_API_KEY` →
   `OPENAI_API_KEY` → OpenRouter key → SHA hash. 64-dim (Matryoshka + defensive slice) so no DB change.
-  `EMBEDDING_DISABLE=true` forces the free hash. See [docs/embeddings.md](docs/embeddings.md).
+  `EMBEDDING_DISABLE=true` forces the free hash. See [docs/setup/embeddings.md](docs/setup/embeddings.md).
 - **Lower the crew's cost by default.** The mission pipeline runs FRUGAL (`CREW_FRUGAL`, default on):
   even Picard's intake/synthesis bookends use the cheapest adequate model (Quark tier-3 ≈ deepseek),
   not a frontier model — the pipeline's dominant cost. Set `CREW_FRUGAL=false` only for a deliberate
@@ -124,7 +124,7 @@ knows. Loop: `prompt → recall → act → store → next prompt recalls it`.
 
 **Model: familiarcat is the consultancy FIRM (system operator/root) → CLIENTS → PROJECTS → epics →
 stories → tasks** (sprints = time axis). Same hierarchy on both the security side (clients table)
-and the PM side (Aha) — see [docs/aha-nomenclature.md](docs/aha-nomenclature.md).
+and the PM side (Aha) — see [docs/setup/aha-nomenclature.md](docs/setup/aha-nomenclature.md).
 
 - Clients live in the Supabase `clients` table (+ RAG memory), hydrated into a sync cache at
   startup. Onboard via `onboardClient` ([client-registry.ts](packages/shared/src/client-registry.ts))
@@ -154,7 +154,7 @@ and the PM side (Aha) — see [docs/aha-nomenclature.md](docs/aha-nomenclature.m
   `pnpm --filter @story-agent/<pkg> run test:unit`. Run scripts with `npx tsx scripts/<x>.ts`
   (the bash shell loads `~/.zshrc`, so crew/Supabase/Aha creds are present).
 - **Viewing crew results end-to-end (web UI + VS Code extension):** follow
-  [docs/system-test-guide.md](docs/system-test-guide.md) — `pnpm dev`, then the per-surface PASS/FAIL
+  [docs/testing/system-test-guide.md](docs/testing/system-test-guide.md) — `pnpm dev`, then the per-surface PASS/FAIL
   walkthrough. Crew results surface at `/observation-lounge`, `/crew/memories`, `/agent`, and
   `/innovation-lounge` (web) + the matching extension commands.
 - `crew-collaboration.integration.test.ts` (formerly the known-failing "missing template vars" test)

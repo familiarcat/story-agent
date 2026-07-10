@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 /**
  * Crew infra-integration #3 (e2e slice) — prove the deployed HTTP→SSE contract the front end consumes:
  * browser/proxy -> ALB -> mcp /agent -> streamed AgentEvents -> terminal `done`. This is the boundary
- * documented in docs/agent-sse-contract.md.
+ * documented in docs/architecture/agent-sse-contract.md.
  *
  * Runs only when STORY_AGENT_AGENT_URL points at a reachable crew server (local `pnpm run mcp` or the
  * cloud ALB); skips cleanly otherwise so it never fails a Redis/server-less suite. Attaches the bearer

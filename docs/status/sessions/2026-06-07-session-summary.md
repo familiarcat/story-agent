@@ -89,7 +89,7 @@ Dual-Role User Support:
 
 **Observation Lounge Sign-Off**:
 ```
-Document: docs/OBSERVATION_LOUNGE_CREW_SIGN_OFF.md
+Document: docs/observation-lounge/crew-sign-off.md
 
 Sign-Off Results:
 - All 11 crew members present ✅
@@ -132,7 +132,7 @@ Crew Consensus: "The project is up to date and ready to proceed."
 - All project management scripts operational ✅
 
 ### 3. ✅ Formal Crew Sign-Off Document
-- docs/OBSERVATION_LOUNGE_CREW_SIGN_OFF.md
+- docs/observation-lounge/crew-sign-off.md
 - All 11 crew members verified
 - Unanimous approval recorded
 - Production-ready certification
@@ -193,7 +193,7 @@ Documentation:
 ## 📁 NEW FILES COMMITTED
 
 ```
-docs/OBSERVATION_LOUNGE_CREW_SIGN_OFF.md
+docs/observation-lounge/crew-sign-off.md
   • Crew sign-off document
   • All 11 members reviewed
   • Unanimous approval

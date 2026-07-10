@@ -1,5 +1,5 @@
 {
-  "$description": "Design tokens — W3C/DTCG. SOURCE OF TRUTH for all three themes (lcars default + dark + light), generated into packages/ui/src/app/globals.css by `pnpm tokens:build`. `lcars` also carries the shared scale (space, radius.pill, type sizes, elevation). Import via Tokens Studio for Figma. PUBLIC UI constants only — NO sa_*/client/controlled data. See docs/figma-supply-spec.md.",
+  "$description": "Design tokens — W3C/DTCG. SOURCE OF TRUTH for all three themes (lcars default + dark + light), generated into packages/ui/src/app/globals.css by `pnpm tokens:build`. `lcars` also carries the shared scale (space, radius.pill, type sizes, elevation). Import via Tokens Studio for Figma. PUBLIC UI constants only — NO sa_*/client/controlled data. See docs/design/figma-supply-spec.md.",
   "lcars": {
     "color": {
       "bg":        { "$type": "color", "$value": "#000000", "$description": "app background" },

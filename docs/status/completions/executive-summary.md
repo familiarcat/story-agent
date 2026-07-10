@@ -399,11 +399,11 @@ Data Isolation:            Verified ✅
 ### Files Created/Modified
 ```
 Created:
-  ✅ docs/CREW_MANIFEST.md (900+ lines)
-  ✅ docs/IMPLEMENTATION_COMPLETE.md
-  ✅ docs/CREW_MEMORY_QUICK_START.md
-  ✅ docs/CREW_VERIFICATION_AND_UI_INTEROPERABILITY.md
-  ✅ docs/WEB_VSCODE_INTEROPERABILITY_GUIDE.md
+  ✅ docs/crew/manifest.md (900+ lines)
+  ✅ docs/status/completions/implementation-complete.md
+  ✅ docs/knowledge/crew-memory-guide.md
+  ✅ docs/status/completions/crew-verification-and-ui-interoperability.md
+  ✅ docs/testing/web-vscode-interoperability.md
   ✅ packages/ui/src/app/crew/memories/page.tsx (650+ lines)
   ✅ packages/ui/src/app/api/crew/memories/* (5 routes)
   ✅ packages/shared/test/crew-memory-integration.test.ts (600+ lines)

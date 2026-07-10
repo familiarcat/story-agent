@@ -37,7 +37,7 @@ servers["story-agent"] = {
         "OpenRouter crew over stdio — run_crew_mission_pipeline, crew memory recall/store, "
         "Aha, WorfGate, skills. The wrapper sources crew secrets. "
         "Lets Claude Code call the crew directly instead of tsx mission scripts. "
-        "See docs/claude-code-mcp.md."
+        "See docs/setup/claude-code-mcp.md."
     ),
 }
 

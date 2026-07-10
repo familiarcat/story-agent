@@ -6,7 +6,7 @@ import { storeObservationMemory, storeCrewPersonalMemory, embeddingSource } from
 const BRIEF = `Observation Lounge — DESIGN a git branching system that mirrors the Aha! story structure so the crew can AUTOMATE branches alongside Aha stories. Be decisive: define the naming convention + lifecycle triggers + the first artifact.
 
 GROUND TRUTH (verified in the repo):
-- Aha hierarchy (docs/aha-nomenclature.md): familiarcat FIRM → Client → Project (=Aha product; reference prefix e.g. PROD=Story Agent, JONAH, BAYER) → Epic → Story (=Aha Feature; reference e.g. PROD-17) → Task (=Aha Requirement). Sprint=Release.
+- Aha hierarchy (docs/setup/aha-nomenclature.md): familiarcat FIRM → Client → Project (=Aha product; reference prefix e.g. PROD=Story Agent, JONAH, BAYER) → Epic → Story (=Aha Feature; reference e.g. PROD-17) → Task (=Aha Requirement). Sprint=Release.
 - Existing capabilities: crew_sync_to_aha (crew result → gated Aha story create), linkAhaStoryToPR (link a story ↔ a PR URL), updateAhaStoryStatus (advance workflow status), aha read/write tools (Worf-gated: dry-run/confirm/audit), and agent-core git tools (git_status/git_diff/run_shell). The crew works on main and wants pushes to trigger CI (audit-check + deploy plan).
 
 CONVERGE ON (terse, decisive, FRUGAL):

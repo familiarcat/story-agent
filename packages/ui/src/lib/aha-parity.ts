@@ -3,7 +3,7 @@
  * API route + UI route, and a route FACTORY that generates Next.js handlers from a manifest entry
  * (instead of hand-writing one route per resource). Crew unified-nav mission (RAG MEM 28).
  *
- * Concept map (docs/aha-nomenclature.md): firm/client = Aha workspace; project = initiative;
+ * Concept map (docs/setup/aha-nomenclature.md): firm/client = Aha workspace; project = initiative;
  * epic = epic; story = feature; task = requirement; sprint = release.
  *
  * Security (Worf): READS are open; WRITES require confirm:true (a dry-run preview otherwise) and are

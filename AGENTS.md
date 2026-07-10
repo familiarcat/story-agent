@@ -18,7 +18,7 @@ Flow: `prompt → recall RAG → crew deliberates → Commodore interprets → A
 
 ## Naming conventions
 
-All crew- and Commodore-authored code follows the ratified standard in [docs/conventions.md](docs/conventions.md):
+All crew- and Commodore-authored code follows the ratified standard in [docs/meta/conventions.md](docs/meta/conventions.md):
 camelCase functions/vars, PascalCase types, UPPER_SNAKE_CASE constants, kebab-case files, `<name>.test.ts` tests;
 new MCP tools are `snake_case` with a reserved prefix (`crew_*` / `aha_*` / `worfgate_*`) + a SkillTheory; SQL is
 snake_case ↔ TS DTOs camelCase at the boundary; identifiers never embed a secret value or a model name.
@@ -57,7 +57,7 @@ Control lane: 🖖 CREW · CREW N delegated (~$X saved, M runs $Y) | ANTHROPIC K
 
 Every natural-language prompt should **recall** crew RAG memory before acting and **store** durable
 conclusions after (`crew:get-relevant-memories` / `crew:store-memory`, or `rag_recall` in agent-core).
-New session? Recall the bootstrap first (see [docs/session-bootstrap.md](docs/session-bootstrap.md)).
+New session? Recall the bootstrap first (see [docs/meta/session-bootstrap.md](docs/meta/session-bootstrap.md)).
 
 ## Security
 

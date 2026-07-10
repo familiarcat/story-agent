@@ -492,5 +492,5 @@ All 11 crew members are:
 
 For implementation details, see:
 - [DOMAIN_DRIVEN_CREW_GUIDE.md](../../docs/domain-driven/DOMAIN_DRIVEN_CREW_GUIDE.md)
-- [CREW_PERSONAL_MEMORIES_GUIDE.md](../../docs/CREW_PERSONAL_MEMORIES_GUIDE.md)
-- [AUTONOMOUS_CREW_MISSION_TEST.md](../../docs/AUTONOMOUS_CREW_MISSION_TEST.md)
+- [CREW_PERSONAL_MEMORIES_GUIDE.md](../../docs/knowledge/crew-memory-guide.md)
+- [AUTONOMOUS_CREW_MISSION_TEST.md](../../docs/testing/autonomous-crew-mission-test.md)

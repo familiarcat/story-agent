@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# One-command setup for the Claude Code ↔ OpenRouter crew MCP connection (docs/claude-code-mcp.md).
+# One-command setup for the Claude Code ↔ OpenRouter crew MCP connection (docs/setup/claude-code-mcp.md).
 #   1. build the MCP server   2. verify the stdio handshake lists run_crew_mission_pipeline
 #   3. PRE-APPROVE the project MCP servers (so they load WITHOUT a manual prompt on restart)
 #   4. print the activation step.

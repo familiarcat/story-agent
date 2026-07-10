@@ -8,14 +8,14 @@ source; its RAG twin (tags: `bootstrap`, `session-restart`, `onboarding`) is wha
 ## Restart protocol (do this first, every fresh session)
 
 1. **Connect to the crew** — the `story-agent` MCP server ([.mcp.json] → `scripts/mcp-crew-stdio.sh`,
-   `docs/claude-code-mcp.md`). 132 tools incl. `run_crew_mission_pipeline`, `crew:get-relevant-memories`,
+   `docs/setup/claude-code-mcp.md`). 132 tools incl. `run_crew_mission_pipeline`, `crew:get-relevant-memories`,
    `crew:store-memory`. One-time setup: `scripts/setup-claude-mcp.sh` (build + verify + pre-approve).
 2. **Recall** — `crew:get-relevant-memories` (or `rag_recall`) for the task, plus the `bootstrap` tag
    for this file's twin. Cite prior rulings; don't re-litigate.
   For chat-integration and client-routing tasks, also consult the saved client-capability matrix and
-  the repo artifacts [docs/chat-client-capability-matrix.md](./chat-client-capability-matrix.md),
-  [docs/chat-client-implementation-roadmap.md](./chat-client-implementation-roadmap.md), and
-  [docs/chat-client-integration-recipes.md](./chat-client-integration-recipes.md) before planning changes.
+  the repo artifacts [docs/design/chat-client-guide.md](./chat-client-capability-matrix.md),
+  [docs/design/chat-client-guide.md](./chat-client-implementation-roadmap.md), and
+  [docs/design/chat-client-recipes.md](./chat-client-integration-recipes.md) before planning changes.
 3. **Act** — route substantive reasoning to the crew (`run_crew_mission_pipeline` / agent-core loop on
    OpenRouter). Anthropic/the host tool is the ORCHESTRATOR: dispatch → verify (build/test) → final-mile.
 4. **Store** — `crew:store-memory` durable conclusions after acting. The loop compounds only if each
@@ -24,7 +24,7 @@ source; its RAG twin (tags: `bootstrap`, `session-restart`, `onboarding`) is wha
 ## Where things are (as of 2026-06-28)
 
 - **Repo:** `~/Developer/story-agent` — moved OFF iCloud (`~/Documents` corrupts `.git`; see
-  [docs/git-push-resilience.md]). Cross-platform clone-ready (LF `.gitattributes`, corepack `engines`).
+  [docs/setup/git-push-resilience.md]). Cross-platform clone-ready (LF `.gitattributes`, corepack `engines`).
   Push with `scripts/git-push-scaled.ts` (diff-scaled timeout); **never `kill -9` a `git push`**.
 - **Crew:** 11 TNG officers on OpenRouter, Quark-cost-selected per task. Mission pipeline =
   `runMissionPipeline` / `run_crew_mission_pipeline`. Frugal by default (`CREW_FRUGAL`).

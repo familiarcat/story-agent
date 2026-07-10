@@ -158,4 +158,4 @@ pnpm chat:smoke
 
 ## Cross-check before rollout
 
-Before recommending a client integration, recall the client-capability matrix in [docs/chat-client-capability-matrix.md](./chat-client-capability-matrix.md) and confirm that the chosen lane matches the client's natural CRUD and tool model.
+Before recommending a client integration, recall the client-capability matrix in [docs/design/chat-client-guide.md](./chat-client-capability-matrix.md) and confirm that the chosen lane matches the client's natural CRUD and tool model.

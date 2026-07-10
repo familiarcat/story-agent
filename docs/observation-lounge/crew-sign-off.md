@@ -203,12 +203,12 @@ Team can start using immediately."
 Status: ✅ COMPLETE
 
 Implementation:
-  ✅ docs/CREW_MANIFEST.md (900+ lines)
-  ✅ docs/CREW_MEMORY_QUICK_START.md
-  ✅ docs/IMPLEMENTATION_COMPLETE.md
-  ✅ docs/CREW_VERIFICATION_AND_UI_INTEROPERABILITY.md
-  ✅ docs/WEB_VSCODE_INTEROPERABILITY_GUIDE.md
-  ✅ docs/EXECUTIVE_SUMMARY.md
+  ✅ docs/crew/manifest.md (900+ lines)
+  ✅ docs/knowledge/crew-memory-guide.md
+  ✅ docs/status/completions/implementation-complete.md
+  ✅ docs/status/completions/crew-verification-and-ui-interoperability.md
+  ✅ docs/testing/web-vscode-interoperability.md
+  ✅ docs/status/completions/executive-summary.md
   ✅ COMPLETION_REPORT.md
   ✅ Project READMEs (Client, Acme, HealthTech, FinTech, Template)
 

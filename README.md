@@ -36,7 +36,7 @@ story-agent/
 > `.env` (no machine-specific paths), and the toolchain is pinned. On Windows use WSL2 or Git Bash so
 > the `*.sh` ops scripts run; the app itself (build / test / dev / `tsx` scripts) is pure Node and
 > runs natively. **Do not place the clone in a cloud-synced folder** (iCloud/OneDrive/Dropbox) — it
-> corrupts `.git`; see [docs/git-push-resilience.md](docs/git-push-resilience.md).
+> corrupts `.git`; see [docs/setup/git-push-resilience.md](docs/setup/git-push-resilience.md).
 
 ## Setup
 

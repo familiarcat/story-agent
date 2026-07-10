@@ -31,7 +31,7 @@ status: ✅ VERIFIED
 | 11 | **Yar** | QA Auditing | ✅ ACTIVE | Yes |
 
 **Verification Sources**:
-- ✅ `docs/CREW_MANIFEST.md` — 900+ lines, all 11 crew fully profiled
+- ✅ `docs/crew/manifest.md` — 900+ lines, all 11 crew fully profiled
 - ✅ `packages/shared/src/lib/crew-baseline-memories.ts` — Baseline memories defined
 - ✅ `packages/shared/src/lib/crew-expertise.ts` — Expertise declarations
 - ✅ `packages/shared/src/lib/domain-registry.ts` — Domain ownership mapped
@@ -421,9 +421,9 @@ npm run test:integration
 ## 📞 SUPPORT
 
 **Crew System Documentation**:
-- [docs/CREW_MANIFEST.md](../CREW_MANIFEST.md) — All 11 crew members
-- [docs/CREW_MEMORY_QUICK_START.md](../CREW_MEMORY_QUICK_START.md) — Usage guide
-- [docs/IMPLEMENTATION_COMPLETE.md](../IMPLEMENTATION_COMPLETE.md) — Technical details
+- [docs/crew/manifest.md](../CREW_MANIFEST.md) — All 11 crew members
+- [docs/knowledge/crew-memory-guide.md](../CREW_MEMORY_QUICK_START.md) — Usage guide
+- [docs/status/completions/implementation-complete.md](../IMPLEMENTATION_COMPLETE.md) — Technical details
 
 **Running Verification**:
 ```bash
