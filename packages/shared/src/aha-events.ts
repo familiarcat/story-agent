@@ -8,17 +8,10 @@
  * payload data), and the table is service-role-only — surfaces read it through server endpoints.
  */
 import { getSupabaseClient } from './db.js';
+import { validateAhaEventInput, type AhaEventInput, type AhaEventMeta, type AhaResourceType, type AhaOperation, type AhaActor } from './schemas/aha-events.schema.js';
 
-export type AhaResourceType = 'story' | 'epic' | 'release' | 'requirement' | 'sprint' | 'project';
-export type AhaOperation = 'created' | 'updated' | 'deleted' | 'status_changed' | 'linked';
-export type AhaActor = 'dashboard' | 'mcp' | 'extension';
-
-export interface AhaEventMeta {
-  sprint_id?: string;
-  project_id?: string;
-  status_from?: string;
-  status_to?: string;
-}
+// Types are defined by the v1.0 schema contract (single source of truth — crew phased plan Phase 1).
+export type { AhaResourceType, AhaOperation, AhaActor, AhaEventMeta, AhaEventInput };
 
 export interface AhaEventRecord {
   id: string;
@@ -28,14 +21,6 @@ export interface AhaEventRecord {
   operation: AhaOperation;
   actor: AhaActor;
   meta: AhaEventMeta;
-}
-
-export interface AhaEventInput {
-  resourceType: AhaResourceType;
-  resourceId: string;
-  operation: AhaOperation;
-  actor: AhaActor;
-  meta?: AhaEventMeta;
 }
 
 function mapRow(row: Record<string, unknown>): AhaEventRecord {
@@ -50,8 +35,10 @@ function mapRow(row: Record<string, unknown>): AhaEventRecord {
   };
 }
 
-/** Append one sync event. Throws if the store is unreachable or the insert fails. */
+/** Append one sync event. Validates against the schema contract; throws on contract violation or store failure. */
 export async function emitAhaEvent(input: AhaEventInput): Promise<AhaEventRecord> {
+  const validation = validateAhaEventInput(input);
+  if (!validation.ok) throw new Error(`aha_events contract v${validation.version} violation: ${validation.errors.join('; ')}`);
   const client = await getSupabaseClient();
   const { data, error } = await client
     .from('aha_events')
