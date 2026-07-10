@@ -61,13 +61,25 @@ class StoryAgentNativeChatProvider implements vscode.LanguageModelChatProvider<v
     }
 
     const clientId = process.env.STORY_AGENT_CLIENT_ID || vscode.workspace.getConfiguration('storyAgent').get<string>('chat.clientId') || null;
-    const result = await chatWithCrew(normalized.message, { clientId, history: normalized.history });
-    if (token.isCancellationRequested) return;
-    if (!result.ok) throw new Error('Story Agent chat brain unreachable. Start the local agent service or configure storyAgent.chat.agentServiceUrl.');
-    const tail = result.costAnalysis
-      ? `\n\n[Story Agent cost] total=$${result.costAnalysis.totalCostUSD.toFixed(5)} chat=$${result.costAnalysis.chatCostUSD.toFixed(5)} crew=$${result.costAnalysis.crewPreparationCostUSD.toFixed(5)} tok=${result.costAnalysis.totalTokens}`
-      : '';
-    progress.report(new vscode.LanguageModelTextPart((result.answer ?? '') + tail));
+    let result;
+    try {
+      result = await chatWithCrew(normalized.message, { clientId, history: normalized.history });
+      if (token.isCancellationRequested) return;
+      if (!result.ok) throw new Error('Story Agent chat brain unreachable. Start the local agent service or configure storyAgent.chat.agentServiceUrl.');
+      const tail = result.costAnalysis
+        ? `\n\n[Story Agent cost] total=${result.costAnalysis.totalCostUSD.toFixed(5)} chat=${result.costAnalysis.chatCostUSD.toFixed(5)} crew=${result.costAnalysis.crewPreparationCostUSD.toFixed(5)} tok=${result.costAnalysis.totalTokens}`
+        : '';
+      progress.report(new vscode.LanguageModelTextPart((result.answer ?? '') + tail));
+    } catch (err) {
+      // Crew infra down — check if we should fall back to Copilot
+      const fallbackEnabled = vscode.workspace.getConfiguration('storyAgent').get<boolean>('routing.enableOpenRouterDefault') ?? true;
+      if (!fallbackEnabled) {
+        throw new Error('OpenRouter default is disabled and crew brain is unavailable.');
+      }
+      // For now: report error. Future: auto-fallback to Copilot.
+      progress.report(new vscode.LanguageModelTextPart('Story Agent crew brain is unreachable. Please start the local agent or configure a fallback provider.'));
+      return;
+    }
   }
 
   async provideTokenCount(
@@ -81,7 +93,7 @@ class StoryAgentNativeChatProvider implements vscode.LanguageModelChatProvider<v
 }
 
 export function registerNativeChatProvider(context: vscode.ExtensionContext): void {
-  const enabled = vscode.workspace.getConfiguration('storyAgent').get<boolean>('chat.nativeProviderEnabled') ?? false;
+  const enabled = vscode.workspace.getConfiguration('storyAgent').get<boolean>('chat.nativeProviderEnabled') ?? true;
   const api = (vscode as typeof vscode & {
     lm?: typeof vscode.lm & {
       registerLanguageModelChatProvider?: (vendor: string, provider: vscode.LanguageModelChatProvider<vscode.LanguageModelChatInformation>) => vscode.Disposable;

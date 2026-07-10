@@ -224,7 +224,9 @@ export function activate(context: vscode.ExtensionContext): void {
   registerParticipant(context);
 
   // ── Optional VS Code-native chat provider lane ────────────────────────────
-  registerNativeChatProvider(context);
+  if (vscode.workspace.getConfiguration('storyAgent').get<boolean>('hijack.enabled') ?? true) {
+    registerNativeChatProvider(context);
+  }
 }
 
 export function deactivate(): void {

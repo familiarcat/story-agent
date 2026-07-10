@@ -362,9 +362,19 @@
           "default": "",
           "description": "Optional bearer token for the agent-core endpoint (matches AGENT_SERVICE_TOKEN). Falls back to the AGENT_SERVICE_TOKEN env var."
         },
+        "storyAgent.hijack.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable OpenRouter as the default chat provider (Section 31 override)"
+        },
+        "storyAgent.routing.enableOpenRouterDefault": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use OpenRouter crew as the default chat provider (killswitch: set to false to use Copilot only)"
+        },
         "storyAgent.chat.nativeProviderEnabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable the experimental VS Code-native Story Agent chat provider lane. This adds Story Agent as a model provider in the Chat view while preserving the existing participant-based path."
         },
         "storyAgent.chat.clientId": {
