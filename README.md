@@ -91,7 +91,7 @@ Dashboard: http://localhost:3000
 - `POST /api/chat/stream` - SSE/JSONL chat-compatible stream adapter (cs-p3-material-investigation-ui integration)
 - `POST /api/stories/import` - import an Aha story into tracker state
 - `GET /api/stories` - list tracked stories with open comment counts
-- `GET /api/projects` - list tracked repository/project records
+- `GET /api/aha/projects` - list projects live from Aha (source of truth)
 
 ## Integration Artifacts
 

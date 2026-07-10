@@ -60,4 +60,4 @@ See `/Users/brady.georgen.ext/Documents/workspace/prompts/` for the prompt templ
 | `/api/aha/story` | API: fetch one Aha story |
 | `/api/stories` | API: list tracked stories with open comment counts |
 | `/api/stories/import` | API: import Aha story into Supabase tracker state |
-| `/api/projects` | API: list tracked project records |
+| `/api/aha/projects` | API: list projects live from Aha (source of truth) |

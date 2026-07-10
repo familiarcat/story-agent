@@ -283,7 +283,10 @@ export default async function Dashboard() {
 
       {stories.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '3rem' }}>
-          No stories tracked yet. <a href="/story/new">Add a story to get started.</a>
+          <p style={{ marginBottom: '0.75rem' }}>
+            No stories tracked locally yet. Aha is the source of truth — projects and stories live there until imported.
+          </p>
+          <a href="/story/new" className="btn btn-primary">Import a story from Aha →</a>
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
