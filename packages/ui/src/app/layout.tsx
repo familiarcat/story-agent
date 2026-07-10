@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import NavBar from '../components/NavBar';
+import SideNav from '../components/SideNav';
 import { ThemeProvider, THEME_INIT_SCRIPT } from '../components/ThemeProvider';
 import DevTour from '../components/dev-tour/DevTour';
 
@@ -21,7 +22,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider>
           <NavBar />
-          <main style={{ padding: '2rem' }}>{children}</main>
+          {/* Crew ruling (UI-GLOBAL-NAV): SideNav lives in the ROOT layout — persistent global
+              navigation on every route, never re-mounted on transitions. */}
+          <div className="app-shell">
+            <SideNav />
+            <main style={{ padding: '2rem', minWidth: 0 }}>{children}</main>
+          </div>
           {/* Developer-only guided tour — hard-gated, never ships to production (see DevTour). */}
           <DevTour />
         </ThemeProvider>
