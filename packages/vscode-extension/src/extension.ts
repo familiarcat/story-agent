@@ -10,6 +10,8 @@ import { registerInlineChat } from './inlineChat';
 import { connectProviderInteractive } from './oauth';
 import { runNodeActions } from './selectionActions';
 import { registerNativeChatProvider } from './nativeChatProvider';
+import { AhaSyncPoller } from './ahaSyncPoller';
+import { registerUpdateAhaStatus, resolveDashboardBase } from './commands/updateAhaStatus';
 
 function dashboardBase(): string {
   return vscode.workspace.getConfiguration('storyAgent').get<string>('dashboardUrl') ?? 'http://localhost:3000';
@@ -31,6 +33,19 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('storyAgent.projectStructure', projectStructureProvider)
   );
+
+  // ── Cross-surface Aha sync: poll /aha/events, debounce bursts into one tree refresh ──
+  const ahaSyncPoller = new AhaSyncPoller();
+  let ahaRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+  ahaSyncPoller.onEvent((event) => {
+    if (!['story', 'release', 'epic', 'project'].includes(event.resourceType)) return;
+    if (ahaRefreshTimer) clearTimeout(ahaRefreshTimer);
+    ahaRefreshTimer = setTimeout(() => projectStructureProvider.refresh(), 4500);
+  });
+  ahaSyncPoller.start();
+  context.subscriptions.push(ahaSyncPoller, {
+    dispose: () => { if (ahaRefreshTimer) clearTimeout(ahaRefreshTimer); },
+  });
 
   // ── Multi-file diff review UI (per-file accept/reject) ───────────────────
   registerReviewChanges(context);
@@ -153,6 +168,22 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.env.openExternal(vscode.Uri.parse(url));
     }),
 
+    // Dashboard deep links from Aha tree items. Story detail lives at /story/[storyId] (the
+    // reference num); the sprint page reads no query params, so it gets the bare page.
+    vscode.commands.registerCommand('story-agent.openAhaInDashboard', (item?: any) => {
+      const base = resolveDashboardBase();
+      const ref = item?.story?.referenceNum;
+      if (ref) {
+        vscode.env.openExternal(vscode.Uri.parse(`${base}/story/${encodeURIComponent(ref)}`));
+        return;
+      }
+      if (item?.release) {
+        vscode.env.openExternal(vscode.Uri.parse(`${base}/sprint`));
+        return;
+      }
+      vscode.env.openExternal(vscode.Uri.parse(`${base}/dashboard`));
+    }),
+
     // Aha tree → refresh, and "Prepare with crew" (story → /prepare mission flow, crew Aha-nav plan).
     vscode.commands.registerCommand('story-agent.refreshAhaTree', () => projectStructureProvider.refresh()),
     vscode.commands.registerCommand('story-agent.prepareAhaStory', (item: any) => {
@@ -185,6 +216,9 @@ export function activate(context: vscode.ExtensionContext): void {
     // OAuth: connect a provider (Aha! MCP, Google, AWS Cognito, …) via browser sign-in
     vscode.commands.registerCommand('story-agent.connectOAuth', () => connectProviderInteractive(context))
   );
+
+  // Worf-gated Aha story status quick-update (dry-run → confirm → write)
+  registerUpdateAhaStatus(context, { refreshTree: () => projectStructureProvider.refresh() });
 
   // ── Chat participant ──────────────────────────────────────────────────────
   registerParticipant(context);

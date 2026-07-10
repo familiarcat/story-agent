@@ -135,6 +135,16 @@
         "command": "story-agent.openAhaStory",
         "title": "Open Story",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "story-agent.updateAhaStoryStatus",
+        "title": "Story Agent: Update Aha Story Status",
+        "icon": "$(pencil)"
+      },
+      {
+        "command": "story-agent.openAhaInDashboard",
+        "title": "Story Agent: Open in Dashboard",
+        "icon": "$(dashboard)"
       }
     ],
     "viewsContainers": {
@@ -186,6 +196,26 @@
           "command": "story-agent.nodeActions",
           "when": "view == storyAgent.projectStructure && viewItem == ahaProject",
           "group": "inline"
+        },
+        {
+          "command": "story-agent.updateAhaStoryStatus",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
+          "group": "inline"
+        },
+        {
+          "command": "story-agent.openAhaInDashboard",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
+          "group": "navigation"
+        },
+        {
+          "command": "story-agent.openAhaInDashboard",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaProject",
+          "group": "navigation"
+        },
+        {
+          "command": "story-agent.openAhaInDashboard",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaRelease",
+          "group": "navigation"
         }
       ],
       "editor/context": [
@@ -221,6 +251,11 @@
           "type": "string",
           "default": "http://localhost:3000",
           "description": "Base URL of the Story Agent Next.js dashboard. Deployed: https://storyagent.pbradygeorgen.com"
+        },
+        "storyAgent.dashboardBaseUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Dashboard base URL used by Worf-gated Aha writes and dashboard deep links (Update Aha Story Status, Open in Dashboard). Falls back to storyAgent.dashboardUrl."
         },
         "storyAgent.agileProvider": {
           "type": "string",

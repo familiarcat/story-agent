@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { AhaProject, AhaSprint, AhaSprintStory } from '@story-agent/shared';
 import { ClientScopeSelector } from '@/components/ClientScopeSelector';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { useAhaEvents } from '@/hooks/useAhaEvents';
 
 type SprintView = {
   sprint: AhaSprint;
@@ -83,6 +84,13 @@ export default function SprintPage() {
     if (selectedSprintId && sprint) void loadSprintStories(selectedSprintId, sprint);
     else setSprintView(null);
   }, [selectedSprintId, sprints, loadSprintStories]);
+
+  // Cross-surface sync: refetch when another surface (MCP crew, extension) changed Aha.
+  useAhaEvents(events => {
+    if (events.some(e => e.resourceType === 'release') && selectedProjectId) void loadSprints(selectedProjectId);
+    const sprint = sprints.find(s => s.id === selectedSprintId);
+    if (events.some(e => e.resourceType === 'story') && selectedSprintId && sprint) void loadSprintStories(selectedSprintId, sprint);
+  }, { resourceTypes: ['story', 'release'] });
 
   const statusColor = (status: string): string => {
     const s = status.toLowerCase();

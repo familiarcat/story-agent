@@ -12,12 +12,15 @@
 import {
   listAhaProjects,
   listAhaStoriesForProject,
+  listAhaEpicsForProject,
+  getAhaEpic,
   getAhaStory,
   updateAhaStoryStatus,
   listAhaSprints,
   getAhaSprint,
   getProjectHierarchy,
 } from '@/lib/aha';
+import { emitAhaEventSafe, type AhaActor, type AhaResourceType } from '@story-agent/shared/aha-events';
 
 export type AhaPrimitive = 'workspace' | 'initiative' | 'epic' | 'feature' | 'requirement' | 'release';
 export type ResourceName = 'firm' | 'client' | 'project' | 'epic' | 'story' | 'task' | 'sprint';
@@ -49,7 +52,13 @@ export const PARITY_MANIFEST: Record<ResourceName, AhaResourceDef> = {
     list: (_parent, page) => listAhaProjects(page),
     fields: ['id', 'name'], status: 'live',
   },
-  epic: { resource: 'epic', ahaPrimitive: 'epic', parent: 'project', fields: ['id', 'name'], status: 'planned' },
+  epic: {
+    resource: 'epic', ahaPrimitive: 'epic', parent: 'project',
+    getParam: 'epicId', listParam: 'projectId',
+    get: (id) => getAhaEpic(id),
+    list: (projectId, page) => listAhaEpicsForProject(projectId, page),
+    fields: ['id', 'referenceNum', 'name', 'workflowStatus'], status: 'live',
+  },
   story: {
     resource: 'story', ahaPrimitive: 'feature', parent: 'project',
     getParam: 'reference', listParam: 'projectId',
@@ -95,6 +104,19 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 }
 
+/** UI resource name → aha_events resource type (firm/client have no sync-ledger representation). */
+const EVENT_RESOURCE_TYPE: Partial<Record<ResourceName, AhaResourceType>> = {
+  story: 'story',
+  epic: 'epic',
+  sprint: 'release',
+  task: 'requirement',
+  project: 'project',
+};
+
+export function parseAhaActor(value: unknown): AhaActor {
+  return value === 'extension' ? 'extension' : 'dashboard';
+}
+
 /**
  * Generate Next.js GET/POST handlers for a manifested Aha resource. READS open; WRITES require
  * confirm:true (Worf gate) — a dry-run preview is returned otherwise, and applied writes are flagged
@@ -133,6 +155,17 @@ export function makeAhaResourceRoute(def: AhaResourceDef) {
       }
       try {
         const result = await def.update(id, body);
+        // Sync ledger (Worf ruling AHA-SYNC-TIERS): emit AFTER the Aha write succeeds; emit failure
+        // must never fail the write — emitAhaEventSafe swallows and logs.
+        const eventType = EVENT_RESOURCE_TYPE[def.resource];
+        if (eventType) {
+          await emitAhaEventSafe({
+            resourceType: eventType,
+            resourceId: id,
+            operation: 'status_changed',
+            actor: parseAhaActor(body.actor),
+          });
+        }
         return json({ ok: true, resource: def.resource, id, result: result ?? null, audited: true });
       } catch (e) {
         return json({ error: `aha ${def.resource} write failed`, details: e instanceof Error ? e.message : String(e) }, 500);

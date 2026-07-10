@@ -39,6 +39,15 @@ export interface AhaStory {
 // Provider-agnostic aliases — prefer these in new code
 export type AgileStory = AhaStory;
 
+export interface AhaEpic {
+  id: string;
+  referenceNum: string;  // e.g. PROD-E-1
+  name: string;
+  workflowStatus: string;
+  description?: string;
+  url?: string;
+}
+
 export interface AhaProject {
   id: string;
   name: string;

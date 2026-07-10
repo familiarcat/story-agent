@@ -1,4 +1,6 @@
 import { createAhaStory, getAhaSprint } from '@/lib/aha';
+import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
+import { parseAhaActor } from '@/lib/aha-parity';
 
 /**
  * Worf-gated story creation (crew story-picker mission, RAG 38b41c47): POST without confirm:true
@@ -6,7 +8,7 @@ import { createAhaStory, getAhaSprint } from '@/lib/aha';
  * aha:create-feature MCP tool's gate.
  */
 export async function POST(request: Request): Promise<Response> {
-  let body: { releaseId?: string; name?: string; description?: string; confirm?: boolean };
+  let body: { releaseId?: string; name?: string; description?: string; confirm?: boolean; actor?: string };
   try {
     body = await request.json();
   } catch {
@@ -32,6 +34,14 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const story = await createAhaStory(releaseId, { name, description: body.description });
+    // Sync ledger: emit AFTER the Aha write succeeds; emit failure never fails the create (Worf ruling).
+    await emitAhaEventSafe({
+      resourceType: 'story',
+      resourceId: story.referenceNum,
+      operation: 'created',
+      actor: parseAhaActor(body.actor),
+      meta: { sprint_id: releaseId },
+    });
     return json({ dryRun: false, story });
   } catch (e) {
     return json({ error: 'aha create-story failed', details: e instanceof Error ? e.message : String(e) }, 500);

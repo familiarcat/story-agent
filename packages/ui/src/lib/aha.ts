@@ -1,4 +1,4 @@
-import type { AhaProject, AhaSprint, AhaSprintStory, AhaStory } from '@story-agent/shared';
+import type { AhaEpic, AhaProject, AhaSprint, AhaSprintStory, AhaStory } from '@story-agent/shared';
 import { createAhaClient } from '@story-agent/shared/aha-client';
 
 /**
@@ -20,6 +20,8 @@ function client() {
 
 export const listAhaProjects = (page = 1): Promise<AhaProject[]> => client().listProjects(page);
 export const listAhaStoriesForProject = (projectId: string, page = 1): Promise<AhaStory[]> => client().listStoriesForProject(projectId, page);
+export const listAhaEpicsForProject = (projectId: string, page = 1): Promise<AhaEpic[]> => client().listEpicsForProject(projectId, page);
+export const getAhaEpic = (epicId: string): Promise<AhaEpic> => client().getEpic(epicId);
 export const getAhaStory = (referenceNum: string): Promise<AhaStory> => client().getStory(referenceNum);
 export const updateAhaStoryStatus = (featureId: string, statusName: string): Promise<void> => client().updateStoryStatus(featureId, statusName);
 export const linkAhaStoryToPR = (featureId: string, prUrl: string, prTitle: string): Promise<void> => client().linkStoryToPR(featureId, prUrl, prTitle);

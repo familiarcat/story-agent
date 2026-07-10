@@ -52,6 +52,10 @@
     "./aha-credentials": {
       "import": "./dist/src/aha-credentials.js",
       "types": "./dist/src/aha-credentials.d.ts"
+    },
+    "./aha-events": {
+      "import": "./dist/src/aha-events.js",
+      "types": "./dist/src/aha-events.d.ts"
     }
   },
   "scripts": {

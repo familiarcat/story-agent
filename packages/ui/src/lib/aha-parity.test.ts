@@ -26,7 +26,7 @@ describe('parity manifest', () => {
   it('catches a broken manifest (live with no handler, dangling parent)', () => {
     const broken = {
       ...PARITY_MANIFEST,
-      epic: { ...PARITY_MANIFEST.epic, status: 'live' as const }, // live but no get/list
+      epic: { ...PARITY_MANIFEST.epic, status: 'live' as const, get: undefined, list: undefined }, // live but no get/list
     };
     const res = validateManifest(broken as Record<string, AhaResourceDef> as typeof PARITY_MANIFEST);
     expect(res.ok).toBe(false);

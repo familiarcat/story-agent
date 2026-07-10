@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { useAhaEvents } from '@/hooks/useAhaEvents';
 
 type AhaProject = { id: string; name: string; referencePrefix: string | null; url: string };
 type AhaStory = { referenceNum: string; name: string; workflowStatus: string; url: string };
@@ -44,25 +45,33 @@ export default function NewStoryPage() {
     void loadProjects();
   }, []);
 
+  const loadStories = useCallback(async (projectId: string) => {
+    setLoadingStories(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/aha/stories?projectId=${encodeURIComponent(projectId)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load stories');
+      setStories(data);
+      setSelectedReference(prev =>
+        prev && (data as AhaStory[]).some(s => s.referenceNum === prev) ? prev : (data[0]?.referenceNum ?? '')
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error loading stories');
+    } finally {
+      setLoadingStories(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!selectedProjectId) return;
-    const loadStories = async () => {
-      setLoadingStories(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/aha/stories?projectId=${encodeURIComponent(selectedProjectId)}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load stories');
-        setStories(data);
-        if (data.length > 0) setSelectedReference(data[0].referenceNum);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error loading stories');
-      } finally {
-        setLoadingStories(false);
-      }
-    };
-    void loadStories();
-  }, [selectedProjectId]);
+    void loadStories(selectedProjectId);
+  }, [selectedProjectId, loadStories]);
+
+  // Cross-surface sync: refetch when another surface (MCP crew, extension) changed a story in Aha.
+  useAhaEvents(() => {
+    if (selectedProjectId) void loadStories(selectedProjectId);
+  }, { resourceTypes: ['story'] });
 
   const onImport = async () => {
     setImporting(true);

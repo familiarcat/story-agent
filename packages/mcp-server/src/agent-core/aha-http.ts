@@ -6,6 +6,7 @@
  */
 import type { IncomingMessage, ServerResponse } from 'http';
 import { resolveAhaCredentials } from '@story-agent/shared/aha-credentials';
+import { listAhaEventsSince } from '@story-agent/shared/aha-events';
 
 async function aha(path: string): Promise<any> {
   const { domain, apiKey } = await resolveAhaCredentials();
@@ -75,6 +76,20 @@ export async function handleAhaRequest(req: IncomingMessage, res: ServerResponse
     } catch (e: any) {
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e?.message || 'aha_unavailable' }));
+    }
+    return true;
+  }
+
+  if (path === '/aha/events') {
+    // Cross-surface sync poll (crew ruling AHA-SYNC-TIERS): ?since=<ISO from previous `now`>.
+    const params = new URLSearchParams(qs || '');
+    try {
+      const result = await listAhaEventsSince(params.get('since'));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (e: any) {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e?.message || 'events_unavailable' }));
     }
     return true;
   }

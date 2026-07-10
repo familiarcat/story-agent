@@ -1,5 +1,5 @@
-import type { AhaProject, AhaSprint, AhaSprintStory, AhaStory } from './index.js';
-import { mapProduct, mapFeatureSummary, mapFeatureToStory, mapRelease, mapSprintStory } from './aha-mappers.js';
+import type { AhaEpic, AhaProject, AhaSprint, AhaSprintStory, AhaStory } from './index.js';
+import { mapProduct, mapEpic, mapFeatureSummary, mapFeatureToStory, mapRelease, mapSprintStory } from './aha-mappers.js';
 
 /**
  * Canonical Aha REST client — the single source of truth for the Aha/PM domain.
@@ -21,6 +21,8 @@ export interface AhaClientConfig {
 export interface AhaClient {
   getStory(referenceNum: string): Promise<AhaStory>;
   listStoriesForProject(projectId: string, page?: number): Promise<AhaStory[]>;
+  listEpicsForProject(projectId: string, page?: number): Promise<AhaEpic[]>;
+  getEpic(epicId: string): Promise<AhaEpic>;
   listProjects(page?: number): Promise<AhaProject[]>;
   updateStoryStatus(featureId: string, statusName: string): Promise<void>;
   linkStoryToPR(featureId: string, prUrl: string, prTitle: string): Promise<void>;
@@ -66,6 +68,12 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
     const data = await get(`products/${projectId}/features?page=${page}&per_page=50`);
     const features = (data.features as Record<string, unknown>[] | undefined) ?? [];
     return features.map(mapFeatureSummary);
+  };
+
+  const listEpicsForProject: AhaClient['listEpicsForProject'] = async (projectId, page = 1) => {
+    const data = await get(`products/${projectId}/epics?page=${page}&per_page=50`);
+    const epics = (data.epics as Record<string, unknown>[] | undefined) ?? [];
+    return epics.map(mapEpic);
   };
 
   const listSprints: AhaClient['listSprints'] = async (projectId) => {
@@ -124,6 +132,7 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
 
   return {
     listStoriesForProject,
+    listEpicsForProject,
     listSprints,
     getSprintStories,
     getRoadmap,
@@ -132,6 +141,10 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
       const id = referenceNum.includes('/') ? referenceNum.split('/').pop()! : referenceNum;
       const data = await get(`features/${id}`);
       return mapFeatureToStory(data.feature as Record<string, unknown>);
+    },
+    async getEpic(epicId) {
+      const data = await get(`epics/${epicId}`);
+      return mapEpic(data.epic as Record<string, unknown>);
     },
     async listProjects(page = 1) {
       const data = await get(`products?page=${page}&per_page=100`);

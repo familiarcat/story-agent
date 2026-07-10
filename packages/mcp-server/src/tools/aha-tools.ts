@@ -14,6 +14,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getCrewAhaMatrix, authorizeAhaWrite } from '../lib/crew-aha-roles.js';
 import { resolveAhaCredentials } from '@story-agent/shared/aha-credentials';
+// cross-surface sync ledger (AHA-SYNC-TIERS)
+import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
 import { executeAhaStoryWithMemory } from '../lib/crew-aha-mission.js';
 import { getRelevantObservationMemories, getRecentObservationMemories } from '@story-agent/shared/db';
 import { gateAhaWrite } from '../lib/crew-aha-automode.js';
@@ -152,6 +154,7 @@ export function registerAhaTools(server: McpServer): void {
       const feature: Record<string, unknown> = { name, description };
       if (epic) feature.epic = epic;  // Aha links both the epic and the sprint from the release-scoped create.
       const res = await aha(`releases/${releaseId}/features`, { method: 'POST', body: JSON.stringify({ feature }) });
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'created', resourceId: String(res.feature?.reference_num ?? res.feature?.id ?? ''), meta: { sprint_id: releaseId } });
       return ok({ created: res.feature?.reference_num, name: res.feature?.name, by: agentId, autoMode: classification });
     },
   );
@@ -180,6 +183,7 @@ export function registerAhaTools(server: McpServer): void {
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, reference, wouldUpdate: feature, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('update-feature', { agentId, reference, fields: Object.keys(feature), decision: classification.decision });
       const res = await aha(`features/${reference}`, { method: 'PUT', body: JSON.stringify({ feature }) });
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: workflowStatus ? 'status_changed' : 'updated', resourceId: reference, meta: workflowStatus ? { status_to: workflowStatus } : undefined });
       return ok({ updated: res.feature?.reference_num, status: res.feature?.workflow_status?.name, by: agentId, autoMode: classification });
     },
   );
@@ -207,6 +211,7 @@ export function registerAhaTools(server: McpServer): void {
       if (startDate) release.start_date = startDate;
       if (endDate) release.release_date = endDate;
       const res = await aha(`products/${productPrefix}/releases`, { method: 'POST', body: JSON.stringify({ release }) });
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'release', operation: 'created', resourceId: String(res.release?.id ?? res.release?.reference_num ?? ''), meta: { project_id: productPrefix } });
       return ok({ created: res.release?.reference_num, id: res.release?.id, name: res.release?.name, by: agentId, autoMode: classification });
     },
   );
@@ -230,6 +235,7 @@ export function registerAhaTools(server: McpServer): void {
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { releaseId, name, description }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('create-epic', { agentId, releaseId, name, decision: classification.decision });
       const res = await aha(`releases/${releaseId}/epics`, { method: 'POST', body: JSON.stringify({ epic: { name, description } }) });
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'epic', operation: 'created', resourceId: String(res.epic?.reference_num ?? res.epic?.id ?? ''), meta: { sprint_id: releaseId } });
       return ok({ created: res.epic?.reference_num, id: res.epic?.id, name: res.epic?.name, by: agentId, autoMode: classification });
     },
   );
@@ -253,6 +259,7 @@ export function registerAhaTools(server: McpServer): void {
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { featureRef, name, description }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('create-requirement', { agentId, featureRef, name, decision: classification.decision });
       const res = await aha(`features/${featureRef}/requirements`, { method: 'POST', body: JSON.stringify({ requirement: { name, description } }) });
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'requirement', operation: 'created', resourceId: String(res.requirement?.reference_num ?? res.requirement?.id ?? '') });
       return ok({ created: res.requirement?.reference_num, id: res.requirement?.id, name: res.requirement?.name, by: agentId, autoMode: classification });
     },
   );
@@ -281,6 +288,7 @@ export function registerAhaTools(server: McpServer): void {
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, id, wouldUpdate: release, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('update-release', { agentId, id, fields: Object.keys(release), decision: classification.decision });
       const res = await aha(`releases/${id}`, { method: 'PUT', body: JSON.stringify({ release }) });
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'release', operation: 'updated', resourceId: id, meta: { sprint_id: id } });
       return ok({ updated: res.release?.reference_num, id: res.release?.id, name: res.release?.name, by: agentId, autoMode: classification });
     },
   );
@@ -306,6 +314,7 @@ export function registerAhaTools(server: McpServer): void {
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, reference, wouldUpdate: epic, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('update-epic', { agentId, reference, fields: Object.keys(epic), decision: classification.decision });
       const res = await aha(`epics/${reference}`, { method: 'PUT', body: JSON.stringify({ epic }) });
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'epic', operation: 'updated', resourceId: reference });
       return ok({ updated: res.epic?.reference_num, name: res.epic?.name, by: agentId, autoMode: classification });
     },
   );
@@ -331,6 +340,7 @@ export function registerAhaTools(server: McpServer): void {
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, reference, wouldUpdate: requirement, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('update-requirement', { agentId, reference, fields: Object.keys(requirement), decision: classification.decision });
       const res = await aha(`requirements/${reference}`, { method: 'PUT', body: JSON.stringify({ requirement }) });
+      void emitAhaEventSafe({ actor: 'mcp', resourceType: 'requirement', operation: 'updated', resourceId: reference });
       return ok({ updated: res.requirement?.reference_num, name: res.requirement?.name, by: agentId, autoMode: classification });
     },
   );
@@ -338,7 +348,8 @@ export function registerAhaTools(server: McpServer): void {
   // ── DELETE feature / epic / release / requirement ──────────────────────────
   // Destructive: gateAhaWrite/classifyAhaAction BLOCKS verb:'delete' by design, so deletes are
   // gated directly on an explicit confirm:true (identity-verified + audited; Aha has no undo).
-  const deleteTool = (name: string, kind: string, endpoint: (ref: string) => string) =>
+  const deleteResourceType = { feature: 'story', epic: 'epic', release: 'release', requirement: 'requirement' } as const;
+  const deleteTool = (name: string, kind: keyof typeof deleteResourceType, endpoint: (ref: string) => string) =>
     server.tool(
       name,
       `Delete an Aha! ${kind} by reference. DESTRUCTIVE + irreversible (Aha has no undo): requires a verified agentId AND confirm:true; without confirm returns a dry-run preview.`,
@@ -353,6 +364,7 @@ export function registerAhaTools(server: McpServer): void {
         if (confirm !== true) return ok({ dryRun: true, agent: agentId, identity: authz.reason, wouldDelete: { kind, reference }, note: 'DESTRUCTIVE + irreversible — re-call with confirm:true to permanently delete.' });
         audit(`delete-${kind}`, { agentId, reference });
         await aha(endpoint(reference), { method: 'DELETE' });
+        void emitAhaEventSafe({ actor: 'mcp', resourceType: deleteResourceType[kind], operation: 'deleted', resourceId: reference });
         return ok({ deleted: reference, kind, by: agentId });
       },
     );

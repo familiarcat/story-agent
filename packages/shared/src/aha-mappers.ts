@@ -1,4 +1,4 @@
-import type { AhaProject, AhaSprint, AhaSprintStory, AhaStory } from './index.js';
+import type { AhaEpic, AhaProject, AhaSprint, AhaSprintStory, AhaStory } from './index.js';
 
 /**
  * Canonical Aha JSON → typed-domain mappers (Option B of the extension-dedup investigation, OBS
@@ -50,6 +50,17 @@ export function mapFeatureToStory(f: Raw): AhaStory {
     acceptanceCriteria,
     url: f.url as string,
     workflowStatus: (f.workflow_status as Raw)?.name as string ?? 'unknown',
+  };
+}
+
+export function mapEpic(e: Raw): AhaEpic {
+  return {
+    id: e.id as string,
+    referenceNum: e.reference_num as string,
+    name: e.name as string,
+    workflowStatus: (e.workflow_status as Raw)?.name as string ?? 'unknown',
+    description: ((e.description as Raw | null)?.body as string | undefined),
+    url: e.url as string | undefined,
   };
 }
 
