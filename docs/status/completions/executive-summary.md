@@ -478,7 +478,7 @@ Modified:
 ## 📚 Documentation Links
 
 1. [CREW_MANIFEST.md](CREW_MANIFEST.md) — Meet the 11 crew members
-2. [CREW_MEMORY_QUICK_START.md](CREW_MEMORY_QUICK_START.md) — How to use the system
+2. [crew-memory-guide.md](../knowledge/crew-memory-guide.md) — How to use the system
 3. [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md) — What was built
 4. [CREW_VERIFICATION_AND_UI_INTEROPERABILITY.md](CREW_VERIFICATION_AND_UI_INTEROPERABILITY.md) — Detailed verification
 5. [WEB_VSCODE_INTEROPERABILITY_GUIDE.md](WEB_VSCODE_INTEROPERABILITY_GUIDE.md) — User guide for both UIs

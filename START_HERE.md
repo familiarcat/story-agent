@@ -44,7 +44,7 @@ docs/
 ├── automation/         # Migration & automation tools
 ├── testing/            # Testing and QA
 ├── DOCUMENTATION_GUIDE.md      # Guide to RAG system
-├── MONOREPO_MULTI_CLIENT_ARCHITECTURE.md  # Multi-client guide
+├── docs/architecture/monorepo.md  # Multi-client guide
 ├── CREW_PERSONAL_MEMORIES_GUIDE.md        # Personal memory system
 └── AUTONOMOUS_CREW_MISSION_TEST.md        # Example mission scenario
 ```
@@ -58,7 +58,7 @@ docs/
 | **domain-driven/** | Domain ownership, task routing, expertise | Task planners, coordinators |
 | **automation/** | Migration tools, client onboarding, monitoring | Operations, DevOps |
 | **testing/** | Test coverage, QA procedures, validation | QA engineers, testers |
-| **MONOREPO_MULTI_CLIENT_ARCHITECTURE.md** | Multi-client project isolation | Project managers, architects |
+| **docs/architecture/monorepo.md** | Multi-client project isolation | Project managers, architects |
 | **CREW_PERSONAL_MEMORIES_GUIDE.md** | Individual crew member learning storage | All crew members |
 
 ---
@@ -235,7 +235,7 @@ story-agent/                           # Root monorepo
 │   ├── automation/                    # Automation tools
 │   ├── testing/                       # Testing guides
 │   ├── DOCUMENTATION_GUIDE.md         # RAG system guide
-│   ├── MONOREPO_MULTI_CLIENT_ARCHITECTURE.md  # Multi-client
+│   ├── docs/architecture/monorepo.md  # Multi-client
 │   ├── CREW_PERSONAL_MEMORIES_GUIDE.md        # Personal memories
 │   └── AUTONOMOUS_CREW_MISSION_TEST.md        # Example mission
 ├── packages/

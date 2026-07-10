@@ -504,7 +504,7 @@ Fix: Refresh both
 ## 📞 Quick Links
 
 - [CREW_MANIFEST.md](./CREW_MANIFEST.md) — Meet the crew
-- [CREW_MEMORY_QUICK_START.md](./CREW_MEMORY_QUICK_START.md) — How to use memories
+- [crew-memory-guide.md](../knowledge/crew-memory-guide.md) — How to use memories
 - [IMPLEMENTATION_COMPLETE.md](./IMPLEMENTATION_COMPLETE.md) — What was built
 - [CREW_VERIFICATION_AND_UI_INTEROPERABILITY.md](./CREW_VERIFICATION_AND_UI_INTEROPERABILITY.md) — Detailed verification
 

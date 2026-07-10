@@ -422,7 +422,7 @@ npm run test:integration
 
 **Crew System Documentation**:
 - [docs/crew/manifest.md](../CREW_MANIFEST.md) — All 11 crew members
-- [docs/knowledge/crew-memory-guide.md](../CREW_MEMORY_QUICK_START.md) — Usage guide
+- [docs/knowledge/crew-memory-guide.md](../knowledge/crew-memory-guide.md) — Usage guide
 - [docs/status/completions/implementation-complete.md](../IMPLEMENTATION_COMPLETE.md) — Technical details
 
 **Running Verification**:
