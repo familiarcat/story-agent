@@ -8,6 +8,7 @@ import { executePromptEngineCall } from '../packages/mcp-server/dist/src/lib/pro
 import { assembleAndOptimize } from '../packages/mcp-server/dist/src/lib/crew-team-assembly.js';
 import { beginAsync, heartbeatAsync, endAsync } from '../packages/shared/dist/src/async-status.js';
 import { storeObservationMemory } from '../packages/shared/dist/src/db.js';
+import { relinkPdf } from './lib/pdf-relink.mjs';
 
 /**
  * present-book.mjs — the system pitches ITSELF, top level down, as an interlinked "pitch book".
@@ -123,8 +124,10 @@ function renderDeck(outAbs, title, minutes, SLIDES) {
   mkdirSync(dirname(outAbs), { recursive:true });
   writeFileSync(outAbs, html, 'utf8');
   try {
+    const pdfPath = outAbs.replace(/index\.html$/,'deck.pdf');
     execFileSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      ['--headless','--disable-gpu','--no-pdf-header-footer','--virtual-time-budget=9000',`--print-to-pdf=${outAbs.replace(/index\.html$/,'deck.pdf')}`,`file://${outAbs}`], { stdio:'ignore' });
+      ['--headless','--disable-gpu','--no-pdf-header-footer','--virtual-time-budget=9000',`--print-to-pdf=${pdfPath}`,`file://${outAbs}`], { stdio:'ignore' });
+    relinkPdf(pdfPath); // WorfGate: strip absolute file:// paths Chrome bakes into link annotations
   } catch (e) { console.warn(`  PDF skipped for ${title}: ${e.message}`); }
 }
 

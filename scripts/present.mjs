@@ -7,6 +7,7 @@ import { CREW_PERSONAS } from '../packages/mcp-server/dist/src/lib/crew-personas
 import { executePromptEngineCall } from '../packages/mcp-server/dist/src/lib/prompt-engine.js';
 import { beginAsync, heartbeatAsync, endAsync } from '../packages/shared/dist/src/async-status.js';
 import { storeObservationMemory, getRelevantObservationMemories } from '../packages/shared/dist/src/db.js';
+import { relinkPdf } from './lib/pdf-relink.mjs';
 
 /**
  * present.mjs — the REUSABLE presentation system. Builds a crew-authored, shared-screen deck for
@@ -261,6 +262,7 @@ function sectionSlide(s, n, total) {
     execFileSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
       ['--headless', '--disable-gpu', '--no-pdf-header-footer', '--virtual-time-budget=9000', `--print-to-pdf=${pdf}`, `file://${outHtml}`],
       { stdio: 'ignore' });
+    relinkPdf(pdf); // WorfGate: strip absolute file:// paths Chrome bakes into link annotations
     console.log(`PDF:  ${outDir}/deck.pdf`);
   } catch (e) { console.warn(`PDF export skipped: ${e.message}`); }
 
