@@ -1,6 +1,6 @@
 /**
  * Sprint Board - Main PM view showing all stories in current sprint
- * 
+ *
  * Key metrics:
  * - Sprint progress (velocity tracking)
  * - Story status at a glance
@@ -32,13 +32,28 @@ interface StoryCardData {
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
 }
 
-const statusColors = {
-  backlog: 'bg-gray-100 border-gray-300',
-  ready: 'bg-blue-50 border-blue-300',
-  in_progress: 'bg-yellow-50 border-yellow-300',
-  in_review: 'bg-purple-50 border-purple-300',
-  complete: 'bg-green-50 border-green-300',
-  blocked: 'bg-red-100 border-red-400',
+const statusColors: Record<StoryCardData['status'], React.CSSProperties> = {
+  backlog: { background: 'var(--surface-2)', borderLeftColor: 'var(--border)' },
+  ready: {
+    background: 'color-mix(in srgb, var(--accent4) 12%, var(--surface))',
+    borderLeftColor: 'var(--accent4)',
+  },
+  in_progress: {
+    background: 'color-mix(in srgb, var(--warn) 12%, var(--surface))',
+    borderLeftColor: 'var(--warn)',
+  },
+  in_review: {
+    background: 'color-mix(in srgb, var(--accent3) 12%, var(--surface))',
+    borderLeftColor: 'var(--accent3)',
+  },
+  complete: {
+    background: 'color-mix(in srgb, var(--ok) 12%, var(--surface))',
+    borderLeftColor: 'var(--ok)',
+  },
+  blocked: {
+    background: 'color-mix(in srgb, var(--danger) 18%, var(--surface))',
+    borderLeftColor: 'var(--danger)',
+  },
 };
 
 const statusLabels = {
@@ -122,7 +137,11 @@ export function SprintBoard({ projectId, sprintId }: SprintBoardProps) {
   };
 
   if (isLoading) {
-    return <div className="p-8 text-center text-gray-500">Loading sprint...</div>;
+    return (
+      <div className="meta" style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
+        Loading sprint...
+      </div>
+    );
   }
 
   const groupedStories = {
@@ -135,24 +154,43 @@ export function SprintBoard({ projectId, sprintId }: SprintBoardProps) {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="stack" style={{ gap: 'var(--content-gap)', padding: 'var(--space-6)' }}>
       {/* Sprint Header */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex justify-between items-start mb-4">
+      <div className="card" style={{ marginBottom: 0 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: 'var(--space-4)',
+          }}
+        >
           <div>
-            <h1 className="text-2xl font-bold">{sprint?.name || 'Current Sprint'}</h1>
-            <p className="text-gray-600 text-sm mt-1">
+            <h1 className="h2">{sprint?.name || 'Current Sprint'}</h1>
+            <p
+              style={{
+                color: 'var(--text-dim)',
+                fontSize: 'var(--text-sm)',
+                marginTop: 'var(--space-1)',
+              }}
+            >
               {sprint?.startDate} → {sprint?.endDate}
               {sprintStats.daysRemaining > 0 && ` (${sprintStats.daysRemaining} days left)`}
             </p>
           </div>
-          <button className="px-4 py-2 bg-blue-500 text-white rounded font-medium hover:bg-blue-600">
+          <button className="btn btn-primary">
             Sprint Settings
           </button>
         </div>
 
         {/* Sprint Stats */}
-        <div className="grid grid-cols-6 gap-4">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+            gap: 'var(--space-4)',
+          }}
+        >
           <StatBox label="Total Points" value={sprintStats.totalPoints} />
           <StatBox label="Velocity" value={sprintStats.completedPoints} color="green" />
           <StatBox label="In Progress" value={sprintStats.inProgressPoints} color="yellow" />
@@ -165,17 +203,34 @@ export function SprintBoard({ projectId, sprintId }: SprintBoardProps) {
         </div>
 
         {/* Sprint Progress Bar */}
-        <div className="mt-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium">Sprint Progress</span>
-            <span className="text-xs text-gray-600">
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 'var(--space-2)',
+            }}
+          >
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>Sprint Progress</span>
+            <span className="meta">
               {sprintStats.completedPoints} / {sprintStats.totalPoints} points
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div
+            style={{
+              width: '100%',
+              background: 'var(--surface-2)',
+              borderRadius: '9999px',
+              height: 'var(--space-3)',
+            }}
+          >
             <div
-              className="bg-green-500 h-3 rounded-full transition-all"
               style={{
+                background: 'var(--ok)',
+                height: 'var(--space-3)',
+                borderRadius: '9999px',
+                transition: 'all 0.15s ease',
                 width: `${Math.round((sprintStats.completedPoints / sprintStats.totalPoints) * 100) || 0}%`,
               }}
             />
@@ -184,7 +239,13 @@ export function SprintBoard({ projectId, sprintId }: SprintBoardProps) {
       </div>
 
       {/* Kanban Board */}
-      <div className="grid grid-cols-6 gap-4">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+          gap: 'var(--space-4)',
+        }}
+      >
         {Object.entries(groupedStories).map(([status, storyList]) => (
           <StoryColumn
             key={status}
@@ -197,16 +258,32 @@ export function SprintBoard({ projectId, sprintId }: SprintBoardProps) {
 
       {/* Risks & Blockers */}
       {sprintStats.blockedPoints > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h3 className="font-semibold text-red-900 mb-2">🛑 Blockers Detected</h3>
-          <div className="space-y-2">
+        <div
+          className="card"
+          style={{
+            marginBottom: 0,
+            padding: 'var(--space-4)',
+            background: 'color-mix(in srgb, var(--danger) 12%, var(--surface))',
+            borderColor: 'var(--danger)',
+          }}
+        >
+          <h3 style={{ color: 'var(--danger)', marginBottom: 'var(--space-2)' }}>🛑 Blockers Detected</h3>
+          <div className="stack" style={{ gap: 'var(--space-2)' }}>
             {groupedStories.blocked.map(story => (
-              <div key={story.id} className="text-sm text-red-800">
+              <div key={story.id} style={{ fontSize: 'var(--text-sm)', color: 'var(--danger)' }}>
                 <strong>{story.title}</strong>
                 {story.blockers.length > 0 && (
-                  <ul className="ml-4 mt-1 space-y-1">
+                  <ul
+                    className="stack"
+                    style={{
+                      gap: 'var(--space-1)',
+                      marginLeft: 'var(--space-4)',
+                      marginTop: 'var(--space-1)',
+                      listStyle: 'none',
+                    }}
+                  >
                     {story.blockers.map((blocker, idx) => (
-                      <li key={idx} className="text-xs">
+                      <li key={idx} style={{ fontSize: 'var(--text-xs)' }}>
                         • {blocker}
                       </li>
                     ))}
@@ -231,23 +308,48 @@ function StoryColumn({
   count: number;
 }) {
   return (
-    <div className="bg-gray-50 rounded-lg p-3 h-fit">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-sm">
+    <div
+      style={{
+        background: 'var(--surface-2)',
+        borderRadius: 'var(--radius)',
+        padding: 'var(--space-3)',
+        height: 'fit-content',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 'var(--space-3)',
+        }}
+      >
+        <h3 style={{ fontSize: 'var(--text-sm)', marginBottom: 0 }}>
           {statusLabels[status as keyof typeof statusLabels]} {status.replace(/_/g, ' ')}
         </h3>
-        <span className="bg-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded">
+        <span className="badge">
           {count}
         </span>
       </div>
 
-      <div className="space-y-2">
+      <div className="stack" style={{ gap: 'var(--space-2)' }}>
         {stories.map(story => (
           <StoryCard key={story.id} story={story} />
         ))}
       </div>
 
-      <div className="mt-3 p-2 border-2 border-dashed border-gray-300 rounded text-center text-xs text-gray-500 hover:bg-white cursor-pointer transition">
+      <div
+        className="meta"
+        style={{
+          marginTop: 'var(--space-3)',
+          padding: 'var(--space-2)',
+          border: '2px dashed var(--border)',
+          borderRadius: 'var(--radius)',
+          textAlign: 'center',
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+        }}
+      >
         + Add Story
       </div>
     </div>
@@ -255,59 +357,136 @@ function StoryColumn({
 }
 
 function StoryCard({ story }: { story: StoryCardData }) {
-  const riskColors = {
-    low: 'bg-green-100 text-green-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    high: 'bg-orange-100 text-orange-800',
-    critical: 'bg-red-100 text-red-800',
+  const riskColors: Record<StoryCardData['riskLevel'], React.CSSProperties> = {
+    low: {
+      background: 'color-mix(in srgb, var(--ok) 18%, var(--surface))',
+      color: 'var(--ok)',
+    },
+    medium: {
+      background: 'color-mix(in srgb, var(--warn) 18%, var(--surface))',
+      color: 'var(--warn)',
+    },
+    high: {
+      background: 'color-mix(in srgb, var(--danger) 14%, var(--surface))',
+      color: 'var(--danger)',
+    },
+    critical: {
+      background: 'color-mix(in srgb, var(--danger) 28%, var(--surface))',
+      color: 'var(--danger)',
+    },
   };
 
   return (
     <div
-      className={`p-3 rounded border-l-4 cursor-pointer hover:shadow-md transition ${statusColors[story.status]}`}
+      style={{
+        padding: 'var(--space-3)',
+        borderRadius: 'var(--radius)',
+        borderLeft: '4px solid var(--border)',
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+        ...statusColors[story.status],
+      }}
     >
       {/* Story header */}
-      <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium text-sm flex-1 line-clamp-2">{story.title}</h4>
-        {story.hasDecisionPending && <span className="text-xs">⚖️</span>}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: 'var(--space-2)',
+        }}
+      >
+        <h4
+          style={{
+            fontWeight: 500,
+            fontSize: 'var(--text-sm)',
+            flex: 1,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {story.title}
+        </h4>
+        {story.hasDecisionPending && <span style={{ fontSize: 'var(--text-xs)' }}>⚖️</span>}
       </div>
 
       {/* Story details */}
-      <div className="space-y-1 text-xs text-gray-600">
-        <div className="flex justify-between">
-          <span className="font-medium">{story.points} pts</span>
+      <div
+        className="stack"
+        style={{ gap: 'var(--space-1)', fontSize: 'var(--text-xs)', color: 'var(--text-dim)' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 500 }}>{story.points} pts</span>
           <span>{story.assignee}</span>
         </div>
 
         {/* Crew progress bar */}
         <div>
-          <div className="flex justify-between mb-1">
-            <span className="text-gray-500">Crew Progress</span>
-            <span className="font-medium">{story.crewProgress}%</span>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: 'var(--space-1)',
+            }}
+          >
+            <span className="meta">Crew Progress</span>
+            <span style={{ fontWeight: 500 }}>{story.crewProgress}%</span>
           </div>
-          <div className="w-full bg-gray-300 rounded-full h-2">
+          <div
+            style={{
+              width: '100%',
+              background: 'var(--surface-2)',
+              borderRadius: '9999px',
+              height: 'var(--space-2)',
+            }}
+          >
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all"
-              style={{ width: `${story.crewProgress}%` }}
+              style={{
+                background: 'var(--accent4)',
+                height: 'var(--space-2)',
+                borderRadius: '9999px',
+                transition: 'all 0.15s ease',
+                width: `${story.crewProgress}%`,
+              }}
             />
           </div>
         </div>
 
         {/* Risk indicator */}
         {story.riskLevel !== 'low' && (
-          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${riskColors[story.riskLevel]}`}>
+          <span
+            style={{
+              display: 'inline-block',
+              alignSelf: 'flex-start',
+              padding: 'var(--space-1) var(--space-2)',
+              borderRadius: 'var(--radius)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 500,
+              ...riskColors[story.riskLevel],
+            }}
+          >
             {story.riskLevel} risk
           </span>
         )}
 
         {/* Due date */}
-        <div className="text-gray-500">Due: {story.dueDate}</div>
+        <div className="meta">Due: {story.dueDate}</div>
       </div>
 
       {/* Blockers */}
       {story.blockers.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-300">
-          <span className="text-xs font-medium text-red-600">🛑 {story.blockers.length} blocker(s)</span>
+        <div
+          style={{
+            marginTop: 'var(--space-2)',
+            paddingTop: 'var(--space-2)',
+            borderTop: '1px solid var(--border)',
+          }}
+        >
+          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--danger)' }}>
+            🛑 {story.blockers.length} blocker(s)
+          </span>
         </div>
       )}
     </div>
@@ -323,18 +502,39 @@ function StatBox({
   value: string | number;
   color?: string;
 }) {
-  const colorClasses = {
-    gray: 'bg-gray-100 text-gray-900',
-    green: 'bg-green-100 text-green-900',
-    yellow: 'bg-yellow-100 text-yellow-900',
-    red: 'bg-red-100 text-red-900',
-    blue: 'bg-blue-100 text-blue-900',
+  const colorStyles: Record<string, React.CSSProperties> = {
+    gray: { background: 'var(--surface-2)', color: 'var(--text)' },
+    green: {
+      background: 'color-mix(in srgb, var(--ok) 18%, var(--surface))',
+      color: 'var(--ok)',
+    },
+    yellow: {
+      background: 'color-mix(in srgb, var(--warn) 18%, var(--surface))',
+      color: 'var(--warn)',
+    },
+    red: {
+      background: 'color-mix(in srgb, var(--danger) 18%, var(--surface))',
+      color: 'var(--danger)',
+    },
+    blue: {
+      background: 'color-mix(in srgb, var(--accent4) 18%, var(--surface))',
+      color: 'var(--accent4)',
+    },
   };
 
   return (
-    <div className={`p-3 rounded text-center ${colorClasses[color as keyof typeof colorClasses]}`}>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs font-medium mt-1">{label}</div>
+    <div
+      style={{
+        padding: 'var(--space-3)',
+        borderRadius: 'var(--radius)',
+        textAlign: 'center',
+        ...(colorStyles[color] ?? colorStyles.gray),
+      }}
+    >
+      <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700 }}>{value}</div>
+      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 500, marginTop: 'var(--space-1)' }}>
+        {label}
+      </div>
     </div>
   );
 }

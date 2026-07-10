@@ -1,6 +1,6 @@
 /**
  * Developer Story Workspace - Individual story view for developers
- * 
+ *
  * Shows:
  * - Story details and acceptance criteria
  * - Real-time crew execution progress
@@ -124,15 +124,38 @@ export function DeveloperStoryWorkspace({
   }, [storyRef]);
 
   if (!story) {
-    return <div className="p-8 text-center text-gray-500">Loading story...</div>;
+    return (
+      <div style={{ padding: 'var(--space-8)', textAlign: 'center', color: 'var(--text-dim)' }}>
+        Loading story...
+      </div>
+    );
   }
 
   return (
-    <div className="grid grid-cols-4 gap-6 p-6 h-screen overflow-hidden">
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+        gap: 'var(--content-gap)',
+        padding: 'var(--space-6)',
+        height: '100vh',
+        overflow: 'hidden',
+      }}
+    >
       {/* Main Content Area */}
-      <div className="col-span-3 flex flex-col overflow-hidden bg-white rounded-lg border border-gray-200">
+      <div
+        style={{
+          gridColumn: 'span 3',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+        }}
+      >
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200 flex">
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
           <TabButton
             active={activeTab === 'overview'}
             onClick={() => setActiveTab('overview')}
@@ -166,14 +189,14 @@ export function DeveloperStoryWorkspace({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-6)' }}>
           {activeTab === 'overview' && <StoryOverviewTab story={story} />}
           {activeTab === 'execution' && crewState && (
             <CrewExecutionTab state={crewState} storyRef={storyRef} />
           )}
           {activeTab === 'code' && <CodeAndCITab story={story} />}
           {activeTab === 'advisor' && (
-            <div className="space-y-4">
+            <div className="stack">
               <DeveloperAdvisor storyRef={storyRef} isConnected={isConnected} />
             </div>
           )}
@@ -184,27 +207,27 @@ export function DeveloperStoryWorkspace({
       </div>
 
       {/* Right Sidebar: Quick Info & Actions */}
-      <div className="space-y-4 flex flex-col">
+      <div className="stack">
         {/* Story Info Card */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+        <div className="card stack" style={{ padding: 'var(--space-4)', marginBottom: 0, gap: 'var(--space-3)' }}>
           <div>
-            <div className="text-xs text-gray-600">Story Reference</div>
-            <div className="text-lg font-bold text-blue-600">{story.ref}</div>
+            <div className="meta">Story Reference</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--accent4)' }}>{story.ref}</div>
           </div>
 
           <div>
-            <div className="text-xs text-gray-600">Story Points</div>
-            <div className="text-2xl font-bold text-purple-600">{story.points}</div>
+            <div className="meta">Story Points</div>
+            <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--accent3)' }}>{story.points}</div>
           </div>
 
           <div>
-            <div className="text-xs text-gray-600">Due Date</div>
-            <div className="font-medium">{story.dueDate}</div>
+            <div className="meta">Due Date</div>
+            <div style={{ fontWeight: 600 }}>{story.dueDate}</div>
           </div>
 
           <div>
-            <div className="text-xs text-gray-600">Status</div>
-            <span className="inline-block mt-1 px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded font-medium">
+            <div className="meta">Status</div>
+            <span className="badge" style={{ marginTop: 'var(--space-1)' }}>
               {story.status}
             </span>
           </div>
@@ -212,25 +235,27 @@ export function DeveloperStoryWorkspace({
 
         {/* Crew Execution Summary */}
         {crewState && (
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h3 className="font-semibold text-sm mb-3">👥 Crew Status</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
+          <div className="card" style={{ padding: 'var(--space-4)', marginBottom: 0 }}>
+            <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 'var(--space-3)' }}>👥 Crew Status</h3>
+            <div className="stack" style={{ gap: 'var(--space-2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)' }}>
                 <span>Progress</span>
-                <span className="font-medium">
+                <span style={{ fontWeight: 600 }}>
                   {crewState.crewExecutions.filter(e => e.status === 'complete').length} / {crewState.crewExecutions.length}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div style={{ width: '100%', background: 'var(--surface-2)', borderRadius: '9999px', height: 'var(--space-2)' }}>
                 <div
-                  className="bg-green-500 h-2 rounded-full"
                   style={{
+                    background: 'var(--ok)',
+                    height: 'var(--space-2)',
+                    borderRadius: '9999px',
                     width: `${(crewState.crewExecutions.filter(e => e.status === 'complete').length / crewState.crewExecutions.length) * 100}%`,
                   }}
                 />
               </div>
               {/* Reusable crew-feedback primitive (shared with the dashboard + mirrored in vscode). */}
-              <div className="mt-2">
+              <div style={{ marginTop: 'var(--space-2)' }}>
                 <WorkflowStatus
                   variant="line"
                   label="Run"
@@ -243,11 +268,17 @@ export function DeveloperStoryWorkspace({
               </div>
             </div>
 
-            <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+            <div
+              className="stack"
+              style={{ marginTop: 'var(--space-4)', gap: 'var(--space-2)', maxHeight: '10rem', overflowY: 'auto' }}
+            >
               {crewState.crewExecutions.slice(0, 6).map(member => (
-                <div key={member.crewId} className="flex items-center gap-2 text-xs">
-                  <div className="w-2 h-2 rounded-full"
+                <div key={member.crewId} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                  <div
                     style={{
+                      width: 'var(--space-2)',
+                      height: 'var(--space-2)',
+                      borderRadius: '9999px',
                       backgroundColor:
                         member.status === 'complete'
                           ? 'var(--ok)'
@@ -256,8 +287,8 @@ export function DeveloperStoryWorkspace({
                             : 'var(--border)',
                     }}
                   />
-                  <span className="flex-1">{member.crewName}</span>
-                  <span className="text-gray-500">
+                  <span style={{ flex: 1 }}>{member.crewName}</span>
+                  <span style={{ color: 'var(--text-dim)' }}>
                     {member.status === 'complete' ? '✓' : member.status === 'executing' ? '…' : '◯'}
                   </span>
                 </div>
@@ -265,9 +296,19 @@ export function DeveloperStoryWorkspace({
             </div>
 
             {crewState.blockers && crewState.blockers.length > 0 && (
-              <div className="mt-4 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+              <div
+                style={{
+                  marginTop: 'var(--space-4)',
+                  padding: 'var(--space-2)',
+                  background: 'color-mix(in srgb, var(--danger) 15%, var(--surface))',
+                  border: '1px solid var(--danger)',
+                  borderRadius: 'var(--radius)',
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--danger)',
+                }}
+              >
                 <strong>🛑 Blockers:</strong>
-                <ul className="mt-1 space-y-1">
+                <ul style={{ marginTop: 'var(--space-1)', display: 'grid', gap: 'var(--space-1)', listStyle: 'none' }}>
                   {crewState.blockers.map((blocker, idx) => (
                     <li key={idx}>• {blocker}</li>
                   ))}
@@ -278,24 +319,24 @@ export function DeveloperStoryWorkspace({
         )}
 
         {/* Quick Actions */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
-          <button className="w-full px-3 py-2 bg-blue-500 text-white rounded text-sm font-medium hover:bg-blue-600">
+        <div className="card stack" style={{ padding: 'var(--space-4)', marginBottom: 0, gap: 'var(--space-2)' }}>
+          <button className="btn btn-primary" style={{ width: '100%' }}>
             → Create/Update Branch
           </button>
-          <button className="w-full px-3 py-2 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600">
+          <button className="btn" style={{ width: '100%', background: 'var(--ok)', color: 'var(--on-accent)' }}>
             ✓ Mark as In Review
           </button>
-          <button className="w-full px-3 py-2 bg-purple-500 text-white rounded text-sm font-medium hover:bg-purple-600">
+          <button className="btn" style={{ width: '100%', background: 'var(--accent3)', color: 'var(--on-accent)' }}>
             📊 View Metrics
           </button>
         </div>
 
         {/* Connection Status */}
-        <div className="text-xs text-center">
+        <div style={{ fontSize: 'var(--text-xs)', textAlign: 'center' }}>
           {isConnected ? (
-            <span className="text-green-600">✓ Crew Connected</span>
+            <span style={{ color: 'var(--ok)' }}>✓ Crew Connected</span>
           ) : (
-            <span className="text-red-600">✗ Crew Offline</span>
+            <span style={{ color: 'var(--danger)' }}>✗ Crew Offline</span>
           )}
         </div>
       </div>
@@ -317,13 +358,21 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex-1 px-4 py-3 font-medium text-sm border-b-2 transition ${
-        active
-          ? 'border-blue-500 text-blue-600 bg-blue-50'
-          : 'border-transparent text-gray-600 hover:text-gray-900'
-      }`}
+      style={{
+        flex: 1,
+        padding: 'var(--space-3) var(--space-4)',
+        fontWeight: 600,
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font)',
+        cursor: 'pointer',
+        border: 'none',
+        borderBottom: active ? '2px solid var(--accent1)' : '2px solid transparent',
+        color: active ? 'var(--accent1)' : 'var(--text-dim)',
+        background: active ? 'var(--surface-2)' : 'transparent',
+        transition: 'color 0.15s ease, background 0.15s ease',
+      }}
     >
-      <span className="mr-2">{icon}</span>
+      <span style={{ marginRight: 'var(--space-2)' }}>{icon}</span>
       {label}
     </button>
   );
@@ -331,47 +380,66 @@ function TabButton({
 
 function StoryOverviewTab({ story }: { story: StoryDetails }) {
   return (
-    <div className="space-y-6">
+    <div className="stack" style={{ gap: 'var(--space-6)' }}>
       {/* Title */}
       <div>
-        <h1 className="text-2xl font-bold mb-2">{story.title}</h1>
-        <p className="text-gray-600">{story.description}</p>
+        <h1 style={{ fontSize: 'var(--text-2xl)' }}>{story.title}</h1>
+        <p style={{ color: 'var(--text-dim)' }}>{story.description}</p>
       </div>
 
       {/* Acceptance Criteria */}
       <div>
-        <h2 className="font-semibold text-lg mb-3">✅ Acceptance Criteria</h2>
-        <div className="space-y-2">
+        <h2 style={{ fontSize: 'var(--text-lg)', marginBottom: 'var(--space-3)' }}>✅ Acceptance Criteria</h2>
+        <div className="stack" style={{ gap: 'var(--space-2)' }}>
           {story.acceptanceCriteria.map((criterion, idx) => (
-            <label key={idx} className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
+            <label
+              key={idx}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 'var(--space-3)',
+                padding: 'var(--space-2)',
+                borderRadius: 'var(--radius)',
+                cursor: 'pointer',
+              }}
+            >
               <input
                 type="checkbox"
-                className="mt-1"
+                style={{ marginTop: 'var(--space-1)' }}
                 defaultChecked={false}
               />
-              <span className="flex-1">{criterion}</span>
+              <span style={{ flex: 1 }}>{criterion}</span>
             </label>
           ))}
         </div>
       </div>
 
       {/* Story Metadata */}
-      <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: 'var(--space-4)',
+          padding: 'var(--space-4)',
+          background: 'var(--surface-2)',
+          borderRadius: 'var(--radius)',
+        }}
+      >
         <div>
-          <div className="text-xs text-gray-600">Assignee</div>
-          <div className="font-medium">{story.assignee}</div>
+          <div className="meta">Assignee</div>
+          <div style={{ fontWeight: 600 }}>{story.assignee}</div>
         </div>
         <div>
-          <div className="text-xs text-gray-600">Points</div>
-          <div className="font-medium text-lg">{story.points}</div>
+          <div className="meta">Points</div>
+          <div style={{ fontWeight: 600, fontSize: 'var(--text-lg)' }}>{story.points}</div>
         </div>
         <div>
-          <div className="text-xs text-gray-600">Repository</div>
-          <div className="font-mono text-sm">{story.repository}</div>
+          <div className="meta">Repository</div>
+          <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 'var(--text-sm)' }}>{story.repository}</div>
         </div>
         <div>
-          <div className="text-xs text-gray-600">Branch</div>
-          <div className="font-mono text-sm">{story.branchName}</div>
+          <div className="meta">Branch</div>
+          <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 'var(--text-sm)' }}>{story.branchName}</div>
         </div>
       </div>
     </div>
@@ -386,16 +454,16 @@ function CrewExecutionTab({
   storyRef: string;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-4">
+    <div className="stack">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 'var(--space-4)' }}>
         <StatCard label="Phase" value={state.phase} />
         <StatCard label="Status" value={state.status} />
         <StatCard label="Cost" value={`$${state.totalCostUsd.toFixed(2)}`} />
       </div>
 
       <div>
-        <h3 className="font-semibold mb-3">Crew Members</h3>
-        <div className="space-y-3">
+        <h3 style={{ marginBottom: 'var(--space-3)' }}>Crew Members</h3>
+        <div className="stack" style={{ gap: 'var(--space-3)' }}>
           {state.crewExecutions.map(member => (
             <CrewMemberExecutionCard key={member.crewId} member={member} />
           ))}
@@ -403,9 +471,16 @@ function CrewExecutionTab({
       </div>
 
       {state.nextStep && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-          <h4 className="font-semibold text-blue-900 mb-2">📍 Next Steps</h4>
-          <p className="text-sm text-blue-800">{state.nextStep}</p>
+        <div
+          style={{
+            padding: 'var(--space-4)',
+            background: 'color-mix(in srgb, var(--accent4) 15%, var(--surface))',
+            border: '1px solid var(--accent4)',
+            borderRadius: 'var(--radius)',
+          }}
+        >
+          <h4 style={{ fontWeight: 600, color: 'var(--accent4)', marginBottom: 'var(--space-2)' }}>📍 Next Steps</h4>
+          <p style={{ fontSize: 'var(--text-sm)' }}>{state.nextStep}</p>
         </div>
       )}
     </div>
@@ -421,20 +496,20 @@ function CrewMemberExecutionCard({ member }: { member: any }) {
   };
 
   return (
-    <div className="border border-gray-200 rounded p-3">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-medium">{statusEmoji[member.status as keyof typeof statusEmoji]} {member.crewName}</span>
-        {member.confidence && <span className="text-xs text-gray-600">{member.confidence}% confident</span>}
+    <div className="card" style={{ padding: 'var(--space-3)', marginBottom: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+        <span style={{ fontWeight: 600 }}>{statusEmoji[member.status as keyof typeof statusEmoji]} {member.crewName}</span>
+        {member.confidence && <span className="meta">{member.confidence}% confident</span>}
       </div>
 
       {member.findings && (
-        <p className="text-sm text-gray-700 mb-2">{member.findings}</p>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dim)', marginBottom: 'var(--space-2)' }}>{member.findings}</p>
       )}
 
       {member.recommendations && member.recommendations.length > 0 && (
-        <div className="text-xs space-y-1 mt-2">
-          <strong className="block">Recommendations:</strong>
-          <ul className="space-y-1 ml-3">
+        <div style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-2)', display: 'grid', gap: 'var(--space-1)' }}>
+          <strong style={{ display: 'block' }}>Recommendations:</strong>
+          <ul style={{ display: 'grid', gap: 'var(--space-1)', marginLeft: 'var(--space-3)', listStyle: 'none' }}>
             {member.recommendations.map((rec: string, idx: number) => (
               <li key={idx}>→ {rec}</li>
             ))}
@@ -443,7 +518,18 @@ function CrewMemberExecutionCard({ member }: { member: any }) {
       )}
 
       {member.isVeto && (
-        <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded text-xs font-medium text-red-700">
+        <div
+          style={{
+            marginTop: 'var(--space-2)',
+            padding: 'var(--space-2)',
+            background: 'color-mix(in srgb, var(--danger) 22%, var(--surface))',
+            border: '1px solid var(--danger)',
+            borderRadius: 'var(--radius)',
+            fontSize: 'var(--text-xs)',
+            fontWeight: 600,
+            color: 'var(--danger)',
+          }}
+        >
           🛑 SECURITY VETO
         </div>
       )}
@@ -453,35 +539,39 @@ function CrewMemberExecutionCard({ member }: { member: any }) {
 
 function CodeAndCITab({ story }: { story: StoryDetails }) {
   return (
-    <div className="space-y-6">
+    <div className="stack" style={{ gap: 'var(--space-6)' }}>
       {/* CI/CD Status */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h3 className="font-semibold mb-4">🔄 CI/CD Pipeline</h3>
+      <div className="card" style={{ padding: 'var(--space-4)', marginBottom: 0 }}>
+        <h3 style={{ marginBottom: 'var(--space-4)' }}>🔄 CI/CD Pipeline</h3>
 
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
+        <div className="stack" style={{ gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <div
-              className={`w-3 h-3 rounded-full ${
-                story.cicdStatus === 'passed'
-                  ? 'bg-green-500'
-                  : story.cicdStatus === 'failed'
-                    ? 'bg-red-500'
-                    : story.cicdStatus === 'running'
-                      ? 'bg-yellow-500'
-                      : 'bg-gray-300'
-              }`}
+              style={{
+                width: 'var(--space-3)',
+                height: 'var(--space-3)',
+                borderRadius: '9999px',
+                background:
+                  story.cicdStatus === 'passed'
+                    ? 'var(--ok)'
+                    : story.cicdStatus === 'failed'
+                      ? 'var(--danger)'
+                      : story.cicdStatus === 'running'
+                        ? 'var(--warn)'
+                        : 'var(--border)',
+              }}
             />
-            <span className="font-medium capitalize">{story.cicdStatus}</span>
+            <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{story.cicdStatus}</span>
           </div>
 
           <div>
-            <div className="text-sm text-gray-600 mb-1">Build Progress</div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="meta" style={{ marginBottom: 'var(--space-1)' }}>Build Progress</div>
+            <div style={{ width: '100%', background: 'var(--surface-2)', borderRadius: '9999px', height: 'var(--space-2)' }}>
               <div
-                className={`h-2 rounded-full ${
-                  story.cicdStatus === 'passed' ? 'bg-green-500' : 'bg-blue-500'
-                }`}
                 style={{
+                  height: 'var(--space-2)',
+                  borderRadius: '9999px',
+                  background: story.cicdStatus === 'passed' ? 'var(--ok)' : 'var(--accent4)',
                   width:
                     story.cicdStatus === 'passed'
                       ? '100%'
@@ -496,25 +586,35 @@ function CodeAndCITab({ story }: { story: StoryDetails }) {
       </div>
 
       {/* Test Coverage */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h3 className="font-semibold mb-4">✅ Test Coverage</h3>
+      <div className="card" style={{ padding: 'var(--space-4)', marginBottom: 0 }}>
+        <h3 style={{ marginBottom: 'var(--space-4)' }}>✅ Test Coverage</h3>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">{story.testCoverage}% Coverage</span>
-            <span className={`text-sm font-medium ${story.testCoverage >= 80 ? 'text-green-600' : 'text-yellow-600'}`}>
+        <div className="stack" style={{ gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: 600 }}>{story.testCoverage}% Coverage</span>
+            <span
+              style={{
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+                color: story.testCoverage >= 80 ? 'var(--ok)' : 'var(--warn)',
+              }}
+            >
               {story.testCoverage >= 80 ? '✓ Acceptable' : '⚠️ Below Target'}
             </span>
           </div>
 
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div style={{ width: '100%', background: 'var(--surface-2)', borderRadius: '9999px', height: 'var(--space-3)' }}>
             <div
-              className={`h-3 rounded-full ${story.testCoverage >= 80 ? 'bg-green-500' : 'bg-yellow-500'}`}
-              style={{ width: `${story.testCoverage}%` }}
+              style={{
+                height: 'var(--space-3)',
+                borderRadius: '9999px',
+                background: story.testCoverage >= 80 ? 'var(--ok)' : 'var(--warn)',
+                width: `${story.testCoverage}%`,
+              }}
             />
           </div>
 
-          <div className="text-xs text-gray-600 mt-2">
+          <div className="meta" style={{ marginTop: 'var(--space-2)' }}>
             Target: 80% | Current: {story.testCoverage}%
           </div>
         </div>
@@ -522,14 +622,22 @@ function CodeAndCITab({ story }: { story: StoryDetails }) {
 
       {/* PR Status */}
       {story.prNumber && (
-        <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
-          <h3 className="font-semibold mb-3">🔗 Pull Request</h3>
-          <div className="flex items-center justify-between">
+        <div
+          className="card"
+          style={{
+            padding: 'var(--space-4)',
+            marginBottom: 0,
+            borderColor: 'var(--ok)',
+            background: 'color-mix(in srgb, var(--ok) 10%, var(--surface))',
+          }}
+        >
+          <h3 style={{ marginBottom: 'var(--space-3)' }}>🔗 Pull Request</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div className="text-sm text-gray-600">PR #{story.prNumber}</div>
-              <div className="font-medium">Ready for Review</div>
+              <div className="meta">PR #{story.prNumber}</div>
+              <div style={{ fontWeight: 600 }}>Ready for Review</div>
             </div>
-            <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm font-medium hover:bg-blue-600">
+            <button className="btn btn-primary">
               View on GitHub
             </button>
           </div>
@@ -541,9 +649,9 @@ function CodeAndCITab({ story }: { story: StoryDetails }) {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-gray-50 rounded p-3 text-center">
-      <div className="text-xs text-gray-600 mb-1">{label}</div>
-      <div className="font-bold text-lg">{value}</div>
+    <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: 'var(--space-3)', textAlign: 'center' }}>
+      <div className="meta" style={{ marginBottom: 'var(--space-1)' }}>{label}</div>
+      <div style={{ fontWeight: 700, fontSize: 'var(--text-lg)' }}>{value}</div>
     </div>
   );
 }

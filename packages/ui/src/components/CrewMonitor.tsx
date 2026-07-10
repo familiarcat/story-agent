@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { CrewAgentProfile } from '@story-agent/shared';
 
 interface CrewMemberWithStats extends CrewAgentProfile {
@@ -156,16 +156,22 @@ export function CrewMonitor() {
     return () => clearInterval(interval);
   }, []);
 
-  const getStatusColor = (status: CrewMemberWithStats['status']): string => {
+  const getStatusColor = (status: CrewMemberWithStats['status']): CSSProperties => {
     switch (status) {
       case 'idle':
-        return 'bg-gray-50 border-gray-200';
+        return { background: 'var(--surface-2)', borderColor: 'var(--border)' };
       case 'executing':
-        return 'bg-blue-50 border-blue-200 animate-pulse';
+        return {
+          background: 'color-mix(in srgb, var(--accent4) 15%, var(--surface))',
+          borderColor: 'var(--accent4)',
+        };
       case 'error':
-        return 'bg-red-50 border-red-200';
+        return {
+          background: 'color-mix(in srgb, var(--danger) 15%, var(--surface))',
+          borderColor: 'var(--danger)',
+        };
       default:
-        return 'bg-gray-50 border-gray-200';
+        return { background: 'var(--surface-2)', borderColor: 'var(--border)' };
     }
   };
 
@@ -183,43 +189,55 @@ export function CrewMonitor() {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-      <h2 className="text-xl font-bold mb-4">Crew Status</h2>
+    <div className="card">
+      <h2>Crew Status</h2>
 
       {isLoading ? (
-        <div className="text-gray-500">Loading crew statistics...</div>
+        <div className="meta">Loading crew statistics...</div>
       ) : (
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div
+          className="stack"
+          style={{ gap: 'var(--space-2)', maxHeight: '24rem', overflowY: 'auto' }}
+        >
           {crew.map(member => (
             <div
               key={member.id}
-              className={`p-3 rounded border transition-all ${getStatusColor(member.status)}`}
+              style={{
+                padding: 'var(--space-3)',
+                borderRadius: 'var(--radius)',
+                border: '1px solid var(--border)',
+                transition: 'all 0.15s ease',
+                ...getStatusColor(member.status),
+              }}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{getStatusEmoji(member.status)}</span>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <span style={{ fontSize: 'var(--text-xl)' }}>{getStatusEmoji(member.status)}</span>
                     <div>
-                      <p className="font-semibold">{member.name}</p>
-                      <p className="text-xs text-gray-500">{member.specialty}</p>
+                      <p style={{ fontWeight: 600 }}>{member.name}</p>
+                      <p className="meta">{member.specialty}</p>
                     </div>
                   </div>
                 </div>
-                <div className="text-right text-xs">
-                  <div className="text-gray-600">Authority: {member.decisionWeight}</div>
-                  <div className="text-gray-500">{member.model}</div>
+                <div style={{ textAlign: 'right', fontSize: 'var(--text-xs)' }}>
+                  <div style={{ color: 'var(--text-dim)' }}>Authority: {member.decisionWeight}</div>
+                  <div className="meta">{member.model}</div>
                 </div>
               </div>
 
               {member.currentAssignments && member.currentAssignments.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-current border-opacity-20">
-                  <p className="text-xs font-medium text-gray-600 mb-1">Assigned:</p>
-                  <div className="flex flex-wrap gap-1">
+                <div
+                  style={{
+                    marginTop: 'var(--space-2)',
+                    paddingTop: 'var(--space-2)',
+                    borderTop: '1px solid var(--border)',
+                  }}
+                >
+                  <p className="meta" style={{ marginBottom: 'var(--space-1)' }}>Assigned:</p>
+                  <div className="cluster" style={{ gap: 'var(--space-1)' }}>
                     {member.currentAssignments.map(storyRef => (
-                      <span
-                        key={storyRef}
-                        className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded"
-                      >
+                      <span key={storyRef} className="tag">
                         {storyRef}
                       </span>
                     ))}
@@ -228,7 +246,7 @@ export function CrewMonitor() {
               )}
 
               {member.totalExecutionsToday !== undefined && (
-                <div className="mt-1 text-xs text-gray-500">
+                <div className="meta" style={{ marginTop: 'var(--space-1)' }}>
                   💼 {member.totalExecutionsToday} executions | 💰 $
                   {(member.costToday || 0).toFixed(4)} today
                 </div>
@@ -239,9 +257,23 @@ export function CrewMonitor() {
       )}
 
       {/* Legend */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500 font-medium mb-2">Authority Weights:</p>
-        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+      <div
+        style={{
+          marginTop: 'var(--space-4)',
+          paddingTop: 'var(--space-4)',
+          borderTop: '1px solid var(--border)',
+        }}
+      >
+        <p className="meta" style={{ marginBottom: 'var(--space-2)' }}>Authority Weights:</p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 'var(--space-2)',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-dim)',
+          }}
+        >
           <div>
             <strong>Executive:</strong> Picard (1.5)
           </div>

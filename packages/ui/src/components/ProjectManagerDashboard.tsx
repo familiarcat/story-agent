@@ -1,6 +1,6 @@
 /**
  * Project Manager Dashboard - Unified view of sprint, roadmap, and crew
- * 
+ *
  * Shows:
  * - Current sprint with Kanban board
  * - Velocity tracking and burndown
@@ -40,32 +40,31 @@ export function ProjectManagerDashboard({ projectId }: PMDashboardProps) {
   const [filterAssignee, setFilterAssignee] = useState<string>('all');
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="stack" style={{ gap: 'var(--content-gap)', padding: 'var(--space-6)' }}>
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="cluster" style={{ justifyContent: 'space-between' }}>
         <div>
-          <h1 className="text-3xl font-bold">Project Manager Dashboard</h1>
-          <p className="text-gray-600 mt-1">Sprint execution, roadmap, and crew management</p>
+          <h1>Project Manager Dashboard</h1>
+          <p className="meta" style={{ marginTop: 'var(--space-1)' }}>Sprint execution, roadmap, and crew management</p>
         </div>
-        <div className="flex gap-2">
+        <div className="cluster" style={{ gap: 'var(--space-2)' }}>
           <select
             value={filterAssignee}
             onChange={(e) => setFilterAssignee(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded font-medium"
           >
             <option value="all">All Developers</option>
             <option value="dev1">Alice</option>
             <option value="dev2">Bob</option>
             <option value="dev3">Carol</option>
           </select>
-          <button className="px-4 py-2 bg-blue-500 text-white rounded font-medium hover:bg-blue-600">
+          <button className="btn btn-primary">
             Settings
           </button>
         </div>
       </div>
 
       {/* View Selector */}
-      <div className="flex gap-2 border-b border-gray-200">
+      <div style={{ display: 'flex', gap: 'var(--space-2)', borderBottom: '1px solid var(--border)' }}>
         <ViewTab
           active={activeView === 'sprint'}
           onClick={() => setActiveView('sprint')}
@@ -105,9 +104,9 @@ export function ProjectManagerDashboard({ projectId }: PMDashboardProps) {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-4 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 'var(--content-gap)' }}>
         {/* Left: Main view */}
-        <div className="col-span-3">
+        <div style={{ gridColumn: 'span 3' }}>
           {activeView === 'sprint' && <SprintBoard projectId={projectId} />}
           {activeView === 'portfolio' && (
             <HierarchyTree persona="management" onAction={handleManagementAction} title="Portfolio — select a project / story" />
@@ -119,8 +118,8 @@ export function ProjectManagerDashboard({ projectId }: PMDashboardProps) {
         </div>
 
         {/* Right: PM Advisor */}
-        <div className="col-span-1">
-          <div className="sticky top-6">
+        <div style={{ gridColumn: 'span 1' }}>
+          <div style={{ position: 'sticky', top: 'var(--space-6)' }}>
             <ProjectManagerAdvisor projectId={projectId} isConnected={true} />
           </div>
         </div>
@@ -143,13 +142,20 @@ function ViewTab({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-3 font-medium text-sm border-b-2 transition ${
-        active
-          ? 'border-blue-500 text-blue-600'
-          : 'border-transparent text-gray-600 hover:text-gray-900'
-      }`}
+      style={{
+        padding: 'var(--space-3) var(--space-4)',
+        fontWeight: 600,
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font)',
+        cursor: 'pointer',
+        border: 'none',
+        background: 'transparent',
+        borderBottom: active ? '2px solid var(--accent1)' : '2px solid transparent',
+        color: active ? 'var(--accent1)' : 'var(--text-dim)',
+        transition: 'color 0.15s ease, border-color 0.15s ease',
+      }}
     >
-      <span className="mr-2">{icon}</span>
+      <span style={{ marginRight: 'var(--space-2)' }}>{icon}</span>
       {label}
     </button>
   );
@@ -165,50 +171,61 @@ function RoadmapView({ projectId }: { projectId: string }) {
   ];
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold">🗺️ Product Roadmap</h2>
+    <div className="stack">
+      <h2 style={{ fontSize: 'var(--text-xl)' }}>🗺️ Product Roadmap</h2>
 
-      <div className="space-y-3">
-        {sprints.map((sprint, idx) => (
-          <div
-            key={idx}
-            className={`border rounded-lg p-4 ${
-              sprint.status === 'complete'
-                ? 'bg-green-50 border-green-200'
-                : sprint.status === 'in_progress'
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'bg-gray-50 border-gray-200'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-semibold">{sprint.name}</h3>
-              <span
-                className={`text-xs font-medium px-2 py-1 rounded ${
-                  sprint.status === 'complete'
-                    ? 'bg-green-200 text-green-800'
-                    : sprint.status === 'in_progress'
-                      ? 'bg-blue-200 text-blue-800'
-                      : 'bg-gray-200 text-gray-800'
-                }`}
-              >
-                {sprint.status}
-              </span>
+      <div className="stack" style={{ gap: 'var(--space-3)' }}>
+        {sprints.map((sprint, idx) => {
+          const tone =
+            sprint.status === 'complete'
+              ? 'var(--ok)'
+              : sprint.status === 'in_progress'
+                ? 'var(--accent4)'
+                : 'var(--border)';
+          return (
+            <div
+              key={idx}
+              className="card"
+              style={{
+                padding: 'var(--space-4)',
+                marginBottom: 0,
+                borderColor: tone,
+                background:
+                  sprint.status === 'planned'
+                    ? 'var(--surface)'
+                    : `color-mix(in srgb, ${tone} 10%, var(--surface))`,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-2)' }}>
+                <h3 style={{ fontSize: 'var(--text-base)', marginBottom: 0 }}>{sprint.name}</h3>
+                <span
+                  className="badge"
+                  style={
+                    sprint.status === 'planned'
+                      ? undefined
+                      : { background: `color-mix(in srgb, ${tone} 22%, var(--surface))`, color: tone }
+                  }
+                >
+                  {sprint.status}
+                </span>
+              </div>
+
+              <div style={{ width: '100%', background: 'var(--surface-2)', borderRadius: '9999px', height: 'var(--space-2)' }}>
+                <div
+                  style={{
+                    height: 'var(--space-2)',
+                    borderRadius: '9999px',
+                    background: sprint.status === 'complete' ? 'var(--ok)' : 'var(--accent4)',
+                    width: `${sprint.progress}%`,
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+
+              <div className="meta" style={{ marginTop: 'var(--space-1)' }}>{sprint.progress}% complete</div>
             </div>
-
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  sprint.status === 'complete'
-                    ? 'bg-green-500'
-                    : 'bg-blue-500'
-                }`}
-                style={{ width: `${sprint.progress}%` }}
-              />
-            </div>
-
-            <div className="text-xs text-gray-600 mt-1">{sprint.progress}% complete</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -233,38 +250,57 @@ function CrewStatusView({ projectId }: { projectId: string }) {
   const idle = crewMembers.filter(c => c.status === 'idle').length;
 
   return (
-    <div className="space-y-4">
+    <div className="stack">
       <div>
-        <h2 className="text-xl font-semibold mb-4">👥 Crew Status & Workload</h2>
+        <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-4)' }}>👥 Crew Status & Workload</h2>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: 'var(--space-4)',
+            marginBottom: 'var(--space-6)',
+          }}
+        >
           <StatCard label="Total Crew" value={crewMembers.length} />
           <StatCard label="Executing" value={executing} highlight="yellow" />
           <StatCard label="Idle" value={idle} highlight="blue" />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-3)' }}>
         {crewMembers.map(member => (
-          <div key={member.id} className="border border-gray-200 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-semibold">{member.name}</h4>
+          <div key={member.id} className="card" style={{ padding: 'var(--space-3)', marginBottom: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+              <h4 style={{ fontWeight: 600 }}>{member.name}</h4>
               <span
-                className={`w-2 h-2 rounded-full ${
-                  member.status === 'executing' ? 'bg-yellow-500' : 'bg-green-500'
-                }`}
+                style={{
+                  width: 'var(--space-2)',
+                  height: 'var(--space-2)',
+                  borderRadius: '9999px',
+                  background: member.status === 'executing' ? 'var(--warn)' : 'var(--ok)',
+                }}
               />
             </div>
 
-            <div className="text-sm text-gray-600 mb-2">{member.role}</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dim)', marginBottom: 'var(--space-2)' }}>{member.role}</div>
 
-            <div className="text-xs">
-              <span className="text-gray-600">Active: </span>
-              <span className="font-medium">{member.activeStories} stories</span>
+            <div style={{ fontSize: 'var(--text-xs)' }}>
+              <span style={{ color: 'var(--text-dim)' }}>Active: </span>
+              <span style={{ fontWeight: 600 }}>{member.activeStories} stories</span>
             </div>
 
             {member.status === 'executing' && (
-              <div className="mt-2 text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded">
+              <div
+                style={{
+                  marginTop: 'var(--space-2)',
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--warn)',
+                  background: 'color-mix(in srgb, var(--warn) 15%, var(--surface))',
+                  padding: 'var(--space-1) var(--space-2)',
+                  borderRadius: 'var(--radius)',
+                }}
+              >
                 Currently working
               </div>
             )}
@@ -286,52 +322,63 @@ function BudgetView({ projectId }: { projectId: string }) {
   };
 
   const percentage = (budget.spent / budget.allocated) * 100;
+  const usageTone = percentage > 80 ? 'var(--danger)' : percentage > 60 ? 'var(--warn)' : 'var(--ok)';
 
   return (
-    <div className="space-y-6">
+    <div className="stack" style={{ gap: 'var(--space-6)' }}>
       <div>
-        <h2 className="text-xl font-semibold mb-4">💰 Budget & Cost Tracking</h2>
+        <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-4)' }}>💰 Budget & Cost Tracking</h2>
 
         {/* Overall Budget */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 'var(--space-4)',
+              marginBottom: 'var(--space-6)',
+            }}
+          >
             <div>
-              <div className="text-sm text-gray-600">Allocated</div>
-              <div className="text-2xl font-bold text-blue-600">${budget.allocated.toLocaleString()}</div>
+              <div className="meta">Allocated</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--accent4)' }}>${budget.allocated.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-600">Spent</div>
-              <div className="text-2xl font-bold text-orange-600">${budget.spent.toLocaleString()}</div>
+              <div className="meta">Spent</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--warn)' }}>${budget.spent.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-600">Remaining</div>
-              <div className="text-2xl font-bold text-green-600">${budget.remaining.toLocaleString()}</div>
+              <div className="meta">Remaining</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--ok)' }}>${budget.remaining.toLocaleString()}</div>
             </div>
           </div>
 
           <div>
-            <div className="flex justify-between mb-2">
-              <span className="font-medium">Budget Usage</span>
-              <span className={`font-bold ${percentage > 80 ? 'text-red-600' : percentage > 60 ? 'text-orange-600' : 'text-green-600'}`}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+              <span style={{ fontWeight: 600 }}>Budget Usage</span>
+              <span style={{ fontWeight: 700, color: usageTone }}>
                 {percentage.toFixed(1)}%
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            <div style={{ width: '100%', background: 'var(--surface-2)', borderRadius: '9999px', height: 'var(--space-3)' }}>
               <div
-                className={`h-3 rounded-full transition-all ${
-                  percentage > 80 ? 'bg-red-500' : percentage > 60 ? 'bg-orange-500' : 'bg-green-500'
-                }`}
-                style={{ width: `${percentage}%` }}
+                style={{
+                  height: 'var(--space-3)',
+                  borderRadius: '9999px',
+                  background: usageTone,
+                  width: `${percentage}%`,
+                  transition: 'width 0.3s ease',
+                }}
               />
             </div>
           </div>
         </div>
 
         {/* Cost Breakdown */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="font-semibold mb-4">Cost Breakdown</h3>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <h3 style={{ marginBottom: 'var(--space-4)' }}>Cost Breakdown</h3>
 
-          <div className="space-y-4">
+          <div className="stack">
             <CostItem
               label="LLM Usage"
               amount={budget.llmCost}
@@ -368,22 +415,27 @@ function CostItem({
   percentage: number;
   color: string;
 }) {
-  const colorClasses = {
-    blue: 'bg-blue-100',
-    green: 'bg-green-100',
-    purple: 'bg-purple-100',
+  const colorTokens: Record<string, string> = {
+    blue: 'var(--accent4)',
+    green: 'var(--ok)',
+    purple: 'var(--accent3)',
   };
+  const tone = colorTokens[color] ?? 'var(--accent1)';
 
   return (
     <div>
-      <div className="flex justify-between mb-1">
-        <span className="font-medium text-sm">{label}</span>
-        <span className="text-sm font-bold">${amount.toLocaleString()} ({percentage.toFixed(1)}%)</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)' }}>
+        <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{label}</span>
+        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>${amount.toLocaleString()} ({percentage.toFixed(1)}%)</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div style={{ width: '100%', background: 'var(--surface-2)', borderRadius: '9999px', height: 'var(--space-2)' }}>
         <div
-          className={`h-2 rounded-full ${colorClasses[color as keyof typeof colorClasses]}`}
-          style={{ width: `${percentage}%` }}
+          style={{
+            height: 'var(--space-2)',
+            borderRadius: '9999px',
+            background: `color-mix(in srgb, ${tone} 45%, var(--surface))`,
+            width: `${percentage}%`,
+          }}
         />
       </div>
     </div>
@@ -423,63 +475,94 @@ function RisksView({ projectId }: { projectId: string }) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="stack">
       <div>
-        <h2 className="text-xl font-semibold mb-4">⚠️ Risks & Decisions Pending</h2>
+        <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--space-4)' }}>⚠️ Risks & Decisions Pending</h2>
       </div>
 
-      <div className="space-y-3">
-        {risks.map(risk => (
-          <div
-            key={risk.id}
-            className={`border rounded-lg p-4 ${
-              risk.priority === 'critical'
-                ? 'bg-red-50 border-red-300'
-                : risk.priority === 'high'
-                  ? 'bg-orange-50 border-orange-300'
-                  : 'bg-yellow-50 border-yellow-300'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <h4 className="font-semibold">{risk.title}</h4>
-              <span
-                className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                  risk.priority === 'critical'
-                    ? 'bg-red-200 text-red-800'
-                    : risk.priority === 'high'
-                      ? 'bg-orange-200 text-orange-800'
-                      : 'bg-yellow-200 text-yellow-800'
-                }`}
+      <div className="stack" style={{ gap: 'var(--space-3)' }}>
+        {risks.map(risk => {
+          const tone =
+            risk.priority === 'critical'
+              ? 'var(--danger)'
+              : risk.priority === 'high'
+                ? 'var(--warn)'
+                : 'var(--accent2)';
+          return (
+            <div
+              key={risk.id}
+              className="card"
+              style={{
+                padding: 'var(--space-4)',
+                marginBottom: 0,
+                borderColor: tone,
+                background: `color-mix(in srgb, ${tone} 10%, var(--surface))`,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-2)' }}>
+                <h4 style={{ fontWeight: 600 }}>{risk.title}</h4>
+                <span
+                  className="badge"
+                  style={{
+                    background: `color-mix(in srgb, ${tone} 22%, var(--surface))`,
+                    color: tone,
+                    textTransform: 'uppercase',
+                    fontWeight: 700,
+                  }}
+                >
+                  {risk.priority}
+                </span>
+              </div>
+
+              <p style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>{risk.impact}</p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: 'var(--space-2)',
+                  borderTop: '1px solid var(--border)',
+                }}
               >
-                {risk.priority}
-              </span>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>→ {risk.action}</span>
+                <button className="btn btn-secondary" style={{ fontSize: 'var(--text-xs)', padding: 'var(--space-1) var(--space-3)' }}>
+                  Review
+                </button>
+              </div>
             </div>
-
-            <p className="text-sm mb-2">{risk.impact}</p>
-
-            <div className="flex items-center justify-between pt-2 border-t border-current border-opacity-20">
-              <span className="text-xs font-medium">→ {risk.action}</span>
-              <button className="text-xs px-3 py-1 bg-white rounded hover:bg-gray-100 font-medium">
-                Review
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Crew Decisions Pending */}
-      <div className="mt-6 bg-blue-50 border border-blue-300 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-3">⚖️ Crew Decisions Awaiting Approval</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
+      <div
+        className="card"
+        style={{
+          marginTop: 'var(--space-6)',
+          marginBottom: 0,
+          padding: 'var(--space-4)',
+          borderColor: 'var(--accent4)',
+          background: 'color-mix(in srgb, var(--accent4) 10%, var(--surface))',
+        }}
+      >
+        <h3 style={{ color: 'var(--accent4)', marginBottom: 'var(--space-3)' }}>⚖️ Crew Decisions Awaiting Approval</h3>
+        <div className="stack" style={{ gap: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
             <span>Crew recommends: Approve STORY-123 PR (Data: 92% confident)</span>
-            <button className="text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 font-medium">
+            <button
+              className="btn"
+              style={{ fontSize: 'var(--text-xs)', padding: 'var(--space-1) var(--space-3)', background: 'var(--ok)', color: 'var(--on-accent)' }}
+            >
               ✓ Approve
             </button>
           </div>
-          <div className="flex justify-between">
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
             <span>Crew recommends: Accelerate timeline by 2 days (Picard consensus)</span>
-            <button className="text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 font-medium">
+            <button
+              className="btn"
+              style={{ fontSize: 'var(--text-xs)', padding: 'var(--space-1) var(--space-3)', background: 'var(--ok)', color: 'var(--on-accent)' }}
+            >
               ✓ Approve
             </button>
           </div>
@@ -498,15 +581,24 @@ function StatCard({
   value: number;
   highlight?: string;
 }) {
-  const highlightClasses = {
-    yellow: 'bg-yellow-100 text-yellow-900',
-    blue: 'bg-blue-100 text-blue-900',
+  const highlightTokens: Record<string, string> = {
+    yellow: 'var(--warn)',
+    blue: 'var(--accent4)',
   };
+  const tone = highlight ? highlightTokens[highlight] : undefined;
 
   return (
-    <div className={`p-4 rounded-lg text-center ${highlight ? highlightClasses[highlight as keyof typeof highlightClasses] : 'bg-gray-100'}`}>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs font-medium mt-1">{label}</div>
+    <div
+      style={{
+        padding: 'var(--space-4)',
+        borderRadius: 'var(--radius)',
+        textAlign: 'center',
+        background: tone ? `color-mix(in srgb, ${tone} 18%, var(--surface))` : 'var(--surface-2)',
+        color: tone ?? 'var(--text)',
+      }}
+    >
+      <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 700 }}>{value}</div>
+      <div className="meta" style={{ marginTop: 'var(--space-1)', color: 'inherit' }}>{label}</div>
     </div>
   );
 }

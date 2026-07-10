@@ -65,7 +65,7 @@ export function ProjectManagerAdvisor({
 
   if (isLoading) {
     return (
-      <div className="p-4 text-gray-500 text-sm">
+      <div style={{ padding: 'var(--space-4)', color: 'var(--text-dim)', fontSize: 'var(--text-sm)' }}>
         Loading project crew guidance...
       </div>
     );
@@ -75,33 +75,47 @@ export function ProjectManagerAdvisor({
   const decisionCount = decisions.filter(d => !d.approved).length;
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white">
+    <div className="card" style={{ padding: 0, marginBottom: 0 }}>
       {/* Tab Navigation */}
-      <div className="flex border-b">
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
         <button
           onClick={() => setActiveTab('insights')}
-          className={`flex-1 px-4 py-3 font-medium text-sm ${
-            activeTab === 'insights'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
+          style={{
+            flex: 1,
+            padding: 'var(--space-3) var(--space-4)',
+            fontWeight: 600,
+            fontSize: 'var(--text-sm)',
+            fontFamily: 'var(--font)',
+            cursor: 'pointer',
+            border: 'none',
+            background: 'transparent',
+            borderBottom: activeTab === 'insights' ? '2px solid var(--accent1)' : '2px solid transparent',
+            color: activeTab === 'insights' ? 'var(--accent1)' : 'var(--text-dim)',
+          }}
         >
           📊 Insights ({insightCount})
         </button>
         <button
           onClick={() => setActiveTab('decisions')}
-          className={`flex-1 px-4 py-3 font-medium text-sm ${
-            activeTab === 'decisions'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
+          style={{
+            flex: 1,
+            padding: 'var(--space-3) var(--space-4)',
+            fontWeight: 600,
+            fontSize: 'var(--text-sm)',
+            fontFamily: 'var(--font)',
+            cursor: 'pointer',
+            border: 'none',
+            background: 'transparent',
+            borderBottom: activeTab === 'decisions' ? '2px solid var(--accent1)' : '2px solid transparent',
+            color: activeTab === 'decisions' ? 'var(--accent1)' : 'var(--text-dim)',
+          }}
         >
           ⚖️ Crew Decisions ({decisionCount})
         </button>
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div style={{ padding: 'var(--space-4)' }}>
         {activeTab === 'insights' ? (
           <ProjectManagerInsights insights={insights} />
         ) : (
@@ -114,7 +128,7 @@ export function ProjectManagerAdvisor({
 
 function ProjectManagerInsights({ insights }: { insights: CrewInsight[] }) {
   if (insights.length === 0) {
-    return <p className="text-gray-500 text-sm">No active insights at this time.</p>;
+    return <p style={{ color: 'var(--text-dim)', fontSize: 'var(--text-sm)' }}>No active insights at this time.</p>;
   }
 
   // Group by priority
@@ -123,7 +137,7 @@ function ProjectManagerInsights({ insights }: { insights: CrewInsight[] }) {
   const byMedium = insights.filter(i => i.priority === 'medium');
 
   return (
-    <div className="space-y-4">
+    <div className="stack">
       {byCritical.length > 0 && (
         <InsightGroup
           title="🔴 Critical"
@@ -156,8 +170,8 @@ function InsightGroup({
 }) {
   return (
     <div>
-      <h4 className="font-semibold text-sm mb-2">{title}</h4>
-      <div className="space-y-2">
+      <h4 style={{ fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: 'var(--space-2)' }}>{title}</h4>
+      <div className="stack" style={{ gap: 'var(--space-2)' }}>
         {insights.map(insight => (
           <PMInsightCard key={insight.id} insight={insight} color={color} />
         ))}
@@ -175,35 +189,60 @@ function PMInsightCard({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const colorClasses: Record<string, string> = {
-    red: 'bg-red-50 border-red-200 hover:bg-red-100',
-    orange: 'bg-orange-50 border-orange-200 hover:bg-orange-100',
-    yellow: 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100',
+  const colorTokens: Record<string, string> = {
+    red: 'var(--danger)',
+    orange: 'var(--warn)',
+    yellow: 'var(--accent2)',
   };
+  const tone = colorTokens[color] ?? 'var(--accent4)';
 
   return (
     <div
-      className={`border rounded p-3 cursor-pointer transition-all ${colorClasses[color]}`}
+      style={{
+        border: `1px solid ${tone}`,
+        borderRadius: 'var(--radius)',
+        padding: 'var(--space-3)',
+        cursor: 'pointer',
+        background: `color-mix(in srgb, ${tone} 10%, var(--surface))`,
+        transition: 'background 0.15s ease',
+      }}
       onClick={() => setIsExpanded(!isExpanded)}
     >
-      <div className="flex justify-between items-start">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h5 className="font-semibold text-sm">{insight.title}</h5>
-          <p className="text-xs text-gray-600 mt-1">{insight.description}</p>
+          <h5 style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{insight.title}</h5>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-dim)', marginTop: 'var(--space-1)' }}>{insight.description}</p>
         </div>
-        <div className="text-right text-xs flex-shrink-0 ml-2">
-          <div className="text-gray-500">{insight.crewMember}</div>
-          <div className="font-medium">{insight.confidence}%</div>
+        <div style={{ textAlign: 'right', fontSize: 'var(--text-xs)', flexShrink: 0, marginLeft: 'var(--space-2)' }}>
+          <div style={{ color: 'var(--text-dim)' }}>{insight.crewMember}</div>
+          <div style={{ fontWeight: 600 }}>{insight.confidence}%</div>
         </div>
       </div>
 
       {isExpanded && insight.actionItems && (
-        <div className="mt-3 pt-3 border-t space-y-2">
-          <p className="text-xs font-semibold">Recommended Actions:</p>
-          <ul className="space-y-1">
+        <div
+          className="stack"
+          style={{
+            marginTop: 'var(--space-3)',
+            paddingTop: 'var(--space-3)',
+            borderTop: '1px solid var(--border)',
+            gap: 'var(--space-2)',
+          }}
+        >
+          <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>Recommended Actions:</p>
+          <ul style={{ display: 'grid', gap: 'var(--space-1)', listStyle: 'none' }}>
             {insight.actionItems.map((action, idx) => (
-              <li key={idx} className="text-xs text-gray-700 flex items-start gap-2">
-                <input type="checkbox" className="mt-0.5" />
+              <li
+                key={idx}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--text-dim)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 'var(--space-2)',
+                }}
+              >
+                <input type="checkbox" style={{ marginTop: '2px' }} />
                 <span>{action}</span>
               </li>
             ))}
@@ -216,11 +255,11 @@ function PMInsightCard({
 
 function CrewDecisions({ decisions }: { decisions: CrewDecision[] }) {
   if (decisions.length === 0) {
-    return <p className="text-gray-500 text-sm">No pending decisions.</p>;
+    return <p style={{ color: 'var(--text-dim)', fontSize: 'var(--text-sm)' }}>No pending decisions.</p>;
   }
 
   return (
-    <div className="space-y-2">
+    <div className="stack" style={{ gap: 'var(--space-2)' }}>
       {decisions.map(decision => (
         <CrewDecisionCard key={decision.id} decision={decision} />
       ))}
@@ -236,25 +275,32 @@ function CrewDecisionCard({ decision }: { decision: CrewDecision }) {
   };
 
   return (
-    <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{authorityIcons[decision.authority]}</span>
+    <div
+      style={{
+        border: '1px solid var(--accent4)',
+        borderRadius: 'var(--radius)',
+        padding: 'var(--space-3)',
+        background: 'color-mix(in srgb, var(--accent4) 10%, var(--surface))',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <span style={{ fontSize: 'var(--text-lg)' }}>{authorityIcons[decision.authority]}</span>
           <div>
-            <h5 className="font-semibold text-sm">
+            <h5 style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>
               {decision.type.replace(/_/g, ' ')}
             </h5>
-            <p className="text-xs text-gray-600">From: {decision.crewMember}</p>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-dim)' }}>From: {decision.crewMember}</p>
           </div>
         </div>
-        <span className="text-xs font-medium px-2 py-1 rounded bg-white border">
+        <span className="badge" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           {decision.authority}
         </span>
       </div>
 
-      <p className="text-sm text-gray-700 mb-3">{decision.reasoning}</p>
+      <p style={{ fontSize: 'var(--text-sm)', marginBottom: 'var(--space-3)' }}>{decision.reasoning}</p>
 
-      <div className="flex gap-2">
+      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
         <button
           onClick={() => {
             // Call API to approve
@@ -262,7 +308,8 @@ function CrewDecisionCard({ decision }: { decision: CrewDecision }) {
               method: 'POST',
             });
           }}
-          className="flex-1 px-3 py-1.5 bg-green-500 text-white text-sm rounded font-medium hover:bg-green-600"
+          className="btn"
+          style={{ flex: 1, background: 'var(--ok)', color: 'var(--on-accent)', fontSize: 'var(--text-sm)' }}
         >
           ✓ Approve
         </button>
@@ -273,7 +320,8 @@ function CrewDecisionCard({ decision }: { decision: CrewDecision }) {
               method: 'POST',
             });
           }}
-          className="flex-1 px-3 py-1.5 bg-red-500 text-white text-sm rounded font-medium hover:bg-red-600"
+          className="btn"
+          style={{ flex: 1, background: 'var(--danger)', color: 'var(--on-accent)', fontSize: 'var(--text-sm)' }}
         >
           ✗ Reject
         </button>
