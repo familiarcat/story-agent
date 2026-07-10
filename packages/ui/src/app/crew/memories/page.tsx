@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 interface CrewMemory {
   id: number;
@@ -126,6 +127,7 @@ function CrewMemoriesContent() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 py-8">
+          <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Crew Memories' }]} />
           <h1 className="text-3xl font-bold text-slate-900">👥 Crew Personal Memories</h1>
           <p className="text-slate-600 mt-2">Track individual crew member learning across projects</p>
         </div>

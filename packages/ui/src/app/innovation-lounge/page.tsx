@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 interface LoungeEntry {
   speakerId: string;
@@ -63,6 +64,7 @@ export default function InnovationLoungePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 py-8">
+          <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Innovation Lounge' }]} />
           <h1 className="text-3xl font-bold text-slate-900">💡 Innovation Lounge</h1>
           <p className="text-slate-600 mt-2">
             The crew&apos;s creative jams — each member invents a project in-persona, the crew debates, Picard resolves a portfolio.

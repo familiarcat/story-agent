@@ -8,7 +8,7 @@
         "user-session-id": "${STORY_AGENT_MCP_SESSION_ID}",
         "x-client-id": "familiarcat"
       },
-      "comment": "Hosted Story Agent MCP over HTTP (default). WorfGate security headers are required: Bearer token + user-session-id; x-client-id scopes policy resolution. Use `pnpm run mcp:connect:hosted` to keep hosted default or `pnpm run mcp:connect:local` to switch back to local stdio."
+      "comment": "Hosted Story Agent MCP over HTTP. WorfGate security headers are required: Bearer token + user-session-id. x-client-id scopes policy resolution."
     },
     "aha": {
       "type": "http",
@@ -30,6 +30,22 @@
         "FIGMA_API_KEY": "${FIGMA_API_KEY}"
       },
       "comment": "GLips Figma-Context-MCP (io.github.GLips/Figma-Context-MCP) \u2014 stdio-local, crew-approved (evaluate_tool_for_crew: figma-context-mcp-glips \u2014 3 approvals, qualityScore 1.00, adopt-first per RAG 139). Feeds richer Figma layout data (nodes/constraints/typography/spacing) to geordi's LCARS scaffold pipeline. Auth = a READ-ONLY Figma personal access token (File content: Read) via FIGMA_API_KEY, governed by the WorfGate registry (op figma:read), centralized in ~/.alexai-secrets (NOT ~/.zshrc \u2014 the non-interactive crew lane must resolve it), never committed; egress = Figma API only. Set FIGMA_API_KEY, then reconnect (/mcp) to activate. See docs/mcp-candidates-ui-management.md + docs/worfgate-break-glass.md."
+    },
+    "shadcn-ui": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@jpisnice/shadcn-ui-mcp-server"
+      ],
+      "comment": "TRIAL: jpisnice/shadcn-ui-mcp-server (npm: @jpisnice/shadcn-ui-mcp-server) approved by Observation Lounge UI pivot slate. WorfGate posture: stdio-local only, no remote OAuth/elevated egress, non-controlled UI assets only. Purpose: optional component reference/scaffolding support when a client adopts shadcn patterns alongside LCARS."
+    },
+    "dashboards": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-dashboards"
+      ],
+      "comment": "TRIAL: io.github.KyuRish/mcp-dashboards (npm: mcp-dashboards) approved by Observation Lounge UI pivot slate. WorfGate posture: stdio-local only; no controlled-data export; use for dashboard chart/KPI scaffolding and exploration in non-regulated contexts."
     }
   }
 }

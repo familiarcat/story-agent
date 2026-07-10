@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { color, tier as TIER_COLOR, font } from '@/lib/tokens';
 import { ChatMessage } from '@/components/ChatMessage';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { parseSSEFrame, cumulativeCost, sanitizeError, isDiff, safeJson } from './transcript';
 
 /**
@@ -122,6 +123,7 @@ export default function AgentPage() {
 
   return (
     <main style={{ maxWidth: 880, margin: '0 auto', padding: '1.5rem', fontFamily: font.sans }}>
+      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Agent' }]} />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.4rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🛠️ Story Agent — Agent Workspace</h1>
         <span style={{ fontSize: '0.8rem', color: color.muted, fontFamily: font.mono }}>

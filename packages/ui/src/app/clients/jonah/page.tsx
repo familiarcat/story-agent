@@ -5,6 +5,7 @@
  * marketing-safe copy (Worf: no confidential/sa_* data) derived from the ingested dossier.
  */
 import { getRelevantObservationMemories } from '@/lib/db';
+import { ClientBreadcrumbs } from '@/components/ClientBreadcrumbs';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,9 @@ export default async function JonahPage() {
 
   return (
     <div data-theme="jonah" style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh', fontFamily: 'var(--font)' }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '1rem 1.5rem 0' }}>
+        <ClientBreadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Clients', href: '/clients' }, { label: 'Jonah' }]} />
+      </div>
       {/* Wordmark */}
       <header style={{ ...wrap, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem' }}>
         <div style={{ fontSize: '1.15rem', letterSpacing: '0.24em', fontWeight: 600 }}>JONAH</div>

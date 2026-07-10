@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 interface Card {
   timestamp: string;
@@ -27,6 +28,7 @@ export default function LearningsPage() {
 
   return (
     <main style={{ maxWidth: 860, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
+      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Learnings' }]} />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🧠 Crew Learnings — self-learning loop</h1>
         <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>agent-run feedback cards · RAG</span>

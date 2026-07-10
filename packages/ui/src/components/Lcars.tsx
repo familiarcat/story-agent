@@ -1,5 +1,6 @@
 import type { ReactNode, CSSProperties } from 'react';
 import { lcars } from '../lib/lcars';
+import { space } from '@/lib/tokens';
 
 /**
  * Shared LCARS primitives (crew design-unification ruling, RAG MEM 49). Every web surface reskins
@@ -43,6 +44,29 @@ export function LcarsStat({ label, value, accent = lcars.paleCanary }: { label: 
     <div style={{ background: lcars.space, borderLeft: `4px solid ${accent}`, borderRadius: 6, padding: '8px 12px' }}>
       <div style={{ fontSize: '0.66rem', color: lcars.textDim, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
       <div style={{ fontSize: '1.4rem', fontWeight: 800, color: accent }}>{value}</div>
+    </div>
+  );
+}
+
+/** Hierarchy text block: parent line + uniformly indented subcategory lines. */
+export function LcarsHierarchyText({
+  parent,
+  children,
+  level = 0,
+  parentColor = lcars.text,
+  childColor = lcars.textDim,
+}: {
+  parent: ReactNode;
+  children?: ReactNode;
+  level?: number;
+  parentColor?: string;
+  childColor?: string;
+}) {
+  const indent = `calc(${space(3)} + ${level * 12}px)`;
+  return (
+    <div style={{ display: 'grid', gap: 2, paddingLeft: indent, borderLeft: level > 0 ? `3px solid ${lcars.border}` : 'none' }}>
+      <div style={{ color: parentColor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{parent}</div>
+      {children ? <div style={{ color: childColor, fontSize: '0.8rem', lineHeight: 1.35, letterSpacing: 'normal' }}>{children}</div> : null}
     </div>
   );
 }

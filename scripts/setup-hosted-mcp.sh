@@ -73,15 +73,18 @@ echo "  ✓ story-agent -> $MCP_URL"
 
 echo "▶ 2/3 Pre-enabling project MCP servers for Claude Code"
 mkdir -p "$ROOT/.claude"
-python3 - "$CLAUDE_SETTINGS" <<'PY'
+python3 - "$CLAUDE_SETTINGS" "$MCP_JSON" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 path = Path(sys.argv[1])
+mcp_path = Path(sys.argv[2])
 cfg = json.loads(path.read_text()) if path.exists() else {}
 
-want = ["story-agent", "aha", "figma", "figma-context"]
+mcp_cfg = json.loads(mcp_path.read_text())
+want = sorted(mcp_cfg.get("mcpServers", {}).keys())
+
 cur = cfg.get("enabledMcpjsonServers", [])
 cfg["enabledMcpjsonServers"] = sorted(set(cur) | set(want))
 
@@ -93,7 +96,10 @@ if ! grep -q '^\.claude/settings\.local\.json$' .gitignore 2>/dev/null; then
   echo ".claude/settings.local.json" >> .gitignore
 fi
 
-echo "▶ 3/3 Verification hints"
+echo "▶ 3/4 Syncing VS Code MCP config from .mcp.json"
+node "$ROOT/scripts/sync-vscode-mcp.mjs"
+
+echo "▶ 4/4 Verification hints"
 echo "  - Ensure ${BEARER_ENV_NAME} is exported in ~/.alexai-secrets (sourced by ~/.zshenv)"
 echo "  - STORY_AGENT_MCP_SESSION_ID=${STORY_AGENT_MCP_SESSION_ID}"
 echo "  - Restart Claude Code in this repo, then run: /mcp"

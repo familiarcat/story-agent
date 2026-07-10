@@ -13,7 +13,21 @@ const MONO = 'ui-monospace, "Arial Narrow", sans-serif';
 
 export default function NavBar() {
   return (
-    <nav data-dev-tour="nav" style={{ background: lcars.black, color: lcars.text, fontFamily: MONO, padding: '6px 10px', display: 'flex', gap: '0.9rem', alignItems: 'stretch', flexWrap: 'wrap', letterSpacing: '0.03em' }}>
+    <nav data-dev-tour="nav" style={{
+      background: lcars.black,
+      color: lcars.text,
+      fontFamily: MONO,
+      padding: '6px 10px',
+      display: 'flex',
+      gap: '0.9rem',
+      alignItems: 'stretch',
+      flexWrap: 'wrap',
+      letterSpacing: '0.03em',
+      position: 'sticky',
+      top: 0,
+      zIndex: 100,
+      borderBottom: `1px solid ${lcars.border}`,
+    }}>
       <a href="/" style={{ background: lcars.neonCarrot, color: lcars.onAccent, textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', padding: '8px 14px', borderTopLeftRadius: 'var(--radius-elbow)', borderBottomLeftRadius: 6, borderTopRightRadius: 6, borderBottomRightRadius: 6, textTransform: 'uppercase', display: 'flex', alignItems: 'center' }}>
         🖖 Story Agent
       </a>

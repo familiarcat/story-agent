@@ -2,6 +2,8 @@ import { listStories } from '@/lib/db';
 import type { StoryRecord } from '@story-agent/shared';
 import Link from 'next/link';
 import { ProjectStatusPanel, type ProjectStatusRow } from '@/components/ProjectStatusPanel';
+import { LcarsHierarchyText } from '@/components/Lcars';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 export const dynamic = 'force-dynamic';
 
@@ -197,6 +199,7 @@ export default async function Dashboard() {
 
   return (
     <div>
+      <Breadcrumbs crumbs={[{ label: 'Home', href: '/' }, { label: 'Dashboard' }]} />
       {isDemo && (
         <div style={{
           backgroundColor: 'var(--surface-2)',
@@ -232,13 +235,16 @@ export default async function Dashboard() {
           return (
             <div key={`${node.clientName}-${node.projectName}-${node.sprintName}`} className="card" style={{ marginBottom: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'start' }}>
-                <div>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--warn)' }}>
-                    {node.clientName}
+                <LcarsHierarchyText
+                  parent={node.clientName}
+                  parentColor="var(--warn)"
+                  childColor="var(--text-dim)"
+                >
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)' }}>{node.projectName}</div>
+                    <div style={{ fontSize: '0.9rem' }}>{node.sprintName}</div>
                   </div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.25rem' }}>{node.projectName}</div>
-                  <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.25rem' }}>{node.sprintName}</div>
-                </div>
+                </LcarsHierarchyText>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent1)' }}>
                   {security.complianceMode}
                 </span>
@@ -249,9 +255,9 @@ export default async function Dashboard() {
                 <span><strong>{node.blockedCount}</strong> blocked</span>
               </div>
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gap: '0.4rem', fontSize: '0.84rem', color: 'var(--text)' }}>
-                <div><strong>LLM Route:</strong> {security.llmRoute}</div>
-                <div><strong>Data Plane:</strong> {security.dataPlane}</div>
-                <div><strong>Security Notes:</strong> {security.notes}</div>
+                <LcarsHierarchyText parent="LLM Route" level={1} parentColor="var(--text)" childColor="var(--text-dim)">{security.llmRoute}</LcarsHierarchyText>
+                <LcarsHierarchyText parent="Data Plane" level={1} parentColor="var(--text)" childColor="var(--text-dim)">{security.dataPlane}</LcarsHierarchyText>
+                <LcarsHierarchyText parent="Security Notes" level={1} parentColor="var(--text)" childColor="var(--text-dim)">{security.notes}</LcarsHierarchyText>
               </div>
             </div>
           );

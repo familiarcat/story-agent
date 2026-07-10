@@ -38,11 +38,13 @@ echo "  ✓ $COUNT tools, run_crew_mission_pipeline present"
 
 echo "▶ 3/4  Pre-approving project MCP servers (enabledMcpjsonServers)…"
 mkdir -p .claude
-python3 - "$ROOT/.claude/settings.local.json" <<'PY'
+python3 - "$ROOT/.claude/settings.local.json" "$ROOT/.mcp.json" <<'PY'
 import json,sys,os
 p=sys.argv[1]
+mcp_p=sys.argv[2]
 cfg=json.load(open(p)) if os.path.exists(p) else {}
-want=["story-agent","aha"]
+mcp_cfg=json.load(open(mcp_p))
+want=sorted(mcp_cfg.get("mcpServers",{}).keys())
 cur=cfg.get("enabledMcpjsonServers",[])
 cfg["enabledMcpjsonServers"]=sorted(set(cur)|set(want))
 json.dump(cfg,open(p,"w"),indent=2)

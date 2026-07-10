@@ -1,20 +1,12 @@
 {
 	"servers": {
 		"story-agent": {
-			"type": "stdio",
-			"command": "node",
-			"args": [
-				"${workspaceFolder}/packages/mcp-server/dist/src/index.js"
-			],
-			"env": {
-				"CREW_LLM_APPROVED_KEY": "${env:CREW_LLM_APPROVED_KEY}",
-				"CREW_LLM_APPROVED_URL": "${env:CREW_LLM_APPROVED_URL}",
-				"AHA_DOMAIN": "${env:AHA_DOMAIN}",
-				"AHA_API_KEY": "${env:AHA_API_KEY}",
-				"GITHUB_TOKEN": "${env:GITHUB_TOKEN}",
-				"GITHUB_DEFAULT_ORG": "${env:GITHUB_DEFAULT_ORG}",
-				"SUPABASE_URL": "${env:SUPABASE_URL}",
-				"SUPABASE_KEY": "${env:SUPABASE_KEY}"
+			"type": "http",
+			"url": "http://story-agent-alb-651393427.us-east-2.elb.amazonaws.com/mcp",
+			"headers": {
+				"Authorization": "Bearer ${env:STORY_AGENT_MCP_BEARER}",
+				"user-session-id": "${env:STORY_AGENT_MCP_SESSION_ID}",
+				"x-client-id": "familiarcat"
 			}
 		},
 		"supabase": {
@@ -23,6 +15,42 @@
 			"headers": {
 				"Authorization": "Bearer ${env:SUPABASE_ACCESS_TOKEN}"
 			}
+		},
+		"aha": {
+			"type": "http",
+			"url": "https://familiarcat.use3.aha.io/api/v1/mcp"
+		},
+		"figma": {
+			"type": "http",
+			"url": "http://127.0.0.1:3845/mcp"
+		},
+		"figma-context": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"figma-developer-mcp",
+				"--stdio"
+			],
+			"env": {
+				"FIGMA_API_KEY": "${env:FIGMA_API_KEY}"
+			}
+		},
+		"shadcn-ui": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@jpisnice/shadcn-ui-mcp-server"
+			]
+		},
+		"dashboards": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"mcp-dashboards"
+			]
 		}
 	},
 	"inputs": []

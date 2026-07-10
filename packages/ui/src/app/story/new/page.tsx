@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 type AhaProject = { id: string; name: string; referencePrefix: string | null; url: string };
 type AhaStory = { referenceNum: string; name: string; workflowStatus: string; url: string };
@@ -89,6 +90,7 @@ export default function NewStoryPage() {
 
   return (
     <div style={{ maxWidth: 760 }}>
+      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'New Story' }]} />
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>Import Story from Aha</h1>
       <p style={{ marginBottom: '1.25rem', color: 'var(--text)' }}>
         Select an Aha project and feature, then import it into the story lifecycle tracker.

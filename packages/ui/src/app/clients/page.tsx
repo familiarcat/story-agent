@@ -4,6 +4,7 @@
  */
 import Link from 'next/link';
 import { listClientsFromDb } from '@story-agent/shared';
+import { ClientBreadcrumbs } from '@/components/ClientBreadcrumbs';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,7 @@ export default async function ClientsIndex() {
 
   return (
     <div>
+      <ClientBreadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Clients' }]} />
       <div style={{ marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Clients</h1>
         <p style={{ marginTop: '0.25rem', color: 'var(--text-dim)', fontSize: '0.95rem' }}>

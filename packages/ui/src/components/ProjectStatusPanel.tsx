@@ -12,6 +12,7 @@
 import React from 'react';
 import { color, space, font } from '@/lib/tokens';
 import { statusToken, STATUS_LABEL, type ProjectStatus } from './ProjectStatusPanel.tokens';
+import { LcarsHierarchyText } from './Lcars';
 
 export type { ProjectStatus } from './ProjectStatusPanel.tokens';
 export { statusToken } from './ProjectStatusPanel.tokens';
@@ -63,7 +64,14 @@ export function ProjectStatusPanel({ title = 'Project Status', rows, live = fals
               padding: `${space(2)} ${space(4)}`,
             }}
           >
-            <span style={{ fontFamily: font.mono, fontSize: '0.85rem' }}>{row.name}</span>
+            <LcarsHierarchyText
+              parent={row.name}
+              level={1}
+              parentColor={color.text}
+              childColor={color.muted}
+            >
+              {STATUS_LABEL[row.status]} · {Math.max(0, Math.min(100, row.progress))}% complete
+            </LcarsHierarchyText>
             <span style={{ display: 'flex', alignItems: 'center', gap: space(3) }}>
               <span
                 aria-label={`progress ${row.progress}%`}

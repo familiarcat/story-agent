@@ -1,6 +1,7 @@
 import { getStory, getCommentsForStory, getRevisionCycles } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 import {
   buildClientAccessContext,
   evaluateControlledDataAccess,
@@ -47,9 +48,7 @@ export default async function StoryPage({
 
   return (
     <div style={{ maxWidth: 900 }}>
-      <div style={{ marginBottom: '1rem' }}>
-        <Link href="/dashboard" style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>← Dashboard</Link>
-      </div>
+      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Story Detail' }]} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.4rem', fontWeight: 700 }}>{record.storyId}: {record.storyTitle}</h1>
@@ -136,7 +135,7 @@ export default async function StoryPage({
 
       {/* Actions */}
       <div style={{ marginTop: '2rem', display: 'flex', gap: '0.75rem' }}>
-        <a href={`/story/${record.storyId}`} className="btn btn-secondary">Refresh</a>
+        <Link href={`/story/${record.storyId}`} className="btn btn-secondary">Refresh</Link>
         {record.prUrl && (
           <a href={record.prUrl} target="_blank" rel="noreferrer" className="btn btn-primary">Open PR ↗</a>
         )}

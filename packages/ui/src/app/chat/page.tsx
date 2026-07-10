@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { ChatMessage } from '@/components/ChatMessage';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 const META = '␞ META ␞';
 
@@ -96,6 +97,7 @@ export default function ChatPage() {
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
+      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Chat' }]} />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🖖 Story Agent — Crew Assistant</h1>
         <span style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
@@ -110,7 +112,7 @@ export default function ChatPage() {
 
       <div ref={scrollRef} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '1rem', height: '60vh', overflowY: 'auto', background: 'var(--surface)' }}>
         {turns.length === 0 && (
-          <p style={{ color: 'var(--text-dim)' }}>Ask anything. Quark routes each turn to the cheapest adequate model on OpenRouter (simple → tier-3 like DeepSeek; complex → tier-4). Crew RAG memory is injected when relevant. The model + cost shows under each reply.</p>
+          <p style={{ color: 'var(--text-dim)' }}>Ask anything.</p>
         )}
         {turns.map((t, i) => (
           <ChatMessage

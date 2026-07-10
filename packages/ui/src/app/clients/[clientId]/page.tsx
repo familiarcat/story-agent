@@ -5,6 +5,7 @@
  */
 import Link from 'next/link';
 import { listClientsFromDb } from '@story-agent/shared';
+import { ClientBreadcrumbs } from '@/components/ClientBreadcrumbs';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,7 @@ export default async function ClientPresence({ params }: { params: Promise<{ cli
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
+      <ClientBreadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Clients', href: '/clients' }, { label: name }]} />
       <Link href="/clients" style={{ color: 'var(--text-dim)', fontSize: '0.82rem', textDecoration: 'none' }}>← All clients</Link>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '1rem' }}>
         <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>{name}</h1>

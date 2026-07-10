@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 /**
  * API Docs — renders the live crew-server OpenAPI spec with Swagger UI.
@@ -39,32 +40,37 @@ export default function DocsPage() {
   }, []);
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ padding: '0 1rem 0.5rem' }}>
-        <h1 style={{ fontSize: '1.25rem', marginBottom: 4 }}>📜 API Docs — Crew Server</h1>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginTop: 0 }}>
-          The live API the UI, the VS Code extension, and clients consume — every endpoint on a
-          Quark-selected OpenRouter model, governed by WorfGate.{' '}
-          <a href="/api/openapi" style={{ color: 'var(--accent4)' }}>raw spec</a>
-        </p>
+    <>
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Docs' }]} />
       </div>
-      {/* Embedded 3rd-party UI principle (crew ruling, RAG): Swagger ships light-designed CSS with
-          dark-gray text that's invisible on our dark themes. Give it a CONTROLLED light surface (its
-          native context) with color-scheme:light so it's legible in ANY app theme — parent theme
-          tokens do NOT propagate past this wrapper. */}
-      <div
-        style={{
-          background: '#ffffff',
-          color: '#1b1b1b',
-          colorScheme: 'light',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          margin: '0 1rem 2rem',
-          overflow: 'hidden',
-        }}
-      >
-        <div id="swagger-ui" />
-      </div>
-    </main>
+      <main style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ padding: '0 1rem 0.5rem' }}>
+          <h1 style={{ fontSize: '1.25rem', marginBottom: 4 }}>📜 API Docs — Crew Server</h1>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginTop: 0 }}>
+            The live API the UI, the VS Code extension, and clients consume — every endpoint on a
+            Quark-selected OpenRouter model, governed by WorfGate.{' '}
+            <a href="/api/openapi" style={{ color: 'var(--accent4)' }}>raw spec</a>
+          </p>
+        </div>
+        {/* Embedded 3rd-party UI principle (crew ruling, RAG): Swagger ships light-designed CSS with
+            dark-gray text that's invisible on our dark themes. Give it a CONTROLLED light surface (its
+            native context) with color-scheme:light so it's legible in ANY app theme — parent theme
+            tokens do NOT propagate past this wrapper. */}
+        <div
+          style={{
+            background: '#ffffff',
+            color: '#1b1b1b',
+            colorScheme: 'light',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            margin: '0 1rem 2rem',
+            overflow: 'hidden',
+          }}
+        >
+          <div id="swagger-ui" />
+        </div>
+      </main>
+    </>
   );
 }

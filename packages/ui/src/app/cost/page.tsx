@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { lcars } from '../../lib/lcars';
 import { headlineSystem, normalizeModelLabel } from '../../lib/headline-system';
 import { LcarsScreen, LcarsPanel, LcarsStat, LcarsBar } from '../../components/Lcars';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 import type { LaneStatusMarker } from '@story-agent/shared';
 
@@ -42,6 +43,7 @@ export default function CostPage() {
 
   return (
     <LcarsScreen title="💰 Cost Observatory · Quark" status="OpenRouter pool · auto-refresh 10s">
+      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Cost' }]} />
       {err && !data && (
         <LcarsPanel title={headlineSystem.panels.signalLost} color={lcars.danger}>
           <div style={{ color: lcars.danger, fontSize: '0.85rem', letterSpacing: 'normal' }}>⚠️ {err}</div>

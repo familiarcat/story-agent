@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AhaSprint, AhaStory, CrewMissionPlan, ObservationDebateResult, ObservationMemoryRecord } from '@story-agent/shared';
 import { buildResumePayload, streamFrames } from '@/lib/stream-transport';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -241,9 +242,7 @@ export default function ObservationLoungePage() {
 
   return (
     <div style={{ maxWidth: 820 }}>
-      <div style={{ marginBottom: '0.75rem' }}>
-        <a href="/dashboard" style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>← Dashboard</a>
-      </div>
+      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Observation Lounge' }]} />
 
       <div style={{ marginBottom: '1.25rem' }}>
         <h1 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>Observation Lounge</h1>

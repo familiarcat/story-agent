@@ -6,6 +6,7 @@
  * SECURITY: images egress to a 3rd-party vision provider — use non-controlled UI only.
  */
 import { useCallback, useState } from 'react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 type Img = { type: 'base64'; data: string; mimeType: string };
 const INTENTS = [
@@ -63,6 +64,7 @@ export default function VisionPage() {
   const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem' };
   return (
     <main style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem' }} onPaste={onPaste}>
+      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Vision' }]} />
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700 }}>🖼️ Vision — analyze an image</h1>
       <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
         Upload or paste a screenshot, pick an intent, and the crew’s Quark-selected vision model analyzes it.

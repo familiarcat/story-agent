@@ -5,7 +5,7 @@
 recorded to RAG — obs `d7bfbc0a`, Troi decision_note). This is the synthesis: information architecture,
 a VS Code feature-parity matrix, the Aha integration model, and a phased build plan.
 
-Goal: **one consistent crew experience across the web dashboards and the VS Code extension**, with the
+Goal: **one consistent crew experience across the general dashboard and the VS Code extension**, with the
 extension reaching **Claude Code / Copilot / Continue parity** *and* integrating Aha + story management.
 
 ## 1. Unified Information Architecture (shared by web + VS Code)
@@ -15,7 +15,7 @@ The same primary objects, labels, and navigation on both surfaces — only the *
 | Domain object | Web (Next.js `packages/ui`) | VS Code (`packages/vscode-extension`) |
 |---|---|---|
 | **Crew** (11 officers) | `/crew` grid + profile | Activity-bar tree: officers + status |
-| **Missions / Observation Lounge** | `/observation-lounge`, `/chat` | Chat participant `@crew` + lounge webview panel |
+| **Missions / Observation Lounge** | `/observation-lounge` | Chat participant `@crew` + lounge webview panel |
 | **Stories / Epics / Sprints** (Aha) | `/dashboard`, `/story`, `/sprint` | Activity-bar tree (Explorer-style) + story context |
 | **Cost (Quark)** | cost panel | status-bar item + cost on each run |
 | **Security (WorfGate)** | posture badge | status-bar gate indicator + audit on actions |
@@ -67,6 +67,9 @@ Mapped to our **agent-core loop** (`packages/mcp-server/src/agent-core`) + the *
   extension webviews, so the two surfaces can't visually diverge. Per-surface adapters only at the edges
   (Chat API rendering vs React DOM).
 - One canonical client for `/agent` SSE + mission pipeline + Aha, reused by both surfaces.
+
+> Pivot note: the web dashboard remains the general-purpose crew surface; chat is no longer a first-class
+> dashboard navigation item. High-frequency conversational work is expected to live in VS Code.
 
 ## 5. Cost & security woven into the UX
 
