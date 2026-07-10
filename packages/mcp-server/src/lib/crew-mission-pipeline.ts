@@ -16,13 +16,11 @@ import { recordCrewRun, beginAsync, heartbeatAsync, endAsync } from '@story-agen
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
-// Cost-minimization (Claude Code informed the crew to lower costs): FRUGAL by default — Picard's
-// intake/synthesis bookends, the pipeline's cost driver, drop from a frontier model to the cheapest
-// adequate one (Quark tier-3 ≈ deepseek). Set CREW_FRUGAL=false for a heavy frontier synthesis run.
+// Cost-minimization (Claude Code informed the crew to lower costs): FRUGAL by default caps the REST
+// of the crew's per-officer tier (see assembleAndOptimize call below). Picard is the captain and
+// always gets the highest available tier for his intake/synthesis bookends, FRUGAL or not.
 const FRUGAL = process.env.CREW_FRUGAL !== 'false';
-const TOP_MODEL = FRUGAL
-  ? quarkSelectModel(3).id
-  : (process.env.CREW_LLM_APPROVED_MODEL || 'anthropic/claude-sonnet-4.6');
+const TOP_MODEL = quarkSelectModel(4).id;
 
 function rate(model: string) {
   const m = MODEL_POOL.find(x => x.id === model);

@@ -72,13 +72,13 @@ interface CrewDomainSpec { crewId: string; domain: string; baseTier: 1 | 2 | 3 |
 
 // Base capability per domain (criticality of the role's judgment), + keywords that pull a member in.
 const CREW: CrewDomainSpec[] = [
-  { crewId: 'picard', domain: 'command', baseTier: 3, keywords: ['decision', 'strategy', 'arbitrate', 'approve', 'priorit', 'roadmap'] },
+  { crewId: 'picard', domain: 'command', baseTier: 4, keywords: ['decision', 'strategy', 'arbitrate', 'approve', 'priorit', 'roadmap'] },
   { crewId: 'data', domain: 'architecture', baseTier: 4, keywords: ['architect', 'schema', 'design', 'data model', 'structure', 'refactor', 'migration', 'consistency'] },
   { crewId: 'worf', domain: 'security', baseTier: 4, keywords: ['security', 'auth', 'permission', 'privilege', 'rls', 'secret', 'vuln', 'access', 'token'] },
-  { crewId: 'riker', domain: 'implementation', baseTier: 3, keywords: ['implement', 'build', 'feature', 'code', 'develop', 'execute'] },
-  { crewId: 'geordi', domain: 'infrastructure', baseTier: 3, keywords: ['infra', 'deploy', 'fargate', 'terraform', 'docker', 'aws', 'pipeline', 'container'] },
+  { crewId: 'riker', domain: 'implementation', baseTier: 4, keywords: ['implement', 'build', 'feature', 'code', 'develop', 'execute'] },
+  { crewId: 'geordi', domain: 'infrastructure', baseTier: 2, keywords: ['infra', 'deploy', 'fargate', 'terraform', 'docker', 'aws', 'pipeline', 'container'] },
   { crewId: 'obrien', domain: 'devops', baseTier: 2, keywords: ['ops', 'ci', 'cd', 'release', 'rollout', 'sync', 'runbook'] },
-  { crewId: 'yar', domain: 'quality', baseTier: 3, keywords: ['test', 'quality', 'acceptance', 'verify', 'coverage', 'qa'] },
+  { crewId: 'yar', domain: 'quality', baseTier: 2, keywords: ['test', 'quality', 'acceptance', 'verify', 'coverage', 'qa'] },
   { crewId: 'troi', domain: 'stakeholder', baseTier: 2, keywords: ['stakeholder', 'ux', 'user', 'experience', 'human', 'client need'] },
   { crewId: 'crusher', domain: 'health', baseTier: 2, keywords: ['health', 'monitor', 'stale', 'incident', 'reliab'] },
   { crewId: 'uhura', domain: 'communications', baseTier: 2, keywords: ['summar', 'report', 'communicat', 'notify', 'doc'] },
@@ -119,7 +119,10 @@ export interface TeamMember { crewId: string; domain: string; capabilityTier: nu
 export interface TeamPlan { issue: string; complex: boolean; team: TeamMember[]; estCostNote: string; providerMix: Record<string, number>; }
 
 /**
- * RIKER assembles a team for the issue (skill/tool match), then QUARK optimizes the model per member.
+ * RIKER and QUARK collaborate on team assembly, in parallel roles, not in sequence:
+ * RIKER owns skill/tool/domain fit — who belongs on this team and why. QUARK owns cost/ROI per
+ * member — advising how each pick's cost scales as task complexity rises, so the team Riker builds
+ * stays optimal to run. Each member's `reason` carries both officers' independent rationale.
  * Picard is always included to arbitrate; specialists join when the issue touches their domain.
  */
 export function assembleAndOptimize(issue: string, maxTier: 1 | 2 | 3 | 4 = 4): TeamPlan {
@@ -129,18 +132,38 @@ export function assembleAndOptimize(issue: string, maxTier: 1 | 2 | 3 | 4 = 4): 
   // Riker: select members whose domain keywords match, always include picard.
   const selected = CREW.filter(c => c.crewId === 'picard' || c.keywords.some(k => text.includes(k)));
   // Fallback: if only picard matched, add the implementation + architecture core.
-  if (selected.length <= 1) selected.push(...CREW.filter(c => ['data', 'riker'].includes(c.crewId)));
+  const isFallback = selected.length <= 1;
+  if (isFallback) selected.push(...CREW.filter(c => ['data', 'riker'].includes(c.crewId)));
 
   const providerMix: Record<string, number> = {};
   const team: TeamMember[] = selected.map(c => {
+    // RIKER's rationale: why this member fits this issue (skill/tool/domain match).
+    const matchedKeywords = c.keywords.filter(k => text.includes(k));
+    const rikerClause = c.crewId === 'picard'
+      ? 'Riker: captain — always arbitrates'
+      : matchedKeywords.length > 0
+        ? `Riker: matched [${matchedKeywords.join(', ')}]`
+        : isFallback
+          ? 'Riker: core fallback (architecture + implementation baseline)'
+          : 'Riker: domain fit';
+
+    // QUARK's rationale: cost/ROI, scaled to task complexity — independent of Riker's pick.
     // maxTier lets a FRUGAL caller cap deliberation at tier-3 (deepseek) — no frontier escalation.
     const capabilityTier = Math.min(maxTier, c.baseTier + (complex ? 1 : 0)) as 1 | 2 | 3 | 4;
     const m = quarkSelectModel(capabilityTier);
+    const mtokUSD = (m.costIn + m.costOut).toFixed(2);
+    const escalated = capabilityTier > c.baseTier;
+    const baseModel = quarkSelectModel(c.baseTier);
+    const deltaUSD = escalated ? ((m.costIn + m.costOut) - (baseModel.costIn + baseModel.costOut)).toFixed(2) : '0.00';
+    const quarkClause = escalated
+      ? `Quark: tier ${c.baseTier}→${capabilityTier} (+$${deltaUSD}/Mtok complexity escalation) → ${m.provider} ~$${mtokUSD}/Mtok`
+      : `Quark: tier ${capabilityTier} (no escalation needed) → ${m.provider} ~$${mtokUSD}/Mtok`;
+
     providerMix[m.provider] = (providerMix[m.provider] ?? 0) + 1;
     return {
       crewId: c.crewId, domain: c.domain, capabilityTier,
       model: m.id, provider: m.provider,
-      reason: `tier ${capabilityTier} need → cheapest eligible (${m.provider}, ~$${(m.costIn + m.costOut).toFixed(2)}/Mtok)`,
+      reason: `${rikerClause}. ${quarkClause}.`,
     };
   });
 

@@ -24,5 +24,7 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./test/setup.ts'],
     include: getIncludePattern(),
+    // 'src/**/*.test.ts' also matches '*.integration.test.ts' — keep unit mode pure.
+    exclude: RUN_MODE === 'unit' ? ['**/node_modules/**', 'src/**/*.integration.test.ts'] : ['**/node_modules/**'],
   },
 });

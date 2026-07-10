@@ -1,12 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { NextRequest } from 'next/server';
 import { GET } from './route';
 
 const originalEnv = process.env;
 const cachePathSuffix = '.claude/control-lane-status.json';
 
-vi.mock('node:fs', () => {
-  const actualFs = vi.importActual<typeof import('node:fs')>('node:fs');
+vi.mock('node:fs', async () => {
+  const actualFs = await vi.importActual<typeof import('node:fs')>('node:fs');
   return {
     ...actualFs,
     existsSync: vi.fn((path: string) => typeof path === 'string' && path.endsWith(cachePathSuffix)),
@@ -44,8 +43,7 @@ describe('/api/cost route fallback', () => {
   });
 
   it('returns cached control-lane status when the agent brain is unavailable', async () => {
-    const request = new NextRequest('http://localhost/api/cost');
-    const response = await GET(request);
+    const response = await GET();
     const body = await response.json();
 
     expect(response.status).toBe(200);
