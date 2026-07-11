@@ -178,8 +178,3 @@ export function runFallbackTests(): { passed: number; failed: number; tests: str
 
   return { passed, failed, tests: results };
 }
-
-/**
- * Export for testing and integration
- */
-export { FallbackState };

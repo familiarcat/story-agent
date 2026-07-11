@@ -169,7 +169,7 @@ export async function logClassifiedError(error: ClassifiedError): Promise<void> 
  * GET /api/error-taxonomy — returns error classification stats
  * Used by dashboard for error breakdown visualization
  */
-export async function GET() {
+export async function GET(): Promise<Response> {
   // TODO: In production, query actual error logs
   // For MVP, return mock breakdown
   const mockBreakdown = {

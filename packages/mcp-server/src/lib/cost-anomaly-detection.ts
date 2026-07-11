@@ -96,15 +96,15 @@ export function formatSlackAlert(anomaly: CostAnomaly, baselineMean?: number): s
   const severity_emoji = anomaly.severity === 'critical' ? '🚨' : '⚠️';
   const baseline_text = baselineMean ? `(baseline $${baselineMean.toFixed(4)})` : '';
 
-  return \`
-\${severity_emoji} **Cost Anomaly Alert** — \${anomaly.severity.toUpperCase()}
-• Tester: \${anomaly.user_id}
-• Date: \${anomaly.date}
-• Actual Cost: \$\${anomaly.actual_cost.toFixed(4)}
-• Expected Cost: \$\${anomaly.expected_cost.toFixed(4)} \${baseline_text}
-• Deviation: +\${anomaly.deviation_percent.toFixed(1)}% (\${anomaly.std_devs_above_mean}σ)
-• Suspected Cause: \${anomaly.suspected_cause}
-  \`.trim();
+  return `
+${severity_emoji} **Cost Anomaly Alert** — ${anomaly.severity.toUpperCase()}
+• Tester: ${anomaly.user_id}
+• Date: ${anomaly.date}
+• Actual Cost: $${anomaly.actual_cost.toFixed(4)}
+• Expected Cost: $${anomaly.expected_cost.toFixed(4)} ${baseline_text}
+• Deviation: +${anomaly.deviation_percent.toFixed(1)}% (${anomaly.std_devs_above_mean}σ)
+• Suspected Cause: ${anomaly.suspected_cause}
+  `.trim();
 }
 
 /**
@@ -149,7 +149,7 @@ export function generateMockAnomalies(): CostAnomaly[] {
 /**
  * GET /api/cost/anomalies?cohort=dogfood — returns recent anomalies
  */
-export async function GET() {
+export async function GET(): Promise<Response> {
   const mockAnomalies = generateMockAnomalies();
 
   return Response.json({
@@ -166,10 +166,10 @@ export async function GET() {
 /**
  * POST /api/cost/anomalies/alert — manually trigger alert for testing
  */
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
   try {
     const body = await request.json();
-    const { user_id, actual_cost, baseline } = body;
+    const { user_id, actual_cost, baseline } = body as { user_id: string; actual_cost: number; baseline: CostBaseline };
 
     if (!user_id || !actual_cost || !baseline) {
       return Response.json(
