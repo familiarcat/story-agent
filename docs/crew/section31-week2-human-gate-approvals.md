@@ -10,13 +10,24 @@
 
 **Development (NOW):** Crew executes continuously at machine speed. Interactive developer (you) provides real-time decisions at gates. No artificial calendar-based pauses.
 
-**Production (FUTURE):** When onboarding real physical clients/customers, switch to calendar-aware timing:
-- SLAs become days/weeks (not crew-time minutes)
-- Async decision protocols (not interactive)
-- Staged rollout pacing (customer comfort, not warp speed)
-- All 4-gate decision structures remain, but cadence changes per customer profile
+**SAFETY CONSTRAINT — SIMULATED CANARY (Development Mode):**
+- ✅ Canary users: **FAKE/SIMULATED** (6,000 synthetic user profiles, not real people)
+- ✅ Email sends: **NONE** — notification copy goes to dev environment only (no outbound emails)
+- ✅ In-app banner: Test environment only (no user-facing production changes)
+- ✅ Metrics: Synthetic/simulated (crew generates test data, not real user behavior)
+- ✅ All gates/decisions: Same logic + protocols (dev validates approach before production)
 
-**Crew Continuity:** This dev-mode execution becomes the blueprint for production. All decisions stored to RAG with full reasoning, enabling fast production onboarding.
+**Why Simulated:** Validates the entire Week 2 crew execution workflow (gates, Aha integration, RAG storage, decision logic) before running real canary with actual GitHub Copilot users.
+
+**Production (FUTURE):** When onboarding real physical clients/customers:
+- Real users (actual GitHub Copilot users, opt-in cohort)
+- Real email sends (with proper consent + opt-out)
+- Real in-app experience (production environment)
+- Real metrics (actual user behavior, A/B comparison)
+- Calendar-aware timing (async protocols for customer rhythm)
+- All 4-gate decision structures remain, but cohort = real users
+
+**Crew Continuity:** This dev-mode simulated execution becomes the blueprint for production. All decisions stored to RAG with full reasoning, enabling fast production onboarding. When you're ready to run real canary, crew runs same workflow with real users/emails.
 
 ---
 
@@ -30,18 +41,27 @@
 
 **Human Decision:** ✅ **APPROVE**
 
+**SIMULATED EXECUTION (Development Mode):**
+- 6,000 FAKE/SIMULATED user profiles (no real people)
+- Notification copy logged to dev environment (no outbound emails sent)
+- In-app banner rendered in test UI only
+- Opt-out clicks recorded in test database
+- All notification metrics simulated (delivery rate, click-through, sentiment)
+
 **Aha Integration:**
-- Auto-create Story: **Canary Notification Delivery** (linked to Epic PROD-E-5)
+- Auto-create Story: **Canary Notification Delivery (SIMULATED)** (linked to Epic PROD-E-5)
 - Acceptance Criteria:
-  - [ ] Email delivered to 6,000 canary users
-  - [ ] In-app banner visible in chat UI
-  - [ ] Opt-out link functional (target: <2 sec)
-  - [ ] Support contact active + monitored
+  - [ ] Notification logged to dev environment (6,000 fake users)
+  - [ ] In-app banner renders in test UI
+  - [ ] Opt-out link functional in test (target: <2 sec)
+  - [ ] Support contact logged (test record, not live)
+  - [ ] Email send verification: **NONE** (dev environment only)
 - Timeline: Immediate crew-time (ready when you give the word, not calendar-bound)
 - Owner: Troi
 - Link to Epic: PROD-E-5 (Section 31 Week 2 Canary Measurement)
+- **Mode:** SIMULATED (validates workflow, no real email sends)
 
-**Rationale:** Transparent experimental framing builds user trust, prominent opt-out enables informed consent.
+**Rationale:** Validates transparent experimental framing + Aha integration before production real-user canary.
 
 ---
 
@@ -51,21 +71,30 @@
 
 **Human Decision:** ✅ **APPROVE >20% THRESHOLD**
 
-**Thresholds (Baseline: $780/day):**
+**SIMULATED EXECUTION (Development Mode):**
+- Cost tracking: Synthetic data (crew generates test dataset simulating 6,000 users)
+- Baseline: $0.78/user/day (Week 1 actual, used as reference)
+- Thresholds applied: Same logic as production
+- Alerts: Logged to test Slack channel (no real alerts sent to ops)
+- Root cause analysis: Simulated (crew explains cost variance synthetically)
+
+**Thresholds (Baseline: $780/day simulated):**
 - GREEN: ≤$936/day (≤20% overage)
-- YELLOW: $936–$1,092/day (20–40% overage) → crew alerts, human investigates if desired
-- RED: >$1,092/day (40%+ overage) → crew escalates immediately, human decides continue/investigate/rollback
+- YELLOW: $936–$1,092/day (20–40% overage) → crew alerts via test channel
+- RED: >$1,092/day (40%+ overage) → crew escalates via test channel
 
 **Aha Linkage:**
-- Story: Cost Model + Anomaly Detection (part of PROD-E-5)
+- Story: Cost Model + Anomaly Detection (SIMULATED) (part of PROD-E-5)
 - Acceptance Criteria:
-  - [ ] Cost tracking deployed by Monday 09:00 PT
-  - [ ] Alerts wired (YELLOW to Slack, RED to email + page)
-  - [ ] Baseline $780/day confirmed
-  - [ ] Alert recipients: Picard + human
+  - [ ] Cost tracking deployed (test environment)
+  - [ ] Alerts wired to test Slack channel (YELLOW/RED)
+  - [ ] Baseline $780/day confirmed in test data
+  - [ ] Alert recipients: Picard + developer (test team)
+  - [ ] **Verification:** No outbound emails, no real user impact
 - Owner: Quark
+- **Mode:** SIMULATED (validates cost logic before production)
 
-**Rationale:** 20% threshold balances cost-creep detection (early warning) with tolerance for natural variance. Aligned with Week 1 baseline ($0.78/user/day) and ROI thesis.
+**Rationale:** 20% threshold balances cost-creep detection with tolerance for variance. Simulated execution validates alert logic before production deployment.
 
 ---
 
@@ -159,40 +188,45 @@
 ## CREW AUTHORIZATION
 
 ✅ **All 4 gates approved by human**  
-✅ **Crew authorized to execute immediately (warp speed, no calendar delays)**
+✅ **Crew authorized to execute immediately (warp speed, no calendar delays)**  
+✅ **SIMULATED EXECUTION (fake users, no real email sends, dev environment only)**
+
+**Safety Constraints (Non-Negotiable):**
+- 🚫 **No real email sends** — all notifications logged to dev environment only
+- 🚫 **No real users affected** — 6,000 synthetic/fake profiles only
+- 🚫 **Test environment only** — no production systems touched
+- 🚫 **Simulated metrics** — crew generates test data (not real user behavior)
+- ✅ **Full decision logic validated** — gates, escalations, Aha integration all exercised
+- ✅ **RAG records all decisions** — blueprint for production run
 
 **Warp-Speed Execution Model (Development Mode):**
-- Crew operates at machine speed (calendar dates are metadata, not operational constraints)
+- Crew operates at machine speed (no calendar delays)
 - Interactive developer (you) stays engaged for real-time decisions
-- No artificial pauses between gates (crew continues infrastructure work while you review decisions)
-- Decisions transmitted immediately via Slack/chat (not async email)
+- All notifications/alerts go to test infrastructure (no external sends)
+- Decisions transmitted immediately via Slack/chat (test channel)
 - Turnaround: seconds to minutes (crew-time), not hours or days
 
-**Crew Execution Sequence:**
-1. ✅ Troi: Send notification (immediate, upon your approval)
-2. ✅ Quark: Deploy cost monitoring + alerts (immediate)
-3. ✅ Picard: Activate daily status reporting + escalation protocol (immediate)
-4. ✅ Worf: Continue TPM signing in parallel (no wait)
-5. ✅ O'Brien: Finalize canary infrastructure + rollback (no wait)
-6. ✅ Picard: Accumulate 5-day canary metrics → Gate 2 assessment (continuous, no pause)
+**Crew Execution Sequence (SIMULATED):**
+1. ✅ Troi: Log notification to dev environment (6,000 fake users)
+2. ✅ Quark: Deploy cost monitoring (synthetic data) + test alerts
+3. ✅ Picard: Activate daily status reporting (simulated metrics)
+4. ✅ Worf: Continue TPM signing validation (dev environment)
+5. ✅ O'Brien: Finalize canary infrastructure (test environment)
+6. ✅ Picard: Accumulate 5-day simulated canary metrics → Gate 2 assessment
 
-**RAG/Aha Storage:**
+**RAG/Aha Storage (Production Blueprint):**
 - All gate decisions documented to crew memory (RAG) immediately
 - Aha stories auto-created per gate (linked to PROD-E-5), decisions logged as comments
 - Daily crew decisions captured (full reasoning stored for retroactive analysis)
-- Gate assessments committed to story in real-time (no end-of-day batch)
+- Gate assessments committed to story in real-time
+- **Result:** Entire workflow validated, ready to replicate with real users/emails when you authorize
 
-**Human Engagement Points (Real-Time Interactive):**
-- **Now:** Approvals finalized, crew moves to execution
-- **Continuous:** Crew reports via Slack (notification sent, alerts wired, status updates)
+**Human Engagement Points (Real-Time Interactive, Test Channel):**
+- **Now:** Approvals finalized, crew moves to simulated execution
+- **Continuous:** Crew reports via test Slack (notification logged, alerts wired, status updates)
 - **Daily:** Picard reports status (GREEN=acknowledge, YELLOW/RED=you decide immediately)
 - **When ready:** Gate 2 assessment presented (you decide GO/HOLD/MODIFY immediately)
-
-**Key Difference from Calendar-Based:**
-- No "wait until Monday 09:00 PT"
-- No "check back Friday EOD"
-- Instead: Crew executes, you respond in real-time (minutes, not days)
-- All decisions logged to RAG for production-mode customers later
+- **Verification:** No external sends, no unauthorized emails
 
 ---
 
@@ -218,32 +252,44 @@
 
 ---
 
-## NEXT ACTIONS (Crew Warp Speed, No Calendar Delays)
+## NEXT ACTIONS (Crew Warp Speed, Simulated Environment, No Real Email Sends)
 
-**Immediate (Now, Crew-Time):**
-1. ✅ Crew receives approval → executes all 5 tasks in parallel
-   - Troi finalizes + sends notification
-   - Quark deploys cost monitoring + alerts
-   - Picard activates daily protocol
-   - Worf continues TPM signing
-   - O'Brien finalizes canary infra
+**Immediate (Now, Crew-Time, Test Environment):**
+1. ✅ Crew receives approval → executes all 5 tasks in parallel (SIMULATED)
+   - Troi logs notification to dev environment (6,000 fake users, no email sends)
+   - Quark deploys cost monitoring (synthetic data, test alerts only)
+   - Picard activates daily protocol (simulated metrics)
+   - Worf continues TPM signing (dev validation)
+   - O'Brien finalizes canary infra (test environment)
 
-2. ✅ Auto-create Aha stories (Epic PROD-E-5 with 4 gate stories + 5 task stories)
+2. ✅ Auto-create Aha stories (Epic PROD-E-5 with 4 gate stories + 5 task stories, marked SIMULATED)
 
-3. ✅ Store decision record to RAG (all gate approvals + crew recommendations)
+3. ✅ Store decision record to RAG (all gate approvals + crew recommendations, full blueprint)
 
-**Continuous (While Canary Runs):**
-- Crew executes independently (ops, monitoring, infrastructure)
-- You stay engaged (Slack alerts, real-time decisions)
+**Continuous (While Simulated Canary Runs):**
+- Crew executes independently (dev ops, synthetic monitoring, test infra)
+- You stay engaged (test Slack alerts, real-time decisions)
 - Every decision logged to RAG + Aha story comments
 - No "check back later" — you're in the loop actively
+- **Verification:** All activity in test environment, no production impact
 
 **When Crew Needs You:**
-- YELLOW escalation → you decide investigate/continue (respond immediately)
-- RED escalation → you decide continue/investigate/rollback (respond immediately)
-- Gate 2 assessment ready → you decide GO/HOLD/MODIFY (respond immediately)
+- YELLOW escalation → you decide investigate/continue (respond immediately, test channel)
+- RED escalation → you decide continue/investigate/rollback (respond immediately, test channel)
+- Gate 2 assessment ready → you decide GO/HOLD/MODIFY (respond immediately, test channel)
 
-**Crew moves to execution NOW (warp speed, no waiting for calendar).**
+**Crew moves to execution NOW (warp speed, simulated environment, no unauthorized email sends).**
+
+---
+
+## PRODUCTION HANDOFF (Later)
+
+When ready to run real canary (real GitHub Copilot users, real email sends):
+1. Use this simulated execution as blueprint (all decision logic validated)
+2. Switch gates to use REAL users (opt-in cohort, real emails with consent)
+3. Same 4-gate decision structure, same Aha + RAG logging
+4. Calendar-aware timing (async protocols for customer rhythm)
+5. All crew decisions repeat with real metrics → production validation
 
 ---
 
