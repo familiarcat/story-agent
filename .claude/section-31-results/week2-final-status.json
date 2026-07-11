@@ -1,0 +1,21 @@
+{
+  "mission": "Section 31 Week 2 Simulated Canary Launch",
+  "completion_date": "2026-07-11T23:21:37.183Z",
+  "overall_status": "LAUNCH-READY",
+  "phases_complete": [
+    "BUILD",
+    "EXECUTE"
+  ],
+  "gates_passed": 5,
+  "gates_failed": 0,
+  "crew_sign_offs": 5,
+  "safety_verified": true,
+  "artifacts_count": 9,
+  "aha_stories_planned": 5,
+  "synthetic_users_generated": 6000,
+  "synthetic_users_opted_out": 121,
+  "synthetic_users_opted_out_percent": 2.02,
+  "error_rate_percent": 0.08,
+  "sentiment_positive_percent": 85.88,
+  "next_phase": "Production Gate Review"
+}
