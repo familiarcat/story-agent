@@ -8,7 +8,7 @@
  * Response: { signed: true, verified: true, audit_trail_logged: true }
  */
 
-import crypto from 'crypto';
+import { createHmac } from 'crypto';
 
 export async function POST(request: Request) {
   try {
@@ -24,8 +24,7 @@ export async function POST(request: Request) {
 
     // Simulate TPM signing (use crypto for deterministic test)
     const testKey = 'dev-tpm-test-key-section-31-week-2';
-    const hmac = crypto
-      .createHmac('sha256', testKey)
+    const hmac = createHmac('sha256', testKey)
       .update(JSON.stringify(payload))
       .digest('hex');
 
@@ -33,8 +32,7 @@ export async function POST(request: Request) {
     const auditId = `audit_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
     // Simulate verification
-    const verified = crypto
-      .createHmac('sha256', testKey)
+    const verified = createHmac('sha256', testKey)
       .update(JSON.stringify(payload))
       .digest('hex') === hmac;
 
