@@ -1,7 +1,22 @@
 # Section 31 Week 2 — Human Gate Approvals
 **Date:** 2026-07-11  
+**Mode:** Development (warp speed) with live interactive developer  
 **Decision Authority:** familiarcat (human orchestrator)  
-**Crew Execution:** Authorized immediately
+**Crew Execution:** Authorized immediately — no calendar delays
+
+---
+
+## OPERATIONAL MODE
+
+**Development (NOW):** Crew executes continuously at machine speed. Interactive developer (you) provides real-time decisions at gates. No artificial calendar-based pauses.
+
+**Production (FUTURE):** When onboarding real physical clients/customers, switch to calendar-aware timing:
+- SLAs become days/weeks (not crew-time minutes)
+- Async decision protocols (not interactive)
+- Staged rollout pacing (customer comfort, not warp speed)
+- All 4-gate decision structures remain, but cadence changes per customer profile
+
+**Crew Continuity:** This dev-mode execution becomes the blueprint for production. All decisions stored to RAG with full reasoning, enabling fast production onboarding.
 
 ---
 
@@ -22,7 +37,7 @@
   - [ ] In-app banner visible in chat UI
   - [ ] Opt-out link functional (target: <2 sec)
   - [ ] Support contact active + monitored
-- Timeline: Monday 2026-07-14 09:00 PT
+- Timeline: Immediate crew-time (ready when you give the word, not calendar-bound)
 - Owner: Troi
 - Link to Epic: PROD-E-5 (Section 31 Week 2 Canary Measurement)
 
@@ -144,30 +159,40 @@
 ## CREW AUTHORIZATION
 
 ✅ **All 4 gates approved by human**  
-✅ **Crew authorized to execute immediately (Monday 2026-07-14 09:00 PT)**
+✅ **Crew authorized to execute immediately (warp speed, no calendar delays)**
 
-**Crew Execution Model:**
-- Troi: Send notification Monday AM (Gate 1 complete)
-- Quark: Deploy cost monitoring + alerts Monday AM (Gate 2 active)
-- Picard: Daily status reporting + escalation protocol (Gate 3 active)
-- Picard: Friday EOD Gate 2→3 decision package (Gate 4 scheduled)
+**Warp-Speed Execution Model (Development Mode):**
+- Crew operates at machine speed (calendar dates are metadata, not operational constraints)
+- Interactive developer (you) stays engaged for real-time decisions
+- No artificial pauses between gates (crew continues infrastructure work while you review decisions)
+- Decisions transmitted immediately via Slack/chat (not async email)
+- Turnaround: seconds to minutes (crew-time), not hours or days
+
+**Crew Execution Sequence:**
+1. ✅ Troi: Send notification (immediate, upon your approval)
+2. ✅ Quark: Deploy cost monitoring + alerts (immediate)
+3. ✅ Picard: Activate daily status reporting + escalation protocol (immediate)
+4. ✅ Worf: Continue TPM signing in parallel (no wait)
+5. ✅ O'Brien: Finalize canary infrastructure + rollback (no wait)
+6. ✅ Picard: Accumulate 5-day canary metrics → Gate 2 assessment (continuous, no pause)
 
 **RAG/Aha Storage:**
-- Gate decisions documented to crew memory (RAG)
-- Aha stories auto-created per gate (linked to PROD-E-5)
-- Daily crew decisions logged as story comments (living journal)
-- Friday Gate 2→3 assessment committed to story (full decision trace)
+- All gate decisions documented to crew memory (RAG) immediately
+- Aha stories auto-created per gate (linked to PROD-E-5), decisions logged as comments
+- Daily crew decisions captured (full reasoning stored for retroactive analysis)
+- Gate assessments committed to story in real-time (no end-of-day batch)
 
-**Human Engagement Points:**
-- **Monday AM:** Receive notification from Troi, cost alerts wired (confirm via Slack)
-- **Daily:** Receive status from Picard (GREEN=acknowledge, YELLOW=decide, RED=decide)
-- **Friday EOD:** Receive Gate 2→3 assessment from Picard (decide GO/HOLD/MODIFY)
+**Human Engagement Points (Real-Time Interactive):**
+- **Now:** Approvals finalized, crew moves to execution
+- **Continuous:** Crew reports via Slack (notification sent, alerts wired, status updates)
+- **Daily:** Picard reports status (GREEN=acknowledge, YELLOW/RED=you decide immediately)
+- **When ready:** Gate 2 assessment presented (you decide GO/HOLD/MODIFY immediately)
 
-**Timeline:**
-- **Now (2026-07-11):** Approvals finalized, crew prepped
-- **Monday 2026-07-14 09:00 PT:** Week 2 canary launch (notification, cost alerts, daily protocol live)
-- **Daily Mon–Fri:** Picard daily status
-- **Friday 2026-07-18 EOD:** Gate 2→3 assessment + human decision
+**Key Difference from Calendar-Based:**
+- No "wait until Monday 09:00 PT"
+- No "check back Friday EOD"
+- Instead: Crew executes, you respond in real-time (minutes, not days)
+- All decisions logged to RAG for production-mode customers later
 
 ---
 
@@ -193,16 +218,32 @@
 
 ---
 
-## NEXT ACTIONS (Crew-Only, No Human Required)
+## NEXT ACTIONS (Crew Warp Speed, No Calendar Delays)
 
-1. ✅ Finalize notification copy (Troi, ready to send Monday)
-2. ✅ Deploy cost monitoring + alerts (Quark, ready Monday)
-3. ✅ Activate daily escalation protocol (Picard, ready Monday)
-4. ✅ Prep Gate 2→3 analysis framework (Picard, ready Friday)
-5. ✅ Auto-create Aha stories per gate (all crew, immediately)
-6. ✅ Store decision record to RAG (Picard, immediately)
+**Immediate (Now, Crew-Time):**
+1. ✅ Crew receives approval → executes all 5 tasks in parallel
+   - Troi finalizes + sends notification
+   - Quark deploys cost monitoring + alerts
+   - Picard activates daily protocol
+   - Worf continues TPM signing
+   - O'Brien finalizes canary infra
 
-**Crew moves to execution NOW (Monday 09:00 PT, no calendar delays).**
+2. ✅ Auto-create Aha stories (Epic PROD-E-5 with 4 gate stories + 5 task stories)
+
+3. ✅ Store decision record to RAG (all gate approvals + crew recommendations)
+
+**Continuous (While Canary Runs):**
+- Crew executes independently (ops, monitoring, infrastructure)
+- You stay engaged (Slack alerts, real-time decisions)
+- Every decision logged to RAG + Aha story comments
+- No "check back later" — you're in the loop actively
+
+**When Crew Needs You:**
+- YELLOW escalation → you decide investigate/continue (respond immediately)
+- RED escalation → you decide continue/investigate/rollback (respond immediately)
+- Gate 2 assessment ready → you decide GO/HOLD/MODIFY (respond immediately)
+
+**Crew moves to execution NOW (warp speed, no waiting for calendar).**
 
 ---
 
