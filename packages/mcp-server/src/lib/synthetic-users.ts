@@ -8,7 +8,7 @@
  * - All users marked with cohort: "canary" and env: "test"
  */
 
-import crypto from 'crypto';
+import { createHash } from 'crypto';
 
 export interface SyntheticUser {
   user_id: string;
@@ -31,7 +31,7 @@ export interface SyntheticUser {
  */
 function generateUserId(index: number): string {
   const seed = `canary-user-${index}`;
-  const hash = crypto.createHash('sha256').update(seed).digest('hex');
+  const hash = createHash('sha256').update(seed).digest('hex');
   return `user_${hash.substring(0, 16)}`;
 }
 
@@ -39,7 +39,7 @@ function generateUserId(index: number): string {
  * Generate synthetic email from user ID
  */
 function generateEmail(userId: string, index: number): string {
-  const hash = crypto.createHash('md5').update(`${userId}-email`).digest('hex');
+  const hash = createHash('md5').update(`${userId}-email`).digest('hex');
   const domain = ['testmail.io', 'synthetic.dev', 'canary.test'][index % 3];
   return `${userId.replace('user_', '')}.${hash.substring(0, 6)}@${domain}`;
 }
@@ -68,7 +68,7 @@ function generateName(userId: string, index: number): string {
  */
 function generateMetrics(index: number): SyntheticUser['syntheticMetrics'] {
   const seed = `metrics-${index}`;
-  const hash = parseInt(crypto.createHash('sha256').update(seed).digest('hex').substring(0, 8), 16);
+  const hash = parseInt(createHash('sha256').update(seed).digest('hex').substring(0, 8), 16);
 
   // Opt-out probability: 1.8% (within 3% threshold)
   const optedOut = (hash % 100) < 1.8;
@@ -83,9 +83,11 @@ function generateMetrics(index: number): SyntheticUser['syntheticMetrics'] {
   // Sentiment: 73% positive (>3), 20% neutral (3), 7% negative (<3)
   const sentimentRng = (hash >> 16) % 100;
   let sentiment: 1 | 2 | 3 | 4 | 5;
-  if (sentimentRng < 73) sentiment = [4, 5][Math.floor(Math.random() * 2)];
+  const positiveRatings: (1 | 2 | 3 | 4 | 5)[] = [4, 5];
+  const negativeRatings: (1 | 2 | 3 | 4 | 5)[] = [1, 2];
+  if (sentimentRng < 73) sentiment = positiveRatings[Math.floor(Math.random() * 2)];
   else if (sentimentRng < 93) sentiment = 3;
-  else sentiment = [1, 2][Math.floor(Math.random() * 2)];
+  else sentiment = negativeRatings[Math.floor(Math.random() * 2)];
 
   return {
     opted_out: optedOut,
