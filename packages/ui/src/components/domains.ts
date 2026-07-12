@@ -24,16 +24,6 @@ export interface DomainGroup {
 
 export const DOMAIN_GROUPS: DomainGroup[] = [
   {
-    group: 'Build',
-    owner: 'Geordi · Engineering',
-    intent: 'Write, understand & run code with the crew',
-    items: [
-      { href: '/agent', label: 'Agent Workspace', icon: '🛠️', hub: true, desc: 'The orchestrating hub — a Claude-Code-grade agentic loop on OpenRouter (read/edit/run/search/git), WorfGate-governed with interactive approvals.' },
-      { href: '/docs', label: 'API Docs', icon: '📜', desc: 'The live crew-server OpenAPI surface, rendered with Swagger UI.' },
-      { href: '/vision', label: 'Vision', icon: '🖼️', desc: 'Analyze an image/screenshot with a Quark-selected vision model — describe, screenshot→stories, UI review, OCR.' },
-    ],
-  },
-  {
     group: 'Plan',
     owner: 'Riker · Delivery',
     intent: 'Projects, sprints & stories (Aha)',
@@ -41,6 +31,16 @@ export const DOMAIN_GROUPS: DomainGroup[] = [
       { href: '/dashboard', label: 'Dashboard', icon: '📊', desc: 'Projects and delivery at a glance.' },
       { href: '/sprint', label: 'Sprint Board', icon: '🗂️', desc: 'Stories by sprint, from Aha.' },
       { href: '/story/new', label: 'New Story', icon: '➕', desc: 'Capture a new story for the crew to execute.' },
+    ],
+  },
+  {
+    group: 'Build',
+    owner: 'Geordi · Engineering',
+    intent: 'Write, understand & run code with the crew',
+    items: [
+      { href: '/agent', label: 'Agent Workspace', icon: '🛠️', hub: true, desc: 'The orchestrating hub — a Claude-Code-grade agentic loop on OpenRouter (read/edit/run/search/git), WorfGate-governed with interactive approvals.' },
+      { href: '/docs', label: 'API Docs', icon: '📜', desc: 'The live crew-server OpenAPI surface, rendered with Swagger UI.' },
+      { href: '/vision', label: 'Vision', icon: '🖼️', desc: 'Analyze an image/screenshot with a Quark-selected vision model — describe, screenshot→stories, UI review, OCR.' },
     ],
   },
   {
