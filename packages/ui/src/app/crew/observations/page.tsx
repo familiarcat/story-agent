@@ -46,9 +46,6 @@ export default function ObservationsPage() {
             <div style={{ minHeight: 400, overflowY: 'auto' }}>
               <ObservationDetailView
                 observationId={selectedObservationId}
-                onOutcomeRecorded={() => {
-                  // Refresh on outcome recorded
-                }}
               />
             </div>
           ) : (
