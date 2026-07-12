@@ -158,12 +158,25 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
 
   if (loading) return <div style={{ color: lcars.textDim, fontSize: '0.8rem' }}>Loading...</div>;
   if (error) return (
-    <div style={{ color: lcars.danger, fontSize: '0.8rem', lineHeight: 1.5 }}>
-      <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ Error Loading Deliberation</div>
-      <div>{error}</div>
+    <div style={{
+      background: lcars.space,
+      borderLeft: `3px solid ${lcars.danger}`,
+      borderRadius: 6,
+      padding: 10,
+      color: lcars.text,
+      fontSize: '0.8rem',
+      lineHeight: 1.5,
+      wordBreak: 'break-word',
+      whiteSpace: 'normal',
+    }}>
+      <div style={{ fontWeight: 700, color: lcars.danger, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span>⚠️</span>
+        <span>Error Loading Deliberation</span>
+      </div>
+      <div style={{ color: lcars.text, marginBottom: 8 }}>{error}</div>
       {error?.includes('too old') && (
-        <div style={{ fontSize: '0.7rem', color: lcars.textDim, marginTop: 6 }}>
-          The deliberation you're looking for may be archived or beyond the recent 5000 observations buffer. Try searching for similar deliberations or checking older records.
+        <div style={{ fontSize: '0.75rem', color: lcars.textDim, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${lcars.border}`, fontStyle: 'italic' }}>
+          💡 Try searching for similar deliberations or checking older records.
         </div>
       )}
     </div>
