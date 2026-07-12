@@ -42,7 +42,7 @@ export default function CostPage() {
   useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
 
   return (
-    <LcarsScreen title="💰 Cost Observatory · Quark" status="OpenRouter pool · auto-refresh 10s">
+    <LcarsScreen title="💰 Cost Observatory" status="OpenRouter pool · auto-refresh 10s">
       <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Cost' }]} />
       {err && !data && (
         <LcarsPanel title={headlineSystem.panels.signalLost} color={lcars.danger}>

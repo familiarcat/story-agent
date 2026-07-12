@@ -12,7 +12,7 @@ export default function ObservationsPage() {
   const [selectedObservationId, setSelectedObservationId] = useState<string | null>(null);
 
   return (
-    <LcarsScreen title="👁️ Observations · Quark" status="Crew deliberation outcomes · learning loop">
+    <LcarsScreen title="👁️ Observations" status="Crew deliberation outcomes · learning loop">
       <Breadcrumbs
         crumbs={[
           { label: 'Observe', href: '/cost' },
