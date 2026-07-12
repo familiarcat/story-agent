@@ -14,6 +14,7 @@ import { quarkSelectModel } from '../lib/crew-team-assembly.js';
 import type { TeamMember } from '../lib/crew-team-assembly.js';
 import { buildBridges } from './bridges.js';
 import { recordCost } from './cost-ledger.js';
+import { checkBudget, getConfig as getCostGovernanceConfig } from './cost-governance.js';
 import { runMissionPipeline } from '../lib/crew-mission-pipeline.js';
 import { planThenExecute } from './plan-then-execute.js';
 import { analyzeMission } from '../lib/mission-analyzer.js';
@@ -829,6 +830,18 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
     });
   } catch { /* crew preflight optional */ }
 
+  const costGovernanceConfig = getCostGovernanceConfig();
+  const requestId = randomUUID();
+
+  // Pre-flight budget check (projected cost)
+  const projectedCostUSD = (picked.costIn ?? 0) * 0.0003 + (picked.costOut ?? 0) * 0.0006; // Conservative estimate
+  if (costGovernanceConfig.mode === 'dev' && costGovernanceConfig.budgetUSD > 0) {
+    const budgetCheck = await checkBudget(projectedCostUSD, requestId);
+    if (!budgetCheck.allow) {
+      throw new Error(`[Budget Exceeded] ${budgetCheck.reason}`);
+    }
+  }
+
   const messages = [
     { role: 'system', content: 'You are the Story Agent crew assistant (OpenRouter, Quark cost-optimized). Be concise and token-efficient: answer directly, prefer short code over prose. Use CONTEXT when relevant. If required context is missing, say exactly what is missing before assuming details. Do not invent files, APIs, outputs, or test results.' },
     ...(hasCtx ? [{ role: 'system', content: `CONTEXT (crew RAG memory):\n${context}` }] : []),
@@ -854,7 +867,16 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   const crewPreparationTokens = crewContext?.meta.totalTokens ?? 0;
   const totalCostUSD = chatCostUSD + crewPreparationCostUSD;
   const totalTokens = tokensIn + tokensOut + crewPreparationTokens;
-  recordCost({ timestamp: new Date().toISOString(), surface: 'chat', model: picked.id, provider: picked.provider, tokensIn, tokensOut, costUSD: totalCostUSD });
+  recordCost({
+    timestamp: new Date().toISOString(),
+    surface: 'chat',
+    model: picked.id,
+    provider: picked.provider,
+    tokensIn,
+    tokensOut,
+    costUSD: totalCostUSD,
+    cost_mode: costGovernanceConfig.mode,
+  });
 
   // Auto-log crew deliberation to RAG (fire-and-forget, never blocks the response)
   autoLogCrewContext(crewContext, clientId).catch(() => {});

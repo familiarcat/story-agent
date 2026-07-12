@@ -12,6 +12,7 @@ export interface CostEntry {
   tokensIn: number;
   tokensOut: number;
   costUSD: number;
+  cost_mode?: 'dev' | 'prod'; // 'dev' = alpha/simulated (no budget charge), 'prod' = real billing
 }
 
 const LEDGER: CostEntry[] = [];

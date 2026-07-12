@@ -6,10 +6,12 @@
  * MCP crew uses. Simple/support turns route to the cheap model, complex/critical turns
  * to the quality model. This is where the cost savings come from.
  *
- * SECONDARY backend: VS Code Language Model API (Copilot), used only when OpenRouter is
- * not configured/unavailable.
+ * SECTION 31 ENFORCEMENT: OpenRouter-only (no Copilot fallback).
+ * Reason: Crew autonomy at scale requires 100% cost attribution to OpenRouter for accurate
+ * metrics (opt-out rate, error rate, sentiment, cost/user). Silent fallback to Copilot
+ * would invalidate A/B test measurements. If OpenRouter is unavailable, user gets an error.
  *
- * Four token-optimization layers wrap both backends:
+ * Four token-optimization layers wrap the OpenRouter backend:
  *   1. Prompt/response caching  — identical turns skip the LLM entirely (Memento + TTL).
  *   2. Model tiering            — Quark-style routing: cheap model for simple, quality for complex.
  *   3. RAG context pruning      — only the top-K relevant editor/workspace snippets are injected.
@@ -183,14 +185,15 @@ async function fetchCloudRagContext(prompt: string, topK: number, cfg: EngineCon
   }
 }
 
-/** Decide which backend to use this turn: OpenRouter is primary, Copilot is the fallback. */
+/** Decide which backend to use this turn: OpenRouter ONLY (no Copilot fallback). */
 async function resolveProvider(cfg: EngineConfig): Promise<Provider | undefined> {
-  const copilotAvailable = async () => (await vscode.lm.selectChatModels({ vendor: 'copilot' })).length > 0;
-  if (cfg.provider === 'copilot') return (await copilotAvailable()) ? 'copilot' : (cfg.orKey ? 'openrouter' : undefined);
-  if (cfg.provider === 'openrouter') return cfg.orKey ? 'openrouter' : ((await copilotAvailable()) ? 'copilot' : undefined);
-  // auto: OpenRouter (cost-optimized) FIRST, Copilot only as fallback.
-  if (cfg.orKey) return 'openrouter';
-  if (await copilotAvailable()) return 'copilot';
+  // SECTION 31 ENFORCEMENT: OpenRouter-only (no fallback to Copilot).
+  // Reason: Week 3 expansion requires 100% crew attribution for cost tracking + metrics purity.
+  // If OpenRouter is unavailable, return undefined (user gets clear error, not silent fallback).
+  if (cfg.provider === 'openrouter' || cfg.provider === 'auto') {
+    return cfg.orKey ? 'openrouter' : undefined;
+  }
+  // Legacy 'copilot' mode: not used in Section 31.
   return undefined;
 }
 
