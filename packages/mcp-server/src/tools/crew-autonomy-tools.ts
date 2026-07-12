@@ -18,6 +18,7 @@ import {
   getDbClient,
   getRelevantObservationMemories,
   storeObservationMemory,
+  recordObservationMemoryOutcome,
   getSupabaseConnectivityDiagnostics
 } from '@story-agent/shared/db';
 import { DOMAIN_REGISTRY, getPrimaryExpert, getCrewForTask } from '../lib/domain-registry.js';
@@ -988,6 +989,51 @@ ${missions.map(m => `- **[${m.id}] ${m.title}** (${m.dutyRole.toUpperCase()}) - 
         content: [{
           type: 'text',
           text: JSON.stringify({ status: 'CLEARED', storyId, message: "Security perimeter remains intact." }, null, 2),
+        }],
+      };
+    }
+  );
+
+  /**
+   * CREW: All
+   * Record the outcome of a past deliberation to help the crew learn from successes/failures.
+   * Used to build institutional memory about what works and what doesn't.
+   */
+  server.tool(
+    'crew:record-memory-outcome',
+    'Record the execution outcome (success/failure) of a past crew deliberation. This helps the crew learn from experience and recognize patterns in what works and what doesn\'t.',
+    {
+      memoryId: z.string().describe('The ID of the observation memory to update'),
+      outcome: z.enum(['success', 'partial', 'failed']).describe('How the planned execution turned out'),
+      outcomeNotes: z.string().optional().describe('Details about why it succeeded/failed and lessons learned'),
+    },
+    async ({ memoryId, outcome, outcomeNotes }) => {
+      const updated = await recordObservationMemoryOutcome({
+        memoryId,
+        outcome,
+        outcomeNotes,
+      });
+
+      if (!updated) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({ error: `Memory ${memoryId} not found` }, null, 2),
+          }],
+        };
+      }
+
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            status: 'recorded',
+            memoryId: updated.id,
+            outcome: updated.outcome,
+            outcomeNotes: updated.outcomeNotes,
+            executionCompletedAt: updated.executionCompletedAt,
+            message: `Crew learning recorded: This deliberation resulted in ${outcome}. Future crew will see this outcome when encountering similar situations.`,
+          }, null, 2),
         }],
       };
     }

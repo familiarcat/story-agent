@@ -43,7 +43,8 @@ describe('/api/cost route fallback', () => {
   });
 
   it('returns cached control-lane status when the agent brain is unavailable', async () => {
-    const response = await GET();
+    const request = new Request('http://localhost:3000/api/cost');
+    const response = await GET(request);
     const body = await response.json();
 
     expect(response.status).toBe(200);

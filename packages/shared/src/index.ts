@@ -389,6 +389,12 @@ export interface ObservationMemoryRecord {
   embedding: number[];
   similarity?: number;
   createdAt: string;
+  /** Outcome of the deliberation's planned execution: pending | success | partial | failed */
+  outcome?: 'pending' | 'success' | 'partial' | 'failed' | null;
+  /** Details about the outcome (why it succeeded/failed, lessons learned) */
+  outcomeNotes?: string | null;
+  /** When the outcome was recorded (execution completed) */
+  executionCompletedAt?: string | null;
 }
 
 // ── Structured Memory (Deterministic Merge) ─────────────────────────────────

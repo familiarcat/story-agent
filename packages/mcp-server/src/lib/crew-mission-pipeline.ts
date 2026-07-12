@@ -57,16 +57,27 @@ async function call(model: string, system: string, user: string, maxTokens = 220
   return { text: (d.choices?.[0]?.message?.content || d.error?.message || '').trim(), model: d.model || model, tokensIn: tin, tokensOut: tout, costUSD: costOf(model, tin, tout) };
 }
 
+export interface MissionAlternative {
+  label: 'conservative' | 'balanced' | 'aggressive';
+  missionPlan: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  costDelta: number; // relative to baseline (0 = same, negative = cheaper, positive = more expensive)
+  reasoning: string;
+}
+
 export interface MissionPipelineResult {
   goals: string;
   team: TeamMember[];
   contributions: Array<{ crewId: string; model: string; text: string; costUSD: number }>;
   efficiency: { perMember: Record<string, number>; perProvider: Record<string, number>; totalCostUSD: number; totalTokens: number };
-  missionPlan: string;
+  missionPlan: string; // the default (balanced) plan for backward compatibility
   topModel: string;
+  // Rule of Three: alternatives + variance detection
+  alternatives?: MissionAlternative[];
+  variance?: { exists: boolean; summary: string };
 }
 
-export async function runMissionPipeline(nlInput: string, clientId?: string | null): Promise<MissionPipelineResult> {
+export async function runMissionPipeline(nlInput: string, clientId?: string | null, complexity?: number): Promise<MissionPipelineResult> {
   if (!OR_KEY) throw new Error('CREW_LLM_APPROVED_KEY not set');
   const ledger: CallResult[] = [];
 
@@ -79,9 +90,10 @@ export async function runMissionPipeline(nlInput: string, clientId?: string | nu
 
   try {
     // 1. PICARD intake (top-tier) — distill goals, retain intent.
+    const complexityLabel = !complexity ? 'unspecified' : complexity < 0.33 ? 'low' : complexity < 0.66 ? 'moderate' : 'high';
     const intake = await call(TOP_MODEL,
       'You are Captain Picard. Read the request and distill it into the crew\'s working brief. Output exactly:\nGOALS: <2-4 crisp goals, retaining the user\'s intended outcome>\nCONCEPTS: <key concepts/constraints>\nKeep it tight.',
-      nlInput, 240);
+      `${nlInput}\n\n[COMPLEXITY CONTEXT: Task complexity is ${complexityLabel}${complexity ? ` (score: ${complexity.toFixed(2)} on 0-1 scale)` : ''}. Adjust team scope accordingly.]`, 240);
     ledger.push(intake);
     const goals = intake.text;
     heartbeatAsync(asyncDir, asyncId, { progress: 20 }, Date.now());
@@ -110,12 +122,66 @@ export async function runMissionPipeline(nlInput: string, clientId?: string | nu
     }
     const totalTokens = ledger.reduce((s, r) => s + r.tokensIn + r.tokensOut, 0);
 
-    // 6. PICARD mission plan (top-tier) — synthesize a concrete plan to autonomously execute.
-    const planResp = await call(TOP_MODEL,
-      'You are Captain Picard on the highest-tier model. Synthesize the crew\'s contributions into a concrete MISSION PLAN: an ordered list of steps the crew will autonomously execute, each tagged with the owning crew member. When a step searches or counts files, make it RECURSIVE and complete (e.g. `find <dir> -name` or `rg`; do NOT use `-maxdepth 1` or other shallow limits) unless the task explicitly scopes it. End with "Make it so."',
-      `GOALS:\n${goals}\n\nCREW CONTRIBUTIONS:\n${contributions.map(c => `${c.crewId}: ${c.text}`).join('\n')}`, 360);
-    ledger.push(planResp);
-    heartbeatAsync(asyncDir, asyncId, { progress: 90 }, Date.now());
+    // 6. PICARD mission plan (top-tier) — synthesize THREE alternative plans (Rule of Three).
+    // This enables user choice when the crew diverges on approach.
+    const alternativesPrompt = `You are Captain Picard. The crew has deliberated this task. Generate THREE alternative mission plans:
+
+CONSERVATIVE: Low-risk, minimal scope. Fast to execute, reduces downstream issues.
+BALANCED: Standard scope with moderate risk. Recommended default.
+AGGRESSIVE: Comprehensive, maximizes value but higher complexity/risk.
+
+For each plan, provide:
+1. A numbered list of steps (each tagged with the owning crew member)
+2. A one-line reasoning
+3. Risk level (low/medium/high)
+
+When a step searches or counts files, make it RECURSIVE unless explicitly scoped. Format:
+
+===== CONSERVATIVE =====
+[steps]
+Reasoning: [one line]
+Risk: low
+
+===== BALANCED =====
+[steps]
+Reasoning: [one line]
+Risk: medium
+
+===== AGGRESSIVE =====
+[steps]
+Reasoning: [one line]
+Risk: high
+
+===== VARIANCE ASSESSMENT =====
+Flag any disagreement between the three approaches (e.g., "teams diverged on whether to migrate vs patch"). If no variance, say "Consensus across all three approaches."`;
+
+    const alternativesResp = await call(TOP_MODEL, alternativesPrompt,
+      `GOALS:\n${goals}\n\nCREW CONTRIBUTIONS:\n${contributions.map(c => `${c.crewId}: ${c.text}`).join('\n')}`, 900);
+    ledger.push(alternativesResp);
+    heartbeatAsync(asyncDir, asyncId, { progress: 85 }, Date.now());
+
+    // Parse the three alternatives from Picard's response.
+    function extractAlternatives(text: string): { alternatives: MissionAlternative[]; variance: { exists: boolean; summary: string } } {
+      const conservative = text.match(/===== CONSERVATIVE =====\n([\s\S]*?)===== BALANCED =====/)?.[1]?.trim() || '';
+      const balanced = text.match(/===== BALANCED =====\n([\s\S]*?)===== AGGRESSIVE =====/)?.[1]?.trim() || '';
+      const aggressive = text.match(/===== AGGRESSIVE =====\n([\s\S]*?)===== VARIANCE/)?.[1]?.trim() || '';
+      const varianceText = text.match(/===== VARIANCE ASSESSMENT =====\n([\s\S]*?)$/)?.[1]?.trim() || '';
+
+      const varianceExists = !varianceText.toLowerCase().includes('consensus') && varianceText.length > 10;
+      return {
+        alternatives: [
+          { label: 'conservative', missionPlan: conservative, riskLevel: 'low', costDelta: -0.15, reasoning: 'Low-risk, minimal scope' },
+          { label: 'balanced', missionPlan: balanced, riskLevel: 'medium', costDelta: 0, reasoning: 'Recommended standard approach' },
+          { label: 'aggressive', missionPlan: aggressive, riskLevel: 'high', costDelta: 0.25, reasoning: 'Comprehensive, maximum value' },
+        ],
+        variance: { exists: varianceExists, summary: varianceText },
+      };
+    }
+
+    const { alternatives, variance } = extractAlternatives(alternativesResp.text);
+
+    // For backward compatibility, use the balanced plan as the default.
+    const balancedPlan = alternatives.find(a => a.label === 'balanced')?.missionPlan || alternativesResp.text;
 
     const finalTotalUSD = Number(ledger.reduce((s, r) => s + r.costUSD, 0).toFixed(5));
 
@@ -131,7 +197,8 @@ export async function runMissionPipeline(nlInput: string, clientId?: string | nu
     return {
       goals, team: plan.team, contributions,
       efficiency: { perMember, perProvider, totalCostUSD: finalTotalUSD, totalTokens },
-      missionPlan: planResp.text, topModel: TOP_MODEL,
+      missionPlan: balancedPlan, topModel: TOP_MODEL,
+      alternatives, variance,
     };
   } catch (err) {
     endAsync(asyncDir, asyncId, 'failed', Date.now());

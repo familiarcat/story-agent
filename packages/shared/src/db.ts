@@ -62,6 +62,9 @@ type ObservationMemoryPayload = {
   tags: string[];
   memory_embedding: string;
   created_at: string;
+  outcome?: 'pending' | 'success' | 'partial' | 'failed' | null;
+  outcome_notes?: string | null;
+  execution_completed_at?: string | null;
 };
 
 type SupabaseMode = 'auto' | 'local' | 'live';
@@ -393,6 +396,9 @@ function mapObservationMemory(row: Record<string, unknown>): ObservationMemoryRe
     tags: (row.tags as string[] | null) ?? [],
     embedding: parseVector(row.memory_embedding),
     createdAt: row.created_at as string,
+    outcome: (row.outcome as 'pending' | 'success' | 'partial' | 'failed' | null) ?? null,
+    outcomeNotes: (row.outcome_notes as string | null) ?? null,
+    executionCompletedAt: (row.execution_completed_at as string | null) ?? null,
   };
 }
 
@@ -409,6 +415,9 @@ function mapObservationMemoryPayload(row: ObservationMemoryPayload): Observation
     tags: row.tags,
     embedding: parseVector(row.memory_embedding),
     createdAt: row.created_at,
+    outcome: row.outcome ?? null,
+    outcomeNotes: row.outcome_notes ?? null,
+    executionCompletedAt: row.execution_completed_at ?? null,
   };
 }
 
@@ -926,6 +935,27 @@ export async function storeObservationMemory(input: {
   return mapObservationMemory((row as Record<string, unknown>) ?? payload);
 }
 
+/** Record the outcome of a crew deliberation after execution. Allows crew to learn from successes/failures. */
+export async function recordObservationMemoryOutcome(input: {
+  memoryId: string;
+  outcome: 'success' | 'partial' | 'failed';
+  outcomeNotes?: string;
+}): Promise<ObservationMemoryRecord | null> {
+  const rows = throwOnError(await (await db())
+    .from('sa_observation_memories')
+    .update({
+      outcome: input.outcome,
+      outcome_notes: input.outcomeNotes ?? null,
+      execution_completed_at: new Date().toISOString(),
+    })
+    .eq('id', input.memoryId)
+    .select('*')
+    .limit(1));
+
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  return row ? mapObservationMemory((row as Record<string, unknown>)) : null;
+}
+
 export async function getRecentObservationMemories(
   limit = 8,
   storyId?: string,
@@ -1043,6 +1073,42 @@ export async function getRelevantObservationMemories(input: {
     }))
     .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
     .slice(0, limit);
+}
+
+/** Format an observation memory for crew display, highlighting outcome if available. */
+export function formatMemoryForCrewDisplay(memory: ObservationMemoryRecord): string {
+  const lines: string[] = [];
+
+  // Add outcome banner if available
+  if (memory.outcome && memory.outcome !== 'pending') {
+    const emoji = memory.outcome === 'success' ? '✅' : memory.outcome === 'partial' ? '⚠️' : '❌';
+    const label = memory.outcome === 'success' ? 'SUCCESS' : memory.outcome === 'partial' ? 'PARTIAL' : 'FAILED';
+    lines.push(`${emoji} PAST OUTCOME: ${label} (${memory.executionCompletedAt ? new Date(memory.executionCompletedAt).toLocaleDateString() : 'date unknown'})`);
+    if (memory.outcomeNotes) {
+      lines.push(`   Lesson: ${memory.outcomeNotes}`);
+    }
+    lines.push('');
+  }
+
+  // Add transcript content
+  const transcript = memory.transcript;
+  if (transcript.consensusSummary) {
+    lines.push(`CONSENSUS: ${transcript.consensusSummary}`);
+    lines.push('');
+  }
+
+  if (transcript.unresolvedRisks?.length) {
+    lines.push('RISKS:');
+    transcript.unresolvedRisks.forEach(risk => lines.push(`  • ${risk}`));
+    lines.push('');
+  }
+
+  if (transcript.actionItems?.length) {
+    lines.push('ACTIONS:');
+    transcript.actionItems.forEach(item => lines.push(`  • ${item}`));
+  }
+
+  return lines.join('\n');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

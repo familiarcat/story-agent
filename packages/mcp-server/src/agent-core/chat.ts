@@ -7,7 +7,9 @@
  * Mounted at POST /chat on the agent HTTP server (alongside /agent, /symphony).
  */
 import type { IncomingMessage, ServerResponse } from 'http';
-import { searchCrewPersonalMemories } from '@story-agent/shared/db';
+import { randomUUID } from 'node:crypto';
+import { searchCrewPersonalMemories, storeObservationMemory } from '@story-agent/shared/db';
+import type { ObservationMemoryRecord, ObservationDebateResult } from '@story-agent/shared';
 import { quarkSelectModel } from '../lib/crew-team-assembly.js';
 import type { TeamMember } from '../lib/crew-team-assembly.js';
 import { buildBridges } from './bridges.js';
@@ -51,6 +53,13 @@ export interface CanonicalChatResponse {
   worfGate: WorfGatePromptSecurityMeta;
   costAnalysis: PromptCostAnalysis;
   executionActivation?: ExecutionActivationMeta;
+  // Crew variance resolution (Rule of Three alternatives)
+  crewVariance?: {
+    exists: boolean;
+    alternatives: Array<{ label: string; plan: string; cost: number; risk: string; reasoning: string }>;
+    recommendation: string;
+    userActionRequired: boolean;
+  };
 }
 
 export interface ResponsiveActionsMeta {
@@ -102,6 +111,9 @@ export interface CrewSelfOrganizationMeta {
   providerCosts: Record<string, number>;
   teams: CrewTeamSnapshot[];
   members: CrewMemberMemorySnapshot[];
+  // Rule of Three: alternatives + variance
+  alternatives?: Array<{ label: string; plan: string; cost: number; risk: string; reasoning: string }>;
+  variance?: { exists: boolean; summary: string };
 }
 
 export interface PromptCostAnalysis {
@@ -206,6 +218,32 @@ function classifyTier(msg: string): 3 | 4 {
   const p = msg.toLowerCase();
   const complex = ['refactor', 'architect', 'design', 'debug', 'why', 'explain', 'review', 'optimize', 'migrate', 'security', 'compare', 'plan', 'trade-off', 'diagnose'];
   return msg.includes('```') || msg.length > 600 || complex.some(w => p.includes(w)) ? 4 : 3;
+}
+
+/** Calculate complexity score (0..1) to inform crew team assembly and resource allocation.
+ * Not a routing gate (crew ALWAYS runs), but input metadata for Riker/Quark optimization.
+ * Score: 0 = trivial/short, 0.5 = moderate, 1.0 = complex/high-stakes. */
+function calculateComplexityScore(msg: string): number {
+  const text = msg.toLowerCase();
+  const tokens = Math.ceil(msg.length / 4); // rough token estimate
+
+  const reasoning = ['analy', 'compar', 'why', 'design', 'plan', 'deliberat', 'decide', 'decision',
+    'evaluat', 'recommend', 'investigat', 'strateg', 'architect', 'trade-off', 'review', 'summar', 'explain'];
+  const agentic = ['refactor', 'migrat', 'implement', 'rename', 'across the', 'every file', 'all files',
+    'add a', 'build a', 'wire up', 'scaffold', 'generate', 'rewrite', 'convert'];
+  const trivial = ['quick', 'just ', 'typo', 'one-liner', 'format', 'what is', "what's",
+    'tiny', 'small fix', 'rename this', 'thanks', 'continue', 'yes', 'no', 'ok'];
+
+  const hasReasoning = reasoning.some(w => text.includes(w));
+  const hasAgentic = agentic.some(w => text.includes(w));
+  const hasTrivial = trivial.some(w => text.includes(w)) || tokens < 12;
+
+  // Complexity = 0.3×(length/600) + (reasoning ? 0.5 : 0) + (agentic ? 0.5 : 0); trivial ×0.4
+  const lengthScore = Math.min(1, tokens / 600);
+  let complexity = 0.3 * lengthScore + (hasReasoning ? 0.5 : 0) + (hasAgentic ? 0.5 : 0);
+  if (hasTrivial) complexity *= 0.4;
+
+  return Math.max(0, Math.min(1, complexity));
 }
 
 function readJson(req: IncomingMessage): Promise<any> {
@@ -474,9 +512,9 @@ async function buildCrewSelfOrganizationContext(
   message: string,
   clientId: string | null,
   missionOverride?: Awaited<ReturnType<typeof runMissionPipeline>>,
-  options?: { forceAllHands?: boolean; worfGate?: WorfGatePromptSecurityMeta },
+  options?: { forceAllHands?: boolean; worfGate?: WorfGatePromptSecurityMeta; complexity?: number },
 ): Promise<{ prelude: string; meta: CrewSelfOrganizationMeta }> {
-  const mission = missionOverride ?? await runMissionPipeline(`CHAT TURN:\n${message}`, clientId);
+  const mission = missionOverride ?? await runMissionPipeline(`CHAT TURN:\n${message}`, clientId, options?.complexity);
   const uniqueMembers = Array.from(new Map(mission.team.map((member) => [member.crewId, member])).values());
   if (options?.forceAllHands) {
     for (const crew of ALL_HANDS_CREW) {
@@ -557,8 +595,61 @@ async function buildCrewSelfOrganizationContext(
       providerCosts: mission.efficiency.perProvider,
       teams: teamSnapshots,
       members,
+      // Rule of Three: include alternatives + variance from crew mission
+      alternatives: mission.alternatives?.map(alt => ({
+        label: alt.label,
+        plan: alt.missionPlan,
+        cost: alt.costDelta,
+        risk: alt.riskLevel,
+        reasoning: alt.reasoning,
+      })),
+      variance: mission.variance,
     },
   };
+}
+
+/** Auto-log crew deliberation to Observation Lounge (Rule of Three + variance). Best-effort, never blocks. */
+async function autoLogCrewContext(
+  crewContext: { prelude: string; meta: CrewSelfOrganizationMeta } | null,
+  clientId: string | null,
+): Promise<void> {
+  if (!crewContext) return;
+  try {
+    const transcript: ObservationDebateResult = {
+      rounds: [
+        {
+          title: `Crew Self-Organization: ${crewContext.meta.goals.slice(0, 100)}`,
+          entries: [
+            {
+              speakerId: 'crew-chat-auto',
+              position: 'support',
+              statement: JSON.stringify({
+                goals: crewContext.meta.goals,
+                missionPlan: crewContext.meta.missionPlan,
+                alternatives: crewContext.meta.alternatives,
+                variance: crewContext.meta.variance,
+                teams: crewContext.meta.teams.map(t => t.label),
+              }),
+              evidence: crewContext.meta.members.map(m => `${m.crewId} (${m.domain})`),
+            },
+          ],
+        },
+      ],
+      consensusSummary: crewContext.meta.variance?.exists
+        ? `Crew deliberated with variance: ${crewContext.meta.variance.summary}`
+        : 'Crew reached consensus on approach',
+      unresolvedRisks: crewContext.meta.variance?.exists ? ['crew alternatives diverge'] : [],
+      finalDecision: crewContext.meta.variance?.exists ? 'revise' : 'approved',
+      actionItems: [],
+    };
+    await storeObservationMemory({
+      storyId: `chat-auto-${randomUUID().slice(0, 8)}`,
+      clientId,
+      source: 'mcp',
+      transcript,
+      tags: ['crew-auto-org', 'chat-turn', clientId ?? 'no-client'],
+    }).catch(() => {}); // best-effort, never blocks
+  } catch { /* auto-logging is best-effort */ }
 }
 
 export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<CanonicalChatResponse> {
@@ -586,7 +677,8 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
 
   const tier = classifyTier(dispatchMessage);
   const picked = quarkSelectModel(tier);
-  const crewPreflightEnabled = controls.crewPreflightEnabled;
+  // CREW-ALWAYS: Force crew self-organization on all prompts (no complexity threshold)
+  const crewPreflightEnabled = true;
   const activationPhrase = controls.activationPhrase;
 
   if (activationPhrase && hasActionableNextStepsHistory(history) && isActivationAllowedForClient(clientId)) {
@@ -675,15 +767,19 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   let context = '';
   try { context = (await buildBridges(clientId).ragRecall?.(dispatchMessage, 4)) ?? ''; } catch { /* RAG optional */ }
   const hasCtx = context && context !== '(no relevant crew memories)';
+
+  // CREW-ALWAYS: Always call crew self-organization (no conditional)
+  // Calculate complexity as INPUT to crew team assembly (not a routing gate)
+  const complexity = calculateComplexityScore(dispatchMessage);
+
   let crewContext: { prelude: string; meta: CrewSelfOrganizationMeta } | null = null;
-  if (crewPreflightEnabled) {
-    try {
-      crewContext = await buildCrewSelfOrganizationContext(dispatchMessage, clientId, undefined, {
-        forceAllHands: controls.forceAllHands,
-        worfGate: controls.worfGate,
-      });
-    } catch { /* crew preflight optional */ }
-  }
+  try {
+    crewContext = await buildCrewSelfOrganizationContext(dispatchMessage, clientId, undefined, {
+      forceAllHands: controls.forceAllHands,
+      worfGate: controls.worfGate,
+      complexity, // NEW: pass complexity as input for team assembly
+    });
+  } catch { /* crew preflight optional */ }
 
   const messages = [
     { role: 'system', content: 'You are the Story Agent crew assistant (OpenRouter, Quark cost-optimized). Be concise and token-efficient: answer directly, prefer short code over prose. Use CONTEXT when relevant. If required context is missing, say exactly what is missing before assuming details. Do not invent files, APIs, outputs, or test results.' },
@@ -711,6 +807,9 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   const totalCostUSD = chatCostUSD + crewPreparationCostUSD;
   const totalTokens = tokensIn + tokensOut + crewPreparationTokens;
   recordCost({ timestamp: new Date().toISOString(), surface: 'chat', model: picked.id, provider: picked.provider, tokensIn, tokensOut, costUSD: totalCostUSD });
+
+  // Auto-log crew deliberation to RAG (fire-and-forget, never blocks the response)
+  autoLogCrewContext(crewContext, clientId).catch(() => {});
 
   return {
     answer,
@@ -740,6 +839,15 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
       provider: picked.provider,
       optimizationRules: optimizedPrompt.meta.rules,
     },
+    // Rule of Three: surface variance to user if crew alternatives diverge
+    ...(crewContext?.meta.variance?.exists && crewContext?.meta.alternatives ? {
+      crewVariance: {
+        exists: true,
+        alternatives: crewContext.meta.alternatives,
+        recommendation: crewContext.meta.variance.summary,
+        userActionRequired: true,
+      },
+    } : {}),
   };
 }
 
