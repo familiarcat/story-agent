@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { lcars } from '@/lib/lcars';
 import type { ObservationDebateResult } from '@story-agent/shared';
-import { RecordOutcomeModal } from './RecordOutcomeModal';
 
 const MONO = 'ui-monospace, "Arial Narrow", sans-serif';
 
@@ -23,14 +22,12 @@ interface DetailObservation {
 
 interface ObservationDetailViewProps {
   observationId: string;
-  onOutcomeRecorded?: () => void;
 }
 
-export function ObservationDetailView({ observationId, onOutcomeRecorded }: ObservationDetailViewProps) {
+export function ObservationDetailView({ observationId }: ObservationDetailViewProps) {
   const [observation, setObservation] = useState<DetailObservation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showOutcomeModal, setShowOutcomeModal] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     consensus: true,
     risks: true,
@@ -148,6 +145,10 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
           borderRadius: 6,
           border: `1px solid ${lcars.border}`,
           overflowX: 'auto',
+          overflowY: 'auto',
+          maxHeight: 600,
+          maxWidth: '100%',
+          wordBreak: 'break-word',
         }}
       >
         {JSON.stringify(jsonData, null, 2)}
@@ -218,30 +219,6 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
             </div>
           )}
         </div>
-      )}
-
-      {/* Record Outcome Button */}
-      {observation.outcome === 'pending' && (
-        <button
-          onClick={() => setShowOutcomeModal(true)}
-          style={{
-            background: lcars.neonCarrot,
-            color: lcars.onAccent,
-            border: 'none',
-            borderRadius: 6,
-            padding: '8px 12px',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            fontSize: '0.75rem',
-            fontFamily: MONO,
-            cursor: 'pointer',
-            transition: 'opacity 0.2s',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-        >
-          Record Outcome
-        </button>
       )}
 
       {/* Tags */}
@@ -435,19 +412,6 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
           </div>
         )}
       </div>
-
-      {/* Record Outcome Modal */}
-      {showOutcomeModal && (
-        <RecordOutcomeModal
-          observationId={observation.id}
-          onClose={() => setShowOutcomeModal(false)}
-          onSuccess={() => {
-            setShowOutcomeModal(false);
-            fetchObservation();
-            onOutcomeRecorded?.();
-          }}
-        />
-      )}
     </div>
   );
 }
