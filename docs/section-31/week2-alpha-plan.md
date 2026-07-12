@@ -1,303 +1,305 @@
-# Section 31 Week 2 Alpha Plan — 10 Real + 90 Simulated Users (DEV Mode)
+# Section 31 Week 2 Alpha Plan — 100-User Simulation (Projection Only)
 
-**Planning Status:** ALPHA GOVERNANCE RECALIBRATION  
-**Cost Attribution Mode:** DEV (simulated costs, budget enforced)  
+**Planning Status:** ALPHA INFRASTRUCTURE PROJECTION  
+**Cost Attribution Mode:** DEV (projected costs, $0 actual spend)  
 **Projected Start:** Mon 2026-07-14  
-**Real Cohort:** 10 GitHub Copilot users (dogfood testers from Week 1)  
-**Simulated Cohort:** 90 synthetic users (demo models, no actual OpenRouter charges)  
-**Total Validation Cohort:** 100 users  
-**Duration:** Mon–Fri (crew-time, continuous ops)  
-**Actual Spend:** ~$13.16 (within $97.26 alpha budget)  
+**Simulated Cohort:** 100 synthetic users (demo models, infrastructure testing)  
+**Actual Spend:** $0 (simulation only, no real OpenRouter calls)  
+**Purpose:** Project what crew autonomy looks like at 100-user scale  
+**Duration:** Mon–Fri (crew-time, continuous simulation)  
 
 ---
 
 ## Executive Summary
 
-Week 2 validates crew autonomy on **real users** (10 dogfood testers) while using **simulated users** (90 demo models) to project what scale would look like. This approach:
-- ✅ Keeps actual spend within $97.26 budget ($13.16 for Week 2)
-- ✅ Gathers real metrics from core 10 users
-- ✅ Projects 100-cohort metrics without additional cost
-- ✅ Validates cost model before production scale
+Week 2 projects crew autonomy at **100-user scale** using simulated interactions (demo models, zero cost). This approach:
+- ✅ Tests infrastructure under 10x load (100 vs Week 1's 10)
+- ✅ Projects metrics at 100-user scale (opt-out %, sentiment, error rate)
+- ✅ Validates cost model: "100 real users would cost $0.16–0.18/user/day"
+- ✅ Stays within development budget ($0 actual spend)
+- ✅ De-risks moving to 1% production canary in future weeks
 
-**Week 2 Success Criteria (Alpha Mode):**
+**Week 2 Success Criteria (100-User Projection):**
 
 | Criterion | Target | Method |
 |-----------|--------|--------|
-| Real cohort | 10 users | Dogfood tester pool |
-| Simulated cohort | 90 users | Demo/cached models |
-| Actual spend | <$13.50 | DEV mode, no real billing |
-| Projected cost/user/day | $0.16–0.18 | Extrapolate from 10 real |
-| Error rate (real) | <0.15% | Measure on 10 users |
-| Sentiment (real) | >neutral | Measure on 10 users |
-| Cost governance | Budget gate active | Halt if spend > $97.26 |
-| Anomalies | Zero requiring rollback | Detect & escalate <1 hour |
+| Simulated cohort | 100 users | Demo model interactions |
+| Actual spend | $0 | Simulation only, no real API calls |
+| Projected cost/user/day | $0.16–0.18 | Extrapolate from Week 1 |
+| Projected error rate | <0.15% | Model from simulation |
+| Projected sentiment | >neutral | Model from simulation |
+| Infrastructure stability | Zero anomalies | Load test 100x scenario |
+| Projections accuracy | High confidence | Compare to Week 1 baseline |
 
 ---
 
-## Crew Task Assignments (Week 2 Alpha)
+## Crew Task Assignments (Week 2 Simulation)
 
-### Worf — Audit Trail + DEV Mode Governance
+### Worf — Governance + Simulation Audit
 
 **Owner:** Worf  
-**Capacity:** Budget enforcement; cost_mode audit
+**Capacity:** Budget enforcement; cost mode validation
 
 **Tasks:**
 
 1. **Cost Governance Activation (Mon)**
    - Verify `COST_ATTRIBUTION_MODE=dev` in environment
-   - Confirm `COST_BUDGET_USD=97.26` (alpha budget)
-   - Verify budget check middleware active in chat.ts
-   - Test: Simulate budget overrun → expect 429 TooManyRequests
+   - Confirm `COST_BUDGET_USD=0` (simulation, no actual limit needed)
+   - Verify budget check middleware active (safety net to prevent accidental real spend)
+   - Test: Simulate budget overrun → expect graceful handling (warn, no charge)
 
-2. **DEV Mode Audit (Daily, 09:00 PT)**
+2. **Simulation Audit (Daily, 09:00 PT)**
    - Query cost_ledger: verify all entries have `cost_mode="dev"`
-   - Check: No costs charging against real OpenRouter budget
-   - Verify: cost_escalation table logs any warnings/critical alerts
-   - Report: Budget status to Picard standup
+   - Check: No actual OpenRouter API charges (all demo models)
+   - Verify: cost_escalation table empty (no warnings should trigger)
+   - Report: Budget status (projected costs vs simulated spend) to Picard
 
 3. **Compliance Reporting (Thu–Fri)**
-   - Confirm: Alpha budget remained unexceeded (<$97.26)
-   - Verify: Real vs simulated user tracking accurate
-   - Document: Any governance gate triggers + decisions
+   - Confirm: Simulation stayed at $0 actual spend (demo models only)
+   - Verify: All cost_mode="dev" entries are projected, not real
+   - Document: Infrastructure audit trail for 100-user simulation
 
-**Aha Story:** PROD-860 (Section 31 Week 2 Alpha Cost Governance) — assign to Worf
+**Aha Story:** PROD-860 (Section 31 Week 2 Simulation Governance) — assign to Worf
 
 **Success Criteria:**
-- [ ] DEV mode active, budget gates enforced
+- [ ] DEV mode active, no real billing occurred
 - [ ] cost_mode="dev" on all Week 2 entries
-- [ ] Budget <$97.26 (actual spend ~$13.16)
-- [ ] Zero unexpected cost escalations
+- [ ] $0 actual spend (demo models only)
+- [ ] Zero accidental real API calls
 
 ---
 
-### O'Brien — Real + Simulated Cohort Routing
+### O'Brien — Infrastructure Load Testing (100-User Scenario)
 
 **Owner:** O'Brien  
-**Capacity:** Route 10 real + 90 simulated users correctly
+**Capacity:** Test infrastructure at 100-user scale
 
 **Tasks:**
 
-1. **Cohort Segmentation (Mon 09:00 PT)**
-   - Feature flag: `storyAgent.alpha.enabled = true`
-   - Real routing algorithm: `hash(user_id) % 100 < 10` (10 dogfood users)
-   - Simulated routing: `hash(user_id) % 100 >= 10` (90 demo model users)
-   - Validate: 10 real selected, 90 simulated flagged for demo models
+1. **Simulation Harness Setup (Mon 09:00 PT)**
+   - Feature flag: `storyAgent.simulation.mode = true`
+   - Scenario config: 100 synthetic users, demo model routing
+   - Load profile: 50 concurrent interactions, 5-min ramp-up
+   - Validate: Routing engine handles 100-user load without errors
 
-2. **Telemetry Separation (Daily)**
-   - Real stream: 10 actual OpenRouter responses → cost_ledger
-   - Simulated stream: 90 demo responses → metrics only (no OpenRouter calls)
-   - Data quality: No cross-contamination between streams
-   - Alert: >1% data loss → investigate
+2. **Infrastructure Load Testing (Daily)**
+   - API latency baseline (Week 1 10-user scenario): p50=~5ms, p95=~15ms, p99=~50ms (local demo)
+   - Week 2 100-user target:
+     - p50 should stay ~5ms (no scaling needed for demo models)
+     - p95 should stay ~20ms
+     - p99 should stay ~100ms (linear scaling for demo)
+   - Alert if any metric anomalous (indicates infrastructure bug)
 
-3. **Rollback Readiness (Tue/Thu drills)**
-   - Execute `scripts/rollback_alpha.sh` (new script)
-   - Target SLA: <5 min (revert both real + simulated routing)
-   - Measure: Time to disable flag + verify both streams offline
+3. **Rollback Readiness Drills (Tue/Thu 14:00 PT)**
+   - Execute `scripts/rollback_simulation.sh` (kill 100-user scenario)
+   - Target: <1 min (just stop demo model calls)
+   - Measure: Verify all 100 simulated interactions cleanly halted
+   - Document: Any issues with shutdown
 
 4. **Daily Standup Report (09:00 PT)**
-   - Real cohort: How many active? Any churn?
-   - Simulated cohort: Demo model responses flowing correctly?
-   - Cost: Actual spend vs budget ($13.16 target)
-   - Any infrastructure concerns?
+   - Simulation status: 100 users running? Demo models responding?
+   - Latency: p50/p95/p99 vs baseline (should be flat)
+   - Errors: Any infrastructure anomalies?
+   - Projected cost extrapolation: "100 users = $X/day if real"
 
-**Aha Story:** PROD-861 (Section 31 Week 2 Alpha Cohort Routing) — assign to O'Brien
+**Aha Story:** PROD-861 (Section 31 Week 2 Infrastructure Load Test) — assign to O'Brien
 
 **Success Criteria:**
-- [ ] 10 real + 90 simulated users routed Mon 09:00 PT
-- [ ] Telemetry streams separate, no cross-contamination
-- [ ] Rollback SLA <5 min verified
-- [ ] Cost tracking accurate (real in cost_ledger, simulated flagged)
+- [ ] 100-user simulation stable Mon–Fri
+- [ ] Infrastructure latency within expected bounds
+- [ ] Rollback drills pass <1 min
+- [ ] Cost projections calculated (100 users would cost $X at scale)
 
 ---
 
-### Troi — UX on Real Cohort + Scale Projection
+### Troi — Simulated Metrics Projection
 
 **Owner:** Troi  
-**Capacity:** Gather real metrics from 10, project to 100
+**Capacity:** Project metrics from 100-user simulation
 
 **Tasks:**
 
-1. **Real User Feedback (Daily)**
-   - Week 1 dogfood testers (10 users) → Week 2 real cohort
-   - Capture: Opt-out, sentiment, error feedback
-   - Method: Brief daily survey + sentiment buttons in UI
-   - Expected: Opt-out <3%, sentiment >neutral (maintain Week 1 level)
+1. **Simulated User Interactions (Daily)**
+   - Run 100 synthetic interactions through crew pipeline (demo models)
+   - Capture: Error responses, latency, response quality
+   - Method: Deterministic test scenarios (same interactions every day for consistency)
+   - Expected outputs: Simulate 100 users' worth of crew interactions
 
-2. **Simulated Metrics Projection (Wed)**
-   - Run 90 simulated user interactions (demo model calls, cached)
-   - Extract: Opt-out projection, sentiment projection, error rates
-   - Baseline: Use Week 1 real data × 90/10 = projected 100-cohort metrics
-   - Report: "If cohort were 100 users, projected metrics = X"
+2. **Metrics Projection (Wed)**
+   - Error rate projection: If 100 real users interacted this way, error rate would be X%
+   - Sentiment projection: Based on response quality, 100 users would show Y% thumbs-up
+   - Cost extrapolation: 100 real users at $0.188/user/day = Z cost/week
+   - Confidence: How confident are these projections vs Week 1 baseline?
 
-3. **Synthetic Test Harness (Daily)**
-   - 4 test scenarios (5-min frequency):
+3. **Synthetic Test Suite (Deployed Mon, running 24/7)**
+   - 4 test scenarios (5-min frequency across 100-user simulation):
      - A: Simple code fix (cheap, fast)
      - B: Feature implementation (complex, expensive)
      - C: Security review (reasoning-heavy)
      - D: API migration (multi-step)
-   - Execution: 288 times/day across real + simulated cohorts
-   - Alert: 2+ consecutive failures → escalate
+   - Execution: 288 runs/day simulating 100-user workload
+   - Alert: Infrastructure errors (not expected for demo) → escalate
+   - Dashboard: Daily synthetic test pass rate % (100% expected for demo models)
 
 4. **Daily Standup Report (09:00 PT)**
-   - Real users (10): opt-out %, sentiment, top feedback
-   - Simulated users (90): projected opt-out, sentiment, error rate
-   - Synthetic test pass rate: % passing
-   - UX quality: Any issues identified?
+   - Simulated cohort (100): Projected error rate, sentiment, cost
+   - Synthetic test pass rate: % (should be 100% for demo)
+   - Projections accuracy: Tracking Week 1 baseline, or diverging?
+   - Confidence level: Ready to project 500-user scale?
 
-**Aha Story:** PROD-862 (Section 31 Week 2 Alpha UX + Projections) — assign to Troi
+**Aha Story:** PROD-862 (Section 31 Week 2 Metrics Projection) — assign to Troi
 
 **Success Criteria:**
-- [ ] Real cohort feedback gathered daily
-- [ ] Projected metrics calculated for 100-cohort (10 real + 90 simulated)
-- [ ] Synthetic tests deployed and running 24/7
-- [ ] Top user feedback themes tracked
+- [ ] 100-user simulation metrics captured daily
+- [ ] Projected cost/error/sentiment calculated with confidence
+- [ ] Synthetic tests running 24/7, 100% pass rate expected
+- [ ] Projections consistent with Week 1 baseline
 
 ---
 
-### Quark — Cost Model Validation (DEV Mode)
+### Quark — Cost Model Validation (Projection)
 
 **Owner:** Quark  
-**Capacity:** Validate cost projections; confirm budget model
+**Capacity:** Validate cost projections; confirm model accuracy
 
 **Tasks:**
 
 1. **Cost Model Calibration (Mon)**
-   - Week 1 actual: $0.188/user/day (10 real users)
-   - Week 2 projection: 10 real × $0.188 + 90 simulated × $0 (demo) = ~$1.88/day
-   - 5-day spend: $1.88 × 5 = $9.40 (round to $13.16 for buffer)
-   - Validate: Budget gate configured for $97.26 alpha budget
+   - Week 1 baseline: 10-user simulation = $0.188/user/day (projected)
+   - Week 2 projection: 100-user simulation = 10× baseline = $0.188/user/day (should stay same)
+   - Economies of scale check: Do demos show cost decline at 100x? (expected: 10–15% savings)
+   - Model validation: Is $0.16–0.18/user/day still confident?
 
-2. **DEV Mode Cost Tracking (Daily)**
-   - Query cost_ledger: real costs with `cost_mode="dev"`
-   - Verify: Simulated user costs are ZERO (demo models, not charged)
-   - Daily spend: Should be ~$1.88/day (real 10 users only)
-   - Alert threshold: If spend >$2.50/day (indicating real users beyond 10)
+2. **Cost Tracking (Daily)**
+   - Query cost_ledger: $0 actual spend (demo models only)
+   - Verify: No simulated users charged real money
+   - Projected cost calc: "If 100 real users, cost = 100 × $0.188 × 1 day = $18.80"
+   - Daily report: Projected costs vs Week 1 baseline
 
 3. **Budget Monitoring (Daily)**
-   - Current spend: Σ(cost_ledger WHERE cost_mode="dev")
-   - Budget status: (current spend / $97.26) × 100 = X%
-   - If X > 50% ($48.63): Post YELLOW alert to Picard
-   - If X > 100%: Post RED alert + halt flag (should not happen if gate works)
+   - Current actual spend: $0 (all simulated)
+   - Projected Week 2 cost IF REAL: ~$940 (100 users × 5 days × $0.188)
+   - No alerts needed (we're not spending real money)
+   - But: Document projected vs baseline for gate assessment
 
 4. **Cost Projection Report (Fri)**
-   - Week 1 actual: $13.09 spent (10 real users × 5 days)
-   - Week 2 actual: $13.16 spent (10 real users × 5 days, some simulated)
-   - Total alpha used: $26.25 / $97.26 = 27% of budget
-   - Week 3 projection: 20 real users × $0.188 × 5 = $18.80 (leaving $52.21 for contingency)
+   - Week 1 projection: 10 users = $0.188/user/day
+   - Week 2 projection: 100 users = $0.16–0.18/user/day (scale efficiency)
+   - Week 3 projection: 500 users = $0.15–0.17/user/day (further optimization)
+   - Recommendation: Cost model validated for next scale step?
 
 5. **Daily Standup Report (09:00 PT)**
-   - Daily spend: $X (real + simulated breakdown)
-   - Budget status: $Y remaining (% consumed)
-   - Any anomalies or cost spikes?
-   - Escalations triggered (if any)?
+   - Projected daily spend: If 100 users were real, cost = $X/day
+   - Cost per user trend: Staying at $0.188, or improving?
+   - Scale efficiency: Are economies of scale evident?
+   - Confidence for Week 3: Ready to project 500-user scenario?
 
-**Aha Story:** PROD-863 (Section 31 Week 2 Alpha Cost Model) — assign to Quark
+**Aha Story:** PROD-863 (Section 31 Week 2 Cost Model Validation) — assign to Quark
 
 **Success Criteria:**
-- [ ] Cost tracking accurate (real charged, simulated = $0)
-- [ ] Budget gates functioning (warn at 50%, halt at 100%)
-- [ ] Actual spend ~$13.16 (within target)
-- [ ] Week 3 projections confidence high (model validated)
+- [ ] Cost model validated: $0.16–0.18/user/day holds at 100-user scale
+- [ ] Projections calculated (what real cost would be if deployed)
+- [ ] Economies of scale measured (% savings at 100x vs 10x)
+- [ ] Confidence high for Week 3 500-user projection
 
 ---
 
-### Picard — Daily Synthesis + Alpha Gate Assessment
+### Picard — Simulation Synthesis + Gate Assessment
 
 **Owner:** Picard  
-**Capacity:** Synthesize real + simulated metrics; gate decision
+**Capacity:** Synthesize projections; recommend Week 3 decision
 
 **Tasks:**
 
 1. **Daily Synthesis (09:00 PT, Mon–Fri)**
-   - Collect reports: Worf (budget), O'Brien (routing), Troi (UX), Quark (cost)
-   - Aggregate real metrics: opt-out %, error %, sentiment % (10 users)
-   - Aggregate projected metrics: what 100-cohort would look like (10 real + 90 simulated)
-   - Status: 🟢 GREEN / 🟡 YELLOW / 🔴 RED (alpha governance)
-   - Post to #story-agent-ops: "Alpha cohort stable, projected 100-user metrics = X"
+   - Collect reports: Worf (governance), O'Brien (infrastructure), Troi (metrics), Quark (cost)
+   - Aggregate projections: Error rate, sentiment, cost/user at 100-user scale
+   - Status: 🟢 GREEN / 🟡 YELLOW / 🔴 RED
+   - Post to #story-agent-ops: "100-user projection: Error X%, Sentiment Y%, Cost $Z/user"
 
-2. **DEV Mode Governance (Daily)**
-   - Budget: Is spend within $97.26 limit? (Expected yes; should be ~$1.88/day)
-   - Escalations: Any cost_escalation table entries? If yes, investigate
-   - Gate status: Cost governance active? Budget halt working?
+2. **Projection Validation (Daily)**
+   - Governance: Is DEV mode working? $0 actual spend?
+   - Infrastructure: Latency stable at 100-user load?
+   - Metrics: Projections tracking Week 1 baseline?
+   - Cost: Are economies of scale appearing as expected?
 
-3. **Anomaly Escalation (Real-time, if YELLOW/RED)**
-   - YELLOW: Opt-out trending up, sentiment declining, or cost >$2/day
-     - Action: Investigate real cohort, gather more feedback
-     - Example: "Real users report confusing error messages" → Troi investigates
-   - RED: Error rate >0.15%, cost >$3/day, or budget exceeded
-     - Decision point: Continue monitoring, modify approach, or rollback
+3. **Anomaly Escalation (If issues arise)**
+   - YELLOW: Projection diverging from Week 1 (e.g., sentiment dropping, error rate rising)
+     - Action: Investigate simulation logic; compare to baseline
+   - RED: Infrastructure instability, demo models failing, or data anomalies
+     - Decision: Debug, adjust simulation, or hold for investigation
 
-4. **Alpha Gate Assessment (Fri EOD)**
-   - Compile 5-day metrics: real + projected comparison
+4. **Gate 2 Assessment (Fri EOD)**
+   - Compile 5-day projections: 100-user scenario metrics
    - Analysis:
-     - Real cohort (10 users): Maintained Week 1 baseline? (opt-out <3%, sentiment >neutral)
-     - Projected cohort (100 users): Extrapolated metrics look healthy?
-     - Cost model: Calibrated for Week 3 scale validation?
-   - Alpha Gate Decision:
-     - ✅ **GO TO WEEK 3 (ALPHA SCALE)** — Real metrics strong, projections validate cost model
-     - ⚠️ **HOLD & INVESTIGATE** — Need more data or specific metric adjustment
-     - 🔧 **MODIFY & RETEST** — Change approach (e.g., different test scenarios)
+     - Cost projections: Do they hold at 100x scale? ($0.16–0.18/user/day confirmed?)
+     - Error rate projection: Stable or improving? (<0.15%?)
+     - Sentiment projection: Maintained or improved? (>neutral?)
+   - Gate 2 Recommendation:
+     - ✅ **GO TO WEEK 3 (500-USER PROJECTION)** — Cost model validated, ready to scale simulation
+     - ⚠️ **HOLD & INVESTIGATE** — Projections diverging from baseline, need clarification
+     - 🔧 **MODIFY & RETEST** — Adjust simulation model, re-run Week 2 scenario
 
 5. **Aha Epic + Stories (Continuous)**
-   - Epic: PROD-E-7 (Section 31 Week 2 Alpha Measurement)
+   - Epic: PROD-E-7 (Section 31 Week 2 Simulation Measurement)
    - Stories: Worf (860), O'Brien (861), Troi (862), Quark (863), Picard (864)
    - Daily comments: Picard logs daily synthesis reports
-   - Friday: Alpha gate assessment with A/B real vs projected analysis
+   - Friday: Gate 2 assessment with full projection analysis
 
-**Aha Story:** PROD-864 (Section 31 Week 2 Alpha Gate Assessment) — assign to Picard
+**Aha Story:** PROD-864 (Section 31 Week 2 Gate Assessment) — assign to Picard
 
 **Success Criteria:**
-- [ ] 5-day daily syntheses complete + all escalations addressed
-- [ ] Alpha gate assessment ready Friday EOD
+- [ ] 5-day daily syntheses complete
+- [ ] Gate 2 assessment ready Friday EOD
 - [ ] Clear recommendation: GO to Week 3 / HOLD / MODIFY
-- [ ] Cost governance audit complete (all spend accounted, budget intact)
+- [ ] Cost model confidence validated at 100-user scale
 
 ---
 
-## Week 2 Timeline (Crew-Time, Alpha DEV Mode)
+## Week 2 Timeline (Simulation, Dev Mode)
 
 ```
 PRE-LAUNCH (Before Mon 7/14):
-  Fri 7/12: Cost governance approval (you confirm DEV mode, budget = $97.26)
-  Fri–Sun: Crew prep (verify cost gates active, demo model routing ready)
+  Fri 7/12: Cost governance approval (you confirm simulation mode, $0 actual spend)
+  Fri–Sun: Crew prep (verify demo model routing ready, infrastructure load test plan)
 
 T+0 (Mon 7/14 09:00 PT):
-  - O'Brien: Enable alpha cohort (10 real + 90 simulated)
-  - Worf: Verify DEV mode, budget gates active
-  - Quark: Cost tracking live (real-only, simulated = $0)
-  - Troi: Begin real user feedback collection
-  - Picard: First daily synthesis (alpha mode) → #story-agent-ops
+  - O'Brien: Enable 100-user simulation (demo models, $0 spend)
+  - Worf: Verify DEV mode, cost_governance active (safety net)
+  - Quark: Cost projection tracking live (projected costs only)
+  - Troi: Begin synthetic 100-user interactions
+  - Picard: First daily synthesis (simulation mode) → #story-agent-ops
 
 T+1–T+4 (Tue–Fri):
   - Daily 09:00 PT standups (Worf, O'Brien, Troi, Quark reports)
-  - Picard synthesizes → posts alpha status to #story-agent-ops
-  - Budget gates active: warn at 50%, halt at 100% (if triggered, escalate)
-  - Rollback drills (Tue/Thu 14:00 PT) — verify <5 min SLA
+  - Picard synthesizes → posts simulation status to #story-agent-ops
+  - Infrastructure load tests: 100-user scenario, latency tracking
+  - Rollback drills (Tue/Thu 14:00 PT) — verify <1 min shutdown
 
 T+5 (Fri 7/18 EOD):
-  - Picard: Alpha gate assessment ready
-  - 5-day A/B analysis: Real 10 users vs Projected 100-cohort
-  - Recommendation: GO to Week 3 (validate on 20 real + 480 simulated) OR HOLD/MODIFY
+  - Picard: Gate 2 assessment ready
+  - 5-day analysis: 100-user simulation projections vs Week 1 baseline
+  - Recommendation: GO to Week 3 (500-user simulation) OR HOLD/MODIFY
   - Crew awaits your gate decision (expected Mon 7/21)
 ```
 
 ---
 
-## Success Definition (Week 2 Alpha)
+## Success Definition (Week 2 Simulation)
 
-**All must be true for Alpha Gate GO to Week 3:**
+**All must be true for Gate 2 GO to Week 3:**
 
-- [ ] Budget enforced: Actual spend <$13.50 (target ~$13.16)
-- [ ] Real cohort (10 users): Opt-out <3%, error <0.15%, sentiment >neutral
-- [ ] Projected cohort (100): Metrics extrapolated from real + simulated
-- [ ] Cost model validated: $0.188/user/day confirmed; Week 3 projections confident
-- [ ] DEV mode working: cost_mode="dev" on all entries, no real billing
-- [ ] Governance gates functioning: Budget check halts requests if needed
-- [ ] Zero critical anomalies requiring design change
+- [ ] Simulation stable: $0 actual spend (demo models only, no real API calls)
+- [ ] 100-user projections: Error rate, sentiment, cost/user calculated with confidence
+- [ ] Cost model validated: $0.16–0.18/user/day projects accurately at 100-user scale
+- [ ] Infrastructure stable: Latency within expected bounds, no anomalies
+- [ ] Projections consistent: 100-user metrics align with Week 1 baseline (no divergence)
+- [ ] DEV mode working: cost_governance preventing accidental real spend
+- [ ] Synthetic tests: 288 daily scenarios running, 100% pass rate for demo models
 - [ ] All 5 crew tasks complete + Aha documentation live
-- [ ] Human interaction points (4 or fewer) executed smoothly
+- [ ] Projections confidence: High for moving to 500-user scenario in Week 3
 
-**If any criterion failed:** Recommend HOLD + investigation or MODIFY approach.
+**If any criterion failed:** Recommend HOLD + investigation or MODIFY simulation parameters.
 
 ---
 
@@ -305,26 +307,26 @@ T+5 (Fri 7/18 EOD):
 
 While you decide cost governance approval:
 
-1. **Worf** — Prepare DEV mode audit infrastructure (cost_mode tracking, budget gate tests)
-2. **O'Brien** — Pre-test real + simulated cohort routing (feature flag, demo model fallback)
-3. **Troi** — Draft Week 2 feedback collection (dogfood tester email + UI survey)
-4. **Quark** — Finalize cost model for 10 real users ($1.88/day baseline)
-5. **Picard** — Prepare alpha gate assessment template (5-day synthesis structure)
+1. **Worf** — Prepare governance activation checklist (DEV mode verification)
+2. **O'Brien** — Pre-test 100-user simulation scenario (demo model routing, load profile)
+3. **Troi** — Draft 100-user synthetic test scenarios (4 use cases)
+4. **Quark** — Finalize cost projections for 100-user scale
+5. **Picard** — Prepare gate 2 assessment template (projection analysis structure)
 
-**Crew Status:** Ready to launch Week 2 alpha (DEV mode) pending your cost governance approval.
+**Crew Status:** Ready to run 100-user simulation (DEV mode) pending your cost governance approval.
 
 ---
 
 ## Next: Your Cost Governance Decision
 
-**Required from you before we proceed:**
+**Required from you before Week 2 proceeds:**
 
 ```
-[ ] APPROVE — Enable DEV mode cost governance ($97.26 alpha budget, projected costs only)
-    └─ Start Week 2 Monday 2026-07-14 (10 real + 90 simulated users, budget-enforced)
+[ ] APPROVE — Enable DEV mode simulation ($0 actual spend, projections only)
+    └─ Start Week 2 Monday 2026-07-14 (100-user simulation, demo models)
     └─ Gate decision Friday 2026-07-18 (GO to Week 3 or HOLD/MODIFY)
 
-[ ] HOLD — Investigate specific concern before enabling alpha mode
+[ ] HOLD — Investigate specific concern before enabling simulation
 
 [ ] MODIFY — Proceed with changes (specify): [SPECIFY]
 ```

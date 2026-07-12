@@ -1,37 +1,35 @@
-# Section 31 Week 3 Alpha Plan — 20 Real + 480 Simulated Users (DEV Mode)
+# Section 31 Week 3 Alpha Plan — 500-User Simulation (Projection Only)
 
-**Planning Status:** ALPHA GOVERNANCE RECALIBRATION  
-**Cost Attribution Mode:** DEV (simulated costs, budget enforced)  
+**Planning Status:** ALPHA INFRASTRUCTURE PROJECTION  
+**Cost Attribution Mode:** DEV (projected costs, $0 actual spend)  
 **Projected Start:** Mon 2026-07-21 (pending Week 2 gate approval)  
-**Real Cohort:** 20 users (Week 1 dogfood + selected new testers)  
-**Simulated Cohort:** 480 synthetic users (demo models, no actual OpenRouter charges)  
-**Total Validation Cohort:** 500 users  
-**Duration:** Mon–Fri (crew-time, continuous ops)  
-**Actual Spend:** ~$26.32 (within $97.26 alpha budget; $23.93 remaining after Week 2)  
+**Simulated Cohort:** 500 synthetic users (demo models, infrastructure testing)  
+**Actual Spend:** $0 (simulation only, no real OpenRouter calls)  
+**Purpose:** Project what crew autonomy looks like at 500-user scale  
+**Duration:** Mon–Fri (crew-time, continuous simulation)  
 
 ---
 
 ## Executive Summary
 
-Week 3 scales alpha validation to 500-cohort while keeping **real spend minimal** ($26.32 total). This approach:
-- ✅ Validates crew autonomy at 5x scale (500 vs 100)
-- ✅ Uses 20 real testers for ground-truth metrics
-- ✅ Projects 500-cohort metrics from 20-real + 480-simulated
-- ✅ Stays within remaining alpha budget ($23.93 left after Week 2)
-- ✅ De-risks Week 4+ scale before production
+Week 3 projects crew autonomy at **500-user scale** using simulated interactions (demo models, zero cost). This approach:
+- ✅ Tests infrastructure under 50x load (500 vs Week 1's 10)
+- ✅ Projects metrics at 500-user scale (opt-out %, sentiment, error rate, cost)
+- ✅ Validates cost model: "500 real users would cost $0.15–0.17/user/day"
+- ✅ Stays within development budget ($0 actual spend)
+- ✅ De-risks moving to 1% production canary (6,247 users) in future weeks
 
-**Week 3 Success Criteria (Alpha Mode, 5x Scale):**
+**Week 3 Success Criteria (500-User Projection):**
 
-| Criterion | Week 2 (10 Real) | Week 3 (20 Real) | Target |
-|-----------|------------------|------------------|--------|
-| Real cohort | 10 users | 20 users | Double validation pool |
-| Simulated cohort | 90 users | 480 users | Confidence in scale |
-| Actual spend | $13.16 | $26.32 | 2x, staying <$97.26 |
-| Projected cost/user/day | $0.188 | $0.16–0.18 | Economies of scale |
-| Error rate (real) | <0.15% | <0.15% | Maintain or improve |
-| Sentiment (real) | >neutral | ≥56% thumbs-up | Maintain or improve |
-| Cost governance | Budget gate active | Budget gate active | Halt if exceed budget |
-| Anomalies | Zero critical | Zero critical | Detect & escalate <1 hour |
+| Criterion | Week 2 (100) | Week 3 (500) | Target |
+|-----------|-------------|-------------|--------|
+| Simulated cohort | 100 users | 500 users | 5x scale validation |
+| Actual spend | $0 | $0 | Simulation only |
+| Projected cost/user/day | $0.16–0.18 | $0.15–0.17 | Economies of scale |
+| Projected error rate | <0.15% | <0.15% | Maintain or improve |
+| Projected sentiment | >neutral | ≥56% thumbs-up | Maintain or improve |
+| Infrastructure stability | No anomalies | No anomalies | Load test 50x scenario |
+| Projections confidence | Moderate | High | Ready for production canary |
 
 ---
 
