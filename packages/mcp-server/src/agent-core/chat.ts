@@ -16,6 +16,9 @@ import { buildBridges } from './bridges.js';
 import { recordCost } from './cost-ledger.js';
 import { runMissionPipeline } from '../lib/crew-mission-pipeline.js';
 import { planThenExecute } from './plan-then-execute.js';
+import { analyzeMission } from '../lib/mission-analyzer.js';
+import { buildCrewInventory } from '../lib/crew-skill-registry.js';
+import { assembleTeamsForMission } from '../lib/team-assembly-engine.js';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
@@ -508,6 +511,50 @@ function buildParallelTeams(team: TeamMember[], memoryCounts: Record<string, num
   return snapshots;
 }
 
+/**
+ * Build parallel teams dynamically using mission analysis and team assembly engine.
+ * Returns N teams based on mission scope, complexity, and crew skills.
+ * Fallback to buildParallelTeams if analysis fails.
+ */
+function buildDynamicParallelTeams(
+  message: string,
+  team: TeamMember[],
+  memoryCounts: Record<string, number>,
+  complexity?: number,
+): CrewTeamSnapshot[] {
+  try {
+    // Analyze mission to extract subtasks
+    const mission = analyzeMission(message);
+
+    // Build crew inventory from our known crew
+    const inventory = buildCrewInventory();
+
+    // Assemble teams dynamically
+    const result = assembleTeamsForMission(mission, inventory, {
+      skillThreshold: 0.65, // slightly lower threshold for more flexibility
+    });
+
+    // Convert assembly result to CrewTeamSnapshot format
+    return result.teams.map((teamAssignment) => ({
+      teamId: teamAssignment.teamId,
+      label: teamAssignment.label,
+      members: teamAssignment.members,
+      domains: Array.from(
+        new Set(
+          team
+            .filter((m) => teamAssignment.members.includes(m.crewId))
+            .map((m) => m.domain)
+        )
+      ),
+      memoryHits: teamAssignment.members.reduce((sum, crewId) => sum + (memoryCounts[crewId] ?? 0), 0),
+    }));
+  } catch (e: any) {
+    // Fallback to static team grouping if dynamic assembly fails
+    // (e.g., invalid mission brief, crew unavailable)
+    return buildParallelTeams(team, memoryCounts);
+  }
+}
+
 async function buildCrewSelfOrganizationContext(
   message: string,
   clientId: string | null,
@@ -535,7 +582,8 @@ async function buildCrewSelfOrganizationContext(
   }));
 
   const memoryCounts = Object.fromEntries(memoryRows.map(({ member, rows }) => [member.crewId, rows.length]));
-  const teams = buildParallelTeams(uniqueMembers, memoryCounts);
+  // Use dynamic team assembly to create N teams based on mission complexity, not hardcoded 3
+  const teams = buildDynamicParallelTeams(message, uniqueMembers, memoryCounts, options?.complexity);
   const allHandsTeam = options?.forceAllHands
     ? {
         teamId: 'all-hands',
