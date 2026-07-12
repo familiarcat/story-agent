@@ -23,8 +23,10 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const clientId = searchParams.get('clientId') || null;
 
-    // Fetch recent observations
-    const allMemories = await getRecentObservationMemories(limit + offset, undefined, clientId);
+    // Fetch recent observations - ensure we get enough for pagination
+    // Fetch max(limit + offset, 2000) to handle multi-page lookups
+    const fetchLimit = Math.max(limit + offset, 2000);
+    const allMemories = await getRecentObservationMemories(fetchLimit, undefined, clientId);
 
     // Apply filters
     let filtered = allMemories.slice(offset, offset + limit);

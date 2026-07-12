@@ -23,13 +23,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // Fetch a large batch and find the one matching the ID
-    const memories = await getRecentObservationMemories(1000);
+    // Fetch a large batch to ensure we find observations even with deep pagination
+    const memories = await getRecentObservationMemories(5000);
     const memory = memories.find((m: ObservationMemoryRecord) => m.id === id);
 
     if (!memory) {
       return NextResponse.json(
-        { success: false, error: 'Observation not found' },
+        {
+          success: false,
+          error: 'Observation not found. It may have been archived, deleted, or is too old (beyond recent 5000 deliberations).',
+        },
         { status: 404 }
       );
     }
