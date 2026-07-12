@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { lcars } from '@/lib/lcars';
 import type { ObservationMemoryRecord } from '@story-agent/shared';
+
+const MONO = 'ui-monospace, "Arial Narrow", sans-serif';
 
 interface Observation {
   id: string;
@@ -73,42 +76,61 @@ export function ObservationListView({ onSelectObservation, selectedId }: Observa
   };
 
   const outcomeLabel = {
-    success: 'Success',
-    partial: 'Partial',
-    failed: 'Failed',
-    pending: 'Pending',
+    success: 'SUCCESS',
+    partial: 'PARTIAL',
+    failed: 'FAILED',
+    pending: 'PENDING',
   };
 
   const outcomeColor = {
-    success: 'text-green-600',
-    partial: 'text-yellow-600',
-    failed: 'text-red-600',
-    pending: 'text-gray-600',
+    success: lcars.paleCanary,
+    partial: lcars.neonCarrot,
+    failed: lcars.danger,
+    pending: lcars.textDim,
   };
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'grid', gap: 8, fontFamily: MONO, color: lcars.text, fontSize: '0.78rem' }}>
       {/* Filters */}
-      <div className="flex gap-4 p-4 bg-slate-100 rounded">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Search observations..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPage(0);
-            }}
-            className="w-full px-3 py-2 border border-slate-300 rounded"
-          />
-        </div>
+      <div style={{ display: 'grid', gap: 6 }}>
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setPage(0);
+          }}
+          style={{
+            background: lcars.space,
+            color: lcars.text,
+            border: `1px solid ${lcars.border}`,
+            borderRadius: 6,
+            padding: '6px 10px',
+            fontFamily: MONO,
+            fontSize: '0.75rem',
+            outline: 'none',
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = lcars.paleCanary)}
+          onBlur={(e) => (e.currentTarget.style.borderColor = lcars.border)}
+        />
         <select
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value);
             setPage(0);
           }}
-          className="px-3 py-2 border border-slate-300 rounded"
+          style={{
+            background: lcars.space,
+            color: lcars.text,
+            border: `1px solid ${lcars.border}`,
+            borderRadius: 6,
+            padding: '6px 10px',
+            fontFamily: MONO,
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
+            cursor: 'pointer',
+          }}
         >
           <option value="">All Outcomes</option>
           <option value="success">✅ Success</option>
@@ -119,52 +141,57 @@ export function ObservationListView({ onSelectObservation, selectedId }: Observa
       </div>
 
       {/* Loading / Error */}
-      {loading && <div className="p-4 text-center text-slate-500">Loading...</div>}
-      {error && <div className="p-4 bg-red-100 text-red-700 rounded">{error}</div>}
+      {loading && <div style={{ color: lcars.textDim, textAlign: 'center', padding: '10px 0' }}>Loading...</div>}
+      {error && <div style={{ color: lcars.danger, background: lcars.space, borderLeft: `3px solid ${lcars.danger}`, borderRadius: 6, padding: 8 }}>{error}</div>}
 
       {/* List */}
       {!loading && observations.length === 0 && (
-        <div className="p-4 text-center text-slate-500">No observations found</div>
+        <div style={{ color: lcars.textDim, textAlign: 'center', padding: '10px 0' }}>No observations found</div>
       )}
 
-      <div className="space-y-2">
+      <div style={{ display: 'grid', gap: 4, maxHeight: 600, overflowY: 'auto' }}>
         {observations.map((obs) => (
           <button
             key={obs.id}
             onClick={() => onSelectObservation(obs.id)}
-            className={`w-full text-left p-4 border rounded transition-colors ${
-              selectedId === obs.id
-                ? 'bg-blue-50 border-blue-500'
-                : 'bg-white border-slate-200 hover:bg-slate-50'
-            }`}
+            style={{
+              textAlign: 'left',
+              background: selectedId === obs.id ? lcars.eggplant : lcars.space,
+              border: `1px solid ${selectedId === obs.id ? outcomeColor[obs.outcome as keyof typeof outcomeColor] : lcars.border}`,
+              borderLeft: `3px solid ${outcomeColor[obs.outcome as keyof typeof outcomeColor]}`,
+              borderRadius: 6,
+              padding: 8,
+              cursor: 'pointer',
+              fontFamily: MONO,
+              color: lcars.text,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = lcars.eggplant;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = selectedId === obs.id ? lcars.eggplant : lcars.space;
+            }}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`text-xl ${outcomeColor[obs.outcome as keyof typeof outcomeColor]}`}>
-                    {outcomeEmoji[obs.outcome as keyof typeof outcomeEmoji]}
-                  </span>
-                  <span className="text-sm font-medium text-slate-600">
-                    {outcomeLabel[obs.outcome as keyof typeof outcomeLabel]}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    {new Date(obs.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-700 truncate">{obs.summary}</p>
-                {obs.tags.length > 0 && (
-                  <div className="flex gap-2 mt-2 flex-wrap">
-                    {obs.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded">
-                        {tag}
-                      </span>
-                    ))}
-                    {obs.tags.length > 3 && (
-                      <span className="text-xs text-slate-500 px-2 py-1">+{obs.tags.length - 3}</span>
-                    )}
-                  </div>
-                )}
+            <div style={{ display: 'grid', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.72rem' }}>
+                <span style={{ fontSize: '1rem' }}>{outcomeEmoji[obs.outcome as keyof typeof outcomeEmoji]}</span>
+                <span style={{ fontWeight: 700, textTransform: 'uppercase', color: outcomeColor[obs.outcome as keyof typeof outcomeColor] }}>
+                  {outcomeLabel[obs.outcome as keyof typeof outcomeLabel]}
+                </span>
+                <span style={{ color: lcars.textDim }}>{new Date(obs.createdAt).toLocaleDateString()}</span>
               </div>
+              <div style={{ fontSize: '0.75rem', color: lcars.tanoi, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{obs.summary}</div>
+              {obs.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {obs.tags.slice(0, 3).map((tag) => (
+                    <span key={tag} style={{ fontSize: '0.65rem', background: lcars.space, color: lcars.textDim, padding: '2px 6px', borderRadius: 4, border: `1px solid ${lcars.border}` }}>
+                      {tag}
+                    </span>
+                  ))}
+                  {obs.tags.length > 3 && <span style={{ fontSize: '0.65rem', color: lcars.textDim }}>+{obs.tags.length - 3}</span>}
+                </div>
+              )}
             </div>
           </button>
         ))}
@@ -172,19 +199,37 @@ export function ObservationListView({ onSelectObservation, selectedId }: Observa
 
       {/* Pagination */}
       {!loading && observations.length > 0 && (
-        <div className="flex justify-between items-center p-4 bg-slate-100 rounded">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${lcars.border}`, paddingTop: 8, fontSize: '0.72rem', color: lcars.textDim, gap: 8 }}>
           <button
             onClick={() => setPage(Math.max(0, page - 1))}
             disabled={page === 0}
-            className="px-4 py-2 border border-slate-300 rounded disabled:opacity-50"
+            style={{
+              background: page === 0 ? lcars.space : lcars.eggplant,
+              color: lcars.text,
+              border: `1px solid ${lcars.border}`,
+              borderRadius: 6,
+              padding: '6px 12px',
+              cursor: page === 0 ? 'default' : 'pointer',
+              fontFamily: MONO,
+              opacity: page === 0 ? 0.5 : 1,
+            }}
           >
             ← Previous
           </button>
-          <span className="text-sm text-slate-600">Page {page + 1}</span>
+          <span>Page {page + 1}</span>
           <button
             onClick={() => setPage(page + 1)}
             disabled={observations.length < limit}
-            className="px-4 py-2 border border-slate-300 rounded disabled:opacity-50"
+            style={{
+              background: observations.length < limit ? lcars.space : lcars.eggplant,
+              color: lcars.text,
+              border: `1px solid ${lcars.border}`,
+              borderRadius: 6,
+              padding: '6px 12px',
+              cursor: observations.length < limit ? 'default' : 'pointer',
+              fontFamily: MONO,
+              opacity: observations.length < limit ? 0.5 : 1,
+            }}
           >
             Next →
           </button>

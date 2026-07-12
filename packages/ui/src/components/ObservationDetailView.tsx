@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { lcars } from '@/lib/lcars';
 import type { ObservationDebateResult } from '@story-agent/shared';
 import { RecordOutcomeModal } from './RecordOutcomeModal';
+
+const MONO = 'ui-monospace, "Arial Narrow", sans-serif';
 
 interface DetailObservation {
   id: string;
@@ -52,9 +55,9 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
     }
   }
 
-  if (loading) return <div className="p-4 text-center text-slate-500">Loading...</div>;
-  if (error) return <div className="p-4 bg-red-100 text-red-700 rounded">{error}</div>;
-  if (!observation) return <div className="p-4 text-center text-slate-500">Observation not found</div>;
+  if (loading) return <div style={{ color: lcars.textDim, fontSize: '0.8rem' }}>Loading...</div>;
+  if (error) return <div style={{ color: lcars.danger, fontSize: '0.8rem' }}>{error}</div>;
+  if (!observation) return <div style={{ color: lcars.textDim, fontSize: '0.8rem' }}>Observation not found</div>;
 
   const outcomeEmoji = {
     success: '✅',
@@ -71,52 +74,47 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
   };
 
   const outcomeColor = {
-    success: 'bg-green-50 border-green-200 text-green-900',
-    partial: 'bg-yellow-50 border-yellow-200 text-yellow-900',
-    failed: 'bg-red-50 border-red-200 text-red-900',
-    pending: 'bg-gray-50 border-gray-200 text-gray-900',
+    success: lcars.paleCanary,
+    partial: lcars.neonCarrot,
+    failed: lcars.danger,
+    pending: lcars.textDim,
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="p-4 bg-slate-100 rounded">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">{observation.storyId}</h2>
-            <p className="text-sm text-slate-600">
-              Deliberated: {new Date(observation.createdAt).toLocaleString()}
-            </p>
-          </div>
-          {observation.missionReference && (
-            <div className="text-right">
-              <p className="text-xs text-slate-600">Reference</p>
-              <p className="text-sm font-mono text-slate-900">{observation.missionReference}</p>
-            </div>
-          )}
+    <div style={{ display: 'grid', gap: 8, fontFamily: MONO, color: lcars.text, fontSize: '0.78rem' }}>
+      {/* Story ID / Header */}
+      <div style={{ borderBottom: `1px solid ${lcars.border}`, paddingBottom: 8 }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi }}>{observation.storyId}</div>
+        <div style={{ fontSize: '0.7rem', color: lcars.textDim, marginTop: 4 }}>
+          Deliberated: {new Date(observation.createdAt).toLocaleString()}
         </div>
+        {observation.missionReference && (
+          <div style={{ fontSize: '0.7rem', color: lcars.textDim, marginTop: 4 }}>
+            Reference: {observation.missionReference}
+          </div>
+        )}
       </div>
 
       {/* Outcome Section */}
       {observation.outcome !== 'pending' && (
-        <div className={`p-4 border-l-4 rounded ${outcomeColor[observation.outcome as keyof typeof outcomeColor]}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">{outcomeEmoji[observation.outcome as keyof typeof outcomeEmoji]}</span>
-            <h3 className="text-lg font-bold">
+        <div style={{ background: lcars.space, borderLeft: `3px solid ${outcomeColor[observation.outcome as keyof typeof outcomeColor]}`, borderRadius: 6, padding: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: '1rem' }}>{outcomeEmoji[observation.outcome as keyof typeof outcomeEmoji]}</span>
+            <div style={{ fontWeight: 700, textTransform: 'uppercase', color: outcomeColor[observation.outcome as keyof typeof outcomeColor], fontSize: '0.85rem' }}>
               {outcomeLabel[observation.outcome as keyof typeof outcomeLabel]}
-            </h3>
+            </div>
           </div>
 
           {observation.executionCompletedAt && (
-            <p className="text-sm mb-2">
+            <div style={{ fontSize: '0.7rem', color: lcars.textDim, marginBottom: 6 }}>
               Recorded: {new Date(observation.executionCompletedAt).toLocaleString()}
-            </p>
+            </div>
           )}
 
           {observation.outcomeNotes && (
-            <div className="mt-3">
-              <h4 className="font-semibold text-sm mb-2">Lessons Learned</h4>
-              <p className="text-sm whitespace-pre-wrap">{observation.outcomeNotes}</p>
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi, marginBottom: 4 }}>Lessons Learned</div>
+              <div style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{observation.outcomeNotes}</div>
             </div>
           )}
         </div>
@@ -126,7 +124,21 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
       {observation.outcome === 'pending' && (
         <button
           onClick={() => setShowOutcomeModal(true)}
-          className="w-full px-4 py-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors"
+          style={{
+            background: lcars.neonCarrot,
+            color: lcars.onAccent,
+            border: 'none',
+            borderRadius: 6,
+            padding: '8px 12px',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            fontSize: '0.75rem',
+            fontFamily: MONO,
+            cursor: 'pointer',
+            transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
         >
           Record Outcome
         </button>
@@ -135,10 +147,10 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
       {/* Tags */}
       {observation.tags.length > 0 && (
         <div>
-          <h4 className="font-semibold text-sm mb-2 text-slate-700">Tags</h4>
-          <div className="flex gap-2 flex-wrap">
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi, marginBottom: 4 }}>Tags</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {observation.tags.map((tag) => (
-              <span key={tag} className="text-xs bg-slate-200 text-slate-700 px-3 py-1 rounded-full">
+              <span key={tag} style={{ fontSize: '0.7rem', background: lcars.space, color: lcars.textDim, padding: '3px 8px', borderRadius: 4, border: `1px solid ${lcars.border}` }}>
                 {tag}
               </span>
             ))}
@@ -147,20 +159,20 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
       )}
 
       {/* Transcript */}
-      <div className="space-y-4">
-        <h3 className="font-bold text-lg text-slate-900">Deliberation Transcript</h3>
+      <div style={{ borderTop: `1px solid ${lcars.border}`, paddingTop: 8 }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi, marginBottom: 6 }}>Deliberation</div>
 
         {observation.transcript.consensusSummary && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-            <h4 className="font-semibold text-sm text-blue-900 mb-2">Consensus</h4>
-            <p className="text-sm text-blue-800">{observation.transcript.consensusSummary}</p>
+          <div style={{ background: lcars.space, borderLeft: `3px solid ${lcars.paleCanary}`, borderRadius: 6, padding: 8, marginBottom: 6 }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi, marginBottom: 4 }}>Consensus</div>
+            <div style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.4 }}>{observation.transcript.consensusSummary}</div>
           </div>
         )}
 
         {observation.transcript.unresolvedRisks && observation.transcript.unresolvedRisks.length > 0 && (
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-            <h4 className="font-semibold text-sm text-yellow-900 mb-2">Unresolved Risks</h4>
-            <ul className="text-sm text-yellow-800 space-y-1">
+          <div style={{ background: lcars.space, borderLeft: `3px solid ${lcars.neonCarrot}`, borderRadius: 6, padding: 8, marginBottom: 6 }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi, marginBottom: 4 }}>Unresolved Risks</div>
+            <ul style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.4, margin: 0, paddingLeft: 16 }}>
               {observation.transcript.unresolvedRisks.map((risk, i) => (
                 <li key={i}>• {risk}</li>
               ))}
@@ -169,9 +181,9 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
         )}
 
         {observation.transcript.actionItems && observation.transcript.actionItems.length > 0 && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded">
-            <h4 className="font-semibold text-sm text-green-900 mb-2">Action Items</h4>
-            <ul className="text-sm text-green-800 space-y-1">
+          <div style={{ background: lcars.space, borderLeft: `3px solid ${lcars.paleCanary}`, borderRadius: 6, padding: 8, marginBottom: 6 }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi, marginBottom: 4 }}>Action Items</div>
+            <ul style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.4, margin: 0, paddingLeft: 16 }}>
               {observation.transcript.actionItems.map((item, i) => (
                 <li key={i}>• {item}</li>
               ))}
@@ -180,26 +192,24 @@ export function ObservationDetailView({ observationId, onOutcomeRecorded }: Obse
         )}
 
         {observation.transcript.rounds && observation.transcript.rounds.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-slate-900">Debate Rounds</h4>
+          <div style={{ marginTop: 6 }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi, marginBottom: 4 }}>Debate Rounds</div>
             {observation.transcript.rounds.map((round, roundIdx) => (
-              <div key={roundIdx} className="p-4 bg-slate-50 border border-slate-200 rounded">
-                <h5 className="font-semibold text-sm text-slate-900 mb-2">{round.title}</h5>
-                <ul className="space-y-2">
-                  {round.entries.map((entry, entryIdx) => (
-                    <li key={entryIdx} className="text-sm">
-                      <span className="font-semibold text-slate-900">{entry.speakerId} ({entry.position})</span>
-                      <p className="text-slate-700 mt-1">{entry.statement}</p>
-                      {entry.evidence.length > 0 && (
-                        <ul className="text-xs text-slate-600 mt-1 space-y-0.5">
-                          {entry.evidence.map((ev, i) => (
-                            <li key={i}>📎 {ev}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+              <div key={roundIdx} style={{ background: lcars.space, borderRadius: 6, padding: 6, marginBottom: 6 }}>
+                <div style={{ fontSize: '0.73rem', fontWeight: 700, color: lcars.tanoi, marginBottom: 4 }}>{round.title}</div>
+                {round.entries.map((entry, entryIdx) => (
+                  <div key={entryIdx} style={{ fontSize: '0.7rem', marginBottom: 4, paddingLeft: 8, borderLeft: `2px solid ${lcars.border}` }}>
+                    <div style={{ fontWeight: 700, color: lcars.text }}>{entry.speakerId} ({entry.position})</div>
+                    <div style={{ color: lcars.tanoi, marginTop: 2 }}>{entry.statement}</div>
+                    {entry.evidence.length > 0 && (
+                      <ul style={{ fontSize: '0.65rem', color: lcars.textDim, marginTop: 2, margin: 0, paddingLeft: 16 }}>
+                        {entry.evidence.map((ev, i) => (
+                          <li key={i}>📎 {ev}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
               </div>
             ))}
           </div>

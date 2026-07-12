@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { lcars } from '@/lib/lcars';
+
+const MONO = 'ui-monospace, "Arial Narrow", sans-serif';
 
 interface RecordOutcomeModalProps {
   observationId: string;
@@ -62,42 +65,71 @@ export function RecordOutcomeModal({ observationId, onClose, onSuccess }: Record
   ] as const;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="p-6 space-y-6">
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.7)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        zIndex: 1000,
+        fontFamily: MONO,
+      }}
+    >
+      <div
+        style={{
+          background: lcars.black,
+          color: lcars.text,
+          borderRadius: 6,
+          border: `1px solid ${lcars.border}`,
+          maxWidth: 480,
+          width: '100%',
+          padding: 16,
+          boxShadow: '0 20px 25px rgba(0, 0, 0, 0.5)',
+        }}
+      >
+        <div style={{ display: 'grid', gap: 12 }}>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Record Outcome</h2>
-            <p className="text-sm text-slate-600 mt-1">
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi, margin: 0 }}>Record Outcome</h2>
+            <p style={{ fontSize: '0.75rem', color: lcars.textDim, marginTop: 4, letterSpacing: 'normal' }}>
               How did this deliberation result in execution?
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 10 }}>
             {/* Outcome Selection */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-900">Outcome</label>
-              <div className="space-y-2">
+            <div style={{ display: 'grid', gap: 6 }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi }}>Outcome</label>
+              <div style={{ display: 'grid', gap: 4 }}>
                 {outcomeOptions.map(({ value, label, description }) => (
                   <button
                     key={value}
                     type="button"
                     onClick={() => setOutcome(value)}
-                    className={`w-full text-left p-3 rounded border-2 transition-colors ${
-                      outcome === value
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-slate-200 bg-white hover:bg-slate-50'
-                    }`}
+                    style={{
+                      textAlign: 'left',
+                      background: outcome === value ? lcars.eggplant : lcars.space,
+                      border: `1px solid ${outcome === value ? lcars.paleCanary : lcars.border}`,
+                      borderRadius: 6,
+                      padding: 8,
+                      cursor: 'pointer',
+                      fontFamily: MONO,
+                      color: lcars.text,
+                      transition: 'all 0.2s',
+                    }}
                   >
-                    <div className="font-semibold text-slate-900">{label}</div>
-                    <div className="text-xs text-slate-600">{description}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.8rem', color: lcars.tanoi }}>{label}</div>
+                    <div style={{ fontSize: '0.7rem', color: lcars.textDim, marginTop: 2, letterSpacing: 'normal' }}>{description}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Lessons Learned */}
-            <div className="space-y-2">
-              <label htmlFor="lessons" className="block text-sm font-semibold text-slate-900">
+            <div style={{ display: 'grid', gap: 4 }}>
+              <label htmlFor="lessons" style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: lcars.tanoi }}>
                 Lessons Learned (Optional)
               </label>
               <textarea
@@ -107,28 +139,76 @@ export function RecordOutcomeModal({ observationId, onClose, onSuccess }: Record
                 placeholder="Why did this work/fail? What did the crew learn?"
                 maxLength={500}
                 rows={4}
-                className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  background: lcars.space,
+                  color: lcars.text,
+                  border: `1px solid ${lcars.border}`,
+                  borderRadius: 6,
+                  padding: 8,
+                  fontFamily: MONO,
+                  fontSize: '0.75rem',
+                  outline: 'none',
+                  resize: 'vertical',
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = lcars.paleCanary)}
+                onBlur={(e) => (e.currentTarget.style.borderColor = lcars.border)}
               />
-              <p className="text-xs text-slate-600">{outcomeNotes.length}/500 characters</p>
+              <p style={{ fontSize: '0.7rem', color: lcars.textDim, margin: 0 }}>{outcomeNotes.length}/500 characters</p>
             </div>
 
             {/* Error */}
-            {error && <div className="p-3 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
+            {error && (
+              <div style={{
+                background: lcars.danger,
+                color: lcars.onAccent,
+                borderRadius: 6,
+                padding: 8,
+                fontSize: '0.75rem',
+              }}>
+                {error}
+              </div>
+            )}
 
             {/* Buttons */}
-            <div className="flex gap-2 pt-4">
+            <div style={{ display: 'flex', gap: 8, paddingTop: 8, borderTop: `1px solid ${lcars.border}` }}>
               <button
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="flex-1 px-4 py-2 border border-slate-300 rounded font-semibold text-slate-900 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                style={{
+                  flex: 1,
+                  background: lcars.space,
+                  color: lcars.text,
+                  border: `1px solid ${lcars.border}`,
+                  borderRadius: 6,
+                  padding: 8,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  fontSize: '0.75rem',
+                  fontFamily: MONO,
+                  cursor: 'pointer',
+                  opacity: loading ? 0.5 : 1,
+                }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                style={{
+                  flex: 1,
+                  background: lcars.neonCarrot,
+                  color: lcars.onAccent,
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: 8,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  fontSize: '0.75rem',
+                  fontFamily: MONO,
+                  cursor: 'pointer',
+                  opacity: loading ? 0.5 : 1,
+                }}
               >
                 {loading ? 'Saving...' : 'Record Outcome'}
               </button>
