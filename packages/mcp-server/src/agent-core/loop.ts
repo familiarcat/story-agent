@@ -20,6 +20,7 @@ import { getSkillTheory } from '@story-agent/shared/skill-theory';
 import '../lib/skill-theories.js'; // register tool theories so the lens can read them
 import { repairToolCallArgs } from './tool-call-repair.js';
 import { nextEscalationTier } from './escalation-policy.js';
+import { logCrewProgress } from '@story-agent/shared';
 
 export interface AgentEvent {
   type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens' | 'stall' | 'verify';
@@ -41,6 +42,10 @@ export interface AgentEvent {
 export interface RunAgentOptions {
   workspace?: string;
   clientId?: string | null;
+  /** Optional crew ID for real-time stream logging (e.g., 'riker', 'geordi', 'worf'). */
+  crewId?: string;
+  /** Optional task ID for real-time stream logging (e.g., 'team_a_e2e', 'team_b_audit'). */
+  taskId?: string;
   /** Capability tier for Quark's per-turn model pick (default 3 = advanced, cheap multi-provider). */
   tier?: number;
   maxIterations?: number;
@@ -244,6 +249,22 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const reviewThresholdUSD = opts.reviewThresholdUSD;
   const emit = opts.onEvent ?? (() => {});
 
+  // Real-time crew stream logging (for warp-speed visibility)
+  const crewId = opts.crewId || 'agent';
+  const taskId = opts.taskId || 'task_' + randomUUID().slice(0, 8);
+  let iteration = 0;
+
+  // Log task start
+  if (opts.crewId && opts.taskId) {
+    await logCrewProgress({
+      crew_id: crewId,
+      task_id: taskId,
+      iteration: 0,
+      status: 'start',
+      action_description: `Starting task: ${userInput.substring(0, 100)}${userInput.length > 100 ? '...' : ''}`,
+    }, workspace).catch(err => console.error('[CrewStream] Failed to log task start:', err));
+  }
+
   // Multi-file reliability: snapshot touched files + scoped typecheck before finishing.
   const verifyEdits = opts.verifyEdits !== false;
   const maxVerifyRetries = opts.maxVerifyRetries ?? 2;
@@ -298,6 +319,23 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
 
   // Single completion path: persist the Layer-4 explainable feedback card (best-effort), emit done.
   const finalize = async (): Promise<AgentRunResult> => {
+    // Log task completion (fire-and-forget)
+    if (opts.crewId && opts.taskId) {
+      await logCrewProgress({
+        crew_id: crewId,
+        task_id: taskId,
+        iteration,
+        status: 'complete',
+        action_description: `Task completed in ${iteration} iteration(s)`,
+        result: result.finalText.substring(0, 200),
+        metrics: {
+          cost_usd: result.totalCostUSD,
+          tokens: result.totalTokens,
+          iterations: result.iterations,
+        },
+      }, workspace).catch(err => console.error('[CrewStream] Failed to log completion:', err));
+    }
+
     if (opts.recordFeedback) {
       const posture = { green: 0, yellow: 0, red: 0 };
       for (const tc of result.toolCalls) if (tc.tier in posture) posture[tc.tier as keyof typeof posture]++;
@@ -333,6 +371,18 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
 
   for (let i = 0; i < maxIterations; i++) {
     result.iterations = i + 1;
+    iteration = i + 1;
+
+    // Log iteration start (fire-and-forget, never blocks)
+    if (opts.crewId && opts.taskId) {
+      logCrewProgress({
+        crew_id: crewId,
+        task_id: taskId,
+        iteration,
+        status: 'progress',
+        action_description: `Iteration ${iteration}/${maxIterations}: processing task`,
+      }, workspace).catch(err => console.error('[CrewStream] Failed to log iteration:', err));
+    }
 
     // Anthropic-first provider routing only for anthropic slugs (avoids stale Bedrock).
     const body: any = { model, messages, tools: openaiTools, tool_choice: 'auto', max_tokens: 1500 };

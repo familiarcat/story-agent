@@ -665,3 +665,13 @@ export {
   getRecentCrewExecutionOutcomes,
   getCrewExecutionStats,
 } from './db.js';
+
+// ── Crew Real-Time Stream (warp-speed visibility) ───────────────────────────
+
+export {
+  logCrewProgress,
+  readCrewStream,
+  tailCrewStream,
+  getLiveCrewStatus,
+  type CrewStreamEvent,
+} from './crew-stream.js';

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { fetchAhaStory } from './aha';
 import { buildObservationLoungeBrief } from './brief';
-import { runAssistantTurn, resetSession } from './chatEngine';
+import { runAssistantTurn, resetSession, streamCrewStatusUpdates } from './chatEngine';
 import { runAgentTurn, renderSymphonyPanel, runChatTurn, fetchAhaHierarchy } from './agentClient';
 import { gatherChatContext } from './contextProvider';
 
@@ -139,6 +139,23 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         return { metadata: { [META_CMD]: 'symphony' } };
       }
 
+      // Live crew status streaming (/crew-status) → real-time progress of executing teams A/B/C/D
+      if (cmd === 'crew-status') {
+        stream.markdown('🎯 **Connecting to live crew stream...**\n\n');
+        try {
+          const cleanup = await streamCrewStatusUpdates(stream, {
+            sessionId: `vscode-${Date.now()}`,
+            autoStopAfterMs: 5 * 60 * 60 * 1000, // 5 hour default
+          });
+          // Keep the cleanup function available; the stream will close when done
+          return { metadata: { [META_CMD]: 'crew-status' } };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          stream.markdown(`**Error connecting to crew stream:** ${msg}\n\nEnsure the crew is executing and crew stream log is being written.`);
+          return { metadata: { [META_CMD]: 'crew-status-error' } };
+        }
+      }
+
       // Autonomous agentic mode (/agent) → tool-calling loop over agent-core (CLI/API/VS Code share it).
       if (cmd === 'agent') {
         if (!prompt.length) {
@@ -206,6 +223,7 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         `| \`/reset\` | Reset the session token budget meter |\n` +
         `| \`/prepare STORY-####\` | Load story mission from Aha, generate Observation Lounge brief |\n` +
         `| \`/status STORY-####\` | Check tracked story status |\n` +
+        `| \`/crew-status\` | **Live crew status streaming** — real-time Teams A/B/C/D progress (warp-speed) |\n` +
         `| \`/dashboard\` | Open the Story Agent web UI |\n`
       );
       stream.button({ command: 'story-agent.openDashboard', title: '$(browser) Open Dashboard' });

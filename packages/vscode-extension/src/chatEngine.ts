@@ -17,6 +17,17 @@
  */
 import * as vscode from 'vscode';
 import { createHash } from 'crypto';
+import {
+  CrewStreamEvent,
+  CrewStatusCard,
+  formatCrewStatusHeader,
+  formatCrewCard,
+  formatEscalationAlert,
+  formatCompletionSummary,
+  mergeCrewEvent,
+  renderCrewCards,
+} from './crew-status-display';
+import { tailCrewStream, readCrewStream } from '@story-agent/shared';
 
 export type Tier = 'simple' | 'complex';
 export type Provider = 'openrouter' | 'copilot';
@@ -587,6 +598,117 @@ export function startCrewStatusPolling(
   // Return stop function
   return () => {
     active = false;
+  };
+}
+
+/**
+ * Stream live crew status updates to the chat, polling every 2 seconds.
+ *
+ * Usage:
+ * ```typescript
+ * const stop = await streamCrewStatusUpdates(stream, { sessionId: chatCtx.sessionId });
+ * // ... chat continues ...
+ * // When done or timeout:
+ * stop();
+ * ```
+ */
+export async function streamCrewStatusUpdates(
+  stream: vscode.ChatResponseStream,
+  options: {
+    sessionId?: string;
+    autoStopAfterMs?: number; // Default: 5 hours
+    workspaceDir?: string;
+  } = {}
+): Promise<() => void> {
+  const sessionId = options.sessionId || `session-${Date.now()}`;
+  const autoStopMs = options.autoStopAfterMs || 5 * 60 * 60 * 1000; // 5 hours default
+  const workspaceDir = options.workspaceDir || process.cwd();
+
+  const crewState = new Map<string, CrewStatusCard>();
+  const startTime = new Date();
+  let isActive = true;
+  let lastPollOffset = 0;
+  let escalationCount = 0;
+  let displayMessageId = '';
+
+  // Emit initial header
+  stream.markdown(formatCrewStatusHeader(startTime) + '\n');
+
+  /**
+   * Poll for new crew stream events and update the display.
+   */
+  const pollAndUpdate = async () => {
+    if (!isActive) return;
+
+    try {
+      // Tail the crew stream for new events since last poll
+      const { events, newOffset } = await tailCrewStream(lastPollOffset, workspaceDir);
+      lastPollOffset = newOffset;
+
+      if (events.length === 0) return; // No new events
+
+      // Process each event
+      const escalationAlerts: string[] = [];
+      for (const event of events) {
+        mergeCrewEvent(crewState, event, startTime);
+
+        // Track escalations for prominent display
+        if (event.status === 'escalation') {
+          escalationCount++;
+          escalationAlerts.push(formatEscalationAlert(event));
+        }
+      }
+
+      // Emit escalation alerts immediately
+      for (const alert of escalationAlerts) {
+        stream.markdown('\n' + alert + '\n');
+      }
+
+      // Re-render all crew cards (update in place by overwriting)
+      const cardDisplay = renderCrewCards(crewState);
+      if (cardDisplay) {
+        stream.markdown('\n' + formatCrewStatusHeader(startTime) + '\n\n' + cardDisplay + '\n');
+      }
+
+      // Check if all crews are complete
+      const allComplete = Array.from(crewState.values()).every(
+        c => c.status === 'complete' || c.status === 'error'
+      );
+
+      if (allComplete && crewState.size > 0) {
+        // All teams finished — show completion summary
+        stream.markdown('\n' + formatCompletionSummary(crewState, startTime, escalationCount) + '\n');
+        isActive = false;
+      }
+    } catch (error) {
+      // Silently continue if poll fails (non-blocking, best-effort)
+      console.debug('[streamCrewStatusUpdates] Poll error:', error);
+    }
+  };
+
+  // Start polling loop (non-blocking background task)
+  const pollInterval = 2000; // 2 seconds
+  const intervalHandle = setInterval(() => {
+    if (isActive) {
+      pollAndUpdate().catch(err => {
+        console.debug('[streamCrewStatusUpdates] Uncaught poll error:', err);
+      });
+    }
+  }, pollInterval);
+
+  // Auto-stop after timeout
+  const timeoutHandle = setTimeout(() => {
+    if (isActive) {
+      isActive = false;
+      stream.markdown('\n✋ **Live crew status monitoring stopped (auto-timeout)**\n');
+    }
+  }, autoStopMs);
+
+  // Return cleanup function
+  return () => {
+    isActive = false;
+    clearInterval(intervalHandle);
+    clearTimeout(timeoutHandle);
   };
 }
 

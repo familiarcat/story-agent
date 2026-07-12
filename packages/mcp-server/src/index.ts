@@ -36,6 +36,7 @@ import { registerAnalyzeImageTool } from './tools/analyze-image.js';
 import { registerRunShellTool, registerPlanThenExecuteTool } from './tools/run-shell.js';
 import { registerCrewAnalyzeImageTool } from './tools/crew-analyze-image.js';
 import { registerSkillTools } from './tools/skill-tools.js';
+import { registerCrewStreamTools } from './tools/crew-stream-tools.js';
 import { applySkillAnnotations } from './lib/apply-skill-annotations.js';
 import { installMcpToolNamePolicy } from './lib/mcp-tool-name-policy.js';
 import { startAgentHttpServer, handleAgentRequest } from './agent-core/http-server.js';
@@ -72,6 +73,7 @@ registerRunShellTool(server);  // 🖥️ governed shell exec (WorfGate green/ye
 registerPlanThenExecuteTool(server);  // 🔁 autonomous loop: crew plan → agent-core execute
 registerCrewAnalyzeImageTool(server);  // 🖼️🖖 crew assesses an image's text content together (vision → deliberation)
 registerSkillTools(server);  // 📚 5W1H skill-theory introspection (describe_skill / coverage)
+registerCrewStreamTools(server);  // ⚡ real-time crew progress streaming — warp-speed visibility
 
 async function main() {
   // Initialize async tool registrations
