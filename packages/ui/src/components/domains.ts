@@ -51,6 +51,7 @@ export const DOMAIN_GROUPS: DomainGroup[] = [
       { href: '/cost', label: 'Cost Observatory', icon: '💰', desc: 'Quark spend on OpenRouter and savings vs a frontier baseline.' },
       { href: '/learnings', label: 'Learnings', icon: '🧠', desc: 'The crew self-learning loop — recent agent outcomes.' },
       { href: '/crew/memories', label: 'Crew Memories', icon: '👥', desc: 'Durable RAG memory across the crew.' },
+      { href: '/crew/observations', label: 'Observations', icon: '👁️', desc: 'Browse past crew deliberations with execution outcomes.' },
       { href: '/observation-lounge', label: 'Observation Lounge', icon: '🖖', desc: 'Full-crew deliberation on hard questions.' },
     ],
   },

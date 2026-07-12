@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ObservationListView } from '@/components/ObservationListView';
 import { ObservationDetailView } from '@/components/ObservationDetailView';
 
@@ -10,6 +11,14 @@ export default function ObservationsPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto p-4 md:p-8">
+        {/* Breadcrumb */}
+        <Breadcrumbs
+          crumbs={[
+            { label: 'Observe', href: '/cost' },
+            { label: 'Observations' },
+          ]}
+        />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Observation Lounge</h1>
