@@ -41,23 +41,34 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       const searchLower = search.toLowerCase();
-      filtered = filtered.filter((m: ObservationMemoryRecord) =>
-        m.transcriptText.toLowerCase().includes(searchLower) ||
-        m.storyId.toLowerCase().includes(searchLower)
-      );
+      filtered = filtered.filter((m: ObservationMemoryRecord) => {
+        const textToSearch = (m.transcriptText || m.storyId || '').toLowerCase();
+        return textToSearch.includes(searchLower) ||
+               m.storyId.toLowerCase().includes(searchLower);
+      });
     }
 
     // Map to response format with summary
-    const observations = filtered.map((m: ObservationMemoryRecord) => ({
-      id: m.id,
-      storyId: m.storyId,
-      createdAt: m.createdAt,
-      outcome: m.outcome || 'pending',
-      summary: m.transcriptText.substring(0, 100),
-      tags: m.tags,
-      outcomeNotes: m.outcomeNotes,
-      transcriptHash: m.transcriptHash,
-    }));
+    const observations = filtered.map((m: ObservationMemoryRecord) => {
+      // Generate summary from transcript consensus or action items
+      let summary = m.storyId;
+      if (m.transcript?.consensusSummary) {
+        summary = m.transcript.consensusSummary.substring(0, 100);
+      } else if (m.transcriptText) {
+        summary = m.transcriptText.substring(0, 100);
+      }
+
+      return {
+        id: m.id,
+        storyId: m.storyId,
+        createdAt: m.createdAt,
+        outcome: m.outcome || 'pending',
+        summary,
+        tags: m.tags,
+        outcomeNotes: m.outcomeNotes,
+        transcriptHash: m.transcriptHash,
+      };
+    });
 
     return NextResponse.json(
       {

@@ -29,9 +29,9 @@ export default function ObservationsPage() {
         </div>
 
         {/* Two-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 auto-rows-max">
           {/* List */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 h-full">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Past Deliberations</h2>
             <ObservationListView
               onSelectObservation={setSelectedObservationId}
@@ -40,7 +40,7 @@ export default function ObservationsPage() {
           </div>
 
           {/* Detail */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 h-full">
             {selectedObservationId ? (
               <>
                 <h2 className="text-lg font-bold text-slate-900 mb-4">Deliberation Details</h2>
@@ -52,7 +52,7 @@ export default function ObservationsPage() {
                 />
               </>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-500">
+              <div className="h-96 flex items-center justify-center text-slate-500">
                 <p>Select a deliberation to view details</p>
               </div>
             )}
