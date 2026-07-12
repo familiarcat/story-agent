@@ -1,17 +1,16 @@
 /**
  * Token-optimizing chat engine for the Story Agent VS Code assistant.
  *
- * PRIMARY backend: OpenRouter, driven by the crew's cost-optimized model routing
- * (Quark's domain) — the same CREW_LLM_APPROVED_* config + cost_optimized profile the
- * MCP crew uses. Simple/support turns route to the cheap model, complex/critical turns
- * to the quality model. This is where the cost savings come from.
+ * PRIMARY backend: Story Agent MCP crew system (http://localhost:3103/chat),
+ * which runs the crew's full cost-optimized routing pipeline (Quark's domain) —
+ * model tiering, team assembly, RAG context injection, governance gates. This
+ * is where all cost savings come from: cheap models for simple tasks, quality
+ * models for complex ones.
  *
- * SECTION 31 ENFORCEMENT: OpenRouter-only (no Copilot fallback).
- * Reason: Crew autonomy at scale requires 100% cost attribution to OpenRouter for accurate
- * metrics (opt-out rate, error rate, sentiment, cost/user). Silent fallback to Copilot
- * would invalidate A/B test measurements. If OpenRouter is unavailable, user gets an error.
+ * FALLBACK: Direct OpenRouter (if MCP unavailable, e.g., server down during dev).
+ * NO COPILOT FALLBACK. Section 31 cost tracking requires 100% OpenRouter attribution.
  *
- * Four token-optimization layers wrap the OpenRouter backend:
+ * Four token-optimization layers wrap the crew backend:
  *   1. Prompt/response caching  — identical turns skip the LLM entirely (Memento + TTL).
  *   2. Model tiering            — Quark-style routing: cheap model for simple, quality for complex.
  *   3. RAG context pruning      — only the top-K relevant editor/workspace snippets are injected.
@@ -104,7 +103,9 @@ interface EngineConfig {
   ragTopK: number;
   tieringEnabled: boolean;
   costProfile: string; // 'cost_optimized' | 'quality_first' | ...
-  // OpenRouter (crew config)
+  // MCP server (crew-optimized routing)
+  mcpUrl: string; // Story Agent MCP server (crew system)
+  // OpenRouter (crew config, fallback only)
   orUrl: string;
   orKey: string;
   orPrimaryModel: string; // quality
@@ -133,7 +134,9 @@ function getConfig(): EngineConfig {
     ragTopK: c.get<number>('chat.ragTopK') ?? 4,
     tieringEnabled: c.get<boolean>('chat.modelTiering') ?? true,
     costProfile: envFirst('CREW_LLM_MODEL_PROFILE', c.get<string>('chat.costProfile')) || 'cost_optimized',
-    // OpenRouter — prefer the crew's env config, then settings, then sensible defaults.
+    // MCP server — prefer env, then settings, then localhost default (crew-optimized routing)
+    mcpUrl: envFirst('STORY_AGENT_MCP_URL', c.get<string>('chat.mcpServerUrl')) || 'http://localhost:3103',
+    // OpenRouter — prefer the crew's env config, then settings, then sensible defaults (fallback only).
     orUrl: envFirst('CREW_LLM_APPROVED_URL', c.get<string>('chat.openRouterUrl')) || 'https://openrouter.ai/api/v1',
     orKey: envFirst('CREW_LLM_APPROVED_KEY', c.get<string>('chat.openRouterApiKey')),
     orPrimaryModel: envFirst('CREW_LLM_APPROVED_MODEL', c.get<string>('chat.openRouterModel')) || 'anthropic/claude-sonnet-4.6',
@@ -279,9 +282,59 @@ function readCache(memento: vscode.Memento, key: string, ttlMs: number): CacheEn
   return entry;
 }
 
-// ── OpenRouter streaming generation (PRIMARY) ─────────────────────────────────
+// ── Crew-optimized MCP routing (PRIMARY) ────────────────────────────────────
+// Route all chat prompts through the MCP server's /chat endpoint, which runs
+// the full crew optimization pipeline (Quark cost routing, team assembly, RAG context, etc.)
 
 interface GenResult { text: string; tokensIn: number; tokensOut: number; }
+
+async function crewMcpStream(
+  system: string,
+  user: string,
+  cfg: EngineConfig,
+  stream: vscode.ChatResponseStream,
+  cancel: vscode.CancellationToken,
+): Promise<GenResult> {
+  const mcpUrl = cfg.mcpUrl.replace(/\/$/, '');
+  const ctrl = new AbortController();
+  const cancelSub = cancel.onCancellationRequested(() => ctrl.abort());
+
+  try {
+    const resp = await fetch(`${mcpUrl}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: user,
+        // Optionally pass system context via history (MCP crew handles RAG independently)
+        crewSelfOrganize: true, // Force crew preflight for cost-optimized routing
+      }),
+      signal: ctrl.signal,
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Crew MCP /chat ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+    }
+
+    const data: any = await resp.json();
+    const answer = data.answer ?? '(no response)';
+    const tokensIn = data.tokensIn ?? 0;
+    const tokensOut = data.tokensOut ?? 0;
+
+    // Stream the response back to the user
+    stream.markdown(answer);
+
+    return { text: answer, tokensIn, tokensOut };
+  } catch (err) {
+    if (ctrl.signal.aborted) {
+      return { text: '(cancelled)', tokensIn: 0, tokensOut: 0 };
+    }
+    throw err;
+  } finally {
+    cancelSub.dispose();
+  }
+}
+
+// ── OpenRouter streaming generation (FALLBACK) ──────────────────────────────
 
 async function openRouterStream(
   system: string,
@@ -435,24 +488,22 @@ export async function runAssistantTurn(
   let costUSD = 0;
 
   try {
-    if (provider === 'openrouter') {
-      gen = await openRouterStream(SYSTEM_PROMPT, userContent, modelName, cfg, stream, cancel);
-      costUSD = estimateCost(modelName, gen.tokensIn, gen.tokensOut);
-    } else {
-      const model = await selectCopilotModel(tier, cfg);
-      if (!model) throw new Error('Copilot model unavailable');
-      const messages = [vscode.LanguageModelChatMessage.User(SYSTEM_PROMPT), vscode.LanguageModelChatMessage.User(userContent)];
-      const tokensIn = await model.countTokens(SYSTEM_PROMPT + userContent);
-      const res = await model.sendRequest(messages, {}, cancel);
-      let text = '';
-      for await (const fragment of res.text) { text += fragment; stream.markdown(fragment); }
-      gen = { text, tokensIn, tokensOut: await model.countTokens(text) };
-      costUSD = 0; // Copilot uses the user's subscription — no per-token spend.
+    // SECTION 31 PRIMARY: Route through crew-optimized MCP system for cost-optimized model selection,
+    // team assembly, RAG context, and governance. This is THE single path for all NL prompts.
+    try {
+      gen = await crewMcpStream(SYSTEM_PROMPT, userContent, cfg, stream, cancel);
+      costUSD = estimateCost(provider === 'openrouter' ? cfg.orPrimaryModel : cfg.orCheapModel, gen.tokensIn, gen.tokensOut);
+    } catch (mcpErr) {
+      // Fallback to direct OpenRouter if MCP unavailable (e.g., server down during development)
+      console.warn('[chatEngine] MCP crew unavailable, falling back to direct OpenRouter:', mcpErr instanceof Error ? mcpErr.message : String(mcpErr));
+      if (provider !== 'openrouter') throw new Error('OpenRouter enforced; Copilot not available as fallback');
+      gen = await openRouterStream(SYSTEM_PROMPT, userContent, cfg.orPrimaryModel, cfg, stream, cancel);
+      costUSD = estimateCost(cfg.orPrimaryModel, gen.tokensIn, gen.tokensOut);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    stream.markdown(`\n\n**LLM error (${provider}):** \`${msg}\``);
-    return { tier, provider, model: modelName, cached: false, tokensIn: 0, tokensOut: 0, costUSD: 0, overBudget: false };
+    stream.markdown(`\n\n**LLM error:** \`${msg}\``);
+    return { tier, provider, model: '', cached: false, tokensIn: 0, tokensOut: 0, costUSD: 0, overBudget: false };
   }
 
   ledger.record(gen.tokensIn, gen.tokensOut, costUSD);
