@@ -157,7 +157,9 @@ export function ObservationListView({ onSelectObservation, selectedId }: Observa
             style={{
               textAlign: 'left',
               background: selectedId === obs.id ? lcars.eggplant : lcars.space,
-              border: `1px solid ${selectedId === obs.id ? outcomeColor[obs.outcome as keyof typeof outcomeColor] : lcars.border}`,
+              borderTop: `1px solid ${selectedId === obs.id ? outcomeColor[obs.outcome as keyof typeof outcomeColor] : lcars.border}`,
+              borderBottom: `1px solid ${selectedId === obs.id ? outcomeColor[obs.outcome as keyof typeof outcomeColor] : lcars.border}`,
+              borderRight: `1px solid ${selectedId === obs.id ? outcomeColor[obs.outcome as keyof typeof outcomeColor] : lcars.border}`,
               borderLeft: `3px solid ${outcomeColor[obs.outcome as keyof typeof outcomeColor]}`,
               borderRadius: 6,
               padding: 8,
