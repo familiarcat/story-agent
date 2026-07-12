@@ -380,7 +380,7 @@ export interface ObservationMemoryRecord {
   crewId?: string | null;
   /** Client org that owns this memory — used for memory isolation between clients */
   clientId: string | null;
-  source: 'mcp' | 'ui';
+  source: 'mcp' | 'ui' | 'crew_execution_outcome' | 'autonomous_task_audit';
   transcriptHash: string;
   transcriptText: string;
   transcript: ObservationDebateResult;
@@ -657,3 +657,11 @@ export { ImageInputSchema, MAX_IMAGE_BASE64_BYTES, imageInputToUrl, checkImageSi
 export type { ImageInput } from './image-input.js';
 export { VISION_MODELS, VISION_MODEL_ARCHITECTURE, selectVisionModel, INTENT_COMPLEXITY, INTENT_PROMPTS, runVisionAnalysis } from './vision.js';
 export type { VisionComplexity, VisionIntent, VisionResult } from './vision.js';
+export { classifyTask, inferTaskType } from './task-classifier.js';
+export type { TaskClassification, TaskType } from './task-classifier.js';
+export {
+  storeCrewExecutionOutcome,
+  storeAutonomousTaskAudit,
+  getRecentCrewExecutionOutcomes,
+  getCrewExecutionStats,
+} from './db.js';

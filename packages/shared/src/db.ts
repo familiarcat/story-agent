@@ -1451,3 +1451,216 @@ export async function getCrewMemoryStats(crew_id: string): Promise<
 
   return data || [];
 }
+
+/**
+ * Store crew execution outcome for real-time status tracking and RAG memory.
+ * Called after every crew task execution (autonomous or guided).
+ * Fire-and-forget async (doesn't block task execution).
+ */
+export async function storeCrewExecutionOutcome(input: {
+  crewId: string;
+  attemptId: string;
+  taskDescription: string;
+  status: 'success' | 'blocked' | 'retry' | 'failed';
+  durationSeconds: number;
+  confidenceLevel?: 'high' | 'medium' | 'low' | 'unknown';
+  error?: string;
+  filesTouched?: string[];
+  recoveryAttempts?: number;
+  complexityEstimate?: string;
+}): Promise<void> {
+  try {
+    const client = await getSupabaseClient();
+
+    // Store to crew_execution_outcomes table
+    const { error } = await client
+      .from('crew_execution_outcomes')
+      .insert({
+        crew_id: input.crewId,
+        attempt_id: input.attemptId,
+        task_description: input.taskDescription,
+        status: input.status,
+        duration_seconds: input.durationSeconds,
+        confidence_level: input.confidenceLevel || 'unknown',
+        error_message: input.error || null,
+        files_touched: input.filesTouched ? JSON.stringify(input.filesTouched) : '[]',
+        recovery_attempts: input.recoveryAttempts || 0,
+        complexity_estimate: input.complexityEstimate || null,
+      });
+
+    if (error) {
+      console.error('Failed to store crew execution outcome:', error);
+      return;
+    }
+
+    // Also store to RAG for future recall
+    const memoryTag = `crew_execution_${input.crewId}_${input.attemptId}`;
+    await storeObservationMemory({
+      storyId: input.crewId,
+      clientId: null,
+      source: 'crew_execution_outcome',
+      transcript: {
+        type: 'crew_execution_outcome',
+        crewId: input.crewId,
+        task: input.taskDescription,
+        status: input.status,
+        durationSeconds: input.durationSeconds,
+        confidenceLevel: input.confidenceLevel,
+        error: input.error,
+        filesTouched: input.filesTouched,
+      } as any,
+      tags: [memoryTag, `crew_execution_${input.status}`, 'execution_outcome'],
+    });
+  } catch (err) {
+    console.error('Error in storeCrewExecutionOutcome:', err);
+    // Don't throw; fire-and-forget logging
+  }
+}
+
+/**
+ * Store autonomous task audit trail for governance + compliance.
+ * Records task classification, escalations, and execution outcome.
+ * Fire-and-forget async.
+ */
+export async function storeAutonomousTaskAudit(input: {
+  taskId: string;
+  crewId: string;
+  brief: string;
+  classification: 'autonomous' | 'requires_approval';
+  reason: string;
+  escalationThreshold?: string;
+  status: 'executed' | 'escalated' | 'blocked';
+  outcome?: string;
+  durationSeconds?: number;
+  costUsd?: number;
+}): Promise<void> {
+  try {
+    // Store to RAG as audit trail with governance tag
+    const auditTag = `autonomous_audit_${input.taskId}`;
+    await storeObservationMemory({
+      storyId: `governance_${input.crewId}`,
+      clientId: null,
+      source: 'autonomous_task_audit',
+      transcript: {
+        type: 'autonomous_task_audit',
+        taskId: input.taskId,
+        crewId: input.crewId,
+        brief: input.brief,
+        classification: input.classification,
+        reason: input.reason,
+        escalationThreshold: input.escalationThreshold,
+        status: input.status,
+        outcome: input.outcome,
+        durationSeconds: input.durationSeconds,
+        costUsd: input.costUsd,
+      } as any,
+      tags: [
+        auditTag,
+        `autonomous_${input.classification}`,
+        `autonomous_${input.status}`,
+        'governance_audit',
+      ],
+    });
+  } catch (err) {
+    console.error('Error in storeAutonomousTaskAudit:', err);
+    // Don't throw; fire-and-forget logging
+  }
+}
+
+/**
+ * Retrieve recent crew execution outcomes for status display.
+ * Returns the last N tasks across all crew members with their outcomes.
+ */
+export async function getRecentCrewExecutionOutcomes(
+  limit: number = 10,
+  crewId?: string
+): Promise<
+  Array<{
+    crew_id: string;
+    attempt_id: string;
+    task_description: string;
+    status: string;
+    duration_seconds: number;
+    confidence_level: string;
+    timestamp: string;
+    error_message?: string;
+  }>
+> {
+  try {
+    const client = await getSupabaseClient();
+
+    let query = client
+      .from('crew_execution_outcomes')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(limit);
+
+    if (crewId) {
+      query = query.eq('crew_id', crewId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Failed to retrieve crew execution outcomes:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Error in getRecentCrewExecutionOutcomes:', err);
+    return [];
+  }
+}
+
+/**
+ * Get aggregate stats for crew execution outcomes (e.g., for dashboard).
+ */
+export async function getCrewExecutionStats(dateFrom?: Date): Promise<{
+  today_count: number;
+  today_success_rate: number;
+  today_cost_usd: number;
+  active_tasks_count: number;
+}> {
+  try {
+    const client = await getSupabaseClient();
+
+    // Default to last 24 hours if no date provided
+    const from = dateFrom || new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Get outcomes from last 24h
+    const { data: outcomes, error: outcomesError } = await client
+      .from('crew_execution_outcomes')
+      .select('status')
+      .gte('timestamp', from.toISOString());
+
+    if (outcomesError) {
+      console.error('Failed to get execution stats:', outcomesError);
+      return {
+        today_count: 0,
+        today_success_rate: 0,
+        today_cost_usd: 0,
+        active_tasks_count: 0,
+      };
+    }
+
+    const outcomeList = outcomes || [];
+    const successCount = outcomeList.filter(o => o.status === 'success').length;
+    const successRate = outcomeList.length > 0 ? successCount / outcomeList.length : 0;
+
+    return {
+      today_count: outcomeList.length,
+      today_success_rate: successRate,
+      today_cost_usd: 0, // TODO: Track cost per execution
+      active_tasks_count: outcomeList.filter(o => o.status === 'retry').length,
+    };
+  } catch (err) {
+    console.error('Error in getCrewExecutionStats:', err);
+    return {
+      today_count: 0,
+      today_success_rate: 0,
+      today_cost_usd: 0,
+      active_tasks_count: 0,
+    };
+  }
+}

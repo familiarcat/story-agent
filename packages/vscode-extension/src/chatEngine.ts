@@ -450,6 +450,146 @@ export async function runAssistantTurn(
   return { tier, provider, model: modelName, cached: false, tokensIn: gen.tokensIn, tokensOut: gen.tokensOut, costUSD, overBudget: false };
 }
 
+/**
+ * Crew Status Polling — WORKSTREAM 3
+ *
+ * Polls /api/crew/execution-status and emits status update messages to the chat stream.
+ * Called periodically to show live crew task execution updates.
+ *
+ * Emits markdown-formatted status cards for active and recently completed tasks.
+ */
+export async function pollCrewExecutionStatus(
+  stream: vscode.ChatResponseStream,
+  onStatusUpdate?: (status: any) => void
+): Promise<void> {
+  try {
+    // Fetch status from the dashboard API
+    const response = await fetch('http://localhost:3000/api/crew/execution-status?limit=10', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Status API returned ${response.status}`);
+    }
+
+    const data = await response.json() as {
+      success?: boolean;
+      active_tasks?: any[];
+      completed_tasks?: any[];
+      aggregate?: any;
+    };
+    if (!data.success) {
+      return; // Silently fail if API is unavailable
+    }
+
+    onStatusUpdate?.(data);
+
+    // Format and emit status update if there are active tasks
+    if (data.active_tasks && data.active_tasks.length > 0) {
+      const statusCards = formatCrewStatusUpdate(data);
+      stream.markdown(statusCards);
+    }
+  } catch (err) {
+    // Silently fail; status polling is best-effort and shouldn't break the main chat
+    console.debug('[chatEngine] Status polling failed:', err);
+  }
+}
+
+/**
+ * Format crew execution status into markdown cards for display in VSCode chat.
+ */
+function formatCrewStatusUpdate(status: any): string {
+  const lines: string[] = [];
+
+  lines.push('🟢 **[Crew Status Update]**\n');
+
+  // Active tasks
+  if (status.active_tasks && status.active_tasks.length > 0) {
+    lines.push('**In Progress:**');
+    for (const task of status.active_tasks) {
+      const emoji = crewEmoji(task.crew_id);
+      lines.push(`  ${emoji} **${task.crew_id}** | ${task.task} (${task.elapsed_seconds}s)`);
+    }
+    lines.push('');
+  }
+
+  // Completed tasks (recent)
+  if (status.completed_tasks && status.completed_tasks.length > 0) {
+    lines.push('**Recently Completed:**');
+    for (const task of status.completed_tasks.slice(0, 3)) {
+      const statusIcon = task.status === 'success' ? '✅' : '❌';
+      const emoji = crewEmoji(task.crew_id);
+      lines.push(
+        `  ${statusIcon} ${emoji} **${task.crew_id}** | ${task.task} (${task.duration_seconds.toFixed(1)}s)`
+      );
+    }
+    lines.push('');
+  }
+
+  // Aggregate metrics
+  if (status.aggregate) {
+    const successRate = (status.aggregate.today_success_rate * 100).toFixed(1);
+    lines.push(
+      `**Today:** ${status.aggregate.today_count} tasks | ${successRate}% success | $${status.aggregate.today_cost_usd.toFixed(2)} cost`
+    );
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Helper: Get emoji for crew member ID.
+ */
+function crewEmoji(crewId: string): string {
+  const emojis: { [key: string]: string } = {
+    picard: '🖖',
+    riker: '💼',
+    data: '🤖',
+    geordi: '🔧',
+    worf: '⚔️',
+    quark: '💰',
+    troi: '💭',
+    crusher: '⚕️',
+    guinan: '🍷',
+  };
+  return emojis[crewId.toLowerCase()] || '👤';
+}
+
+/**
+ * Start continuous status polling loop for the chat stream.
+ * Emits updates every 500ms while the stream is active.
+ *
+ * Usage in VSCode extension chat handler:
+ * ```
+ * startCrewStatusPolling(stream);
+ * ```
+ */
+export function startCrewStatusPolling(
+  stream: vscode.ChatResponseStream,
+  intervalMs: number = 500,
+  onStatusUpdate?: (status: any) => void
+): () => void {
+  let active = true;
+
+  const poll = async () => {
+    while (active) {
+      await pollCrewExecutionStatus(stream, onStatusUpdate);
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+  };
+
+  // Start polling in background (non-blocking)
+  poll().catch(err => {
+    console.debug('[chatEngine] Status polling error:', err);
+  });
+
+  // Return stop function
+  return () => {
+    active = false;
+  };
+}
+
 export function resetSession(): void {
   ledger.tokensIn = 0;
   ledger.tokensOut = 0;
