@@ -5,7 +5,40 @@
  * Section 31 Week 1 QUARK Task 4.3
  */
 
-import { generateMockAnomalies, formatSlackAlert, detectAnomaly, type CostAnomaly } from '@/lib/cost-anomaly-detection';
+// Type: Cost anomaly detection result
+interface CostAnomaly {
+  user_id: string;
+  date: string;
+  actual_cost: number;
+  expected_cost: number;
+  deviation_percent: number;
+  std_devs_above_mean: number;
+  severity: 'critical' | 'warning' | 'info';
+  message: string;
+  suspected_cause: string;
+}
+
+// Mock anomaly generator for UI testing
+function generateMockAnomalies(): CostAnomaly[] {
+  return [
+    {
+      user_id: 'user-001',
+      date: new Date().toISOString().split('T')[0],
+      actual_cost: 0.25,
+      expected_cost: 0.20,
+      deviation_percent: 25,
+      std_devs_above_mean: 1.5,
+      severity: 'warning',
+      message: 'Cost slightly elevated: $0.25 (expected $0.20, +25%)',
+      suspected_cause: 'Longer conversation than average',
+    },
+  ];
+}
+
+// Slack alert formatter
+function formatSlackAlert(anomaly: CostAnomaly, baseline: number): string {
+  return `[${anomaly.severity.toUpperCase()}] ${anomaly.message} | Cause: ${anomaly.suspected_cause}`;
+}
 
 export const runtime = 'nodejs';
 

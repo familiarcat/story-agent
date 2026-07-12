@@ -28,7 +28,7 @@ const validationLedger: ValidationRecord[] = [];
  * Generate checksum for a crew request
  * Format: SHA256(request_id + tokens_used + model)
  */
-export function generateValidationChecksum(requestId: string, tokensUsed: number, model: string): string {
+function generateValidationChecksum(requestId: string, tokensUsed: number, model: string): string {
   const data = `${requestId}:${tokensUsed}:${model}`;
   return createHash('sha256').update(data).digest('hex');
 }
@@ -36,7 +36,7 @@ export function generateValidationChecksum(requestId: string, tokensUsed: number
 /**
  * Record a request for validation
  */
-export function recordValidationRequest(
+function recordValidationRequest(
   requestId: string,
   tokensUsed: number,
   model: string
@@ -66,7 +66,7 @@ export function recordValidationRequest(
  * Verify a request against the cost ledger
  * In production, this would query the actual cost API
  */
-export function verifyValidationChecksum(
+function verifyValidationChecksum(
   requestId: string,
   expectedChecksum: string,
   actualTokens: number,
@@ -171,5 +171,5 @@ export async function POST(request: Request) {
   }
 }
 
-// Export for testing and integration
-export { ValidationRecord, validationLedger };
+// NOTE: generateValidationChecksum, recordValidationRequest, ValidationRecord are NOT exported
+// These are internal utilities for this route only. Move to shared if external access needed.
