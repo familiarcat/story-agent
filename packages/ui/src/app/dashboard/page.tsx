@@ -1,5 +1,7 @@
 import { listStories } from '@/lib/db';
+import { getProjectHierarchy, listAhaProjects } from '@/lib/aha';
 import type { StoryRecord } from '@story-agent/shared';
+import { systemBucketFromStoryStatus, systemBucketFromWorkflowStatus } from '@story-agent/shared';
 import Link from 'next/link';
 import { ProjectStatusPanel, type ProjectStatusRow } from '@/components/ProjectStatusPanel';
 import { LcarsHierarchyText } from '@/components/Lcars';
@@ -130,6 +132,7 @@ type HierarchyNode = {
   storyCount: number;
   blockedCount: number;
   activeCount: number;
+  doneCount: number;
 };
 
 function deriveHierarchy(stories: HierarchicalStoryRecord[]): HierarchyNode[] {
@@ -147,15 +150,65 @@ function deriveHierarchy(stories: HierarchicalStoryRecord[]): HierarchyNode[] {
       storyCount: 0,
       blockedCount: 0,
       activeCount: 0,
+      doneCount: 0,
     };
 
     current.storyCount += 1;
-    if (story.status === 'blocked') current.blockedCount += 1;
-    if (story.status !== 'merged' && story.status !== 'pending') current.activeCount += 1;
+    const bucket = systemBucketFromStoryStatus(story.status);
+    if (bucket === 'blocked') current.blockedCount += 1;
+    if (bucket === 'active') current.activeCount += 1;
+    if (bucket === 'done') current.doneCount += 1;
     groups.set(key, current);
   }
 
   return Array.from(groups.values()).sort((a, b) => a.clientName.localeCompare(b.clientName) || a.projectName.localeCompare(b.projectName));
+}
+
+async function deriveHierarchyFromAha(): Promise<HierarchyNode[]> {
+  const projects = await listAhaProjects();
+  const hierarchies = await Promise.all(
+    projects.map(async (project) => ({
+      project,
+      hierarchy: await getProjectHierarchy(project.id),
+    }))
+  );
+
+  return hierarchies.map(({ project, hierarchy }) => {
+    let storyCount = 0;
+    let activeCount = 0;
+    let blockedCount = 0;
+    let doneCount = 0;
+
+    for (const rel of hierarchy.releases) {
+      for (const stories of Object.values(rel.storiesByStatus)) {
+        storyCount += stories.length;
+        for (const story of stories) {
+          const bucket = systemBucketFromWorkflowStatus(story.workflowStatus);
+          if (bucket === 'active') activeCount += 1;
+          if (bucket === 'blocked') blockedCount += 1;
+          if (bucket === 'done') doneCount += 1;
+        }
+      }
+    }
+
+    for (const story of hierarchy.unreleasedStories) {
+      storyCount += 1;
+      const bucket = systemBucketFromWorkflowStatus(story.workflowStatus);
+      if (bucket === 'active') activeCount += 1;
+      if (bucket === 'blocked') blockedCount += 1;
+      if (bucket === 'done') doneCount += 1;
+    }
+
+    return {
+      clientName: 'Aha',
+      projectName: project.name,
+      sprintName: hierarchy.releases[0]?.release.name ?? 'Unscheduled',
+      storyCount,
+      blockedCount,
+      activeCount,
+      doneCount,
+    };
+  });
 }
 
 function inferClientName(repoFullName?: string | null): string {
@@ -187,14 +240,22 @@ export default async function Dashboard() {
     isDemo = true;
   }
   const byStatus = (s: StoryRecord['status']) => stories.filter(x => x.status === s).length;
-  const hierarchy = deriveHierarchy(stories);
+  let hierarchy = deriveHierarchy(stories);
+
+  // Unification step: when Aha is reachable, use the same hierarchy projection path as the VS Code extension.
+  try {
+    const ahaHierarchy = await deriveHierarchyFromAha();
+    if (ahaHierarchy.length > 0) hierarchy = ahaHierarchy;
+  } catch {
+    // Keep local tracker fallback if Aha is unavailable in the current environment.
+  }
 
   // Figma→token pilot, now LIVE: derive the token-driven ProjectStatusPanel from the same hierarchy.
   const statusRows: ProjectStatusRow[] = hierarchy.map((node, i) => ({
     id: `${node.clientName}-${node.projectName}-${i}`,
     name: `${node.clientName} · ${node.projectName}`,
     status: node.blockedCount > 0 ? 'blocked' : node.activeCount > 0 ? 'implementing' : 'merged',
-    progress: node.storyCount ? Math.round((100 * (node.storyCount - node.activeCount)) / node.storyCount) : 0,
+    progress: node.storyCount ? Math.round((100 * node.doneCount) / node.storyCount) : 0,
   }));
 
   return (

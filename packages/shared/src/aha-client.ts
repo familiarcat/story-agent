@@ -1,5 +1,6 @@
 import type { AhaEpic, AhaProject, AhaSprint, AhaSprintStory, AhaStory } from './index.js';
 import { mapProduct, mapEpic, mapFeatureSummary, mapFeatureToStory, mapRelease, mapSprintStory } from './aha-mappers.js';
+import { SYSTEM_STATUS_ORDER, type SystemStatusBucket, systemBucketFromWorkflowStatus } from './system-status.js';
 
 /**
  * Canonical Aha REST client — the single source of truth for the Aha/PM domain.
@@ -38,9 +39,9 @@ export interface AhaClient {
   getHierarchy(projectId: string): Promise<{
     project: AhaProject;
     stats: { totalStories: number; totalStoryPoints: number; plannedPoints: number; completedPoints: number; releaseCount: number };
-    releases: Array<{ release: AhaSprint; storiesByStatus: Record<string, AhaSprintStory[]> }>;
+    releases: Array<{ release: AhaSprint; storiesByStatus: Record<SystemStatusBucket, AhaSprintStory[]> }>;
     unreleasedStories: AhaStory[];
-    statusesUsed: string[];
+    statusesUsed: SystemStatusBucket[];
   }>;
 }
 
@@ -104,15 +105,28 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
   const getHierarchy: AhaClient['getHierarchy'] = async (projectId) => {
     const roadmap = await getRoadmap(projectId);
     const releasesWithGroupedStories = roadmap.releases.map((release) => {
-      const storiesByStatus: Record<string, AhaSprintStory[]> = {};
+      const storiesByStatus: Record<SystemStatusBucket, AhaSprintStory[]> = {
+        pending: [],
+        active: [],
+        blocked: [],
+        done: [],
+      };
       for (const story of release.stories) {
-        (storiesByStatus[story.workflowStatus] ??= []).push(story);
+        storiesByStatus[systemBucketFromWorkflowStatus(story.workflowStatus)].push(story);
       }
       return { release, storiesByStatus };
     });
-    const statusesUsed = new Set<string>();
-    for (const rel of releasesWithGroupedStories) Object.keys(rel.storiesByStatus).forEach((s) => statusesUsed.add(s));
-    for (const story of roadmap.unreleasedStories) statusesUsed.add(story.workflowStatus);
+
+    const statusesUsed = new Set<SystemStatusBucket>();
+    for (const rel of releasesWithGroupedStories) {
+      for (const status of SYSTEM_STATUS_ORDER) {
+        if (rel.storiesByStatus[status].length > 0) statusesUsed.add(status);
+      }
+    }
+    for (const story of roadmap.unreleasedStories) {
+      statusesUsed.add(systemBucketFromWorkflowStatus(story.workflowStatus));
+    }
+
     const totalStoryPoints = roadmap.releases.reduce((sum, r) => sum + r.totalStoryPoints, 0);
     const completedPoints = roadmap.releases.reduce((sum, r) => sum + r.doneStoryPoints, 0);
     return {
@@ -126,7 +140,7 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
       },
       releases: releasesWithGroupedStories,
       unreleasedStories: roadmap.unreleasedStories,
-      statusesUsed: Array.from(statusesUsed).sort(),
+      statusesUsed: SYSTEM_STATUS_ORDER.filter((status) => statusesUsed.has(status)),
     };
   };
 

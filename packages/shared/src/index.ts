@@ -5,6 +5,8 @@
 export * from './selection-contract.js';
 // Crew/agent run-status contract — one shape rendered by <WorkflowStatus> on web + mirrored in vscode.
 export * from './workflow-status.js';
+// Concise system-status buckets reused by dashboard + extension surfaces.
+export * from './system-status.js';
 // Async status registry — live cross-process view of in-flight async work (surfaced on every prompt).
 export * from './async-status.js';
 

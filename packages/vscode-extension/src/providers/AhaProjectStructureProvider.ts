@@ -4,6 +4,7 @@
  */
 
 import * as vscode from 'vscode';
+import { SYSTEM_STATUS_LABEL, SYSTEM_STATUS_ORDER, type SystemStatusBucket } from '@story-agent/shared';
 import { TIER_ICONS, formatRefLabel } from '@story-agent/shared/ui-tokens';
 import { getProjectHierarchy, listAhaProjects, type AhaProject, type AhaSprint, type AhaSprintStory, type AhaStory } from '../aha';
 
@@ -18,10 +19,10 @@ interface ProjectHierarchyData {
   };
   releases: Array<{
     release: AhaSprint;
-    storiesByStatus: Record<string, AhaSprintStory[]>;
+    storiesByStatus: Record<SystemStatusBucket, AhaSprintStory[]>;
   }>;
   unreleasedStories: AhaStory[];
-  statusesUsed: string[];
+  statusesUsed: SystemStatusBucket[];
 }
 
 export class AhaProjectStructureProvider
@@ -122,10 +123,12 @@ export class AhaProjectStructureProvider
 
     // Release level: show story status groups
     if (element instanceof ReleaseTreeItem) {
-      return Object.entries(element.storiesByStatus).map(
-        ([status, stories]) =>
+      return SYSTEM_STATUS_ORDER
+        .map((status) => ({ status, stories: element.storiesByStatus[status] ?? [] }))
+        .filter(({ stories }) => stories.length > 0)
+        .map(({ status, stories }) =>
           new StatusGroupTreeItem(status, stories, element.projectId, this.onDidChangeTreeDataEmitter)
-      );
+        );
     }
 
     // Status group level: show individual stories
@@ -197,7 +200,7 @@ class ProjectTreeItem extends vscode.TreeItem {
 class ReleaseTreeItem extends vscode.TreeItem {
   constructor(
     readonly release: AhaSprint,
-    readonly storiesByStatus: Record<string, AhaSprintStory[]>,
+    readonly storiesByStatus: Record<SystemStatusBucket, AhaSprintStory[]>,
     readonly projectId: string,
     private onDidChangeTreeData: vscode.EventEmitter<
       ProjectStructureItem | undefined | null | void
@@ -238,19 +241,16 @@ class ReleaseTreeItem extends vscode.TreeItem {
 
 class StatusGroupTreeItem extends vscode.TreeItem {
   constructor(
-    readonly status: string,
+    readonly status: SystemStatusBucket,
     readonly stories: AhaSprintStory[],
     readonly projectId: string,
     private onDidChangeTreeData: vscode.EventEmitter<
       ProjectStructureItem | undefined | null | void
     >
   ) {
-    super(
-      `${status} (${stories.length})`,
-      vscode.TreeItemCollapsibleState.Collapsed
-    );
+    super(`${SYSTEM_STATUS_LABEL[status]} (${stories.length})`, vscode.TreeItemCollapsibleState.Collapsed);
     this.contextValue = 'statusGroup';
-    this.description = `${stories.length} story(ies)`;
+    this.description = status;
     this.iconPath = new vscode.ThemeIcon('list-filter');
   }
 
