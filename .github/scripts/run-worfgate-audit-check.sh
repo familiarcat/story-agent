@@ -8,7 +8,7 @@ set -euo pipefail
 # - Skip green when URL points to localhost/127.0.0.1.
 # - Execute the provided audit command otherwise.
 
-AUDIT_CMD="${1:-pnpm exec tsx scripts/check-recent-audits.ts}"
+AUDIT_CMD="${1:-npx tsx scripts/check-recent-audits.ts}"
 
 if [[ -n "${SUPABASE_CLOUD_URL:-}" && -n "${SUPABASE_CLOUD_KEY:-}" ]]; then
   export SUPABASE_URL="${SUPABASE_CLOUD_URL}"

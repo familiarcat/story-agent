@@ -118,7 +118,7 @@ jobs:
           SUPABASE_CLOUD_KEY: ${{ secrets.SUPABASE_CLOUD_KEY }}
           WORFGATE_AUDIT_MAX: 100
           STORY_AGENT_PATH: ${{ github.workspace }}
-        run: bash .github/scripts/run-worfgate-audit-check.sh "pnpm exec tsx scripts/check-recent-audits.ts"
+        run: bash .github/scripts/run-worfgate-audit-check.sh "npx tsx scripts/check-recent-audits.ts"
 
   deploy:
     needs: [detect, build_mcp, build_ui, security_gate]

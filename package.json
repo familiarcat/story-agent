@@ -68,6 +68,7 @@
     "ops:cycle": "bash scripts/worfgate-autonomous-cycle.sh dry",
     "ops:cycle:apply": "bash scripts/worfgate-autonomous-cycle.sh apply",
     "ops:cycle:release": "bash scripts/worfgate-autonomous-cycle.sh release",
+    "ops:bottom-line:fast": "bash scripts/bottom-line-fast-lane.sh",
     "memory:rollup": "npx tsx scripts/crew-memory-rollup.ts",
     "memory:rollup:apply": "npx tsx scripts/crew-memory-rollup.ts --apply",
     "memory:milestone:worfgate": "npx tsx scripts/store-worfgate-milestone-memory.ts",
