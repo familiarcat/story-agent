@@ -34,6 +34,8 @@ jobs:
       CREW_LLM_APPROVED_URL: ${{ vars.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1' }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      SUPABASE_CLOUD_URL: ${{ secrets.SUPABASE_CLOUD_URL }}
+      SUPABASE_CLOUD_KEY: ${{ secrets.SUPABASE_CLOUD_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,6 +60,25 @@ jobs:
           fi
           if [[ -z "${CREW_LLM_APPROVED_KEY}" && -z "${OPENROUTER_API_KEY}" ]]; then
             echo "Neither CREW_LLM_APPROVED_KEY nor OPENROUTER_API_KEY is configured in GitHub secrets."
+            exit 1
+          fi
+
+      - name: Resolve Supabase cloud endpoint
+        shell: bash
+        run: |
+          if [[ -n "${SUPABASE_CLOUD_URL}" && -n "${SUPABASE_CLOUD_KEY}" ]]; then
+            echo "SUPABASE_URL=${SUPABASE_CLOUD_URL}" >> "$GITHUB_ENV"
+            echo "SUPABASE_KEY=${SUPABASE_CLOUD_KEY}" >> "$GITHUB_ENV"
+            echo "Using SUPABASE_CLOUD_URL/SUPABASE_CLOUD_KEY for memory rollup."
+          fi
+
+          if [[ -z "${SUPABASE_URL}" || -z "${SUPABASE_KEY}" ]]; then
+            echo "SUPABASE_URL/SUPABASE_KEY are required for memory rollup."
+            exit 1
+          fi
+
+          if [[ "${SUPABASE_URL}" == http://127.0.0.1* || "${SUPABASE_URL}" == http://localhost* ]]; then
+            echo "SUPABASE_URL points to a local endpoint (${SUPABASE_URL}); configure SUPABASE_CLOUD_URL/SUPABASE_CLOUD_KEY or set SUPABASE_URL to cloud." 
             exit 1
           fi
 
