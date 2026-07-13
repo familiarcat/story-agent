@@ -91,6 +91,12 @@ case "$MODE" in
       -f repo="$TARGET_REPO"
 
     echo
+    echo "5) Persist crew memory rollup"
+    if ! pnpm run memory:rollup:apply -- --context "ops-cycle-release"; then
+      echo "⚠️ memory rollup failed (non-blocking). Continue with existing release artifacts."
+    fi
+
+    echo
     echo "Release mode completed: local apply + remote sync dispatch submitted."
     ;;
 

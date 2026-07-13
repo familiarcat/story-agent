@@ -64,6 +64,8 @@
     "ops:cycle": "bash scripts/worfgate-autonomous-cycle.sh dry",
     "ops:cycle:apply": "bash scripts/worfgate-autonomous-cycle.sh apply",
     "ops:cycle:release": "bash scripts/worfgate-autonomous-cycle.sh release",
+    "memory:rollup": "npx tsx scripts/crew-memory-rollup.ts",
+    "memory:rollup:apply": "npx tsx scripts/crew-memory-rollup.ts --apply",
     "aha:derive-backlog": "npx tsx scripts/derive-aha-backlog.ts",
     "aha:commit-backlog": "npx tsx scripts/aha-commit-backlog.ts",
     "story:create-project-management-ui": "pnpm --filter @story-agent/mcp-server exec node ./scripts/create-project-management-ui-story.mjs",

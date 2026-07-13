@@ -19,8 +19,21 @@ export function buildBridges(
         getRelevantObservationMemories({ queryText: query, clientId, limit }),
         searchDocumentation(query, undefined, 4).catch(() => []),
       ]);
-      const memBlock = memories.length
-        ? memories.map((m, i) => `#${i + 1} [${m.missionReference ?? m.storyId}] ${m.transcript?.consensusSummary?.slice(0, 400) ?? ''}`).join('\n\n')
+      // Retrieval-order policy: prioritize short-term operational signals and rollups,
+      // then broader historical memories. This makes autonomous recovery more pragmatic.
+      const prioritized = memories
+        .slice()
+        .sort((a, b) => {
+          const pa = (a.tags ?? []).includes('short-term') || (a.tags ?? []).includes('crew-memory-rollup') ? 2 : 0;
+          const pb = (b.tags ?? []).includes('short-term') || (b.tags ?? []).includes('crew-memory-rollup') ? 2 : 0;
+          if (pa !== pb) return pb - pa;
+          const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+          const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+          return tb - ta;
+        });
+
+      const memBlock = prioritized.length
+        ? prioritized.map((m, i) => `#${i + 1} [${m.missionReference ?? m.storyId}] ${m.transcript?.consensusSummary?.slice(0, 400) ?? ''}`).join('\n\n')
         : '';
       const docBlock = docs.length
         ? '\n\nRELEVANT DOCS:\n' + docs.map((d: any) => `• [${d.source_path ?? d.title}] ${(d.chunk_content ?? '').slice(0, 300)}`).join('\n')

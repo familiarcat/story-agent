@@ -1,0 +1,60 @@
+name: Crew Memory Rollup
+
+on:
+  schedule:
+    - cron: '7 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write rollups to RAG"
+        type: boolean
+        default: true
+      context:
+        description: "Rollup context tag"
+        required: false
+        default: "workflow-rollup"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crew-memory-rollup
+  cancel-in-progress: false
+
+jobs:
+  rollup:
+    runs-on: ubuntu-latest
+    env:
+      npm_config_yes: "true"
+      CREW_LLM_PROVIDER: approved
+      CREW_FRUGAL: "true"
+      STORY_AGENT_OPENROUTER_ONLY: "true"
+      CREW_LLM_APPROVED_KEY: ${{ secrets.CREW_LLM_APPROVED_KEY }}
+      CREW_LLM_APPROVED_URL: ${{ vars.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1' }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Validate OpenRouter guard
+        run: pnpm run ops:openrouter:guard
+
+      - name: Run memory rollup (scheduled default apply)
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.apply == 'true' }}
+        run: pnpm run memory:rollup:apply -- --context "${{ github.event.inputs.context || 'workflow-rollup' }}"
+
+      - name: Run memory rollup dry-run
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply != 'true' }}
+        run: pnpm run memory:rollup -- --context "${{ github.event.inputs.context || 'workflow-rollup' }}"
