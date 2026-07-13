@@ -11,6 +11,9 @@ set -euo pipefail
 MODE="${1:-dry}"
 SECRET_ID="${SECRET_ID:-story-agent/aha}"
 TARGET_REPO="${TARGET_REPO:-familiarcat/story-agent}"
+OPS_ENFORCE_CREW_ONLY="${OPS_ENFORCE_CREW_ONLY:-false}"
+OPS_MIN_CREW_DELEGATION_PCT="${OPS_MIN_CREW_DELEGATION_PCT:-50}"
+OPS_REQUIRE_OPENROUTER_PROVIDER="${OPS_REQUIRE_OPENROUTER_PROVIDER:-true}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
@@ -20,9 +23,41 @@ echo "Mode: $MODE"
 echo "Repo: $TARGET_REPO"
 echo "Secret: $SECRET_ID"
 
+export CREW_LLM_PROVIDER="${CREW_LLM_PROVIDER:-approved}"
+export CREW_FRUGAL="${CREW_FRUGAL:-true}"
+
+if [[ "$OPS_REQUIRE_OPENROUTER_PROVIDER" == "true" && "$CREW_LLM_PROVIDER" != "approved" ]]; then
+  echo "❌ OpenRouter-first policy violation: CREW_LLM_PROVIDER='$CREW_LLM_PROVIDER' (expected 'approved')."
+  exit 1
+fi
+
+echo
+echo "0) OpenRouter-first guard"
+pnpm run ops:openrouter:guard
+
 echo
 echo "1) Activation baseline"
 npm_config_yes=true pnpm run activation:status
+
+echo
+echo "1b) Control-lane gate"
+LANES_JSON="$(npx tsx scripts/control-lanes.ts --json)"
+CURRENT_LANE="$(printf '%s' "$LANES_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const j=JSON.parse(d);process.stdout.write(String(j.currentLane||""));});')"
+DELEGATION_PCT="$(printf '%s' "$LANES_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const j=JSON.parse(d);process.stdout.write(String(j.delegationRatePct??0));});')"
+echo "   lane=$CURRENT_LANE delegation=${DELEGATION_PCT}%"
+if [[ "$OPS_ENFORCE_CREW_ONLY" == "true" ]]; then
+  if [[ "$CURRENT_LANE" != "crew" ]]; then
+    echo "❌ OpenRouter-first policy violation: current lane is '$CURRENT_LANE' (expected 'crew')."
+    echo "   Run more work through crew tools (run_crew_mission_pipeline / plan_then_execute) before release."
+    exit 1
+  fi
+  if [[ "$OPS_MIN_CREW_DELEGATION_PCT" -gt 0 && "$DELEGATION_PCT" -lt "$OPS_MIN_CREW_DELEGATION_PCT" ]]; then
+    echo "❌ OpenRouter-first policy violation: delegation ${DELEGATION_PCT}% < required ${OPS_MIN_CREW_DELEGATION_PCT}%."
+    exit 1
+  fi
+else
+  echo "   strict crew-lane gating disabled (set OPS_ENFORCE_CREW_ONLY=true to enforce)."
+fi
 
 echo
 echo "2) Local<->prod parity dry-run"

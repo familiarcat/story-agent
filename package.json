@@ -60,6 +60,7 @@
     "secrets:sync:github-from-aws:dry": "npx tsx scripts/worfgate-aws-to-github-secrets.ts",
     "bridge:local-prod:dry": "npx tsx scripts/worfgate-local-prod-bridge.ts",
     "bridge:local-prod:apply": "npx tsx scripts/worfgate-local-prod-bridge.ts --apply",
+    "ops:openrouter:guard": "npx tsx scripts/worfgate-openrouter-guard.ts",
     "ops:cycle": "bash scripts/worfgate-autonomous-cycle.sh dry",
     "ops:cycle:apply": "bash scripts/worfgate-autonomous-cycle.sh apply",
     "ops:cycle:release": "bash scripts/worfgate-autonomous-cycle.sh release",

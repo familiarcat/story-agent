@@ -126,9 +126,19 @@ Commands:
 Under the hood:
 
 1. Runs `activation:status`
+2. Runs `ops:openrouter:guard` (verifies runtime key and available OpenRouter credits)
 2. Runs `bridge:local-prod:dry`
 3. In apply/release modes, runs `bridge:local-prod:apply`
 4. In release mode, dispatches `.github/workflows/aws-source-secret-sync.yml` with `apply=true`
+
+OpenRouter-first policy flags:
+
+- `OPS_REQUIRE_OPENROUTER_PROVIDER=true` (default)
+   - Fails if `CREW_LLM_PROVIDER` is not `approved`
+- `OPS_ENFORCE_CREW_ONLY=false` (default)
+   - Optional strict mode to fail when current control lane is not `crew`
+- `OPS_MIN_CREW_DELEGATION_PCT=50`
+   - Used only when strict mode is enabled
 
 ## Security Posture
 
