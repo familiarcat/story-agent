@@ -19,6 +19,16 @@ type HierarchicalStoryRecord = StoryRecord & {
   sprintName?: string | null;
 };
 
+type DashboardMode = 'delivery' | 'stakeholder';
+
+type DashboardSearchParams = {
+  view?: string | string[];
+  client?: string | string[];
+  sprint?: string | string[];
+  status?: string | string[];
+  acceptance?: string | string[];
+};
+
 function StatusBadge({ status }: { status: StoryRecord['status'] }) {
   return <span className={`badge badge-${status}`}>{status.replace('_', ' ')}</span>;
 }
@@ -232,7 +242,40 @@ function inferClientId(story: HierarchicalStoryRecord): string {
   return (owner ?? 'unassigned-client').toLowerCase();
 }
 
-export default async function Dashboard() {
+function getFirstParam(param?: string | string[]): string {
+  return Array.isArray(param) ? (param[0] ?? '') : (param ?? '');
+}
+
+function acceptanceScore(story: HierarchicalStoryRecord): 'strong' | 'partial' | 'missing' {
+  const acceptance = (story.acceptanceCriteria ?? '').trim();
+  if (acceptance.length > 80) return 'strong';
+  if (acceptance.length > 0) return 'partial';
+  return 'missing';
+}
+
+function dashboardHref(params: {
+  view?: DashboardMode;
+  client?: string;
+  sprint?: string;
+  status?: StoryRecord['status'] | 'all';
+  acceptance?: 'all' | 'strong' | 'partial' | 'missing';
+}): string {
+  const qp = new URLSearchParams();
+  if (params.view && params.view !== 'delivery') qp.set('view', params.view);
+  if (params.client && params.client !== 'all') qp.set('client', params.client);
+  if (params.sprint && params.sprint !== 'all') qp.set('sprint', params.sprint);
+  if (params.status && params.status !== 'all') qp.set('status', params.status);
+  if (params.acceptance && params.acceptance !== 'all') qp.set('acceptance', params.acceptance);
+  const q = qp.toString();
+  return q ? `/dashboard?${q}` : '/dashboard';
+}
+
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams?: Promise<DashboardSearchParams>;
+}) {
+  const resolvedSearchParams = (await searchParams) ?? {};
   const ahaDomain = process.env.AHA_DOMAIN ?? '';
   const ahaBase = ahaDomain ? `https://${ahaDomain}` : '';
   let stories: HierarchicalStoryRecord[] = [];
@@ -246,7 +289,28 @@ export default async function Dashboard() {
     stories = DEMO_STORIES;
     isDemo = true;
   }
-  const byStatus = (s: StoryRecord['status']) => stories.filter(x => x.status === s).length;
+
+  const mode: DashboardMode = getFirstParam(resolvedSearchParams.view) === 'stakeholder' ? 'stakeholder' : 'delivery';
+  const selectedClient = getFirstParam(resolvedSearchParams.client) || 'all';
+  const selectedSprint = getFirstParam(resolvedSearchParams.sprint) || 'all';
+  const selectedStatus = (getFirstParam(resolvedSearchParams.status) || 'all') as StoryRecord['status'] | 'all';
+  const selectedAcceptance = (getFirstParam(resolvedSearchParams.acceptance) || 'all') as 'all' | 'strong' | 'partial' | 'missing';
+
+  const filteredStories = stories.filter((story) => {
+    const clientName = story.clientName ?? inferClientName(story.repoFullName);
+    const sprintName = story.sprintName ?? 'Unscheduled';
+    if (selectedClient !== 'all' && selectedClient !== clientName) return false;
+    if (selectedSprint !== 'all' && selectedSprint !== sprintName) return false;
+    if (selectedStatus !== 'all' && selectedStatus !== story.status) return false;
+    if (selectedAcceptance !== 'all' && selectedAcceptance !== acceptanceScore(story)) return false;
+    return true;
+  });
+
+  const tableStories = mode === 'stakeholder' ? filteredStories : stories;
+  const byStatus = (s: StoryRecord['status']) => tableStories.filter((x) => x.status === s).length;
+
+  const clientOptions = Array.from(new Set(stories.map((s) => s.clientName ?? inferClientName(s.repoFullName)))).sort((a, b) => a.localeCompare(b));
+  const sprintOptions = Array.from(new Set(stories.map((s) => s.sprintName ?? 'Unscheduled'))).sort((a, b) => a.localeCompare(b));
   let hierarchy = deriveHierarchy(stories);
 
   // Unification step: when Aha is reachable, use the same hierarchy projection path as the VS Code extension.
@@ -289,6 +353,81 @@ export default async function Dashboard() {
           </p>
         </div>
         <a href="/story/new" className="btn btn-primary">+ New Story</a>
+      </div>
+
+      <div className="card" style={{ marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1rem' }}>View Mode</h2>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Switch between execution and stakeholder evaluation workflows.</div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <Link
+              href={dashboardHref({ view: 'delivery' })}
+              style={{
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: mode === 'delivery' ? 'var(--ok)' : 'var(--text-dim)',
+              }}
+            >
+              Delivery Mode
+            </Link>
+            <Link
+              href={dashboardHref({ view: 'stakeholder', client: selectedClient, sprint: selectedSprint, status: selectedStatus, acceptance: selectedAcceptance })}
+              style={{
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                color: mode === 'stakeholder' ? 'var(--ok)' : 'var(--text-dim)',
+              }}
+            >
+              Stakeholder Mode
+            </Link>
+          </div>
+        </div>
+
+        <form action="/dashboard" method="get" style={{ display: 'grid', gap: '0.8rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', alignItems: 'end' }}>
+          {mode === 'stakeholder' && <input type="hidden" name="view" value="stakeholder" />}
+          <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+            Client
+            <select name="client" defaultValue={selectedClient} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '0.4rem', background: 'var(--surface)', color: 'var(--text)' }}>
+              <option value="all">All clients</option>
+              {clientOptions.map((client) => (
+                <option key={client} value={client}>{client}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+            Sprint
+            <select name="sprint" defaultValue={selectedSprint} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '0.4rem', background: 'var(--surface)', color: 'var(--text)' }}>
+              <option value="all">All sprints</option>
+              {sprintOptions.map((sprint) => (
+                <option key={sprint} value={sprint}>{sprint}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+            Delivery Status
+            <select name="status" defaultValue={selectedStatus} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '0.4rem', background: 'var(--surface)', color: 'var(--text)' }}>
+              <option value="all">All statuses</option>
+              {(['pending', 'implementing', 'pr_open', 'pr_revision', 'pr_approved', 'merged', 'blocked'] as const).map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'grid', gap: 4, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+            Acceptance
+            <select name="acceptance" defaultValue={selectedAcceptance} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '0.4rem', background: 'var(--surface)', color: 'var(--text)' }}>
+              <option value="all">All</option>
+              <option value="strong">Strong</option>
+              <option value="partial">Partial</option>
+              <option value="missing">Missing</option>
+            </select>
+          </label>
+          <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
+            <button type="submit" className="btn btn-primary" style={{ padding: '0.45rem 0.8rem' }}>Apply</button>
+            <Link href={dashboardHref({ view: mode })} style={{ fontSize: '0.82rem', fontWeight: 600 }}>Reset</Link>
+          </div>
+        </form>
       </div>
 
       <RealtimeOpsPanel />
@@ -385,17 +524,16 @@ export default async function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {stories.slice(0, 12).map((s, i) => {
-                const acceptance = (s.acceptanceCriteria ?? '').trim();
-                const acceptanceScore = acceptance.length > 80 ? 'strong' : acceptance.length > 0 ? 'partial' : 'missing';
+              {filteredStories.slice(0, 20).map((s, i) => {
+                const score = acceptanceScore(s);
                 return (
                   <tr key={`stakeholder-${s.id ?? s.storyId ?? i}`}>
                     <td style={{ fontWeight: 600 }}>{s.storyId}</td>
                     <td>{s.sprintName ?? 'Unscheduled'}</td>
                     <td><StatusBadge status={s.status} /></td>
                     <td>
-                      <span style={{ color: acceptanceScore === 'strong' ? 'var(--ok)' : acceptanceScore === 'partial' ? 'var(--warn)' : 'var(--danger)', fontWeight: 600 }}>
-                        {acceptanceScore}
+                      <span style={{ color: score === 'strong' ? 'var(--ok)' : score === 'partial' ? 'var(--warn)' : 'var(--danger)', fontWeight: 600 }}>
+                        {score}
                       </span>
                     </td>
                     <td>
@@ -414,12 +552,19 @@ export default async function Dashboard() {
             </tbody>
           </table>
         </div>
+        {filteredStories.length === 0 && (
+          <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+            No stories match the current stakeholder filters.
+          </div>
+        )}
       </div>
 
-      {stories.length === 0 ? (
+      {tableStories.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '3rem' }}>
           <p style={{ marginBottom: '0.75rem' }}>
-            No stories tracked locally yet. Aha is the source of truth — projects and stories live there until imported.
+            {mode === 'stakeholder'
+              ? 'No stories matched the stakeholder filters. Adjust filters to evaluate additional stories.'
+              : 'No stories tracked locally yet. Aha is the source of truth — projects and stories live there until imported.'}
           </p>
           <a href="/story/new" className="btn btn-primary">Import a story from Aha →</a>
         </div>
@@ -443,7 +588,7 @@ export default async function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {stories.map((s, i) => (
+              {tableStories.map((s, i) => (
                 // Unique key: DB id (UUID, always present) → Aha storyId → row index. storyId can be
                 // null on DB rows, which made the key non-unique/undefined (React key warning).
                 <tr key={s.id ?? s.storyId ?? `story-${i}`}>
