@@ -29,6 +29,26 @@ type DashboardSearchParams = {
   acceptance?: string | string[];
 };
 
+type SystemStatusBucket = 'queued' | 'active' | 'blocked' | 'done';
+
+function localBucketFromStatus(value: string | null | undefined): SystemStatusBucket {
+  const v = (value ?? '').toLowerCase();
+  if (v.includes('block') || v.includes('fail')) return 'blocked';
+  if (v.includes('merge') || v.includes('done') || v.includes('complete') || v.includes('approved')) return 'done';
+  if (v.includes('implement') || v.includes('progress') || v.includes('revision') || v.includes('open')) return 'active';
+  return 'queued';
+}
+
+const storyBucketFromStatus: (status: StoryRecord['status']) => SystemStatusBucket =
+  typeof (systemBucketFromStoryStatus as unknown) === 'function'
+    ? (status: StoryRecord['status']) => systemBucketFromStoryStatus(status) as SystemStatusBucket
+    : (status: StoryRecord['status']) => localBucketFromStatus(String(status));
+
+const workflowBucketFromStatus: (status: string | null | undefined) => SystemStatusBucket =
+  typeof (systemBucketFromWorkflowStatus as unknown) === 'function'
+    ? (status: string | null | undefined) => systemBucketFromWorkflowStatus(status) as SystemStatusBucket
+    : (status: string | null | undefined) => localBucketFromStatus(status);
+
 function StatusBadge({ status }: { status: StoryRecord['status'] }) {
   return <span className={`badge badge-${status}`}>{status.replace('_', ' ')}</span>;
 }
@@ -167,7 +187,7 @@ function deriveHierarchy(stories: HierarchicalStoryRecord[]): HierarchyNode[] {
     };
 
     current.storyCount += 1;
-    const bucket = systemBucketFromStoryStatus(story.status);
+    const bucket = storyBucketFromStatus(story.status);
     if (bucket === 'blocked') current.blockedCount += 1;
     if (bucket === 'active') current.activeCount += 1;
     if (bucket === 'done') current.doneCount += 1;
@@ -196,7 +216,7 @@ async function deriveHierarchyFromAha(): Promise<HierarchyNode[]> {
       for (const stories of Object.values(rel.storiesByStatus)) {
         storyCount += stories.length;
         for (const story of stories) {
-          const bucket = systemBucketFromWorkflowStatus(story.workflowStatus);
+          const bucket = workflowBucketFromStatus(story.workflowStatus);
           if (bucket === 'active') activeCount += 1;
           if (bucket === 'blocked') blockedCount += 1;
           if (bucket === 'done') doneCount += 1;
@@ -206,7 +226,7 @@ async function deriveHierarchyFromAha(): Promise<HierarchyNode[]> {
 
     for (const story of hierarchy.unreleasedStories) {
       storyCount += 1;
-      const bucket = systemBucketFromWorkflowStatus(story.workflowStatus);
+      const bucket = workflowBucketFromStatus(story.workflowStatus);
       if (bucket === 'active') activeCount += 1;
       if (bucket === 'blocked') blockedCount += 1;
       if (bucket === 'done') doneCount += 1;
