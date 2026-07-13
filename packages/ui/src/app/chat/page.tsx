@@ -28,8 +28,14 @@ export default function ChatPage() {
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const lastProgressPulseAtRef = useRef<number>(0);
 
-  function emitChatPulse(payload: { type: 'turn_started' | 'turn_progress' | 'turn_completed' | 'turn_error'; model?: string; costUSD?: number }) {
+  function emitChatPulse(payload: {
+    type: 'turn_started' | 'turn_progress' | 'turn_completed' | 'turn_error';
+    model?: string;
+    costUSD?: number;
+    stage?: string;
+  }) {
     try {
       if (!channelRef.current) channelRef.current = new BroadcastChannel('story-agent-chat');
       channelRef.current.postMessage({ ...payload, at: new Date().toISOString() });
@@ -50,7 +56,7 @@ export default function ChatPage() {
     if (!message || busy) return;
     setInput('');
     setBusy(true);
-    emitChatPulse({ type: 'turn_started' });
+    emitChatPulse({ type: 'turn_started', stage: 'dispatching' });
     // Multi-turn: send recent conversation so the crew chat has memory.
     const history = turns
       .filter(t => t.text)
@@ -64,14 +70,17 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, history }),
       });
+      emitChatPulse({ type: 'turn_progress', stage: 'response_opened' });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+        emitChatPulse({ type: 'turn_error', stage: 'http_error' });
         setTurns(t => { const c = [...t]; c[c.length - 1] = { role: 'assistant', text: `⚠️ ${err.error}` }; return c; });
         return;
       }
       const reader = resp.body.getReader();
       const dec = new TextDecoder();
       let acc = '';
+      let lastMeta: Meta | undefined;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -79,13 +88,18 @@ export default function ChatPage() {
         const [answer, metaStr] = acc.split(META);
         let meta: Meta | undefined;
         if (metaStr) { try { meta = JSON.parse(metaStr); } catch { /* partial */ } }
-        if (meta?.model) emitChatPulse({ type: 'turn_progress', model: meta.model, costUSD: meta.costUSD });
+        if (meta) lastMeta = meta;
+        const now = Date.now();
+        if (now - lastProgressPulseAtRef.current > 750) {
+          emitChatPulse({ type: 'turn_progress', model: meta?.model, costUSD: meta?.costUSD, stage: 'streaming' });
+          lastProgressPulseAtRef.current = now;
+        }
         setTurns(t => { const c = [...t]; c[c.length - 1] = { role: 'assistant', text: answer, meta }; return c; });
         scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
       }
-      emitChatPulse({ type: 'turn_completed' });
+      emitChatPulse({ type: 'turn_completed', model: lastMeta?.model, costUSD: lastMeta?.costUSD, stage: 'completed' });
     } catch (e) {
-      emitChatPulse({ type: 'turn_error' });
+      emitChatPulse({ type: 'turn_error', stage: 'exception' });
       setTurns(t => { const c = [...t]; c[c.length - 1] = { role: 'assistant', text: `⚠️ ${e instanceof Error ? e.message : String(e)}` }; return c; });
     } finally {
       setBusy(false);

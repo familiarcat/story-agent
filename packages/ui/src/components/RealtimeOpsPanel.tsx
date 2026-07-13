@@ -18,6 +18,7 @@ type ChatPulse = {
   type: 'turn_started' | 'turn_progress' | 'turn_completed' | 'turn_error';
   model?: string;
   costUSD?: number;
+  stage?: string;
   at?: string;
 };
 
@@ -38,6 +39,7 @@ export function RealtimeOpsPanel() {
   const [lastAhaEventAt, setLastAhaEventAt] = useState<string | null>(null);
   const [lastChatEventAt, setLastChatEventAt] = useState<string | null>(null);
   const [lastChatModel, setLastChatModel] = useState<string>('n/a');
+  const [lastChatStage, setLastChatStage] = useState<string>('idle');
   const [chatTurns, setChatTurns] = useState(0);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -88,6 +90,7 @@ export function RealtimeOpsPanel() {
         if (!pulse || typeof pulse !== 'object') return;
         setLastChatEventAt(pulse.at || new Date().toISOString());
         if (pulse.model) setLastChatModel(pulse.model);
+        setLastChatStage(pulse.stage || pulse.type);
         if (pulse.type === 'turn_started') setChatTurns((v) => v + 1);
       };
     } catch {
@@ -133,7 +136,7 @@ export function RealtimeOpsPanel() {
 
       <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-dim)', display: 'grid', gap: 4 }}>
         <div>Aha sync pulse: {fmtAgo(lastAhaEventAt)}</div>
-        <div>Chat pulse: {fmtAgo(lastChatEventAt)} · model {lastChatModel} · turns {chatTurns}</div>
+        <div>Chat pulse: {fmtAgo(lastChatEventAt)} · {lastChatStage} · model {lastChatModel} · turns {chatTurns}</div>
       </div>
     </div>
   );
