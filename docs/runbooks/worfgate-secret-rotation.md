@@ -110,6 +110,26 @@ Bridge behavior:
 
 This gives local development and published CI/CD a synchronized, security-governed secret contract with AWS as canonical storage.
 
+## Autonomous Ops Cycle (CLI)
+
+The autonomous cycle wraps activation checks, parity validation, and secure sync paths in one command.
+
+Commands:
+
+- Validation only:
+   - `pnpm run ops:cycle`
+- Local apply (AWS -> GitHub mirror):
+   - `pnpm run ops:cycle:apply`
+- Release mode (local apply + remote workflow dispatch):
+   - `pnpm run ops:cycle:release`
+
+Under the hood:
+
+1. Runs `activation:status`
+2. Runs `bridge:local-prod:dry`
+3. In apply/release modes, runs `bridge:local-prod:apply`
+4. In release mode, dispatches `.github/workflows/aws-source-secret-sync.yml` with `apply=true`
+
 ## Security Posture
 
 1. WorfGate broker resolves credentials and audits access
