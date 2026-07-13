@@ -89,6 +89,27 @@ Note:
 - Keep `.github/workflows/worfgate-secret-rotation.yml` for controlled AWS write/bootstrap operations.
 - Use AWS->GitHub sync workflow for ongoing autonomous secret propagation.
 
+## 1:1 Local <-> Production Bridge (WorfGate)
+
+Use this when a local developer wants a governed, end-to-end parity check and sync path before release.
+
+Commands:
+
+- Dry-run bridge (recommended first):
+   - `pnpm run bridge:local-prod:dry`
+- Apply bridge (writes GitHub mirror from AWS source):
+   - `pnpm run bridge:local-prod:apply`
+
+Bridge behavior:
+
+1. Syncs `.mcp.json` into `.vscode/mcp.json`
+2. Verifies critical MCP parity for `story-agent`, `supabase`, `aha`
+3. Verifies required WorfGate credential presence locally
+4. Runs AWS(source)->GitHub mirror dry-run validation
+5. In apply mode, executes AWS(source)->GitHub mirror write path
+
+This gives local development and published CI/CD a synchronized, security-governed secret contract with AWS as canonical storage.
+
 ## Security Posture
 
 1. WorfGate broker resolves credentials and audits access

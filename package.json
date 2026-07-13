@@ -58,6 +58,8 @@
     "secrets:rotate:aws": "npx tsx scripts/worfgate-secrets-rotate.ts --apply --trigger-rotation",
     "secrets:sync:github-from-aws": "npx tsx scripts/worfgate-aws-to-github-secrets.ts --apply",
     "secrets:sync:github-from-aws:dry": "npx tsx scripts/worfgate-aws-to-github-secrets.ts",
+    "bridge:local-prod:dry": "npx tsx scripts/worfgate-local-prod-bridge.ts",
+    "bridge:local-prod:apply": "npx tsx scripts/worfgate-local-prod-bridge.ts --apply",
     "aha:derive-backlog": "npx tsx scripts/derive-aha-backlog.ts",
     "aha:commit-backlog": "npx tsx scripts/aha-commit-backlog.ts",
     "story:create-project-management-ui": "pnpm --filter @story-agent/mcp-server exec node ./scripts/create-project-management-ui-story.mjs",

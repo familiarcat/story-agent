@@ -89,8 +89,11 @@ function readAwsSecret(secretId: string, region: string): Record<string, unknown
 
 function requireGhAuth() {
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
-  if (!token) {
-    throw new Error('GH_TOKEN or GITHUB_TOKEN is required for GitHub secret sync');
+  if (token) return;
+
+  const auth = run('gh', ['auth', 'status']);
+  if (!auth.ok) {
+    throw new Error('GH_TOKEN/GITHUB_TOKEN is missing and gh CLI is not authenticated (run: gh auth login)');
   }
 }
 

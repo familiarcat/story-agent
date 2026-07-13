@@ -1,13 +1,8 @@
 {
 	"servers": {
 		"story-agent": {
-			"type": "http",
-			"url": "http://story-agent-alb-651393427.us-east-2.elb.amazonaws.com/mcp",
-			"headers": {
-				"Authorization": "Bearer ${env:STORY_AGENT_MCP_BEARER}",
-				"user-session-id": "${env:STORY_AGENT_MCP_SESSION_ID}",
-				"x-client-id": "familiarcat"
-			}
+			"type": "stdio",
+			"command": "scripts/mcp-crew-stdio.sh"
 		},
 		"supabase": {
 			"type": "http",
@@ -18,7 +13,10 @@
 		},
 		"aha": {
 			"type": "http",
-			"url": "https://familiarcat.use3.aha.io/api/v1/mcp"
+			"url": "https://familiarcat.use3.aha.io/api/v1/mcp",
+			"headers": {
+				"Authorization": "Bearer ${env:AHA_API_KEY}"
+			}
 		},
 		"figma": {
 			"type": "http",
