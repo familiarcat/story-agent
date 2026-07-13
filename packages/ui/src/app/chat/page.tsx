@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 
@@ -27,12 +27,30 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<BroadcastChannel | null>(null);
+
+  function emitChatPulse(payload: { type: 'turn_started' | 'turn_progress' | 'turn_completed' | 'turn_error'; model?: string; costUSD?: number }) {
+    try {
+      if (!channelRef.current) channelRef.current = new BroadcastChannel('story-agent-chat');
+      channelRef.current.postMessage({ ...payload, at: new Date().toISOString() });
+    } catch {
+      // BroadcastChannel can be unavailable in some environments; chat still works without it.
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      channelRef.current?.close();
+      channelRef.current = null;
+    };
+  }, []);
 
   async function send() {
     const message = input.trim();
     if (!message || busy) return;
     setInput('');
     setBusy(true);
+    emitChatPulse({ type: 'turn_started' });
     // Multi-turn: send recent conversation so the crew chat has memory.
     const history = turns
       .filter(t => t.text)
@@ -61,10 +79,13 @@ export default function ChatPage() {
         const [answer, metaStr] = acc.split(META);
         let meta: Meta | undefined;
         if (metaStr) { try { meta = JSON.parse(metaStr); } catch { /* partial */ } }
+        if (meta?.model) emitChatPulse({ type: 'turn_progress', model: meta.model, costUSD: meta.costUSD });
         setTurns(t => { const c = [...t]; c[c.length - 1] = { role: 'assistant', text: answer, meta }; return c; });
         scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
       }
+      emitChatPulse({ type: 'turn_completed' });
     } catch (e) {
+      emitChatPulse({ type: 'turn_error' });
       setTurns(t => { const c = [...t]; c[c.length - 1] = { role: 'assistant', text: `⚠️ ${e instanceof Error ? e.message : String(e)}` }; return c; });
     } finally {
       setBusy(false);

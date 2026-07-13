@@ -4,6 +4,7 @@ import type { StoryRecord } from '@story-agent/shared';
 import { systemBucketFromStoryStatus, systemBucketFromWorkflowStatus } from '@story-agent/shared/system-status';
 import Link from 'next/link';
 import { ProjectStatusPanel, type ProjectStatusRow } from '@/components/ProjectStatusPanel';
+import { RealtimeOpsPanel } from '@/components/RealtimeOpsPanel';
 import { LcarsHierarchyText } from '@/components/Lcars';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 
@@ -283,6 +284,8 @@ export default async function Dashboard() {
         </div>
         <a href="/story/new" className="btn btn-primary">+ New Story</a>
       </div>
+
+      <RealtimeOpsPanel />
 
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', marginBottom: '2rem' }}>
         {hierarchy.map(node => {
