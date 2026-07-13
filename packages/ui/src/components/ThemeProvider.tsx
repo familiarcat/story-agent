@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 /**
  * Theme system (crew theme-system mission, RAG MEM 50). Themes are values maps for the CSS-variable
@@ -49,24 +49,111 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 /** Compact theme switcher for the NavBar. */
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const applyPreview = (t: ThemeId) => {
+    document.documentElement.setAttribute('data-theme', t);
+  };
+
+  const restoreTheme = () => {
+    document.documentElement.setAttribute('data-theme', theme);
+  };
+
+  useEffect(() => {
+    const onDocClick = (ev: MouseEvent) => {
+      if (!wrapRef.current) return;
+      if (wrapRef.current.contains(ev.target as Node)) return;
+      setOpen(false);
+      restoreTheme();
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [theme]);
+
   return (
-    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }} title="UI theme">
-      {THEMES.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => setTheme(t.id)}
-          aria-pressed={theme === t.id}
+    <div
+      ref={wrapRef}
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      title="UI theme"
+      onMouseLeave={() => {
+        if (open) restoreTheme();
+      }}
+    >
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (!next) restoreTheme();
+        }}
+        style={{
+          background: 'var(--surface-2)',
+          color: 'var(--text)',
+          border: '1px solid var(--border)',
+          borderRadius: 6,
+          padding: '4px 9px',
+          fontSize: '0.68rem',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+          minWidth: 88,
+          textAlign: 'left',
+        }}
+      >
+        Theme: {THEMES.find((t) => t.id === theme)?.label ?? 'Theme'} ▾
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Theme selection"
           style={{
-            background: theme === t.id ? 'var(--accent1)' : 'var(--surface-2)',
-            color: theme === t.id ? 'var(--on-accent)' : 'var(--text-dim)',
-            border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px',
-            fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', cursor: 'pointer',
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            right: 0,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+            minWidth: 140,
+            overflow: 'hidden',
+            zIndex: 200,
           }}
         >
-          {t.label}
-        </button>
-      ))}
-    </span>
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              role="option"
+              aria-selected={theme === t.id}
+              type="button"
+              onMouseEnter={() => applyPreview(t.id)}
+              onFocus={() => applyPreview(t.id)}
+              onClick={() => {
+                setTheme(t.id);
+                setOpen(false);
+              }}
+              style={{
+                width: '100%',
+                border: 'none',
+                borderTop: '1px solid var(--border)',
+                background: theme === t.id ? 'var(--surface-2)' : 'var(--surface)',
+                color: theme === t.id ? 'var(--text)' : 'var(--text-dim)',
+                textAlign: 'left',
+                padding: '7px 10px',
+                fontSize: '0.73rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
