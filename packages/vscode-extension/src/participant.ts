@@ -164,7 +164,22 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         }
         const ctx = await gatherChatContext(request, token);
         if (ctx.note) stream.markdown(`${ctx.note}\n\n`);
+        const workspaceDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        let stopCrewStream: (() => void) | undefined;
+        try {
+          // Auto-bridge live crew updates into chat so operators do not need a separate /crew-status call.
+          stopCrewStream = await streamCrewStatusUpdates(stream, {
+            sessionId: `vscode-agent-${Date.now()}`,
+            autoStopAfterMs: 30 * 60 * 1000,
+            workspaceDir,
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          stream.markdown(`_Live crew stream unavailable: ${msg}_\n`);
+        }
+
         const result = await runAgentTurn(ctx.contextBlock + (ctx.prompt || prompt), stream, token);
+        stopCrewStream?.();
         // Multi-file diff review: let the user inspect / revert the agent's edits per file.
         stream.button({ command: 'story-agent.reviewChanges', title: '$(diff) Review changes (accept/reject per file)' });
         return { metadata: { [META_CMD]: 'agent', escalated: result.escalated } };

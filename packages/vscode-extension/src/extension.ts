@@ -12,6 +12,7 @@ import { runNodeActions } from './selectionActions';
 import { registerNativeChatProvider } from './nativeChatProvider';
 import { AhaSyncPoller } from './ahaSyncPoller';
 import { registerUpdateAhaStatus, resolveDashboardBase } from './commands/updateAhaStatus';
+import { CrewStreamRelay } from './crewStreamRelay';
 
 function dashboardBase(): string {
   return vscode.workspace.getConfiguration('storyAgent').get<string>('dashboardUrl') ?? 'http://localhost:3000';
@@ -46,6 +47,14 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(ahaSyncPoller, {
     dispose: () => { if (ahaRefreshTimer) clearTimeout(ahaRefreshTimer); },
   });
+
+  // ── Live crew stream relay: emit autonomous progress to VS Code Output ──
+  const streamRelayEnabled = vscode.workspace.getConfiguration('storyAgent').get<boolean>('chat.autoCrewStreamRelay') ?? true;
+  if (streamRelayEnabled) {
+    const crewStreamRelay = new CrewStreamRelay();
+    crewStreamRelay.start();
+    context.subscriptions.push(crewStreamRelay);
+  }
 
   // ── Multi-file diff review UI (per-file accept/reject) ───────────────────
   registerReviewChanges(context);

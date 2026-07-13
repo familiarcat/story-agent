@@ -29,7 +29,8 @@ jobs:
       CREW_LLM_PROVIDER: approved
       CREW_FRUGAL: "true"
       STORY_AGENT_OPENROUTER_ONLY: "true"
-      CREW_LLM_APPROVED_KEY: ${{ secrets.CREW_LLM_APPROVED_KEY || secrets.OPENROUTER_API_KEY }}
+      CREW_LLM_APPROVED_KEY: ${{ secrets.CREW_LLM_APPROVED_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       CREW_LLM_APPROVED_URL: ${{ vars.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1' }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -47,6 +48,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Resolve OpenRouter key fallback
+        shell: bash
+        run: |
+          if [[ -z "${CREW_LLM_APPROVED_KEY}" && -n "${OPENROUTER_API_KEY}" ]]; then
+            echo "CREW_LLM_APPROVED_KEY=${OPENROUTER_API_KEY}" >> "$GITHUB_ENV"
+            echo "Using OPENROUTER_API_KEY fallback for CREW_LLM_APPROVED_KEY"
+          fi
+          if [[ -z "${CREW_LLM_APPROVED_KEY}" && -z "${OPENROUTER_API_KEY}" ]]; then
+            echo "Neither CREW_LLM_APPROVED_KEY nor OPENROUTER_API_KEY is configured in GitHub secrets."
+            exit 1
+          fi
 
       - name: Validate OpenRouter guard
         run: pnpm run ops:openrouter:guard

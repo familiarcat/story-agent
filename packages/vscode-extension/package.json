@@ -362,6 +362,11 @@
           "default": "",
           "description": "Optional bearer token for the agent-core endpoint (matches AGENT_SERVICE_TOKEN). Falls back to the AGENT_SERVICE_TOKEN env var."
         },
+        "storyAgent.chat.autoCrewStreamRelay": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically mirror crew stream events into the Story Agent Crew Stream output channel during extension runtime."
+        },
         "storyAgent.hijack.enabled": {
           "type": "boolean",
           "default": true,
