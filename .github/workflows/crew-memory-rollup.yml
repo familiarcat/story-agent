@@ -29,7 +29,7 @@ jobs:
       CREW_LLM_PROVIDER: approved
       CREW_FRUGAL: "true"
       STORY_AGENT_OPENROUTER_ONLY: "true"
-      CREW_LLM_APPROVED_KEY: ${{ secrets.CREW_LLM_APPROVED_KEY }}
+      CREW_LLM_APPROVED_KEY: ${{ secrets.CREW_LLM_APPROVED_KEY || secrets.OPENROUTER_API_KEY }}
       CREW_LLM_APPROVED_URL: ${{ vars.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1' }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
