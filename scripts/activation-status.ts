@@ -23,12 +23,20 @@ console.log('\n=== Story Agent — activation status (WorfGate presence-only) ==
 // 1. Capabilities already powered by env (~/.zshrc / ~/.alexai-secrets)
 const env = [
   ['CREW_LLM_APPROVED_KEY', 'OpenRouter — the crew LLM (required)'],
+  ['STORY_AGENT_MCP_BEARER', 'Hosted Story Agent MCP bearer token (required for hosted MCP)'],
   ['AHA_API_KEY', 'Aha! PM writes'],
   ['SUPABASE_ACCESS_TOKEN', 'Supabase CLI / Management API migrations'],
   ['AWS_ACCESS_KEY_ID', 'AWS deploy (bootstrap + WorfGate-brokered terraform)'],
 ];
 console.log('Environment credentials (WorfGate broker):');
 for (const [name, what] of env) console.log(`  ${ok(worfGateHasCredential(name))} ${name} — ${what}`);
+
+const sessionIdPresent = Boolean(process.env.STORY_AGENT_MCP_SESSION_ID && process.env.STORY_AGENT_MCP_SESSION_ID.trim().length > 0);
+console.log(`  ${ok(sessionIdPresent)} STORY_AGENT_MCP_SESSION_ID — Hosted MCP session isolation header`);
+if (!sessionIdPresent) {
+  console.log('    → Missing session id can break enterprise-tier MCP auth. Set a non-secret value, e.g.:');
+  console.log('      export STORY_AGENT_MCP_SESSION_ID="vscode-local-session"');
+}
 
 // 2. RAG embeddings — the one that sharpens self-learning
 const embOn = embeddingSource() === 'api';
