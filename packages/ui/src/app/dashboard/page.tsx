@@ -134,6 +134,8 @@ type HierarchyNode = {
   blockedCount: number;
   activeCount: number;
   doneCount: number;
+  ahaProjectId?: string;
+  ahaReleaseId?: string;
 };
 
 function deriveHierarchy(stories: HierarchicalStoryRecord[]): HierarchyNode[] {
@@ -208,6 +210,8 @@ async function deriveHierarchyFromAha(): Promise<HierarchyNode[]> {
       blockedCount,
       activeCount,
       doneCount,
+      ahaProjectId: project.id,
+      ahaReleaseId: hierarchy.releases[0]?.release.id,
     };
   });
 }
@@ -229,6 +233,8 @@ function inferClientId(story: HierarchicalStoryRecord): string {
 }
 
 export default async function Dashboard() {
+  const ahaDomain = process.env.AHA_DOMAIN ?? '';
+  const ahaBase = ahaDomain ? `https://${ahaDomain}` : '';
   let stories: HierarchicalStoryRecord[] = [];
   let isDemo = false;
   
@@ -318,10 +324,26 @@ export default async function Dashboard() {
                 <span><strong>{node.activeCount}</strong> active</span>
                 <span><strong>{node.blockedCount}</strong> blocked</span>
               </div>
+              <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
+                Sprint completion: <strong style={{ color: 'var(--text)' }}>{node.storyCount ? Math.round((100 * node.doneCount) / node.storyCount) : 0}%</strong>
+              </div>
               <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'grid', gap: '0.4rem', fontSize: '0.84rem', color: 'var(--text)' }}>
                 <LcarsHierarchyText parent="LLM Route" level={1} parentColor="var(--text)" childColor="var(--text-dim)">{security.llmRoute}</LcarsHierarchyText>
                 <LcarsHierarchyText parent="Data Plane" level={1} parentColor="var(--text)" childColor="var(--text-dim)">{security.dataPlane}</LcarsHierarchyText>
                 <LcarsHierarchyText parent="Security Notes" level={1} parentColor="var(--text)" childColor="var(--text-dim)">{security.notes}</LcarsHierarchyText>
+              </div>
+              <div style={{ marginTop: '0.85rem', display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <Link href="/observation-lounge" style={{ fontSize: '0.8rem', fontWeight: 600 }}>Stakeholder Review</Link>
+                {node.ahaProjectId && ahaBase && (
+                  <a
+                    href={`${ahaBase}/products/${encodeURIComponent(node.ahaProjectId)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '0.8rem', fontWeight: 600 }}
+                  >
+                    Open Aha Project
+                  </a>
+                )}
               </div>
             </div>
           );
@@ -343,6 +365,55 @@ export default async function Dashboard() {
             <StatusBadge status={s} />
           </div>
         ))}
+      </div>
+
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <h2 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.05rem' }}>Stakeholder Story Evaluation</h2>
+        <p style={{ marginTop: 0, marginBottom: '1rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+          Use this view during sprint reviews to assess Agile story readiness from delivery status, acceptance criteria, and Aha traceability.
+        </p>
+        <div style={{ overflowX: 'auto' }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Story</th>
+                <th>Sprint</th>
+                <th>Delivery</th>
+                <th>Acceptance</th>
+                <th>Aha</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stories.slice(0, 12).map((s, i) => {
+                const acceptance = (s.acceptanceCriteria ?? '').trim();
+                const acceptanceScore = acceptance.length > 80 ? 'strong' : acceptance.length > 0 ? 'partial' : 'missing';
+                return (
+                  <tr key={`stakeholder-${s.id ?? s.storyId ?? i}`}>
+                    <td style={{ fontWeight: 600 }}>{s.storyId}</td>
+                    <td>{s.sprintName ?? 'Unscheduled'}</td>
+                    <td><StatusBadge status={s.status} /></td>
+                    <td>
+                      <span style={{ color: acceptanceScore === 'strong' ? 'var(--ok)' : acceptanceScore === 'partial' ? 'var(--warn)' : 'var(--danger)', fontWeight: 600 }}>
+                        {acceptanceScore}
+                      </span>
+                    </td>
+                    <td>
+                      {s.storyUrl ? (
+                        <a href={s.storyUrl} target="_blank" rel="noreferrer">Open</a>
+                      ) : (
+                        <span style={{ color: 'var(--border)' }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      <Link href={`/story/${s.storyId}?clientId=${encodeURIComponent(inferClientId(s))}`}>Inspect</Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {stories.length === 0 ? (
