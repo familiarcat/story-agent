@@ -33,21 +33,4 @@ jobs:
           SUPABASE_CLOUD_KEY: ${{ secrets.SUPABASE_CLOUD_KEY }}
           WORFGATE_AUDIT_MAX: 100
           STORY_AGENT_PATH: ${{ github.workspace }}
-        run: |
-          if [ -n "$SUPABASE_CLOUD_URL" ] && [ -n "$SUPABASE_CLOUD_KEY" ]; then
-            export SUPABASE_URL="$SUPABASE_CLOUD_URL"
-            export SUPABASE_KEY="$SUPABASE_CLOUD_KEY"
-            echo "::notice::Using SUPABASE_CLOUD_URL/SUPABASE_CLOUD_KEY for WorfGate audit query."
-          fi
-
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
-            echo "::notice::SUPABASE_URL/SUPABASE_KEY not fully configured — skipping live WorfGate audit query (CI stays green)."
-            exit 0
-          fi
-
-          if [[ "$SUPABASE_URL" == http://127.0.0.1* || "$SUPABASE_URL" == http://localhost* ]]; then
-            echo "::notice::SUPABASE_URL points to a local endpoint ($SUPABASE_URL) — skipping live WorfGate audit query in CI (CI stays green)."
-            exit 0
-          fi
-
-          pnpm exec tsx scripts/check-recent-audits.ts
+        run: bash .github/scripts/run-worfgate-audit-check.sh "pnpm exec tsx scripts/check-recent-audits.ts"
