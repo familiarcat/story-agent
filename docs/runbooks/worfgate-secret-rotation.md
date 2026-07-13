@@ -2,6 +2,11 @@
 
 This runbook defines the operational method for automated secret updates and rotation using WorfGate plus AWS Secrets Manager.
 
+Primary direction for autonomous ops:
+
+- AWS Secrets Manager is the source of truth.
+- GitHub repository secrets are a mirrored consumer for CI/runtime compatibility.
+
 ## Objective
 
 1. Resolve credentials through WorfGate (audited, never printed)
@@ -55,6 +60,34 @@ Required repository configuration:
 2. Secrets:
    - `AHA_DOMAIN`
    - `AHA_API_KEY`
+
+## AWS Source -> GitHub Sync (Preferred Autonomous Path)
+
+Workflow: `.github/workflows/aws-source-secret-sync.yml`
+
+1. Weekly schedule runs dry-run automatically
+2. Manual dispatch with `apply=true` mirrors values from AWS secret JSON into GitHub repo secrets
+3. Default mappings are `AHA_DOMAIN` and `AHA_API_KEY`
+4. AWS auth uses OIDC role assumptions (no long-lived AWS keys in CI)
+
+Required repository configuration:
+
+1. Variables:
+   - `AWS_REGION`
+   - `AWS_DEPLOY_ROLE_ARN`
+2. GitHub token is provided by Actions automatically (`github.token`)
+
+Local commands:
+
+- Dry-run mirror:
+  - `pnpm run secrets:sync:github-from-aws:dry -- --secret-id story-agent/aha`
+- Apply mirror:
+  - `pnpm run secrets:sync:github-from-aws -- --secret-id story-agent/aha --repo familiarcat/story-agent`
+
+Note:
+
+- Keep `.github/workflows/worfgate-secret-rotation.yml` for controlled AWS write/bootstrap operations.
+- Use AWS->GitHub sync workflow for ongoing autonomous secret propagation.
 
 ## Security Posture
 
