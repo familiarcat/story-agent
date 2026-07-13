@@ -1586,6 +1586,13 @@ export async function getRecentCrewExecutionOutcomes(
     error_message?: string;
   }>
 > {
+  const isMissingOutcomesTable = (err: unknown): boolean => {
+    const code = typeof err === 'object' && err !== null && 'code' in err
+      ? String((err as any).code)
+      : '';
+    return code === '42P01';
+  };
+
   try {
     const client = await getSupabaseClient();
 
@@ -1602,6 +1609,9 @@ export async function getRecentCrewExecutionOutcomes(
     const { data, error } = await query;
 
     if (error) {
+      if (isMissingOutcomesTable(error)) {
+        return [];
+      }
       console.error('Failed to retrieve crew execution outcomes:', error);
       return [];
     }
@@ -1622,6 +1632,13 @@ export async function getCrewExecutionStats(dateFrom?: Date): Promise<{
   today_cost_usd: number;
   active_tasks_count: number;
 }> {
+  const isMissingOutcomesTable = (err: unknown): boolean => {
+    const code = typeof err === 'object' && err !== null && 'code' in err
+      ? String((err as any).code)
+      : '';
+    return code === '42P01';
+  };
+
   try {
     const client = await getSupabaseClient();
 
@@ -1635,6 +1652,14 @@ export async function getCrewExecutionStats(dateFrom?: Date): Promise<{
       .gte('timestamp', from.toISOString());
 
     if (outcomesError) {
+      if (isMissingOutcomesTable(outcomesError)) {
+        return {
+          today_count: 0,
+          today_success_rate: 0,
+          today_cost_usd: 0,
+          active_tasks_count: 0,
+        };
+      }
       console.error('Failed to get execution stats:', outcomesError);
       return {
         today_count: 0,
