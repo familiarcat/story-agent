@@ -35,6 +35,9 @@ export interface LoungeDeps {
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
+const CALL_TIMEOUT_MS = Math.max(4000, Number(process.env.CREW_CALL_TIMEOUT_MS || 7000));
+const INNOVATION_CONCURRENCY = Math.max(1, Number(process.env.INNOVATION_LOUNGE_CONCURRENCY || 11));
+const PERSIST_TIMEOUT_MS = Math.max(1000, Number(process.env.INNOVATION_LOUNGE_PERSIST_TIMEOUT_MS || 8000));
 
 function rate(model: string) {
   const m = MODEL_POOL.find((x) => x.id === model);
@@ -43,6 +46,38 @@ function rate(model: string) {
 const costOf = (model: string, tin: number, tout: number) => (tin / 1e6) * rate(model).i + (tout / 1e6) * rate(model).o;
 
 interface CallResult { text: string; model: string; tokensIn: number; tokensOut: number; costUSD: number; }
+
+async function mapWithConcurrency<T, R>(items: T[], concurrency: number, worker: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let cursor = 0;
+
+  async function runOne() {
+    while (true) {
+      const i = cursor++;
+      if (i >= items.length) return;
+      out[i] = await worker(items[i], i);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runOne());
+  await Promise.all(workers);
+  return out;
+}
+
+async function settleWithTimeout(promises: Array<Promise<unknown>>, timeoutMs: number) {
+  if (!promises.length) return;
+  await Promise.race([
+    Promise.allSettled(promises),
+    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | undefined> {
+  return await Promise.race([
+    promise,
+    new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), timeoutMs)),
+  ]);
+}
 
 /** Direct OpenRouter completion (mirrors crew-mission-pipeline's call: provider routing + timeout + cost). */
 async function call(model: string, system: string, user: string, maxTokens = 550): Promise<CallResult> {
@@ -53,7 +88,7 @@ async function call(model: string, system: string, user: string, maxTokens = 550
   };
   if (model.startsWith('anthropic/')) body.provider = { order: ['Anthropic'], allow_fallbacks: true };
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), Number(process.env.CREW_CALL_TIMEOUT_MS || 60000));
+  const timer = setTimeout(() => ctrl.abort(), CALL_TIMEOUT_MS);
   let d: any;
   try {
     const resp = await fetch(`${OR_URL}/chat/completions`, {
@@ -113,9 +148,14 @@ export interface InnovationLoungeResult {
   sessionId: string;
   stardate: string;
   theme: string;
+  mode: 'full' | 'forum';
+  incomplete?: boolean;
+  timeoutMs?: number;
+  elapsedMs?: number;
   pitches: ProjectPitch[];
   reactions: LoungeReaction[];
   synthesis: string;
+  collectiveNextSteps: string[];
   portfolio: { pursueNow: string[]; pursueNext: string[]; park: string[] };
   dissent: Array<{ crewId: string; concern: string }>;
   efficiency: { perMember: Record<string, number>; totalCostUSD: number; totalTokens: number };
@@ -187,6 +227,7 @@ PURSUE_NOW: [1-2 project names to greenlight immediately, each with a one-line r
 PURSUE_NEXT: [project names to queue for the next cycle; semicolon-separated]
 PARK: [project names to defer, with a one-line reason each; semicolon-separated]
 DISSENT: [genuine unresolved concerns worth preserving, attributed to a crew member where clear; semicolon-separated]
+COLLECTIVE_NEXT_STEPS: [3-6 concrete next actions for the crew; semicolon-separated]
 DECISION: [one closing line — "Make it so."-style]`;
 }
 
@@ -206,12 +247,18 @@ function splitList(s: string): string[] {
 export async function runInnovationLounge(options?: {
   theme?: string;
   crewIds?: CrewId[];
+  mode?: 'full' | 'forum';
+  timeoutMs?: number;
   store?: boolean;
   deps?: LoungeDeps;
 }): Promise<InnovationLoungeResult> {
   if (!OR_KEY) throw new Error('CREW_LLM_APPROVED_KEY not set — Innovation Lounge needs the crew LLM key');
   const theme = options?.theme ?? 'the future of the Story Agent platform and the consultancy firm it serves';
+  const mode = options?.mode ?? 'full';
+  const timeoutMs = Math.max(10000, options?.timeoutMs ?? Number(process.env.INNOVATION_LOUNGE_TIMEOUT_MS || (mode === 'full' ? 60000 : 25000)));
+  const startedAtMs = Date.now();
   const crewIds = options?.crewIds ?? CREW_MISSION_ORDER;
+  const debateCrewIds: CrewId[] = mode === 'forum' ? ['picard', 'worf', 'data', 'quark'] : crewIds;
   const deps = options?.deps ?? {};
   // Only persist when a store fn was injected (the engine has no db import of its own).
   const store = (options?.store ?? true) && !!deps.storeCrewPersonalMemory;
@@ -221,62 +268,103 @@ export async function runInnovationLounge(options?: {
   let totalTokens = 0;
 
   // 1. PITCH ROUND — each member invents their own project.
-  const pitches: ProjectPitch[] = [];
-  for (const crewId of crewIds) {
+  const memoryWrites: Array<Promise<unknown>> = [];
+  const pitches = await mapWithConcurrency(crewIds, INNOVATION_CONCURRENCY, async (crewId) => {
     const p = getPersona(crewId);
     const model = quarkSelectModel(crewBaseTier(crewId)).id;
-    const r = await call(model, pitchSystem(crewId), pitchUser(theme), 600);
+    const r = await call(model, pitchSystem(crewId), pitchUser(theme), 340);
     perMember[crewId] = (perMember[crewId] ?? 0) + r.costUSD;
     totalTokens += r.tokensIn + r.tokensOut;
     const pitch: ProjectPitch = {
       crewId, fullName: p.fullName, rank: p.rank, role: p.engineeringRole, model: r.model,
       projectName: cleanName(section(r.text, 'PROJECT_NAME')) || `[${p.fullName}'s project]`,
-      elevatorPitch: section(r.text, 'ELEVATOR_PITCH'),
+      elevatorPitch: section(r.text, 'ELEVATOR_PITCH') || 'Pitch unavailable (model timeout/failure).',
       whyMe: section(r.text, 'WHY_ME'),
       whatItBuilds: section(r.text, 'WHAT_IT_BUILDS'),
       firstMilestone: section(r.text, 'FIRST_MILESTONE'),
       closing: section(r.text, 'CLOSING'),
       costUSD: r.costUSD,
     };
-    pitches.push(pitch);
+
     if (store && pitch.elevatorPitch) {
-      await deps.storeCrewPersonalMemory!({
-        crew_id: crewId,
-        memory_type: 'insight',
-        title: `Innovation Lounge pitch — "${pitch.projectName}" by ${p.fullName}`,
-        content: [
-          `PROJECT: ${pitch.projectName}`,
-          `PITCH: ${pitch.elevatorPitch}`,
-          `WHY ME: ${pitch.whyMe}`,
-          `WHAT IT BUILDS: ${pitch.whatItBuilds}`,
-          `FIRST MILESTONE: ${pitch.firstMilestone}`,
-          `— ${pitch.closing}`,
-        ].join('\n'),
-        tags: ['innovation-lounge', 'project-pitch', 'ideation', p.engineeringRole, sessionId],
-      }).catch(() => undefined);
+      memoryWrites.push(
+        deps.storeCrewPersonalMemory!({
+          crew_id: crewId,
+          memory_type: 'insight',
+          title: `Innovation Lounge pitch — "${pitch.projectName}" by ${p.fullName}`,
+          content: [
+            `PROJECT: ${pitch.projectName}`,
+            `PITCH: ${pitch.elevatorPitch}`,
+            `WHY ME: ${pitch.whyMe}`,
+            `WHAT IT BUILDS: ${pitch.whatItBuilds}`,
+            `FIRST MILESTONE: ${pitch.firstMilestone}`,
+            `— ${pitch.closing}`,
+          ].join('\n'),
+          tags: ['innovation-lounge', 'project-pitch', 'ideation', p.engineeringRole, sessionId],
+        }).catch(() => undefined),
+      );
     }
+
+    return pitch;
+  });
+
+  if (Date.now() - startedAtMs > timeoutMs) {
+    return {
+      sessionId,
+      stardate,
+      theme,
+      mode,
+      incomplete: true,
+      timeoutMs,
+      elapsedMs: Date.now() - startedAtMs,
+      pitches,
+      reactions: [],
+      synthesis: 'Innovation Lounge timed out after pitch round; returning partial forum output.',
+      collectiveNextSteps: [],
+      portfolio: { pursueNow: [], pursueNext: [], park: [] },
+      dissent: [],
+      efficiency: { perMember, totalCostUSD: Object.values(perMember).reduce((a, b) => a + b, 0), totalTokens },
+    };
   }
 
   // 2. DEBATE ROUND — everyone reacts to the slate.
   const slate = pitches
     .map((p) => `• "${p.projectName}" (${p.fullName}, ${p.role}): ${p.elevatorPitch}`)
     .join('\n');
-  const reactions: LoungeReaction[] = [];
-  for (const crewId of crewIds) {
+  const reactions = await mapWithConcurrency(debateCrewIds, INNOVATION_CONCURRENCY, async (crewId) => {
     const p = getPersona(crewId);
     const model = quarkSelectModel(crewBaseTier(crewId)).id;
     const own = pitches.find((x) => x.crewId === crewId)?.projectName ?? '';
-    const r = await call(model, reactionSystem(crewId), reactionUser(slate, own), 350);
+    const r = await call(model, reactionSystem(crewId), reactionUser(slate, own), 220);
     perMember[crewId] = (perMember[crewId] ?? 0) + r.costUSD;
     totalTokens += r.tokensIn + r.tokensOut;
-    reactions.push({
+    return {
       crewId, fullName: p.fullName, model: r.model,
       endorses: cleanName(section(r.text, 'ENDORSE')),
-      endorseWhy: section(r.text, 'ENDORSE_WHY'),
+      endorseWhy: section(r.text, 'ENDORSE_WHY') || 'No endorsement rationale returned.',
       challenge: section(r.text, 'CHALLENGE'),
       synergy: section(r.text, 'SYNERGY'),
       costUSD: r.costUSD,
-    });
+    } satisfies LoungeReaction;
+  });
+
+  if (Date.now() - startedAtMs > timeoutMs) {
+    return {
+      sessionId,
+      stardate,
+      theme,
+      mode,
+      incomplete: true,
+      timeoutMs,
+      elapsedMs: Date.now() - startedAtMs,
+      pitches,
+      reactions,
+      synthesis: 'Innovation Lounge timed out after debate round; returning partial forum output.',
+      collectiveNextSteps: [],
+      portfolio: { pursueNow: [], pursueNext: [], park: [] },
+      dissent: [],
+      efficiency: { perMember, totalCostUSD: Object.values(perMember).reduce((a, b) => a + b, 0), totalTokens },
+    };
   }
 
   // 3. RESOLVE — Picard reasons over pitches + debate and decides the portfolio.
@@ -284,7 +372,7 @@ export async function runInnovationLounge(options?: {
     .map((x) => `${x.fullName}: endorses "${x.endorses}" (${x.endorseWhy}) | challenge: ${x.challenge} | synergy: ${x.synergy}`)
     .join('\n');
   const picardModel = quarkSelectModel(crewBaseTier('picard')).id;
-  const synth = await call(picardModel, pitchSystem('picard'), synthesisUser(slate, debate, theme), 950);
+  const synth = await call(picardModel, pitchSystem('picard'), synthesisUser(slate, debate, theme), 520);
   perMember['picard'] = (perMember['picard'] ?? 0) + synth.costUSD;
   totalTokens += synth.tokensIn + synth.tokensOut;
 
@@ -297,18 +385,23 @@ export async function runInnovationLounge(options?: {
     park: splitList(section(synth.text, 'PARK')),
   };
   const dissent = splitList(section(synth.text, 'DISSENT')).map((concern) => ({ crewId: 'crew', concern }));
+  const collectiveNextSteps = splitList(section(synth.text, 'COLLECTIVE_NEXT_STEPS'));
   const totalCostUSD = Object.values(perMember).reduce((a, b) => a + b, 0);
 
   const result: InnovationLoungeResult = {
-    sessionId, stardate, theme, pitches, reactions,
+    sessionId, stardate, theme, mode, pitches, reactions,
+    timeoutMs,
+    elapsedMs: Date.now() - startedAtMs,
     synthesis,
+    collectiveNextSteps,
     portfolio, dissent,
     efficiency: { perMember, totalCostUSD, totalTokens },
   };
 
   // Store the whole session to crew-wide RAG.
   if (store && deps.storeObservationMemory) {
-    const obs = (await deps.storeObservationMemory({
+    await settleWithTimeout(memoryWrites, PERSIST_TIMEOUT_MS);
+    const obs = (await withTimeout(deps.storeObservationMemory({
       storyId: 'innovation-lounge',
       source: 'mcp',
       transcript: {
@@ -319,10 +412,10 @@ export async function runInnovationLounge(options?: {
         consensusSummary: synth.text,
         unresolvedRisks: dissent.map((d) => d.concern),
         finalDecision: 'approved',
-        actionItems: [...portfolio.pursueNow, ...portfolio.pursueNext],
+        actionItems: collectiveNextSteps.length ? collectiveNextSteps : [...portfolio.pursueNow, ...portfolio.pursueNext],
       },
       tags: ['innovation-lounge', 'ideation', 'crew-wide', 'portfolio', sessionId],
-    }).catch(() => undefined)) as { id?: string } | undefined;
+    }).catch(() => undefined), PERSIST_TIMEOUT_MS)) as { id?: string } | undefined;
     if (obs?.id) result.observationMemoryId = obs.id;
   }
 
@@ -337,6 +430,7 @@ export function formatInnovationLoungeAsMarkdown(r: InnovationLoungeResult): str
     ``,
     `**Stardate:** ${r.stardate}  |  **Session:** ${r.sessionId}`,
     `**Arena:** ${r.theme}`,
+    `**Mode:** ${r.mode}`,
     `**Attendees:** ${r.pitches.map((p) => p.fullName).join(', ')}`,
     `**Cost:** $${r.efficiency.totalCostUSD.toFixed(4)} (${r.efficiency.totalTokens} tokens)`,
     ``,
@@ -388,6 +482,12 @@ export function formatInnovationLoungeAsMarkdown(r: InnovationLoungeResult): str
   lines.push(`**Parked:**`);
   r.portfolio.park.forEach((x) => lines.push(`- ${x}`));
   lines.push(``);
+  if (r.collectiveNextSteps.length) {
+    lines.push(`## Collective Next Steps`);
+    lines.push(``);
+    r.collectiveNextSteps.forEach((x) => lines.push(`- ${x}`));
+    lines.push(``);
+  }
   if (r.dissent.length) {
     lines.push(`## Dissent (Preserved)`);
     lines.push(``);

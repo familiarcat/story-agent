@@ -23,12 +23,16 @@ export function registerInnovationLoungeTools(server: McpServer): void {
     ].join(' '),
     {
       theme: z.string().optional().describe('Optional arena/theme for the jam (defaults to the future of the Story Agent platform + firm).'),
-      store: z.boolean().optional().default(true).describe('If true (default), store each pitch + the session synthesis to cloud RAG.'),
+      mode: z.enum(['full', 'forum']).optional().default('forum').describe('full = all-crew pitch+debate; forum = all-crew pitch + focused Observation-style forum debate (faster, more resilient).'),
+      store: z.boolean().optional().default(false).describe('If true, store each pitch + the session synthesis to cloud RAG. Default false for fast non-blocking runs.'),
+      timeoutMs: z.number().int().positive().optional().describe('Hard cap for this run in milliseconds. Default: 25s forum / 60s full.'),
     },
-    async ({ theme, store }) => {
+    async ({ theme, mode, store, timeoutMs }) => {
       try {
         const result = await runInnovationLounge({
           theme,
+          mode,
+          timeoutMs,
           store,
           deps: { storeCrewPersonalMemory, storeObservationMemory },
         });
@@ -37,11 +41,16 @@ export function registerInnovationLoungeTools(server: McpServer): void {
             type: 'text' as const,
             text: JSON.stringify({
               status: 'success',
+              incomplete: !!result.incomplete,
+              mode: result.mode,
+              timeoutMs: result.timeoutMs,
+              elapsedMs: result.elapsedMs,
               stored: !!store,
               observationMemoryId: result.observationMemoryId,
               theme: result.theme,
               pitches: result.pitches.map((p) => ({ crewId: p.crewId, projectName: p.projectName, elevatorPitch: p.elevatorPitch, model: p.model })),
               portfolio: result.portfolio,
+              collectiveNextSteps: result.collectiveNextSteps,
               dissent: result.dissent,
               synthesis: result.synthesis,
               efficiency: result.efficiency,

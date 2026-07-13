@@ -157,14 +157,18 @@ async function main() {
           registerDocTools(perRequestServer);
           registerCrewIntegrityTools(perRequestServer);
           registerStarshipTools(perRequestServer);
+          registerAhaTools(perRequestServer);  // 📋 Aha tools parity with stdio
           registerCrewMissionTools(perRequestServer);  // 🧭 mission pipeline over HTTP
+          registerInnovationLoungeTools(perRequestServer);  // 💡 innovation forum over HTTP
           registerClientTools(perRequestServer);  // 👥 client onboarding over HTTP
+          registerEntitlementTools(perRequestServer);  // 🔑 entitlement tools parity with stdio
           registerWorfGateTools(perRequestServer);  // 🛡️ Worf credential broker over HTTP
           registerAnalyzeImageTool(perRequestServer);  // 🖼️ multimodal vision over HTTP
           registerRunShellTool(perRequestServer);  // 🖥️ governed shell exec over HTTP
           registerPlanThenExecuteTool(perRequestServer);  // 🔁 autonomous loop over HTTP
           registerCrewAnalyzeImageTool(perRequestServer);  // 🖼️🖖 crew image-content analysis over HTTP
           registerSkillTools(perRequestServer);  // 📚 skill-theory introspection over HTTP
+          registerCrewStreamTools(perRequestServer);  // ⚡ streaming parity with stdio
 
           await perRequestServer.connect(httpTransport);
 
