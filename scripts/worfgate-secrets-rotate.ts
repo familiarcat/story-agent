@@ -62,6 +62,7 @@ function parseArgs(argv: string[]) {
 
 function inferOperation(envName: string): CredentialOperation {
   if (envName.startsWith('AHA_')) return 'aha:write';
+  if (envName === 'SUPABASE_URL' || envName === 'SUPABASE_KEY' || envName === 'SUPABASE_CLOUD_URL' || envName === 'SUPABASE_CLOUD_KEY') return 'supabase:query';
   if (envName.startsWith('SUPABASE_')) return 'supabase:migrate';
   if (envName.startsWith('AWS_')) return 'aws:secrets';
   if (envName.startsWith('CREW_LLM_')) return 'llm:call';
