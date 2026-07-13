@@ -38,6 +38,11 @@ if (!sessionIdPresent) {
   console.log('      export STORY_AGENT_MCP_SESSION_ID="vscode-local-session"');
 }
 
+const provider = (process.env.CREW_LLM_PROVIDER || 'approved').trim().toLowerCase();
+const openRouterOnly = !['false', '0', 'no'].includes((process.env.STORY_AGENT_OPENROUTER_ONLY || 'true').trim().toLowerCase());
+console.log(`  ${ok(provider === 'approved')} CREW_LLM_PROVIDER=${provider} — expected 'approved' for OpenRouter-first ops`);
+console.log(`  ${ok(openRouterOnly)} STORY_AGENT_OPENROUTER_ONLY=${openRouterOnly} — fail-closed provider enforcement`);
+
 // 2. RAG embeddings — the one that sharpens self-learning
 const embOn = embeddingSource() === 'api';
 console.log(`\nRAG embeddings: ${ok(embOn)} ${embOn ? 'real model active' : 'hash fallback (recall is weak)'}`);

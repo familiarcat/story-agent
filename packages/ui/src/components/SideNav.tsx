@@ -7,12 +7,25 @@
  * where the NavBar dropdowns take over (see .app-shell in globals.css).
  */
 import { usePathname } from 'next/navigation';
+import { useSidebar } from './SidebarProvider';
 import { DOMAIN_GROUPS } from './domains';
 
 export default function SideNav() {
   const pathname = usePathname();
+  const { isCollapsed, toggleCollapse } = useSidebar();
   return (
-    <aside className="app-sidenav" aria-label="Global navigation">
+    <aside className={`app-sidenav${isCollapsed ? ' app-sidenav--collapsed' : ''}`} aria-label="Global navigation">
+      <div className="app-sidenav-toggle">
+        <button
+          onClick={toggleCollapse}
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!isCollapsed}
+          className="app-sidenav-toggle-btn"
+          title={isCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+        >
+          {isCollapsed ? '▶' : '◀'}
+        </button>
+      </div>
       {DOMAIN_GROUPS.map((g) => (
         <section key={g.group} className="app-sidenav-group">
           <div className="app-sidenav-heading">

@@ -135,6 +135,8 @@ OpenRouter-first policy flags:
 
 - `OPS_REQUIRE_OPENROUTER_PROVIDER=true` (default)
    - Fails if `CREW_LLM_PROVIDER` is not `approved`
+- `STORY_AGENT_OPENROUTER_ONLY=true` (default outside tests)
+   - Prompt engine forces `approved` provider and fails closed instead of demo fallback when key/url are missing
 - `OPS_ENFORCE_CREW_ONLY=false` (default)
    - Optional strict mode to fail when current control lane is not `crew`
 - `OPS_MIN_CREW_DELEGATION_PCT=50`

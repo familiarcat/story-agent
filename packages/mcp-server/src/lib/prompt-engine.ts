@@ -24,6 +24,15 @@ import type { BusinessTier } from '@story-agent/shared';
 
 type CrewLlmModelProfile = 'quality' | 'balanced' | 'cost_optimized';
 
+function openRouterOnlyMode(): boolean {
+  const explicit = (process.env.STORY_AGENT_OPENROUTER_ONLY ?? '').trim().toLowerCase();
+  if (explicit === 'false' || explicit === '0' || explicit === 'no') return false;
+  if (explicit === 'true' || explicit === '1' || explicit === 'yes') return true;
+  // Secure-by-default outside tests.
+  const isTest = (process.env.NODE_ENV ?? '').trim() === 'test' || Boolean(process.env.TEST_ENV);
+  return !isTest;
+}
+
 function getCrewLlmModelProfile(): CrewLlmModelProfile {
   const profile = (process.env.CREW_LLM_MODEL_PROFILE ?? 'cost_optimized').trim().toLowerCase();
   if (profile === 'quality' || profile === 'balanced' || profile === 'cost_optimized') {
@@ -76,6 +85,12 @@ function selectModelForCall(template: PromptTemplate, requesterTier?: BusinessTi
  */
 function getLlmProvider(): string {
   const provider = (process.env.CREW_LLM_PROVIDER ?? '').trim().toLowerCase();
+  if (openRouterOnlyMode()) {
+    if (provider && provider !== 'approved') {
+      console.warn(`[prompt-engine] STORY_AGENT_OPENROUTER_ONLY active: forcing provider '${provider}' -> 'approved'`);
+    }
+    return 'approved';
+  }
   if (!provider) return 'approved';
   if (['demo', 'copilot', 'approved'].includes(provider)) return provider;
   return 'approved';
@@ -87,7 +102,7 @@ function getLlmProvider(): string {
 function getLlmBaseUrl(): string {
   const provider = getLlmProvider();
   if (provider === 'copilot') return 'https://models.inference.ai.github.com';
-  if (provider === 'approved') return (process.env.CREW_LLM_APPROVED_URL ?? '').trim();
+  if (provider === 'approved') return (process.env.CREW_LLM_APPROVED_URL ?? 'https://openrouter.ai/api/v1').trim();
   return '';
 }
 
@@ -97,7 +112,7 @@ function getLlmBaseUrl(): string {
 function getLlmApiKey(): string {
   const provider = getLlmProvider();
   if (provider === 'copilot') return process.env.GITHUB_TOKEN ?? '';
-  if (provider === 'approved') return process.env.CREW_LLM_APPROVED_KEY ?? '';
+  if (provider === 'approved') return process.env.CREW_LLM_APPROVED_KEY ?? process.env.OPENROUTER_API_KEY ?? '';
   return '';
 }
 
@@ -112,6 +127,9 @@ function getLlmClient(): OpenAI | null {
   const apiKey = getLlmApiKey();
 
   if (!baseUrl || !apiKey) {
+    if (openRouterOnlyMode()) {
+      throw new Error(`[prompt-engine] OpenRouter-only mode is active but approved provider is not fully configured (baseUrl='${baseUrl ? 'set' : 'missing'}', key='${apiKey ? 'set' : 'missing'}')`);
+    }
     console.warn(`[prompt-engine] LLM provider '${provider}' not fully configured, falling back to demo mode`);
     return null;
   }

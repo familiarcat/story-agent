@@ -131,6 +131,8 @@
   --page-max-width: 1280px;
   --page-padding-x: var(--space-6);
   --sidebar-width: 240px;
+  --sidebar-collapsed-peek: 28px;
+  --nav-height: 52px;
   --content-gap: var(--space-6);
   /* form controls (reference per-theme tokens; resolve at usage) */
   --input-height: 2.25rem;
@@ -159,10 +161,21 @@ p { line-height: var(--leading-normal); }
 @media (max-width: 900px) { .page-grid { grid-template-columns: 1fr; } }
 
 /* App shell — persistent global nav rail (root layout) + routed content. NavBar (z 100) overlays. */
-.app-shell { display: grid; grid-template-columns: var(--sidebar-width) 1fr; align-items: start; }
+.app-shell { min-height: 100vh; }
+.app-main {
+  min-width: 0;
+  padding: var(--space-8);
+  margin-left: var(--sidebar-width);
+  transition: margin-left 0.3s ease;
+}
 .app-sidenav {
-  position: sticky; top: 52px; z-index: 10;
-  max-height: calc(100vh - 52px); overflow-y: auto;
+  position: fixed;
+  left: 0;
+  top: var(--nav-height);
+  z-index: 10;
+  width: var(--sidebar-width);
+  height: calc(100vh - var(--nav-height));
+  overflow-y: auto;
   padding: var(--space-4) var(--space-3);
   border-right: 1px solid var(--border);
   background: var(--surface);
@@ -183,8 +196,47 @@ p { line-height: var(--leading-normal); }
 .app-sidenav-link:hover { background: var(--input-bg); color: var(--accent4); }
 .app-sidenav-link.active { background: var(--input-bg); color: var(--accent4); font-weight: 600; border-left: 2px solid var(--accent4); }
 .app-sidenav-hub { margin-left: auto; font-size: var(--text-xs); color: var(--accent1); letter-spacing: 0.05em; }
+
+/* Sidebar collapse/expand states (persistent via localStorage) */
+:root {
+  --sidebar-transition: transform 0.3s ease, margin-left 0.3s ease;
+}
+.app-sidenav {
+  transition: var(--sidebar-transition);
+}
+.app-sidenav--collapsed {
+  transform: translateX(calc(-1 * (var(--sidebar-width) - var(--sidebar-collapsed-peek))));
+}
+.app-sidenav--collapsed .app-sidenav-heading,
+.app-sidenav--collapsed .app-sidenav-group { display: none; }
+.app-sidenav-toggle {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  min-height: 2.75rem;
+}
+.app-sidenav-toggle-btn {
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+  cursor: pointer; font-size: var(--text-lg); padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius); transition: background 0.15s ease;
+}
+.app-sidenav-toggle-btn:hover { background: var(--input-bg); }
+
+:root[data-sidebar-collapsed='true'] .app-main {
+  margin-left: var(--sidebar-collapsed-peek);
+}
+
+:root[data-sidebar-collapsed='true'] .app-sidenav-toggle {
+  justify-content: center;
+  padding-inline: 0;
+  border-bottom: none;
+}
+
 @media (max-width: 900px) {
-  .app-shell { grid-template-columns: 1fr; }
+  .app-main {
+    margin-left: 0;
+    padding: var(--space-6);
+  }
   .app-sidenav { display: none; } /* NavBar dropdowns carry navigation on narrow screens */
 }
 .stack { display: flex; flex-direction: column; gap: var(--space-4); }
