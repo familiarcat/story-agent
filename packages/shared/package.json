@@ -60,6 +60,10 @@
     "./ui-tokens": {
       "import": "./dist/src/ui-tokens.js",
       "types": "./dist/src/ui-tokens.d.ts"
+    },
+    "./system-status": {
+      "import": "./dist/src/system-status.js",
+      "types": "./dist/src/system-status.d.ts"
     }
   },
   "scripts": {

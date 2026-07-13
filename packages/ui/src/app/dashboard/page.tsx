@@ -1,7 +1,7 @@
 import { listStories } from '@/lib/db';
 import { getProjectHierarchy, listAhaProjects } from '@/lib/aha';
 import type { StoryRecord } from '@story-agent/shared';
-import { systemBucketFromStoryStatus, systemBucketFromWorkflowStatus } from '@story-agent/shared';
+import { systemBucketFromStoryStatus, systemBucketFromWorkflowStatus } from '@story-agent/shared/system-status';
 import Link from 'next/link';
 import { ProjectStatusPanel, type ProjectStatusRow } from '@/components/ProjectStatusPanel';
 import { LcarsHierarchyText } from '@/components/Lcars';

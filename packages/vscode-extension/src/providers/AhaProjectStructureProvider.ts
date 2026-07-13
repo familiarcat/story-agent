@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { SYSTEM_STATUS_LABEL, SYSTEM_STATUS_ORDER, type SystemStatusBucket } from '@story-agent/shared';
+import { SYSTEM_STATUS_LABEL, SYSTEM_STATUS_ORDER, type SystemStatusBucket } from '@story-agent/shared/system-status';
 import { TIER_ICONS, formatRefLabel } from '@story-agent/shared/ui-tokens';
 import { getProjectHierarchy, listAhaProjects, type AhaProject, type AhaSprint, type AhaSprintStory, type AhaStory } from '../aha';
 
