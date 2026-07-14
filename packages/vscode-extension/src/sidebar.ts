@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { randomBytes } from 'crypto';
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
 import { withDashboardTheme } from './lib/dashboardThemeLink';
+import { chatWithCrew } from './agentClient';
 import {
   BASE_DESIGN_THEORY_ID,
   BASE_DESIGN_PRINCIPLES,
@@ -11,6 +12,29 @@ import {
 
 function getNonce(): string {
   return randomBytes(16).toString('base64');
+}
+
+interface PanelAttachment {
+  name: string;
+  mimeType: string;
+  size: number;
+  dataUrl?: string;
+}
+
+function parsePanelAttachments(input: unknown): PanelAttachment[] {
+  if (!Array.isArray(input)) return [];
+  const out: PanelAttachment[] = [];
+  for (const item of input) {
+    const it = item as Record<string, unknown>;
+    const name = typeof it.name === 'string' ? it.name : '';
+    const mimeType = typeof it.mimeType === 'string' ? it.mimeType : 'application/octet-stream';
+    const size = typeof it.size === 'number' ? it.size : 0;
+    const dataUrl = typeof it.dataUrl === 'string' ? it.dataUrl : undefined;
+    if (!name || size <= 0) continue;
+    out.push({ name, mimeType, size, dataUrl });
+    if (out.length >= 6) break;
+  }
+  return out;
 }
 
 export class StorySidebarProvider implements vscode.WebviewViewProvider {
@@ -43,7 +67,7 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = this._buildHtml();
 
-    webviewView.webview.onDidReceiveMessage((msg: Record<string, string>) => {
+    webviewView.webview.onDidReceiveMessage(async (msg: Record<string, unknown>) => {
       switch (msg.command) {
         case 'openDashboard':
           vscode.env.openExternal(
@@ -65,7 +89,7 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
           break;
         }
         case 'copyText':
-          vscode.env.clipboard.writeText(msg.text ?? '');
+          vscode.env.clipboard.writeText(String(msg.text ?? ''));
           vscode.window.showInformationMessage('Copied to clipboard!');
           break;
         case 'openSettings':
@@ -75,7 +99,7 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
           );
           break;
         case 'setTheme': {
-          const nextTheme = (msg.theme ?? '').trim();
+          const nextTheme = String(msg.theme ?? '').trim();
           if (!['lcars', 'dark', 'light', 'vscode'].includes(nextTheme)) break;
           vscode.workspace
             .getConfiguration('storyAgent')
@@ -83,6 +107,43 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
             .then(() => {
               if (this._view) this._view.webview.html = this._buildHtml();
             });
+          break;
+        }
+        case 'panelChat': {
+          const message = String(msg.message ?? '').trim();
+          if (!message) break;
+          const attachments = parsePanelAttachments(msg.attachments);
+          const historyRaw = Array.isArray(msg.history) ? msg.history : [];
+          const history = historyRaw
+            .filter((h): h is { role: 'user' | 'assistant'; content: string } => {
+              const role = (h as any)?.role;
+              const content = (h as any)?.content;
+              return (role === 'user' || role === 'assistant') && typeof content === 'string';
+            })
+            .slice(-8);
+          try {
+            const enrichedMessage = this._buildMultimodalPrompt(message, attachments);
+            const result = await chatWithCrew(enrichedMessage, { history, attachments });
+            if (this._view) {
+              this._view.webview.postMessage({
+                command: 'panelChatResult',
+                ok: result.ok,
+                answer: result.answer ?? '',
+                model: result.model ?? '',
+                costUSD: result.costUSD ?? 0,
+              });
+            }
+          } catch (err) {
+            if (this._view) {
+              this._view.webview.postMessage({
+                command: 'panelChatResult',
+                ok: false,
+                answer: err instanceof Error ? err.message : String(err),
+                model: '',
+                costUSD: 0,
+              });
+            }
+          }
           break;
         }
       }
@@ -236,6 +297,129 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
       font-size: 11px;
       margin-top: 4px;
     }
+
+    .chat-log {
+      border: 1px solid var(--sa-border);
+      background: var(--sa-card);
+      border-radius: 6px;
+      min-height: 110px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 6px;
+      margin-bottom: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .chat-bubble {
+      padding: 6px 7px;
+      border-radius: 6px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+    }
+
+    .chat-bubble.user {
+      background: color-mix(in srgb, var(--sa-primary) 20%, transparent);
+      color: var(--sa-text);
+      align-self: flex-end;
+      border: 1px solid color-mix(in srgb, var(--sa-primary) 35%, transparent);
+      max-width: 92%;
+    }
+
+    .chat-bubble.assistant {
+      background: color-mix(in srgb, var(--sa-accent) 14%, transparent);
+      color: var(--sa-text);
+      align-self: flex-start;
+      border: 1px solid color-mix(in srgb, var(--sa-accent) 34%, transparent);
+      max-width: 96%;
+    }
+
+    .chat-meta {
+      color: var(--sa-muted);
+      font-size: 10px;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .chat-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      align-items: start;
+    }
+
+    .chat-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 6px;
+      gap: 6px;
+    }
+
+    .attach-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 6px;
+      margin-bottom: 2px;
+      flex-wrap: wrap;
+    }
+
+    .attach-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid var(--sa-border);
+      background: color-mix(in srgb, var(--sa-accent) 10%, var(--sa-card));
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10px;
+      color: var(--sa-text);
+      max-width: 100%;
+    }
+
+    .attach-pill button {
+      border: none;
+      background: transparent;
+      color: var(--sa-muted);
+      cursor: pointer;
+      font-size: 10px;
+      padding: 0;
+    }
+
+    textarea {
+      width: 100%;
+      resize: vertical;
+      min-height: 56px;
+      max-height: 140px;
+      padding: 6px;
+      background: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border: 1px solid var(--vscode-input-border, transparent);
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: var(--vscode-editor-font-family);
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--vscode-focusBorder);
+    }
+
+    .btn-chat {
+      width: auto;
+      min-width: 72px;
+      margin-bottom: 0;
+      text-align: center;
+      align-self: stretch;
+    }
+
+    .btn-chat-clear {
+      min-width: 54px;
+    }
   </style>
 </head>
 <body>
@@ -254,6 +438,33 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
     </button>
     <div id="err" class="error" style="display:none;"></div>
     <p class="tip">Opens <code>@story-agent /prepare</code> in Copilot chat with your inputs.</p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── Interactive chat in-panel ─────────────────────────────────── -->
+  <div class="section">
+    <h3>Story Agent Chat</h3>
+    <div id="chatLog" class="chat-log">
+      <div class="chat-bubble assistant">
+        Ask anything here for an interactive crew response.
+        <div class="chat-meta">panel chat · canonical /chat brain</div>
+      </div>
+    </div>
+    <div class="chat-row">
+      <textarea id="chatInput" placeholder="Ask Story Agent... (Shift+Enter for newline)"></textarea>
+      <button id="sendBtn" class="btn btn-primary btn-chat" onclick="sendPanelChat()">Send</button>
+    </div>
+    <div class="attach-row">
+      <input id="mediaInput" type="file" accept="image/*,audio/*,video/*" multiple style="display:none" onchange="handleMediaSelected(event)" />
+      <button class="btn btn-secondary btn-chat" onclick="chooseMedia()">Attach</button>
+      <span class="tip">image / audio / video</span>
+    </div>
+    <div id="attachList" class="attach-row"></div>
+    <div class="chat-actions">
+      <button id="clearBtn" class="btn btn-secondary btn-chat btn-chat-clear" onclick="clearPanelChat()">Clear</button>
+    </div>
+    <p class="tip">Runs directly in this panel. Uses the same Quark-optimized chat backend.</p>
   </div>
 
   <hr class="divider" />
@@ -326,6 +537,159 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
   <script>
     // eslint-disable-next-line no-undef
     const vscode = acquireVsCodeApi();
+    const savedState = vscode.getState() || {};
+    const panelTurns = Array.isArray(savedState.turns)
+      ? savedState.turns.filter((t) => t && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string').slice(-30)
+      : [];
+    const panelAttachments = [];
+
+    function persistPanelTurns() {
+      vscode.setState({ turns: panelTurns.slice(-30) });
+    }
+
+    function emptyChatLog() {
+      const log = document.getElementById('chatLog');
+      while (log.firstChild) log.removeChild(log.firstChild);
+    }
+
+    function renderBubble(role, text, meta) {
+      const log = document.getElementById('chatLog');
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble ' + role;
+      bubble.textContent = text;
+      if (meta) {
+        const m = document.createElement('div');
+        m.className = 'chat-meta';
+        m.textContent = meta;
+        bubble.appendChild(m);
+      }
+      log.appendChild(bubble);
+      log.scrollTop = log.scrollHeight;
+      return bubble;
+    }
+
+    function streamAssistantBubble(text, meta) {
+      const bubble = renderBubble('assistant', '', meta);
+      let i = 0;
+      const step = () => {
+        i = Math.min(text.length, i + 5);
+        bubble.firstChild && bubble.firstChild.nodeType === Node.TEXT_NODE
+          ? bubble.firstChild.textContent = text.slice(0, i)
+          : bubble.textContent = text.slice(0, i);
+        if (meta) {
+          const m = document.createElement('div');
+          m.className = 'chat-meta';
+          m.textContent = meta;
+          if (!bubble.querySelector('.chat-meta')) bubble.appendChild(m);
+        }
+        const log = document.getElementById('chatLog');
+        log.scrollTop = log.scrollHeight;
+        if (i < text.length) {
+          window.setTimeout(step, 10);
+        }
+      };
+      step();
+    }
+
+    function renderPanelHistory() {
+      emptyChatLog();
+      if (panelTurns.length === 0) {
+        renderBubble('assistant', 'Ask anything here for an interactive crew response.', 'panel chat · canonical /chat brain');
+        return;
+      }
+      for (const turn of panelTurns) {
+        renderBubble(turn.role, turn.content);
+      }
+    }
+
+    function setChatBusy(busy) {
+      const sendBtn = document.getElementById('sendBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const input = document.getElementById('chatInput');
+      sendBtn.disabled = busy;
+      clearBtn.disabled = busy;
+      input.disabled = busy;
+      sendBtn.textContent = busy ? '...' : 'Send';
+    }
+
+    function clearPanelChat() {
+      panelTurns.length = 0;
+      persistPanelTurns();
+      renderPanelHistory();
+    }
+
+    function chooseMedia() {
+      const input = document.getElementById('mediaInput');
+      input.click();
+    }
+
+    function attachmentKind(mimeType) {
+      if ((mimeType || '').startsWith('image/')) return 'image';
+      if ((mimeType || '').startsWith('audio/')) return 'audio';
+      if ((mimeType || '').startsWith('video/')) return 'video';
+      return 'file';
+    }
+
+    function renderAttachments() {
+      const list = document.getElementById('attachList');
+      while (list.firstChild) list.removeChild(list.firstChild);
+      for (let i = 0; i < panelAttachments.length; i += 1) {
+        const a = panelAttachments[i];
+        const pill = document.createElement('div');
+        pill.className = 'attach-pill';
+        pill.title = a.mimeType;
+        const label = document.createElement('span');
+        label.textContent = attachmentKind(a.mimeType) + ' · ' + a.name;
+        const btn = document.createElement('button');
+        btn.textContent = '✕';
+        btn.onclick = () => {
+          panelAttachments.splice(i, 1);
+          renderAttachments();
+        };
+        pill.appendChild(label);
+        pill.appendChild(btn);
+        list.appendChild(pill);
+      }
+    }
+
+    async function handleMediaSelected(event) {
+      const files = event.target && event.target.files ? Array.from(event.target.files) : [];
+      for (const file of files.slice(0, 6)) {
+        if (!(file.type.startsWith('image/') || file.type.startsWith('audio/') || file.type.startsWith('video/'))) continue;
+        if (file.size > 8 * 1024 * 1024) continue;
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        }).catch(() => '');
+        panelAttachments.push({ name: file.name, mimeType: file.type || 'application/octet-stream', size: file.size, dataUrl });
+      }
+      renderAttachments();
+      event.target.value = '';
+    }
+
+    function sendPanelChat() {
+      const input = document.getElementById('chatInput');
+      const message = input.value.trim();
+      if (!message) return;
+
+      panelTurns.push({ role: 'user', content: message });
+      persistPanelTurns();
+      renderBubble('user', message);
+      input.value = '';
+      setChatBusy(true);
+
+      vscode.postMessage({
+        command: 'panelChat',
+        message,
+        history: panelTurns.slice(-8),
+        attachments: panelAttachments,
+      });
+
+      panelAttachments.length = 0;
+      renderAttachments();
+    }
 
     function launchInChat() {
       const refNum = document.getElementById('refNum').value.trim();
@@ -370,7 +734,26 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
         if (msg.referenceNum) document.getElementById('refNum').value = msg.referenceNum;
         if (msg.repoFullName) document.getElementById('repoName').value = msg.repoFullName;
       }
+      if (msg.command === 'panelChatResult') {
+        setChatBusy(false);
+        const ok = Boolean(msg.ok);
+        const answer = String(msg.answer || (ok ? '(no response)' : 'chat unavailable'));
+        if (ok) {
+          panelTurns.push({ role: 'assistant', content: answer });
+          persistPanelTurns();
+          const meta = msg.model
+            ? (String(msg.model) + (msg.costUSD ? (' · $' + Number(msg.costUSD).toFixed(5)) : ''))
+            : '';
+          streamAssistantBubble(answer, meta);
+        } else {
+          panelTurns.push({ role: 'assistant', content: '⚠️ ' + answer });
+          persistPanelTurns();
+          streamAssistantBubble('⚠️ ' + answer);
+        }
+      }
     });
+
+    renderPanelHistory();
 
     // Allow Enter key on inputs to launch
     document.addEventListener('keydown', (e) => {
@@ -381,9 +764,38 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
       )) {
         launchInChat();
       }
+      if (e.key === 'Enter' && document.activeElement?.id === 'chatInput' && !e.shiftKey) {
+        e.preventDefault();
+        sendPanelChat();
+      }
     });
   </script>
 </body>
 </html>`;
+  }
+
+  private _buildMultimodalPrompt(message: string, attachments: PanelAttachment[]): string {
+    if (!attachments.length) return message;
+    const lines: string[] = [message, '', 'MULTIMODAL CONTEXT:'];
+    for (const [idx, a] of attachments.entries()) {
+      const kind = a.mimeType.startsWith('image/')
+        ? 'image'
+        : a.mimeType.startsWith('audio/')
+          ? 'audio'
+          : a.mimeType.startsWith('video/')
+            ? 'video'
+            : 'file';
+      lines.push(`- attachment ${idx + 1}: ${a.name} (${kind}, ${a.mimeType}, ${Math.round(a.size / 1024)}KB)`);
+
+      if (kind === 'image') {
+        lines.push('  media_note: image will be analyzed by backend multimodal path if supported by current model.');
+      }
+      if (kind === 'audio' || kind === 'video') {
+        lines.push('  media_note: audio/video will be preprocessed by backend multimodal path when available.');
+      }
+    }
+    lines.push('');
+    lines.push('Use multimodal context above when drafting your response.');
+    return lines.join('\n');
   }
 }

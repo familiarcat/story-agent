@@ -134,6 +134,13 @@ function workspacePath(): string | undefined {
 
 export interface ChatOnceResult { ok: boolean; answer?: string; model?: string; tier?: number; costUSD?: number; }
 
+export interface CrewChatAttachment {
+  name: string;
+  mimeType: string;
+  size: number;
+  dataUrl?: string;
+}
+
 export interface CrewChatResult extends ChatOnceResult {
   provider?: string;
   tokensIn?: number;
@@ -187,7 +194,11 @@ export interface CrewChatResult extends ChatOnceResult {
 
 export async function chatWithCrew(
   message: string,
-  opts?: { clientId?: string | null; history?: Array<{ role: string; content: string }> },
+  opts?: {
+    clientId?: string | null;
+    history?: Array<{ role: string; content: string }>;
+    attachments?: CrewChatAttachment[];
+  },
 ): Promise<CrewChatResult> {
   const clientId = opts?.clientId;
   for (const base of agentCandidates()) {
@@ -195,7 +206,12 @@ export async function chatWithCrew(
       const resp = await fetch(base + '/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, clientId: clientId ?? null, history: opts?.history ?? [] }),
+        body: JSON.stringify({
+          message,
+          clientId: clientId ?? null,
+          history: opts?.history ?? [],
+          attachments: opts?.attachments ?? [],
+        }),
       });
       if (!resp.ok) continue;
       const d: any = await resp.json();

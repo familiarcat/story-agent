@@ -14,17 +14,20 @@ import { useEffect } from 'react';
 
 export default function SideNav() {
   const pathname = usePathname();
-  const { isCollapsed, toggleCollapse } = useSidebar();
+  const { isCollapsed, toggleCollapse, setCollapsed } = useSidebar();
   const isHome = pathname === '/';
   const surfaces = DOMAIN_GROUPS.flatMap((g) => g.items);
   const palette = ['#f39b35', '#e7c066', '#bb93c7', '#86b0db'];
 
   useEffect(() => {
     document.documentElement.setAttribute('data-sidenav-hidden', isHome ? 'true' : 'false');
+    if (isHome && isCollapsed) {
+      setCollapsed(false);
+    }
     return () => {
       document.documentElement.setAttribute('data-sidenav-hidden', 'false');
     };
-  }, [isHome]);
+  }, [isCollapsed, isHome, setCollapsed]);
 
   if (isHome) return null;
 

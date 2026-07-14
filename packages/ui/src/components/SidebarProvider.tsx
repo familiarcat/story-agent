@@ -8,7 +8,12 @@ const DEFAULT_COLLAPSED = false;
 export const SIDEBAR_INIT_SCRIPT = `(function(){document.documentElement.setAttribute('data-sidebar-collapsed','false');})();`;
 
 interface SidebarCtx { isCollapsed: boolean; toggleCollapse: () => void; }
-const Ctx = createContext<SidebarCtx>({ isCollapsed: DEFAULT_COLLAPSED, toggleCollapse: () => {} });
+interface SidebarCtx {
+  isCollapsed: boolean;
+  toggleCollapse: () => void;
+  setCollapsed: (next: boolean) => void;
+}
+const Ctx = createContext<SidebarCtx>({ isCollapsed: DEFAULT_COLLAPSED, toggleCollapse: () => {}, setCollapsed: () => {} });
 
 export function useSidebar(): SidebarCtx {
   return useContext(Ctx);
@@ -21,11 +26,14 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-sidebar-collapsed', 'false');
   }, []);
 
-  function toggleCollapse() {
-    const newState = !isCollapsed;
-    setIsCollapsedState(newState);
-    document.documentElement.setAttribute('data-sidebar-collapsed', newState ? 'true' : 'false');
+  function setCollapsed(next: boolean) {
+    setIsCollapsedState(next);
+    document.documentElement.setAttribute('data-sidebar-collapsed', next ? 'true' : 'false');
   }
 
-  return <Ctx.Provider value={{ isCollapsed, toggleCollapse }}>{children}</Ctx.Provider>;
+  function toggleCollapse() {
+    setCollapsed(!isCollapsed);
+  }
+
+  return <Ctx.Provider value={{ isCollapsed, toggleCollapse, setCollapsed }}>{children}</Ctx.Provider>;
 }

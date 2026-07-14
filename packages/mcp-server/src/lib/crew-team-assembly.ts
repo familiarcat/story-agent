@@ -12,7 +12,7 @@
  */
 
 import type { BusinessTier } from '@story-agent/shared';
-import { selectVisionModel, type VisionComplexity } from '@story-agent/shared';
+import { selectMultimodalModel, type MultimodalComplexity } from '@story-agent/shared';
 
 export type Provider = 'Meta' | 'DeepSeek' | 'OpenAI' | 'Anthropic' | 'Google';
 
@@ -62,8 +62,8 @@ export function quarkCheapestAnthropic(): PoolModel {
 
 /** QUARK (vision): the vision model slug for a complexity — simple→gemini-flash, moderate→gpt-4o-mini,
  *  complex→gpt-4o (Anthropic thin, explicit only). Delegates to the shared routing (single source). */
-export function quarkSelectVisionModel(complexity: VisionComplexity, opts?: { anthropic?: boolean }): string {
-  return selectVisionModel(complexity, opts);
+export function quarkSelectVisionModel(complexity: MultimodalComplexity, opts?: { anthropic?: boolean }): string {
+  return selectMultimodalModel(complexity, opts);
 }
 
 // ── RIKER: team assembly by skill/tool/domain ────────────────────────────────

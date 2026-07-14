@@ -661,8 +661,28 @@ export { laneForRoute, readLedger, recordCrewRun, summarizeLanes, laneBanner, bu
 export type { Lane, LaneSummary, LaneStatusMarker, LedgerEntry, DecisionEntry, CrewRunEntry } from './control-lane.js';
 export { ImageInputSchema, MAX_IMAGE_BASE64_BYTES, imageInputToUrl, checkImageSize } from './image-input.js';
 export type { ImageInput } from './image-input.js';
-export { VISION_MODELS, VISION_MODEL_ARCHITECTURE, selectVisionModel, INTENT_COMPLEXITY, INTENT_PROMPTS, runVisionAnalysis } from './vision.js';
-export type { VisionComplexity, VisionIntent, VisionResult } from './vision.js';
+export {
+  MULTIMODAL_MODELS,
+  MULTIMODAL_MODEL_ARCHITECTURE,
+  selectMultimodalModel,
+  MULTIMODAL_INTENT_COMPLEXITY,
+  MULTIMODAL_INTENT_PROMPTS,
+  runMultimodalAnalysis,
+  VISION_MODELS,
+  VISION_MODEL_ARCHITECTURE,
+  selectVisionModel,
+  INTENT_COMPLEXITY,
+  INTENT_PROMPTS,
+  runVisionAnalysis,
+} from './vision.js';
+export type {
+  MultimodalComplexity,
+  MultimodalIntent,
+  MultimodalResult,
+  VisionComplexity,
+  VisionIntent,
+  VisionResult,
+} from './vision.js';
 export { classifyTask, inferTaskType } from './task-classifier.js';
 export type { TaskClassification, TaskType } from './task-classifier.js';
 export {

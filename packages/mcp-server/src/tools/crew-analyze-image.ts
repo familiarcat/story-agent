@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ImageInputSchema, checkImageSize, runVisionAnalysis, type ImageInput } from '@story-agent/shared';
+import { ImageInputSchema, checkImageSize, runMultimodalAnalysis, type ImageInput } from '@story-agent/shared';
 import { runMissionPipeline } from '../lib/crew-mission-pipeline.js';
 
 /**
  * crew_analyze_image — the crew assesses an image's TEXT CONTENT together. Two governed steps, reusing
  * existing pieces (no new machinery):
- *   1. runVisionAnalysis(extract_text|describe) — a vision model reads the image's content.
+ *   1. runMultimodalAnalysis(extract_text|describe) — a multimodal model reads the image's content.
  *   2. runMissionPipeline(extracted content) — the full crew deliberates it together (Observation Lounge,
  *      auto-stored to RAG).
  *
@@ -25,7 +25,7 @@ export async function crewAnalyzeImage(args: {
   const sizeErr = checkImageSize(args.image);
   if (sizeErr) throw new Error(sizeErr);
 
-  const vision = await runVisionAnalysis(args.image, { intent: args.extractIntent ?? 'extract_text' });
+  const vision = await runMultimodalAnalysis(args.image, { intent: args.extractIntent ?? 'extract_text' });
   const arena = [
     'The following content was extracted from an image via a vision model. Assess it TOGETHER.',
     args.question?.trim() || 'What are the key points, any risks or gaps, and the recommended next actions?',

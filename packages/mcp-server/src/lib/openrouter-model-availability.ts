@@ -76,20 +76,28 @@ export async function getAvailableModelIds(forceRefresh = false): Promise<Set<st
   return cachedAvailableIds;
 }
 
-function sortedEligible(capabilityTier: number): PoolModel[] {
+function sortedEligible(capabilityTier: number, opts?: { requireVision?: boolean }): PoolModel[] {
   const blended = (m: PoolModel) => m.costIn + m.costOut;
   return MODEL_POOL
-    .filter((m) => m.tier >= capabilityTier && !m.visionOnly)
+    .filter((m) => m.tier >= capabilityTier && !m.visionOnly && (!opts?.requireVision || m.supportsVision))
     .sort((a, b) => blended(a) - blended(b));
 }
 
 export async function quarkSelectAvailableModel(
   capabilityTier: number,
-  opts?: { preferredModelId?: string; excludeModelIds?: string[] }
+  opts?: { preferredModelId?: string; excludeModelIds?: string[]; requireVision?: boolean }
 ): Promise<PoolModel> {
   const exclude = new Set(opts?.excludeModelIds ?? []);
-  const candidates = sortedEligible(capabilityTier).filter((m) => !exclude.has(m.id) && !isTemporarilyUnavailable(m.id));
-  if (candidates.length === 0) return quarkSelectModel(capabilityTier);
+  const candidates = sortedEligible(capabilityTier, { requireVision: opts?.requireVision }).filter((m) => !exclude.has(m.id) && !isTemporarilyUnavailable(m.id));
+  if (candidates.length === 0) {
+    if (opts?.requireVision) {
+      const visionFallback = MODEL_POOL
+        .filter((m) => m.tier >= capabilityTier && !m.visionOnly && m.supportsVision)
+        .sort((a, b) => (a.costIn + a.costOut) - (b.costIn + b.costOut))[0];
+      if (visionFallback) return visionFallback;
+    }
+    return quarkSelectModel(capabilityTier);
+  }
 
   if (opts?.preferredModelId) {
     const preferred = candidates.find((m) => m.id === opts.preferredModelId);

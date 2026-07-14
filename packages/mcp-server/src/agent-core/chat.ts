@@ -44,6 +44,20 @@ export interface CanonicalChatRequest {
   clientId?: string | null;
   crewSelfOrganize?: boolean;
   promptOptimizationMode?: 'safe' | 'off';
+  attachments?: CanonicalChatAttachment[];
+}
+
+export interface CanonicalChatAttachment {
+  name: string;
+  mimeType: string;
+  size: number;
+  dataUrl?: string;
+}
+
+type AttachmentKind = 'image' | 'audio' | 'video' | 'file';
+
+interface NormalizedAttachment extends CanonicalChatAttachment {
+  kind: AttachmentKind;
 }
 
 export interface CanonicalChatResponse {
@@ -269,6 +283,116 @@ function normalizeHistory(history: unknown): CanonicalChatHistoryTurn[] {
     .filter((m: any) => (m?.role === 'user' || m?.role === 'assistant') && typeof m?.content === 'string')
     .slice(-8)
     .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 4000) }));
+}
+
+function normalizeAttachments(input: unknown): NormalizedAttachment[] {
+  if (!Array.isArray(input)) return [];
+  const out: NormalizedAttachment[] = [];
+  for (const item of input) {
+    const it = item as Record<string, unknown>;
+    const name = typeof it.name === 'string' ? it.name.trim() : '';
+    const mimeType = typeof it.mimeType === 'string' ? it.mimeType.trim().toLowerCase() : 'application/octet-stream';
+    const size = typeof it.size === 'number' && Number.isFinite(it.size) ? Math.max(0, Math.trunc(it.size)) : 0;
+    const dataUrl = typeof it.dataUrl === 'string' ? it.dataUrl : undefined;
+    if (!name || size <= 0) continue;
+    const kind: AttachmentKind = mimeType.startsWith('image/')
+      ? 'image'
+      : mimeType.startsWith('audio/')
+        ? 'audio'
+        : mimeType.startsWith('video/')
+          ? 'video'
+          : 'file';
+    out.push({ name: name.slice(0, 160), mimeType, size, dataUrl, kind });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+function parseBase64DataUrl(dataUrl: string): { mimeType: string; data: string } | null {
+  const match = /^data:([a-zA-Z0-9.+/-]+);base64,([a-zA-Z0-9+/=\n\r]+)$/.exec(dataUrl);
+  if (!match) return null;
+  return { mimeType: match[1].toLowerCase(), data: match[2].replace(/[\n\r]/g, '') };
+}
+
+function normalizeAudioFormat(mimeType: string): string | null {
+  const subtype = mimeType.split('/')[1] ?? '';
+  const clean = subtype.split(';')[0].toLowerCase();
+  if (clean === 'mpeg' || clean === 'mpga') return 'mp3';
+  if (clean === 'x-m4a') return 'm4a';
+  if (clean === 'wave' || clean === 'x-wav') return 'wav';
+  if (['mp3', 'wav', 'm4a', 'ogg', 'webm', 'mp4'].includes(clean)) return clean;
+  return null;
+}
+
+async function transcribeAudioAttachment(attachment: NormalizedAttachment): Promise<string | null> {
+  if (!attachment.dataUrl || !attachment.mimeType.startsWith('audio/')) return null;
+  const parsed = parseBase64DataUrl(attachment.dataUrl);
+  if (!parsed) return null;
+  const format = normalizeAudioFormat(parsed.mimeType);
+  if (!format) return null;
+  try {
+    const r = await fetch(`${OR_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'openai/gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Transcribe the provided audio exactly. Return plain text only, no commentary.',
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: `Transcribe this audio clip (${attachment.name}).` },
+              { type: 'input_audio', input_audio: { data: parsed.data, format } },
+            ],
+          },
+        ],
+        max_tokens: 800,
+      }),
+    });
+    if (!r.ok) return null;
+    const d: any = await r.json();
+    const text = String(d?.choices?.[0]?.message?.content ?? '').trim();
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
+async function buildAttachmentNotes(attachments: NormalizedAttachment[]): Promise<string[]> {
+  if (!attachments.length) return [];
+  const notes: string[] = ['MULTIMODAL ATTACHMENTS:'];
+  let transcribed = 0;
+  for (const [idx, attachment] of attachments.entries()) {
+    notes.push(`- ${idx + 1}. ${attachment.name} (${attachment.kind}, ${attachment.mimeType}, ${Math.round(attachment.size / 1024)}KB)`);
+    if (attachment.kind === 'audio' && transcribed < 2 && attachment.size <= 8 * 1024 * 1024) {
+      const transcript = await transcribeAudioAttachment(attachment);
+      if (transcript) {
+        notes.push(`  transcript: ${transcript.slice(0, 1200)}`);
+        transcribed += 1;
+      } else {
+        notes.push('  transcript: unavailable (audio format/provider support mismatch).');
+      }
+    }
+    if (attachment.kind === 'video') {
+      notes.push('  video_note: direct video transcription is not available in canonical chat yet; request key timestamps or transcript from user if needed.');
+    }
+  }
+  return notes;
+}
+
+function buildUserContentParts(message: string, attachments: NormalizedAttachment[]): string | Array<Record<string, unknown>> {
+  const parts: Array<Record<string, unknown>> = [{ type: 'text', text: message }];
+  for (const attachment of attachments) {
+    if (attachment.kind !== 'image' || !attachment.dataUrl) continue;
+    const parsed = parseBase64DataUrl(attachment.dataUrl);
+    if (!parsed || !parsed.mimeType.startsWith('image/')) continue;
+    parts.push({ type: 'text', text: `Image attachment: ${attachment.name}` });
+    parts.push({ type: 'image_url', image_url: { url: attachment.dataUrl } });
+  }
+  return parts.length > 1 ? parts : message;
 }
 
 function compactText(text: string, max = 180): string {
@@ -711,6 +835,7 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   const originalMessage = String(body.message ?? '').trim();
   if (!originalMessage) throw new Error('message_required');
   const history = normalizeHistory(body.history);
+  const attachments = normalizeAttachments(body.attachments);
   const clientId = body.clientId ?? null;
   const requestedCrewPreflight = body.crewSelfOrganize ?? AUTO_CREW_PREFLIGHT;
   const controls = resolveResponsiveActionControls(originalMessage, requestedCrewPreflight, clientId);
@@ -729,7 +854,11 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
     : optimizePromptForDispatch(dispatchMessage);
 
   const tier = classifyTier(dispatchMessage);
-  let picked = await quarkSelectAvailableModel(tier);
+  const requiresVision = attachments.some((attachment) => attachment.kind === 'image' && Boolean(attachment.dataUrl));
+  let picked = await quarkSelectAvailableModel(tier, {
+    requireVision: requiresVision,
+    preferredModelId: requiresVision ? 'openai/gpt-4o-mini' : undefined,
+  });
   // CREW-ALWAYS: Force crew self-organization on all prompts (no complexity threshold)
   const crewPreflightEnabled = true;
   const activationPhrase = controls.activationPhrase;
@@ -837,6 +966,12 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   const costGovernanceConfig = getCostGovernanceConfig();
   const requestId = randomUUID();
 
+  const attachmentNotes = await buildAttachmentNotes(attachments);
+  const userContent = buildUserContentParts(
+    attachmentNotes.length ? `${optimizedPrompt.dispatchMessage}\n\n${attachmentNotes.join('\n')}` : optimizedPrompt.dispatchMessage,
+    attachments,
+  );
+
   // Pre-flight budget check (projected cost)
   const projectedCostUSD = (picked.costIn ?? 0) * 0.0003 + (picked.costOut ?? 0) * 0.0006; // Conservative estimate
   if (costGovernanceConfig.mode === 'dev' && costGovernanceConfig.budgetUSD > 0) {
@@ -846,12 +981,12 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
     }
   }
 
-  const messages = [
+  const messages: Array<Record<string, unknown>> = [
     { role: 'system', content: 'You are the Story Agent crew assistant (OpenRouter, Quark cost-optimized). Be concise and token-efficient: answer directly, prefer short code over prose. Use CONTEXT when relevant. If required context is missing, say exactly what is missing before assuming details. Do not invent files, APIs, outputs, or test results.' },
     ...(hasCtx ? [{ role: 'system', content: `CONTEXT (crew RAG memory):\n${context}` }] : []),
     ...(crewContext ? [{ role: 'system', content: crewContext.prelude }] : []),
     ...history,
-    { role: 'user', content: optimizedPrompt.dispatchMessage },
+    { role: 'user', content: userContent },
   ];
 
   let d: any;
@@ -1046,6 +1181,7 @@ export async function handleChatRequest(req: IncomingMessage, res: ServerRespons
       clientId: body.clientId ?? null,
       crewSelfOrganize: body.crewSelfOrganize,
       promptOptimizationMode: body.promptOptimizationMode,
+      attachments: body.attachments,
     });
     json(200, result);
   } catch (e: any) {

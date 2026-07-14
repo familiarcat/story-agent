@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ImageInputSchema, checkImageSize, runVisionAnalysis, INTENT_COMPLEXITY, type ImageInput, type VisionIntent } from '@story-agent/shared';
+import { ImageInputSchema, checkImageSize, runMultimodalAnalysis, MULTIMODAL_INTENT_COMPLEXITY, type ImageInput, type MultimodalIntent } from '@story-agent/shared';
 import { storeObservationMemory } from '@story-agent/shared/db';
 
 /**
- * analyze_image — multimodal vision tool. Sends an image/screenshot + an intent prompt to a
- * Quark-selected OpenRouter VISION model (cheap→gemini-flash, moderate→gpt-4o-mini, complex→gpt-4o),
+ * analyze_image — multimodal analysis tool. Sends an image/screenshot + an intent prompt to a
+ * Quark-selected OpenRouter multimodal model (cheap→gemini-flash, moderate→gpt-4o-mini, complex→gpt-4o),
  * optionally storing the result to crew RAG.
  *
  * SECURITY (Worf): images EGRESS to a 3rd-party vision provider — non-controlled UI only; never send
@@ -38,9 +38,9 @@ export function registerAnalyzeImageTool(server: McpServer): void {
 
       let result;
       try {
-        result = await runVisionAnalysis(img, { intent: intent as VisionIntent, customPrompt });
+        result = await runMultimodalAnalysis(img, { intent: intent as MultimodalIntent, customPrompt });
       } catch (e) {
-        return { isError: true, content: [{ type: 'text' as const, text: JSON.stringify({ error: `vision analysis failed: ${e instanceof Error ? e.message : String(e)}` }) }] };
+        return { isError: true, content: [{ type: 'text' as const, text: JSON.stringify({ error: `multimodal analysis failed: ${e instanceof Error ? e.message : String(e)}` }) }] };
       }
 
       let ragStored = false;
@@ -59,7 +59,7 @@ export function registerAnalyzeImageTool(server: McpServer): void {
       return {
         content: [{
           type: 'text' as const,
-          text: JSON.stringify({ analysis: result.analysis, model: result.model, complexity: INTENT_COMPLEXITY[intent as VisionIntent], ragStored }, null, 2),
+          text: JSON.stringify({ analysis: result.analysis, model: result.model, complexity: MULTIMODAL_INTENT_COMPLEXITY[intent as MultimodalIntent], ragStored }, null, 2),
         }],
       };
     }
