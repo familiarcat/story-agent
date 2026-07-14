@@ -9,43 +9,72 @@
 import { usePathname } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import { DOMAIN_GROUPS } from './domains';
+import type { CSSProperties } from 'react';
+import { useEffect } from 'react';
 
 export default function SideNav() {
   const pathname = usePathname();
   const { isCollapsed, toggleCollapse } = useSidebar();
+  const isHome = pathname === '/';
+  const surfaces = DOMAIN_GROUPS.flatMap((g) => g.items);
+  const palette = ['#f39b35', '#e7c066', '#bb93c7', '#86b0db'];
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-sidenav-hidden', isHome ? 'true' : 'false');
+    return () => {
+      document.documentElement.setAttribute('data-sidenav-hidden', 'false');
+    };
+  }, [isHome]);
+
+  if (isHome) return null;
+
   return (
-    <aside className={`app-sidenav${isCollapsed ? ' app-sidenav--collapsed' : ''}`} aria-label="Global navigation">
-      <div className="app-sidenav-toggle">
+    <>
+      <aside className={`app-sidenav${isCollapsed ? ' app-sidenav--collapsed' : ''}`} aria-label="Global navigation">
+        <div className="app-sidenav-topbar">
+          <div className="app-sidenav-brand">LCARS · STORY AGENT</div>
+          <button
+            onClick={toggleCollapse}
+            aria-label="Collapse sidebar"
+            aria-expanded={!isCollapsed}
+            className="app-sidenav-toggle-btn"
+            title="Collapse navigation"
+          >
+            ◀
+          </button>
+        </div>
+
+        <nav className="app-sidenav-stack">
+          {surfaces.map((s, idx) => {
+            const active = pathname === s.href || (s.href !== '/' && pathname?.startsWith(`${s.href}/`));
+            const bg = s.hub ? '#e9d2ae' : palette[idx % palette.length];
+            const chipStyle = { '--nav-chip-bg': bg } as CSSProperties;
+            return (
+              <a
+                key={s.href}
+                href={s.href}
+                className={`app-sidenav-link app-sidenav-link--chip${active ? ' active' : ''}`}
+                title={s.desc}
+                style={chipStyle}
+              >
+                <span className="app-sidenav-link-icon" aria-hidden>{s.icon}</span>
+                <span>{s.label.toUpperCase()}</span>
+              </a>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {isCollapsed ? (
         <button
           onClick={toggleCollapse}
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!isCollapsed}
-          className="app-sidenav-toggle-btn"
-          title={isCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+          aria-label="Re-expand sidebar"
+          className="app-sidenav-reopen"
+          title="Expand navigation"
         >
-          {isCollapsed ? '▶' : '◀'}
+          NAV ▶
         </button>
-      </div>
-      {DOMAIN_GROUPS.map((g) => (
-        <section key={g.group} className="app-sidenav-group">
-          <div className="app-sidenav-heading">
-            <span>{g.group}</span>
-            <span className="app-sidenav-owner">{g.owner}</span>
-          </div>
-          <nav>
-            {g.items.map((s) => {
-              const active = pathname === s.href || (s.href !== '/' && pathname?.startsWith(`${s.href}/`));
-              return (
-                <a key={s.href} href={s.href} className={`app-sidenav-link${active ? ' active' : ''}`} title={s.desc}>
-                  <span aria-hidden>{s.icon}</span>
-                  <span>{s.label}</span>
-                  {s.hub ? <span className="app-sidenav-hub">HUB</span> : null}
-                </a>
-              );
-            })}
-          </nav>
-        </section>
-      ))}
-    </aside>
+      ) : null}
+    </>
   );
 }

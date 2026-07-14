@@ -28,7 +28,7 @@ const ISSUES = [
   {
     crew: 'Counselor Troi (stakeholder/UX)',
     tier: 'quality' as const,
-    issue: 'The Story Agent web dashboard needs a free-form natural-language text input with a streamed prompt response (a chat assistant in the web UI), powered by OpenRouter with the same cost-optimized model tiering as the VS Code assistant. Design the minimal implementation: a Next.js API route that calls OpenRouter (cost-optimized, Anthropic-direct provider routing) optionally enriched by the RAG read service on localhost:3102, plus a simple chat page/component. Specify the key files and data flow.',
+    issue: 'The Story Agent web dashboard needs a free-form natural-language text input with a streamed prompt response (a chat assistant in the web UI), powered by OpenRouter with the same cost-optimized model tiering as the VS Code assistant. Design the minimal implementation: a Next.js API route that calls OpenRouter (cost-optimized routing) optionally enriched by the RAG read service on localhost:3102, plus a simple chat page/component. Specify the key files and data flow.',
   },
 ];
 
@@ -39,7 +39,6 @@ async function ask(crew: string, model: string, prompt: string) {
     body: JSON.stringify({
       model,
       max_tokens: 500,
-      provider: { order: ['Anthropic'], allow_fallbacks: true },
       messages: [
         { role: 'system', content: `You are ${crew}, a member of the Story Agent crew. Be concise and technical. Give a root-cause + concrete fix with specific files/commands.` },
         { role: 'user', content: prompt },

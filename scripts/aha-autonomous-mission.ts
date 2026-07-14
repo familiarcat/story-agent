@@ -26,7 +26,7 @@ async function deliberate(crewId: string, fullName: string, focus: string, model
   const r = await fetch(`${URL}/chat/completions`, {
     method: 'POST', headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model, max_tokens: 90, provider: { order: ['Anthropic'], allow_fallbacks: true },
+      model, max_tokens: 90,
       messages: [
         { role: 'system', content: `You are ${fullName} of the Story Agent crew. Your Aha! specialty: ${focus}. Speak in ONE concise sentence.` },
         { role: 'user', content: DECISION },
@@ -53,7 +53,7 @@ async function main() {
   const synth = await fetch(`${URL}/chat/completions`, {
     method: 'POST', headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: picardModel, max_tokens: 200, provider: { order: ['Anthropic'], allow_fallbacks: true },
+      model: picardModel, max_tokens: 200,
       messages: [
         { role: 'system', content: 'You are Captain Picard. Synthesize the crew positions into ONE feature. Reply ONLY with compact JSON: {"name":"...","description":"..."} (name <= 80 chars).' },
         { role: 'user', content: 'Crew positions:\n' + results.map(r => `- ${r.crewId}: ${r.text}`).join('\n') },

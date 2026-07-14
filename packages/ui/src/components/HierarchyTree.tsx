@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { childLevel, type HierarchyNode, type Persona, type ActionIntent } from '@story-agent/shared';
+import { childLevel, type HierarchyNode, type Persona, type ActionIntent } from '@story-agent/shared/selection-contract';
 import { useHierarchy } from '@/hooks/useHierarchy';
 import { NodeActions } from './NodeActions';
 

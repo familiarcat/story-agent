@@ -1,6 +1,7 @@
 import type { AhaEpic, AhaProject, AhaSprint, AhaSprintStory, AhaStory } from './index.js';
 import { mapProduct, mapEpic, mapFeatureSummary, mapFeatureToStory, mapRelease, mapSprintStory } from './aha-mappers.js';
 import { SYSTEM_STATUS_ORDER, type SystemStatusBucket, systemBucketFromWorkflowStatus } from './system-status.js';
+import { estimateStoryGravity, type StoryRiskLevel } from './story-gravity.js';
 
 /**
  * Canonical Aha REST client — the single source of truth for the Aha/PM domain.
@@ -30,7 +31,15 @@ export interface AhaClient {
   listSprints(projectId: string): Promise<AhaSprint[]>;
   getSprint(releaseId: string): Promise<AhaSprint>;
   getSprintStories(releaseId: string): Promise<AhaSprintStory[]>;
-  createFeature(releaseId: string, input: { name: string; description?: string }): Promise<AhaStory>;
+  createFeature(releaseId: string, input: {
+    name: string;
+    description?: string;
+    storyPoints?: number;
+    dependencyCount?: number;
+    integrationSurfaceCount?: number;
+    riskLevel?: StoryRiskLevel;
+    uncertainty?: number;
+  }): Promise<AhaStory>;
   getRoadmap(projectId: string): Promise<{
     project: AhaProject;
     releases: Array<AhaSprint & { stories: AhaSprintStory[] }>;
@@ -176,8 +185,17 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
       return mapRelease(data.release as Record<string, unknown>);
     },
     async createFeature(releaseId, input) {
+      const estimated = estimateStoryGravity({
+        name: input.name,
+        description: input.description,
+        dependencyCount: input.dependencyCount,
+        integrationSurfaceCount: input.integrationSurfaceCount,
+        riskLevel: input.riskLevel,
+        uncertainty: input.uncertainty,
+      });
+      const score = input.storyPoints ?? estimated.storyPoints;
       const data = await send('POST', `releases/${releaseId}/features`, {
-        feature: { name: input.name, ...(input.description ? { description: input.description } : {}) },
+        feature: { name: input.name, score, ...(input.description ? { description: input.description } : {}) },
       });
       return mapFeatureToStory(data.feature as Record<string, unknown>);
     },

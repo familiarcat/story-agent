@@ -18,7 +18,6 @@ const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
 
 async function complete(model: string, system: string, user: string): Promise<string> {
   const body: any = { model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], max_tokens: 500, temperature: 0.7 };
-  if (model.startsWith('anthropic/')) body.provider = { order: ['Anthropic'], allow_fallbacks: true };
   const res = await fetch(`${OR_URL}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OR_KEY}` },

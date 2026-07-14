@@ -353,8 +353,6 @@ async function openRouterStream(
       temperature: 0.3,
       stream: true,
       stream_options: { include_usage: true },
-      // Prefer Anthropic-direct; avoids routing Claude slugs to stale/EOL Bedrock variants.
-      provider: { order: ['Anthropic'], allow_fallbacks: true },
     }),
   });
   if (!resp.ok || !resp.body) {

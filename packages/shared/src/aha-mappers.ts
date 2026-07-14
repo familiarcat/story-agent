@@ -28,6 +28,7 @@ export function mapFeatureSummary(f: Raw): AhaStory {
     name: f.name as string,
     description: '',
     acceptanceCriteria: '',
+    storyPoints: (f.score as number | null | undefined) ?? null,
     url: f.url as string,
     workflowStatus: (f.workflow_status as Raw)?.name as string ?? 'unknown',
   };
@@ -48,6 +49,7 @@ export function mapFeatureToStory(f: Raw): AhaStory {
     name: f.name as string,
     description,
     acceptanceCriteria,
+    storyPoints: (f.score as number | null | undefined) ?? null,
     url: f.url as string,
     workflowStatus: (f.workflow_status as Raw)?.name as string ?? 'unknown',
   };

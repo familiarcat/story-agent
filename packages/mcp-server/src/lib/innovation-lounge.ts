@@ -86,7 +86,6 @@ async function call(model: string, system: string, user: string, maxTokens = 550
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     usage: { include: true },
   };
-  if (model.startsWith('anthropic/')) body.provider = { order: ['Anthropic'], allow_fallbacks: true };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), CALL_TIMEOUT_MS);
   let d: any;

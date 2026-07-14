@@ -26,14 +26,11 @@ function rate(model) {
 }
 const costOf = (model, tin, tout) => (tin / 1e6) * rate(model).i + (tout / 1e6) * rate(model).o;
 async function call(model, system, user, maxTokens = 220) {
-    // Anthropic-first provider routing only for anthropic slugs (avoids stale Bedrock); others route normally.
     const body = {
         model, max_tokens: maxTokens,
         messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
         usage: { include: true },
     };
-    if (model.startsWith('anthropic/'))
-        body.provider = { order: ['Anthropic'], allow_fallbacks: true };
     // Hard per-call timeout so one slow/hung provider can't stall the whole pipeline for minutes.
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), Number(process.env.CREW_CALL_TIMEOUT_MS || 60000));

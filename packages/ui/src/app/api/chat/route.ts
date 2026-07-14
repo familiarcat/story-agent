@@ -2,7 +2,7 @@
  * Web chat API — free-form NL → OpenRouter (cost-optimized), streamed.
  *
  * Mirrors the VS Code assistant: Quark cost-optimized tiering (cheap model for simple
- * turns, quality for complex), Anthropic-direct provider routing, and optional crew RAG
+ * turns, quality for complex), OpenRouter-only provider routing, and optional crew RAG
  * context from the local RAG read service. Reads the same CREW_LLM_APPROVED_* env the
  * crew uses (the UI server must be launched with that env in scope).
  */
@@ -94,7 +94,6 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       model, temperature: 0.3, stream: true,
       stream_options: { include_usage: true },
-      provider: { order: ['Anthropic'], allow_fallbacks: true },
       messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userContent }],
     }),
   });

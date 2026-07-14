@@ -384,9 +384,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       }, workspace).catch(err => console.error('[CrewStream] Failed to log iteration:', err));
     }
 
-    // Anthropic-first provider routing only for anthropic slugs (avoids stale Bedrock).
     const body: any = { model, messages, tools: openaiTools, tool_choice: 'auto', max_tokens: 1500 };
-    if (model.startsWith('anthropic/')) body.provider = { order: ['Anthropic'], allow_fallbacks: true };
 
     let resp: any;
     try {

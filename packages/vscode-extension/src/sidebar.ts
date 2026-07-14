@@ -1,6 +1,12 @@
 import * as vscode from 'vscode';
 import { randomBytes } from 'crypto';
 import { webviewTokenStyle } from '@story-agent/shared/ui-tokens';
+import {
+  BASE_DESIGN_THEORY_ID,
+  BASE_DESIGN_PRINCIPLES,
+  BASE_COPYRIGHT_GUARDRAILS,
+  THEME_LAYER_STACK,
+} from '@story-agent/shared';
 
 function getNonce(): string {
   return randomBytes(16).toString('base64');
@@ -83,6 +89,13 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
     // No CSP added: the existing markup relies on inline onclick handlers and a style attribute,
     // which a nonce-based CSP would disable. The token block is still a nonce'd static <style>.
     const nonce = getNonce();
+    const principleList = BASE_DESIGN_PRINCIPLES
+      .map(p => `<li><code>${p}</code></li>`)
+      .join('');
+    const guardrailList = BASE_COPYRIGHT_GUARDRAILS
+      .map(g => `<li>${g}</li>`)
+      .join('');
+    const layerStack = THEME_LAYER_STACK.join(' → ');
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -223,6 +236,23 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
       ◎ Open Observation Lounge UI
     </button>
     <p class="tip">Requires <code>pnpm ui</code> to be running locally.</p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── Base Design Doctrine ─────────────────────────────────────── -->
+  <div class="section">
+    <h3>Base UI/UX Doctrine</h3>
+    <p class="tip">Theory ID: <code>${BASE_DESIGN_THEORY_ID}</code></p>
+    <p class="tip">Theme inheritance: <code>${layerStack}</code></p>
+    <p class="tip" style="margin-top:6px;">Core principles:</p>
+    <ul style="margin: 4px 0 8px 18px; padding: 0; color: var(--sa-muted); font-size: 11px; line-height: 1.5;">
+      ${principleList}
+    </ul>
+    <p class="tip" style="margin-top:6px;">Guardrails:</p>
+    <ul style="margin: 4px 0 0 18px; padding: 0; color: var(--sa-muted); font-size: 11px; line-height: 1.5;">
+      ${guardrailList}
+    </ul>
   </div>
 
   <hr class="divider" />

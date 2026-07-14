@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { workflowStatusTone, workflowStatusLine, type WorkflowStatusData } from '@story-agent/shared';
+import { workflowStatusTone, workflowStatusLine, type WorkflowStatusData } from '@story-agent/shared/workflow-status';
 import { lcars } from '@/lib/lcars';
 
 /**

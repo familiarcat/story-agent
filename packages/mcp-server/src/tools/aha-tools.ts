@@ -14,6 +14,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getCrewAhaMatrix, authorizeAhaWrite } from '../lib/crew-aha-roles.js';
 import { resolveAhaCredentials } from '@story-agent/shared/aha-credentials';
+import { estimateStoryGravity, type StoryRiskLevel } from '@story-agent/shared';
 // cross-surface sync ledger (AHA-SYNC-TIERS)
 import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
 import { executeAhaStoryWithMemory } from '../lib/crew-aha-mission.js';
@@ -140,22 +141,65 @@ export function registerAhaTools(server: McpServer): void {
       releaseId: z.string().describe('Target release (sprint) id'),
       name: z.string(),
       description: z.string().optional(),
+      storyPoints: z.number().int().positive().optional().describe('Optional explicit story point override. If omitted, points are estimated using the Einstein-Fibonacci model.'),
+      dependencyCount: z.number().int().nonnegative().optional(),
+      integrationSurfaceCount: z.number().int().nonnegative().optional(),
+      riskLevel: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      uncertainty: z.number().min(0).max(1).optional().describe('0..1 uncertainty weight used by the estimator.'),
       epic: z.string().optional().describe('Optional epic reference (e.g. JONAH-E-1) to link the story under — sets both the epic and the sprint in one call.'),
       confirm: z.boolean().optional().describe('true to execute (human-approved, or automated after agent verification)'),
     },
-    async ({ agentId, releaseId, name, description, epic, confirm }) => {
+    async ({ agentId, releaseId, name, description, storyPoints, dependencyCount, integrationSurfaceCount, riskLevel, uncertainty, epic, confirm }) => {
       const authz = authorizeAhaWrite(agentId, 'aha:create-feature');
       if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const estimate = estimateStoryGravity({
+        name,
+        description,
+        dependencyCount,
+        integrationSurfaceCount,
+        riskLevel: riskLevel as StoryRiskLevel | undefined,
+        uncertainty,
+      });
+      const finalStoryPoints = storyPoints ?? estimate.storyPoints;
       // Auto-mode classification (crew governance): a draft feature create is AUTO.
       const { proceed, classification } = gateAhaWrite({ verb: 'create', resource: 'feature', publishedState: 'draft', agentId }, confirm);
       if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
-      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { releaseId, name, description, epic }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      if (!proceed) return ok({
+        dryRun: true,
+        agent: agentId,
+        identity: authz.reason,
+        classification,
+        wouldCreate: { releaseId, name, description, epic, score: finalStoryPoints },
+        estimation: {
+          model: estimate.model,
+          suggestedStoryPoints: estimate.storyPoints,
+          appliedStoryPoints: finalStoryPoints,
+          gravityWeight: estimate.gravityWeight,
+          effectiveVelocityLoad: estimate.effectiveVelocityLoad,
+          rationale: estimate.rationale,
+        },
+        note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.`,
+      });
       audit('create-feature', { agentId, releaseId, name, epic, decision: classification.decision });
-      const feature: Record<string, unknown> = { name, description };
+      const feature: Record<string, unknown> = { name, description, score: finalStoryPoints };
       if (epic) feature.epic = epic;  // Aha links both the epic and the sprint from the release-scoped create.
       const res = await aha(`releases/${releaseId}/features`, { method: 'POST', body: JSON.stringify({ feature }) });
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'created', resourceId: String(res.feature?.reference_num ?? res.feature?.id ?? ''), meta: { sprint_id: releaseId } });
-      return ok({ created: res.feature?.reference_num, name: res.feature?.name, by: agentId, autoMode: classification });
+      return ok({
+        created: res.feature?.reference_num,
+        name: res.feature?.name,
+        by: agentId,
+        storyPoints: res.feature?.score ?? finalStoryPoints,
+        estimation: {
+          model: estimate.model,
+          suggestedStoryPoints: estimate.storyPoints,
+          appliedStoryPoints: finalStoryPoints,
+          gravityWeight: estimate.gravityWeight,
+          effectiveVelocityLoad: estimate.effectiveVelocityLoad,
+          rationale: estimate.rationale,
+        },
+        autoMode: classification,
+      });
     },
   );
 

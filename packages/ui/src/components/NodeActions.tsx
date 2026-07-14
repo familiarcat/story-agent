@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { actionsForPersona, type HierarchyNode, type Persona, type ActionIntent } from '@story-agent/shared';
+import { actionsForPersona, type HierarchyNode, type Persona, type ActionIntent } from '@story-agent/shared/selection-contract';
 
 /**
  * Reusable per-node action bar — the SAME primitive both persona shells render (the crew's shared

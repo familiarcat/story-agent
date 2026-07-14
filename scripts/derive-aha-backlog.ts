@@ -42,7 +42,7 @@ function introspect(): string {
 async function ask(system: string, user: string, model: string, maxTokens = 600) {
   const r = await fetch(`${URL}/chat/completions`, {
     method: 'POST', headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, max_tokens: maxTokens, provider: { order: ['Anthropic'], allow_fallbacks: true }, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], usage: { include: true } }),
+    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], usage: { include: true } }),
   });
   const d: any = await r.json();
   return { text: (d.choices?.[0]?.message?.content || '').trim(), model: d.model, c: cost(model, d.usage?.prompt_tokens || 0, d.usage?.completion_tokens || 0) };

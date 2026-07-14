@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 
@@ -42,6 +42,90 @@ const MEMORY_TYPE_ICONS = {
   decision_note: '📋',
   reminder: '⏰',
 };
+
+const MEMORY_TYPE_LABELS = {
+  insight: 'Insight',
+  lesson_learned: 'Lesson Learned',
+  decision_note: 'Decision Note',
+  reminder: 'Reminder',
+};
+
+function renderStructuredMemoryContent(content: string, tone: string) {
+  const lines = content.split('\n');
+  const nodes: ReactNode[] = [];
+  let prevWasNumbered = false;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const raw = lines[i] ?? '';
+    const line = raw.trim();
+
+    if (!line) {
+      prevWasNumbered = false;
+      continue;
+    }
+
+    const numbered = line.match(/^(\d+)\.\s+(.*)$/);
+    if (numbered) {
+      prevWasNumbered = true;
+      nodes.push(
+        <div
+          key={`line-${i}`}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.55rem 1fr',
+            gap: '0.5rem',
+            padding: '0.24rem 0.5rem',
+            borderRadius: '0.45rem',
+            background: 'color-mix(in srgb, var(--surface) 55%, var(--surface-2))',
+            marginLeft: '0.25rem',
+            marginBottom: '0.18rem',
+          }}
+        >
+          <span style={{ color: tone, fontWeight: 800, fontSize: '0.85rem' }}>{numbered[1]}.</span>
+          <span style={{ lineHeight: 1.45 }}>{numbered[2]}</span>
+        </div>
+      );
+      continue;
+    }
+
+    if (/:$/.test(line) && line.length < 60) {
+      prevWasNumbered = false;
+      nodes.push(
+        <div
+          key={`line-${i}`}
+          style={{
+            marginTop: i === 0 ? 0 : '0.55rem',
+            marginBottom: '0.22rem',
+            color: tone,
+            fontWeight: 750,
+            fontSize: '0.92rem',
+            letterSpacing: '0.01em',
+          }}
+        >
+          {line}
+        </div>
+      );
+      continue;
+    }
+
+    nodes.push(
+      <p
+        key={`line-${i}`}
+        style={{
+          margin: 0,
+          marginLeft: prevWasNumbered ? '2.3rem' : 0,
+          color: prevWasNumbered ? 'var(--text-dim)' : 'var(--text)',
+          fontSize: prevWasNumbered ? '0.88rem' : '0.96rem',
+          lineHeight: 1.52,
+        }}
+      >
+        {line}
+      </p>
+    );
+  }
+
+  return nodes.length ? nodes : <p style={{ margin: 0 }}>{content}</p>;
+}
 
 function CrewMemoriesContent() {
   const searchParams = useSearchParams();
@@ -258,26 +342,55 @@ function CrewMemoriesContent() {
                 <div
                   key={memory.id}
                   className="card"
-                  style={{ borderLeft: `3px solid ${MEMORY_TYPE_COLORS[memory.memory_type]}` }}
+                  style={{
+                    borderLeft: `4px solid ${MEMORY_TYPE_COLORS[memory.memory_type]}`,
+                    background: `linear-gradient(120deg, color-mix(in srgb, ${MEMORY_TYPE_COLORS[memory.memory_type]} 11%, var(--surface)) 0%, var(--surface) 34%)`,
+                    boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${MEMORY_TYPE_COLORS[memory.memory_type]} 22%, transparent)`,
+                  }}
                 >
-                  <div className="cluster" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
-                    <div className="cluster">
-                      <span style={{ fontSize: 'var(--text-2xl)' }}>
+                  <div className="cluster" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)', gap: '0.6rem' }}>
+                    <div className="cluster" style={{ alignItems: 'flex-start', gap: '0.7rem' }}>
+                      <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>
                         {MEMORY_TYPE_ICONS[memory.memory_type]}
                       </span>
                       <div>
-                        <h3>{memory.title}</h3>
-                        <div className="meta">
-                          {memory.memory_type.replace('_', ' ').toUpperCase()}
+                        <h3 style={{ marginBottom: '0.15rem', fontSize: '1.22rem', letterSpacing: '0.005em' }}>{memory.title}</h3>
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '0.17rem 0.52rem',
+                            borderRadius: '999px',
+                            background: `color-mix(in srgb, ${MEMORY_TYPE_COLORS[memory.memory_type]} 20%, var(--surface))`,
+                            color: MEMORY_TYPE_COLORS[memory.memory_type],
+                            fontSize: '0.72rem',
+                            textTransform: 'uppercase',
+                            fontWeight: 720,
+                            letterSpacing: '0.04em',
+                          }}
+                        >
+                          {MEMORY_TYPE_LABELS[memory.memory_type]}
                         </div>
                       </div>
                     </div>
-                    <div className="meta" style={{ textAlign: 'right' }}>
+                    <div className="meta" style={{ textAlign: 'right', fontSize: '0.77rem' }}>
                       {new Date(memory.created_at).toLocaleDateString()}
                     </div>
                   </div>
 
-                  <p style={{ whiteSpace: 'pre-wrap', marginBottom: 'var(--space-3)' }}>{memory.content}</p>
+                  <div
+                    style={{
+                      marginBottom: 'var(--space-3)',
+                      padding: '0.72rem 0.76rem',
+                      borderRadius: '0.6rem',
+                      border: `1px solid color-mix(in srgb, ${MEMORY_TYPE_COLORS[memory.memory_type]} 20%, var(--border))`,
+                      background: 'color-mix(in srgb, var(--surface-2) 60%, var(--surface))',
+                      display: 'grid',
+                      gap: '0.25rem',
+                    }}
+                  >
+                    {renderStructuredMemoryContent(memory.content, MEMORY_TYPE_COLORS[memory.memory_type])}
+                  </div>
 
                   <div className="cluster" style={{ marginBottom: 'var(--space-3)' }}>
                     {memory.tags && memory.tags.map((tag, idx) => (
@@ -289,10 +402,10 @@ function CrewMemoriesContent() {
 
                   <div className="cluster">
                     {memory.project_id && (
-                      <div className="meta">📦 Project: {memory.project_id}</div>
+                      <div className="meta" style={{ fontSize: '0.74rem' }}>📦 Project: {memory.project_id}</div>
                     )}
                     {memory.task_id && (
-                      <div className="meta">🎯 Task: {memory.task_id}</div>
+                      <div className="meta" style={{ fontSize: '0.74rem' }}>🎯 Task: {memory.task_id}</div>
                     )}
                   </div>
                 </div>

@@ -12,6 +12,7 @@
  */
 import { storeObservationMemory } from '@story-agent/shared/db';
 import type { ObservationDebateResult } from '@story-agent/shared';
+import { estimateStoryGravity } from '@story-agent/shared';
 import { resolveAhaCredentials } from '@story-agent/shared/aha-credentials';
 // cross-surface sync (AHA-SYNC-TIERS)
 import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
@@ -30,11 +31,12 @@ export interface AhaMissionResult {
 }
 
 async function ahaCreateFeature(releaseId: string, name: string, description?: string): Promise<any> {
+  const estimate = estimateStoryGravity({ name, description });
   const { domain, apiKey } = await resolveAhaCredentials();
   const resp = await fetch(`https://${domain}/api/v1/releases/${releaseId}/features`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ feature: { name, description } }),
+    body: JSON.stringify({ feature: { name, description, score: estimate.storyPoints } }),
   });
   if (!resp.ok) throw new Error(`Aha! ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
   const feature = ((await resp.json()) as any)?.feature;

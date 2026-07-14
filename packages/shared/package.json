@@ -61,6 +61,18 @@
       "import": "./dist/src/ui-tokens.js",
       "types": "./dist/src/ui-tokens.d.ts"
     },
+    "./design-doctrine": {
+      "import": "./dist/src/design-doctrine.js",
+      "types": "./dist/src/design-doctrine.d.ts"
+    },
+    "./design-theme-layers": {
+      "import": "./dist/src/design-theme-layers.js",
+      "types": "./dist/src/design-theme-layers.d.ts"
+    },
+    "./workflow-status": {
+      "import": "./dist/src/workflow-status.js",
+      "types": "./dist/src/workflow-status.d.ts"
+    },
     "./system-status": {
       "import": "./dist/src/system-status.js",
       "types": "./dist/src/system-status.d.ts"

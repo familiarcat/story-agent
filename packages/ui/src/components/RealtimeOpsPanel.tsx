@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAhaEvents } from '@/hooks/useAhaEvents';
+import { BASE_DESIGN_THEORY_ID } from '@story-agent/shared/design-doctrine';
 
 type ExecutionStatusResponse = {
   success: boolean;
@@ -64,7 +65,7 @@ export function RealtimeOpsPanel() {
     void poll();
     const timer = setInterval(() => {
       void poll();
-    }, 5000);
+    }, 15000);
 
     return () => {
       cancelled = true;
@@ -78,7 +79,7 @@ export function RealtimeOpsPanel() {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = setTimeout(() => router.refresh(), 1200);
     },
-    { intervalMs: 8000 },
+    { intervalMs: 20000 },
   );
 
   useEffect(() => {
@@ -137,6 +138,7 @@ export function RealtimeOpsPanel() {
       <div style={{ marginTop: '0.85rem', paddingTop: '0.85rem', borderTop: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-dim)', display: 'grid', gap: 4 }}>
         <div>Aha sync pulse: {fmtAgo(lastAhaEventAt)}</div>
         <div>Chat pulse: {fmtAgo(lastChatEventAt)} · {lastChatStage} · model {lastChatModel} · turns {chatTurns}</div>
+        <div>UI doctrine: {BASE_DESIGN_THEORY_ID}</div>
       </div>
     </div>
   );

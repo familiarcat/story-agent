@@ -31,13 +31,11 @@ const costOf = (model: string, tin: number, tout: number) => (tin / 1e6) * rate(
 interface CallResult { text: string; model: string; tokensIn: number; tokensOut: number; costUSD: number; }
 
 async function call(model: string, system: string, user: string, maxTokens = 220): Promise<CallResult> {
-  // Anthropic-first provider routing only for anthropic slugs (avoids stale Bedrock); others route normally.
   const body: any = {
     model, max_tokens: maxTokens,
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     usage: { include: true },
   };
-  if (model.startsWith('anthropic/')) body.provider = { order: ['Anthropic'], allow_fallbacks: true };
   // Hard per-call timeout so one slow/hung provider can't stall the whole pipeline for minutes.
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), Number(process.env.CREW_CALL_TIMEOUT_MS || 60000));

@@ -30,5 +30,13 @@ export const getAhaSprint = (releaseId: string): Promise<AhaSprint> => client().
 export const getAhaSprintStories = (releaseId: string): Promise<AhaSprintStory[]> => client().getSprintStories(releaseId);
 export const getProjectRoadmap = (projectId: string) => client().getRoadmap(projectId);
 export const getProjectHierarchy = (projectId: string) => client().getHierarchy(projectId);
-export const createAhaStory = (releaseId: string, input: { name: string; description?: string }): Promise<AhaStory> =>
+export const createAhaStory = (releaseId: string, input: {
+  name: string;
+  description?: string;
+  storyPoints?: number;
+  dependencyCount?: number;
+  integrationSurfaceCount?: number;
+  riskLevel?: 'low' | 'medium' | 'high' | 'critical';
+  uncertainty?: number;
+}): Promise<AhaStory> =>
   client().createFeature(releaseId, input);

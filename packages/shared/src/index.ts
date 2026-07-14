@@ -9,6 +9,9 @@ export * from './workflow-status.js';
 export * from './system-status.js';
 // Async status registry — live cross-process view of in-flight async work (surfaced on every prompt).
 export * from './async-status.js';
+export * from './story-gravity.js';
+export * from './design-doctrine.js';
+export * from './design-theme-layers.js';
 
 export type StoryStatus =
   | 'pending'
@@ -33,6 +36,7 @@ export interface AhaStory {
   name: string;
   description: string;
   acceptanceCriteria: string;
+  storyPoints?: number | null;
   epicId?: string; // Added for hierarchical context
   url: string;
   workflowStatus: string;
