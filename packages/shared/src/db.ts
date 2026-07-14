@@ -1444,12 +1444,43 @@ export async function getCrewMemoryStats(crew_id: string): Promise<
     crew_id,
   });
 
-  if (error) {
-    console.error(`Error getting crew memory stats for ${crew_id}:`, error);
+  if (!error) {
+    return data || [];
+  }
+
+  // Fallback path: aggregate directly from the table if the RPC function has an ambiguity error.
+  const { data: rawRows, error: rawErr } = await client
+    .from('sa_crew_personal_memory')
+    .select('memory_type, project_id, created_at')
+    .eq('crew_id', crew_id)
+    .eq('is_searchable', true);
+
+  if (rawErr) {
+    if ((error as { code?: string } | null)?.code !== '42702') {
+      console.error(`Error getting crew memory stats for ${crew_id}:`, error);
+    }
+    console.error(`Fallback table query also failed for ${crew_id}:`, rawErr);
     return [];
   }
 
-  return data || [];
+  const rows = (rawRows || []) as Array<{ memory_type: string; project_id: string | null; created_at: string }>;
+  const byType = new Map<string, { total: number; projects: Set<string>; latest: string }>();
+
+  for (const row of rows) {
+    const key = row.memory_type || 'unknown';
+    const current = byType.get(key) || { total: 0, projects: new Set<string>(), latest: row.created_at };
+    current.total += 1;
+    if (row.project_id) current.projects.add(row.project_id);
+    if (row.created_at > current.latest) current.latest = row.created_at;
+    byType.set(key, current);
+  }
+
+  return Array.from(byType.entries()).map(([memoryType, agg]) => ({
+    total_memories: agg.total,
+    memory_by_type: memoryType,
+    projects_count: agg.projects.size,
+    most_recent_memory: agg.latest,
+  }));
 }
 
 /**

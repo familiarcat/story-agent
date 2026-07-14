@@ -17,11 +17,25 @@ interface Summary {
   perModel: Record<string, { costUSD: number; turns: number }>;
   baseline: { model: string; wouldCostUSD: number; savedUSD: number; savedPct: number };
   recent: Array<{ timestamp: string; surface: string; model: string; provider: string; costUSD: number }>;
+  historical?: {
+    totalCostUSD: number;
+    crewRuns: number;
+    firstSeenAt: string | null;
+    lastSeenAt: string | null;
+    daily: Array<{ day: string; costUSD: number; runs: number }>;
+  };
 }
 
 interface CacheFallback {
   source: 'cache';
   offlineMarker: LaneStatusMarker;
+  historical?: {
+    totalCostUSD: number;
+    crewRuns: number;
+    firstSeenAt: string | null;
+    lastSeenAt: string | null;
+    daily: Array<{ day: string; costUSD: number; runs: number }>;
+  };
   note?: string;
 }
 
@@ -33,7 +47,7 @@ export default function CostPage() {
 
   async function load() {
     try {
-      const r = await fetch('/api/cost');
+      const r = await fetch('/api/cost', { cache: 'no-store' });
       const d = await r.json();
       if (!r.ok) { setErr(d.error || `HTTP ${r.status}`); return; }
       setErr(''); setData(d);
@@ -75,7 +89,36 @@ export default function CostPage() {
             <LcarsStat label={headlineSystem.stats.totalCostTurns(data.turns)} value={`$${data.totalUSD.toFixed(4)}`} accent={lcars.goldenTanoi} />
             <LcarsStat label={headlineSystem.stats.savingsVsBaseline(normalizeModelLabel(data.baseline.model))} value={`${data.baseline.savedPct}%`} accent={lcars.anakiwa} />
             <LcarsStat label={headlineSystem.stats.tokenThroughput} value={`↑${data.tokensIn.toLocaleString()} ↓${data.tokensOut.toLocaleString()}`} accent={lcars.tanoi} />
+            <LcarsStat label="System historical cost" value={`$${(data.historical?.totalCostUSD ?? 0).toFixed(4)}`} accent={lcars.lilac} />
           </div>
+
+          <LcarsPanel title="Historical Ledger (All System Runs)" color={lcars.anakiwa}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 8, marginBottom: 10 }}>
+              <LcarsStat label="Historical crew runs" value={`${data.historical?.crewRuns ?? 0}`} accent={lcars.tanoi} />
+              <LcarsStat
+                label="Range"
+                value={data.historical?.firstSeenAt ? `${new Date(data.historical.firstSeenAt).toLocaleDateString()} → ${data.historical?.lastSeenAt ? new Date(data.historical.lastSeenAt).toLocaleDateString() : 'now'}` : 'n/a'}
+                accent={lcars.neonCarrot}
+              />
+            </div>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {(data.historical?.daily ?? []).slice(-14).map((d) => {
+                const max = Math.max(...(data.historical?.daily ?? [{ day: 'x', costUSD: 1, runs: 1 }]).map((x) => x.costUSD || 0), 0.000001);
+                return (
+                  <div key={d.day}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', letterSpacing: 'normal' }}>
+                      <span style={{ color: lcars.tanoi }}>{d.day}</span>
+                      <span style={{ color: lcars.textDim }}>{d.runs} runs · ${d.costUSD.toFixed(5)}</span>
+                    </div>
+                    <LcarsBar frac={d.costUSD / max} color={lcars.anakiwa} />
+                  </div>
+                );
+              })}
+              {!data.historical?.daily?.length && (
+                <p style={{ color: lcars.textDim, fontSize: '0.8rem', letterSpacing: 'normal' }}>No historical ledger entries yet.</p>
+              )}
+            </div>
+          </LcarsPanel>
 
           <LcarsPanel title={headlineSystem.panels.modelDistribution} color={lcars.neonCarrot}>
             {Object.entries(data.perModel).sort((a, b) => b[1].costUSD - a[1].costUSD).map(([m, v]) => (

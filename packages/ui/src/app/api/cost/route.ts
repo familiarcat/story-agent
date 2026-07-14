@@ -9,6 +9,8 @@ import { join } from 'node:path';
  * Section 31 Week 1 Enhancement: Supports ?cohort=dogfood to filter costs to the 10 testers.
  */
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Section 31 Week 1 Dogfood Tester Roster
 const DOGFOOD_TESTERS = [
@@ -33,6 +35,79 @@ interface DogfoodCostBreakdown {
   baseline_cost: number;         // Copilot baseline: ~$0.20/user/day
   total_testers: number;
   timestamp: string;
+}
+
+interface HistoricalCostSummary {
+  totalCostUSD: number;
+  crewRuns: number;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+  daily: Array<{ day: string; costUSD: number; runs: number }>;
+}
+
+function readHistoricalCostSummary(workspaceRoot: string): HistoricalCostSummary {
+  const ledgerPath = join(workspaceRoot, '.claude', 'delegation-audit.jsonl');
+  if (!existsSync(ledgerPath)) {
+    return {
+      totalCostUSD: 0,
+      crewRuns: 0,
+      firstSeenAt: null,
+      lastSeenAt: null,
+      daily: [],
+    };
+  }
+
+  const raw = readFileSync(ledgerPath, 'utf8');
+  const daily = new Map<string, { costUSD: number; runs: number }>();
+  let totalCostUSD = 0;
+  let crewRuns = 0;
+  let firstSeenAt: string | null = null;
+  let lastSeenAt: string | null = null;
+
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const entry = JSON.parse(trimmed) as {
+        kind?: string;
+        costUSD?: number;
+        ts?: string;
+        timestamp?: string;
+      };
+      if (entry.kind !== 'crew-run') continue;
+      const cost = Number(entry.costUSD || 0);
+      if (!Number.isFinite(cost) || cost <= 0) continue;
+
+      const ts = entry.ts || entry.timestamp || null;
+      const day = ts ? new Date(ts).toISOString().slice(0, 10) : 'unknown';
+      const agg = daily.get(day) || { costUSD: 0, runs: 0 };
+      agg.costUSD += cost;
+      agg.runs += 1;
+      daily.set(day, agg);
+
+      totalCostUSD += cost;
+      crewRuns += 1;
+
+      if (ts) {
+        if (!firstSeenAt || ts < firstSeenAt) firstSeenAt = ts;
+        if (!lastSeenAt || ts > lastSeenAt) lastSeenAt = ts;
+      }
+    } catch {
+      // Ignore malformed ledger lines.
+    }
+  }
+
+  const dailySeries = Array.from(daily.entries())
+    .map(([day, v]) => ({ day, costUSD: Number(v.costUSD.toFixed(6)), runs: v.runs }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+
+  return {
+    totalCostUSD: Number(totalCostUSD.toFixed(6)),
+    crewRuns,
+    firstSeenAt,
+    lastSeenAt,
+    daily: dailySeries,
+  };
 }
 
 function generateMockDogfoodCosts(): DogfoodCostBreakdown {
@@ -67,14 +142,16 @@ function generateMockDogfoodCosts(): DogfoodCostBreakdown {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const cohort = url.searchParams.get('cohort');
+  const workspaceRoot = join(process.cwd(), '..', '..');
+  const historical = readHistoricalCostSummary(workspaceRoot);
 
   // Handle dogfood cohort filter
   if (cohort === 'dogfood') {
     try {
       const dogfoodCosts = generateMockDogfoodCosts();
-      return Response.json(dogfoodCosts, {
+      return Response.json({ ...dogfoodCosts, historical }, {
         headers: {
-          'Cache-Control': 'max-age=60, s-maxage=60', // 1-min cache for cost aggregates
+          'Cache-Control': 'no-store',
           'Content-Type': 'application/json',
         },
       });
@@ -94,7 +171,12 @@ export async function GET(request: Request) {
 
   try {
     const r = await fetch(`${base}/cost`, { signal: AbortSignal.timeout(8000) });
-    if (r.ok) return Response.json(await r.json());
+    if (r.ok) {
+      const live = await r.json();
+      return Response.json({ ...live, historical }, {
+        headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },
+      });
+    }
     liveError = `agent /cost HTTP ${r.status}`;
   } catch (e) {
     liveError = `agent brain unreachable at ${base}`;
@@ -103,7 +185,10 @@ export async function GET(request: Request) {
   if (existsSync(cachePath)) {
     try {
       const offlineMarker = JSON.parse(readFileSync(cachePath, 'utf8'));
-      return Response.json({ source: 'cache', offlineMarker, note: 'Using cached lane status from .claude/control-lane-status.json because the live crew brain cost endpoint was unavailable.' });
+      return Response.json(
+        { source: 'cache', offlineMarker, historical, note: 'Using cached lane status from .claude/control-lane-status.json because the live crew brain cost endpoint was unavailable.' },
+        { headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' } }
+      );
     } catch (e) {
       return Response.json({ error: `failed to parse cached lane status at ${cachePath}` }, { status: 500 });
     }
