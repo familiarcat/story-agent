@@ -42,12 +42,11 @@ function getCrewLlmModelProfile(): CrewLlmModelProfile {
 }
 
 function getApprovedPrimaryModel(): string {
-  // Mirrors cs-p3-material-investigation global Anthropic default.
-  return (process.env.CREW_LLM_APPROVED_MODEL ?? 'global.anthropic.claude-sonnet-4-6').trim();
+  return (process.env.CREW_LLM_APPROVED_MODEL ?? quarkSelectModel(3).id).trim();
 }
 
 function getApprovedLowCostModel(): string {
-  return (process.env.CREW_LLM_APPROVED_MODEL_CHEAP ?? 'global.anthropic.claude-3-5-haiku').trim();
+  return (process.env.CREW_LLM_APPROVED_MODEL_CHEAP ?? quarkSelectModel(2).id).trim();
 }
 
 function getCopilotPrimaryModel(): string {

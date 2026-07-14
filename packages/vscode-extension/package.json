@@ -257,6 +257,18 @@
           "default": "http://localhost:3000",
           "description": "Dashboard base URL used by Worf-gated Aha writes and dashboard deep links (Update Aha Story Status, Open in Dashboard). Falls back to storyAgent.dashboardUrl."
         },
+        "storyAgent.uiTheme": {
+          "type": "string",
+          "default": "lcars",
+          "enum": ["lcars", "dark", "light", "vscode"],
+          "enumDescriptions": [
+            "LCARS (default) — matches dashboard LCARS theme tokens",
+            "Dark — matches dashboard dark theme tokens",
+            "Light — matches dashboard light theme tokens",
+            "Use native VS Code theme variables"
+          ],
+          "description": "Unified visual theme for Story Agent VS Code webviews. Defaults to LCARS for dashboard parity."
+        },
         "storyAgent.agileProvider": {
           "type": "string",
           "default": "aha",
@@ -309,12 +321,12 @@
         },
         "storyAgent.chat.openRouterModel": {
           "type": "string",
-          "default": "anthropic/claude-sonnet-4.6",
+          "default": "deepseek/deepseek-chat",
           "description": "Quality model slug (complex/critical turns). Falls back to the CREW_LLM_APPROVED_MODEL env var if set."
         },
         "storyAgent.chat.openRouterModelCheap": {
           "type": "string",
-          "default": "anthropic/claude-haiku-4.5",
+          "default": "meta-llama/llama-3.3-70b-instruct",
           "description": "Cost-optimized model slug (simple/support turns). Falls back to the CREW_LLM_APPROVED_MODEL_CHEAP env var if set."
         },
         "storyAgent.chat.smallModelFamily": {

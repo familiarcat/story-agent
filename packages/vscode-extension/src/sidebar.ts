@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { randomBytes } from 'crypto';
-import { webviewTokenStyle } from '@story-agent/shared/ui-tokens';
+import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
+import { withDashboardTheme } from './lib/dashboardThemeLink';
 import {
   BASE_DESIGN_THEORY_ID,
   BASE_DESIGN_PRINCIPLES,
@@ -46,12 +47,12 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
       switch (msg.command) {
         case 'openDashboard':
           vscode.env.openExternal(
-            vscode.Uri.parse(this._dashboardUrl())
+            vscode.Uri.parse(withDashboardTheme(this._dashboardUrl()))
           );
           break;
         case 'openObservationLounge':
           vscode.env.openExternal(
-            vscode.Uri.parse(`${this._dashboardUrl()}/observation-lounge`)
+            vscode.Uri.parse(withDashboardTheme(`${this._dashboardUrl()}/observation-lounge`))
           );
           break;
         case 'launchInChat': {
@@ -73,6 +74,17 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
             'storyAgent'
           );
           break;
+        case 'setTheme': {
+          const nextTheme = (msg.theme ?? '').trim();
+          if (!['lcars', 'dark', 'light', 'vscode'].includes(nextTheme)) break;
+          vscode.workspace
+            .getConfiguration('storyAgent')
+            .update('uiTheme', nextTheme, vscode.ConfigurationTarget.Global)
+            .then(() => {
+              if (this._view) this._view.webview.html = this._buildHtml();
+            });
+          break;
+        }
       }
     });
   }
@@ -83,6 +95,13 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
         .getConfiguration('storyAgent')
         .get<string>('dashboardUrl') ?? 'http://localhost:3000'
     );
+  }
+
+  private _uiTheme(): WebviewThemeId {
+    const value = vscode.workspace.getConfiguration('storyAgent').get<string>('uiTheme') ?? 'lcars';
+    return value === 'lcars' || value === 'dark' || value === 'light' || value === 'vscode'
+      ? value
+      : 'lcars';
   }
 
   private _buildHtml(): string {
@@ -96,13 +115,14 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
       .map(g => `<li>${g}</li>`)
       .join('');
     const layerStack = THEME_LAYER_STACK.join(' → ');
+    const currentTheme = this._uiTheme();
     return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Story Agent</title>
-  ${webviewTokenStyle(nonce)}
+  ${webviewTokenStyle(nonce, currentTheme)}
   <style nonce="${nonce}">
     *, *::before, *::after { box-sizing: border-box; }
 
@@ -151,6 +171,18 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     input::placeholder { color: var(--vscode-input-placeholderForeground); }
+
+    select {
+      width: 100%;
+      padding: 4px 6px;
+      background: var(--vscode-dropdown-background, var(--sa-card));
+      color: var(--vscode-dropdown-foreground, var(--sa-text));
+      border: 1px solid var(--vscode-dropdown-border, var(--sa-border));
+      border-radius: 2px;
+      font-size: 12px;
+      margin-bottom: 4px;
+      outline: none;
+    }
 
     .btn {
       display: block;
@@ -222,6 +254,21 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
     </button>
     <div id="err" class="error" style="display:none;"></div>
     <p class="tip">Opens <code>@story-agent /prepare</code> in Copilot chat with your inputs.</p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ── Theme selection ───────────────────────────────────────────── -->
+  <div class="section">
+    <h3>Theme</h3>
+    <label for="uiTheme">Cross-surface theme</label>
+    <select id="uiTheme" onchange="setTheme(this.value)">
+      <option value="lcars" ${currentTheme === 'lcars' ? 'selected' : ''}>LCARS (default)</option>
+      <option value="dark" ${currentTheme === 'dark' ? 'selected' : ''}>Dark</option>
+      <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>Light</option>
+      <option value="vscode" ${currentTheme === 'vscode' ? 'selected' : ''}>VS Code native</option>
+    </select>
+    <p class="tip">Matches dashboard theme tokens for parity.</p>
   </div>
 
   <hr class="divider" />
@@ -310,6 +357,10 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
 
     function openSettings() {
       vscode.postMessage({ command: 'openSettings' });
+    }
+
+    function setTheme(theme) {
+      vscode.postMessage({ command: 'setTheme', theme });
     }
 
     // Pre-fill form fields when triggered from a command

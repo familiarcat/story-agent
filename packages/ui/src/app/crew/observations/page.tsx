@@ -7,54 +7,55 @@ import { LcarsScreen, LcarsPanel, LcarsButton } from '@/components/Lcars';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ObservationListView } from '@/components/ObservationListView';
 import { ObservationDetailView } from '@/components/ObservationDetailView';
+import { ViewHeader, ViewPresentationProvider } from '@/components/ViewPresentation';
 
 export default function ObservationsPage() {
   const [selectedObservationId, setSelectedObservationId] = useState<string | null>(null);
 
   return (
     <LcarsScreen title="👁️ Observations" status="Crew deliberation outcomes · learning loop">
-      <Breadcrumbs
-        crumbs={[
-          { label: 'Observe', href: '/cost' },
-          { label: 'Observations' },
-        ]}
-      />
+      <ViewPresentationProvider tone="observe">
+        <Breadcrumbs
+          crumbs={[
+            { label: 'Observe', href: '/cost' },
+            { label: 'Observations' },
+          ]}
+        />
 
-      {/* Header section */}
-      <LcarsPanel title="📊 Observation Lounge" color={lcars.paleCanary} style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: '0.82rem', color: lcars.tanoi, lineHeight: 1.5, letterSpacing: 'normal' }}>
-          Browse past crew deliberations with execution outcomes. Track how crew decisions perform in the real world.
-          Outcomes feed the RAG learning loop — crew becomes hesitant about failed patterns, confident in proven approaches.
-        </div>
-      </LcarsPanel>
+        <ViewHeader
+          title="👁️ Observation Lounge"
+          subtitle="Browse past crew deliberations with execution outcomes. Track how decisions perform in the real world and feed the RAG learning loop."
+          badge="deliberation history"
+        />
 
-      {/* Two-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-        {/* List panel */}
-        <LcarsPanel title="Past Deliberations" color={lcars.neonCarrot}>
-          <div style={{ minHeight: 400 }}>
-            <ObservationListView
-              onSelectObservation={setSelectedObservationId}
-              selectedId={selectedObservationId || undefined}
-            />
-          </div>
-        </LcarsPanel>
-
-        {/* Detail panel */}
-        <LcarsPanel title="Deliberation Details" color={lcars.goldenTanoi}>
-          {selectedObservationId ? (
-            <div style={{ minHeight: 400, overflowY: 'auto' }}>
-              <ObservationDetailView
-                observationId={selectedObservationId}
+        {/* Two-column layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          {/* List panel */}
+          <LcarsPanel title="Past Deliberations" color={lcars.neonCarrot} style={{ borderRadius: '0.7rem' }}>
+            <div style={{ minHeight: 400 }}>
+              <ObservationListView
+                onSelectObservation={setSelectedObservationId}
+                selectedId={selectedObservationId || undefined}
               />
             </div>
-          ) : (
-            <div style={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', color: lcars.textDim, fontSize: '0.85rem', textTransform: 'uppercase' }}>
-              Select a deliberation to view details
-            </div>
-          )}
-        </LcarsPanel>
-      </div>
+          </LcarsPanel>
+
+          {/* Detail panel */}
+          <LcarsPanel title="Deliberation Details" color={lcars.goldenTanoi} style={{ borderRadius: '0.7rem' }}>
+            {selectedObservationId ? (
+              <div style={{ minHeight: 400, overflowY: 'auto' }}>
+                <ObservationDetailView
+                  observationId={selectedObservationId}
+                />
+              </div>
+            ) : (
+              <div style={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', color: lcars.textDim, fontSize: '0.85rem', textTransform: 'uppercase' }}>
+                Select a deliberation to view details
+              </div>
+            )}
+          </LcarsPanel>
+        </div>
+      </ViewPresentationProvider>
     </LcarsScreen>
   );
 }

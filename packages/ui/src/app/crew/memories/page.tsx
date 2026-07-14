@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ViewHeader, ViewPresentationProvider } from '@/components/ViewPresentation';
 
 interface CrewMemory {
   id: number;
@@ -209,16 +210,20 @@ function CrewMemoriesContent() {
 
   return (
     <div className="page">
+      <ViewPresentationProvider tone="observe">
       {/* Header */}
       <div className="section">
         <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Crew Memories' }]} />
-        <h1>👥 Crew Personal Memories</h1>
-        <p className="lead">Track individual crew member learning across projects</p>
+        <ViewHeader
+          title="👥 Crew Personal Memories"
+          subtitle="Track individual crew member learning across projects"
+          badge="memory layer"
+        />
       </div>
 
       <div className="page-grid">
         {/* Sidebar */}
-        <div className="card" style={{ position: 'sticky', top: 'var(--space-4)' }}>
+        <div className="card view-card" style={{ position: 'sticky', top: 'var(--space-4)' }}>
           <div className="stack">
             {/* Crew Selection */}
             <div className="field">
@@ -285,7 +290,7 @@ function CrewMemoriesContent() {
         {/* Main Content */}
         <div className="stack">
           {/* Search Bar */}
-          <div className="card">
+          <div className="card view-card">
             <div className="cluster" style={{ marginBottom: 'var(--space-3)' }}>
               <input
                 type="text"
@@ -316,11 +321,11 @@ function CrewMemoriesContent() {
           {/* Memories List */}
           <div className="stack">
             {loading ? (
-              <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+              <div className="card view-card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
                 <div>Loading memories...</div>
               </div>
             ) : filteredMemories.length === 0 ? (
-              <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+              <div className="card view-card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
                 <div style={{ fontSize: 'var(--text-lg)' }}>
                   No memories found for {selectedCrew}
                 </div>
@@ -341,7 +346,7 @@ function CrewMemoriesContent() {
               filteredMemories.map(memory => (
                 <div
                   key={memory.id}
-                  className="card"
+                  className="card view-card"
                   style={{
                     borderLeft: `4px solid ${MEMORY_TYPE_COLORS[memory.memory_type]}`,
                     background: `linear-gradient(120deg, color-mix(in srgb, ${MEMORY_TYPE_COLORS[memory.memory_type]} 11%, var(--surface)) 0%, var(--surface) 34%)`,
@@ -415,7 +420,7 @@ function CrewMemoriesContent() {
 
           {/* Summary */}
           {filteredMemories.length > 0 && (
-            <div className="card">
+            <div className="card view-card">
               <h3>📈 Summary</h3>
               <p className="meta">
                 Showing {filteredMemories.length} memories
@@ -426,6 +431,7 @@ function CrewMemoriesContent() {
           )}
         </div>
       </div>
+      </ViewPresentationProvider>
     </div>
   );
 }

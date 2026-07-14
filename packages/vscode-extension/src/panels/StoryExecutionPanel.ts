@@ -4,7 +4,7 @@
 
 import * as vscode from 'vscode';
 import { randomBytes } from 'crypto';
-import { space, webviewTokenStyle } from '@story-agent/shared/ui-tokens';
+import { space, webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
 
 function getNonce(): string {
   return randomBytes(16).toString('base64');
@@ -113,6 +113,13 @@ export class StoryExecutionPanel {
     this.updateDeveloperAdvisor();
   }
 
+  private uiTheme(): WebviewThemeId {
+    const value = vscode.workspace.getConfiguration('storyAgent').get<string>('uiTheme') ?? 'lcars';
+    return value === 'lcars' || value === 'dark' || value === 'light' || value === 'vscode'
+      ? value
+      : 'lcars';
+  }
+
   private async updateDeveloperAdvisor(): Promise<void> {
     try {
       // Fetch developer-focused crew insights
@@ -138,6 +145,7 @@ export class StoryExecutionPanel {
     // No CSP added: the progress-fill width is an inline style attribute, which a
     // nonce-based CSP would disable. Token injection stays a nonce'd static <style>.
     const nonce = getNonce();
+    const uiTheme = this.uiTheme();
     const crewHtml = state.crewExecutions
       .map(
         (execution: unknown) => {
@@ -186,7 +194,7 @@ export class StoryExecutionPanel {
       <!DOCTYPE html>
       <html>
       <head>
-        ${webviewTokenStyle(nonce)}
+        ${webviewTokenStyle(nonce, uiTheme)}
         <style nonce="${nonce}">
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell;
@@ -377,11 +385,12 @@ export class StoryExecutionPanel {
 
   private renderLoading(): string {
     const nonce = getNonce();
+    const uiTheme = this.uiTheme();
     return `
       <!DOCTYPE html>
       <html>
       <head>
-        ${webviewTokenStyle(nonce)}
+        ${webviewTokenStyle(nonce, uiTheme)}
         <style nonce="${nonce}">
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;

@@ -47,6 +47,9 @@ interface CacheEntry {
 // ── Cost model (Quark) — USD per 1M tokens, OpenRouter Claude pricing (approx) ──
 // Override per-model via storyAgent.chat.modelRates if needed.
 const DEFAULT_RATES: Record<string, { in: number; out: number }> = {
+  'meta-llama/llama-3.3-70b-instruct': { in: 0.12, out: 0.3 },
+  'openai/gpt-4o-mini': { in: 0.15, out: 0.6 },
+  'deepseek/deepseek-chat': { in: 0.25, out: 0.85 },
   'anthropic/claude-haiku-4.5': { in: 1, out: 5 },
   'anthropic/claude-3.5-haiku': { in: 0.8, out: 4 },
   'anthropic/claude-sonnet-4.6': { in: 3, out: 15 },
@@ -139,8 +142,8 @@ function getConfig(): EngineConfig {
     // OpenRouter — prefer the crew's env config, then settings, then sensible defaults (fallback only).
     orUrl: envFirst('CREW_LLM_APPROVED_URL', c.get<string>('chat.openRouterUrl')) || 'https://openrouter.ai/api/v1',
     orKey: envFirst('CREW_LLM_APPROVED_KEY', c.get<string>('chat.openRouterApiKey')),
-    orPrimaryModel: envFirst('CREW_LLM_APPROVED_MODEL', c.get<string>('chat.openRouterModel')) || 'anthropic/claude-sonnet-4.6',
-    orCheapModel: envFirst('CREW_LLM_APPROVED_MODEL_CHEAP', c.get<string>('chat.openRouterModelCheap')) || 'anthropic/claude-haiku-4.5',
+    orPrimaryModel: envFirst('CREW_LLM_APPROVED_MODEL', c.get<string>('chat.openRouterModel')) || 'deepseek/deepseek-chat',
+    orCheapModel: envFirst('CREW_LLM_APPROVED_MODEL_CHEAP', c.get<string>('chat.openRouterModelCheap')) || 'meta-llama/llama-3.3-70b-instruct',
     smallModelFamily: c.get<string>('chat.smallModelFamily') ?? 'gpt-4o-mini',
     capableModelFamily: c.get<string>('chat.capableModelFamily') ?? 'gpt-4o',
     ragUseCloud: c.get<boolean>('chat.ragUseCloudMemory') ?? true,
@@ -286,7 +289,76 @@ function readCache(memento: vscode.Memento, key: string, ttlMs: number): CacheEn
 // Route all chat prompts through the MCP server's /chat endpoint, which runs
 // the full crew optimization pipeline (Quark cost routing, team assembly, RAG context, etc.)
 
-interface GenResult { text: string; tokensIn: number; tokensOut: number; }
+interface GenResult { text: string; tokensIn: number; tokensOut: number; model?: string; }
+
+let availableModelIdsCache: Set<string> | null = null;
+let availableModelIdsExpiresAt = 0;
+
+function isLikelyModelAvailabilityError(status: number, text: string): boolean {
+  if (status === 404 || status === 410 || status === 429 || status === 503) return true;
+  const t = text.toLowerCase();
+  return t.includes('model') && (
+    t.includes('not found') ||
+    t.includes('does not exist') ||
+    t.includes('unavailable') ||
+    t.includes('decommissioned') ||
+    t.includes('insufficient credits') ||
+    t.includes('quota')
+  );
+}
+
+async function getAvailableModelIds(cfg: EngineConfig, forceRefresh = false): Promise<Set<string> | null> {
+  if (!forceRefresh && availableModelIdsCache && availableModelIdsExpiresAt > Date.now()) {
+    return availableModelIdsCache;
+  }
+  try {
+    const resp = await fetch(`${cfg.orUrl.replace(/\/$/, '')}/models`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${cfg.orKey}` },
+    });
+    if (!resp.ok) return availableModelIdsCache;
+    const data: any = await resp.json();
+    const ids = new Set<string>();
+    for (const item of data?.data ?? []) {
+      if (typeof item?.id === 'string' && item.id.trim()) ids.add(item.id.trim());
+    }
+    if (ids.size > 0) {
+      availableModelIdsCache = ids;
+      availableModelIdsExpiresAt = Date.now() + 300000;
+    }
+    return availableModelIdsCache;
+  } catch {
+    return availableModelIdsCache;
+  }
+}
+
+function buildOpenRouterCandidates(tier: Tier, cfg: EngineConfig): string[] {
+  const preferred = openRouterModelForTier(tier, cfg);
+  const ranked = tier === 'simple'
+    ? [preferred, cfg.orCheapModel, 'meta-llama/llama-3.3-70b-instruct', 'openai/gpt-4o-mini', 'deepseek/deepseek-chat', cfg.orPrimaryModel, 'anthropic/claude-haiku-4.5']
+    : [preferred, cfg.orPrimaryModel, 'deepseek/deepseek-chat', 'openai/gpt-4o-mini', 'meta-llama/llama-3.3-70b-instruct', cfg.orCheapModel, 'anthropic/claude-haiku-4.5', 'anthropic/claude-sonnet-4.6'];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const model of ranked) {
+    const trimmed = String(model || '').trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+async function selectAvailableOpenRouterModel(tier: Tier, cfg: EngineConfig, exclude: string[] = []): Promise<string> {
+  const excluded = new Set(exclude);
+  const candidates = buildOpenRouterCandidates(tier, cfg).filter((model) => !excluded.has(model));
+  if (candidates.length === 0) return openRouterModelForTier(tier, cfg);
+  const available = await getAvailableModelIds(cfg);
+  if (available) {
+    const found = candidates.find((model) => available.has(model));
+    if (found) return found;
+  }
+  return candidates[0];
+}
 
 async function crewMcpStream(
   system: string,
@@ -340,23 +412,39 @@ async function openRouterStream(
   system: string,
   user: string,
   model: string,
+  tier: Tier,
   cfg: EngineConfig,
   stream: vscode.ChatResponseStream,
   cancel: vscode.CancellationToken,
 ): Promise<GenResult> {
-  const resp = await fetch(`${cfg.orUrl.replace(/\/$/, '')}/chat/completions`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${cfg.orKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-      temperature: 0.3,
-      stream: true,
-      stream_options: { include_usage: true },
-    }),
-  });
-  if (!resp.ok || !resp.body) {
-    throw new Error(`OpenRouter ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+  let selectedModel = String(model || '').trim() || await selectAvailableOpenRouterModel(tier, cfg);
+  let resp: Response | null = null;
+  let errStatus = 0;
+  let errText = '';
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    resp = await fetch(`${cfg.orUrl.replace(/\/$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${cfg.orKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: selectedModel,
+        messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+        temperature: 0.3,
+        stream: true,
+        stream_options: { include_usage: true },
+      }),
+    });
+    if (resp.ok && resp.body) break;
+    errStatus = resp.status;
+    errText = (await resp.text()).slice(0, 200);
+    if (attempt === 0 && isLikelyModelAvailabilityError(errStatus, errText)) {
+      await getAvailableModelIds(cfg, true);
+      selectedModel = await selectAvailableOpenRouterModel(tier, cfg, [selectedModel]);
+      continue;
+    }
+    break;
+  }
+  if (!resp || !resp.ok || !resp.body) {
+    throw new Error(`OpenRouter ${errStatus}: ${errText}`);
   }
 
   const reader = (resp.body as any).getReader();
@@ -391,6 +479,7 @@ async function openRouterStream(
     text,
     tokensIn: usageIn || Math.ceil((system.length + user.length) / 4),
     tokensOut: usageOut || Math.ceil(text.length / 4),
+    model: selectedModel,
   };
 }
 
@@ -468,8 +557,8 @@ export async function runAssistantTurn(
     return { tier, provider: 'none', model: 'none', cached: false, tokensIn: 0, tokensOut: 0, costUSD: 0, overBudget: false };
   }
 
-  const modelName = provider === 'openrouter'
-    ? openRouterModelForTier(tier, cfg)
+  let modelName = provider === 'openrouter'
+    ? await selectAvailableOpenRouterModel(tier, cfg)
     : (await selectCopilotModel(tier, cfg))?.name ?? 'copilot';
 
   // 1. Cache lookup
@@ -495,8 +584,10 @@ export async function runAssistantTurn(
       // Fallback to direct OpenRouter if MCP unavailable (e.g., server down during development)
       console.warn('[chatEngine] MCP crew unavailable, falling back to direct OpenRouter:', mcpErr instanceof Error ? mcpErr.message : String(mcpErr));
       if (provider !== 'openrouter') throw new Error('OpenRouter enforced; Copilot not available as fallback');
-      gen = await openRouterStream(SYSTEM_PROMPT, userContent, cfg.orPrimaryModel, cfg, stream, cancel);
-      costUSD = estimateCost(cfg.orPrimaryModel, gen.tokensIn, gen.tokensOut);
+      const fallbackModel = await selectAvailableOpenRouterModel(tier, cfg);
+      gen = await openRouterStream(SYSTEM_PROMPT, userContent, fallbackModel, tier, cfg, stream, cancel);
+      modelName = gen.model || fallbackModel;
+      costUSD = estimateCost(modelName, gen.tokensIn, gen.tokensOut);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

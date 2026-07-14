@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { AhaSprint, AhaStory, CrewMissionPlan, ObservationDebateResult, ObservationMemoryRecord } from '@story-agent/shared';
 import { buildResumePayload, streamFrames } from '@/lib/stream-transport';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ViewHeader, ViewPresentationProvider } from '@/components/ViewPresentation';
 import HierarchyPicker from './components/HierarchyPicker';
 import StoryReferenceInput from './components/StoryReferenceInput';
 import { StoryDetailForm } from './components/StoryDetailForm';
@@ -250,16 +251,16 @@ export default function ObservationLoungePage() {
 
   return (
     <div style={{ maxWidth: 820 }}>
-      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Observation Lounge' }]} />
+      <ViewPresentationProvider tone="observe">
+        <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Observation Lounge' }]} />
 
-      <div style={{ marginBottom: '1.25rem' }}>
-        <h1 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>Observation Lounge</h1>
-        <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem', margin: '4px 0 0' }}>
-          Step through mission intake: load story → review context → set execution parameters → assign sprint & launch.
-        </p>
-      </div>
+        <ViewHeader
+          title="Observation Lounge"
+          subtitle="Step through mission intake: load story → review context → set execution parameters → assign sprint & launch."
+          badge="guided intake flow"
+        />
 
-      <StepIndicator current={step} />
+        <StepIndicator current={step} />
 
       {/* ── STEP 1: Load story — typeahead + hierarchy picker + detail/create (crew story-picker mission) ── */}
       {step === 1 && (
@@ -600,6 +601,7 @@ export default function ObservationLoungePage() {
           </div>
         </div>
       )}
+      </ViewPresentationProvider>
     </div>
   );
 }

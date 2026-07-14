@@ -12,15 +12,19 @@
  * everything else runs on cheaper providers. Reuses assembleAndOptimize (Riker+Quark).
  */
 import { assembleAndOptimize, quarkSelectModel, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
+import {
+  quarkSelectAvailableModel,
+  markModelTemporarilyUnavailable,
+  isLikelyModelAvailabilityError,
+} from './openrouter-model-availability.js';
 import { recordCrewRun, beginAsync, heartbeatAsync, endAsync } from '@story-agent/shared';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
-// Cost-minimization (Claude Code informed the crew to lower costs): FRUGAL by default caps the REST
-// of the crew's per-officer tier (see assembleAndOptimize call below). Picard is the captain and
-// always gets the highest available tier for his intake/synthesis bookends, FRUGAL or not.
+// Cost-minimization: FRUGAL by default keeps both Picard's synthesis bookends and the crew body at
+// tier-3 cost profiles. Set CREW_FRUGAL=false for deliberate tier-4 synthesis runs.
 const FRUGAL = process.env.CREW_FRUGAL !== 'false';
-const TOP_MODEL = quarkSelectModel(4).id;
+const TOP_MODEL = quarkSelectModel(FRUGAL ? 3 : 4).id;
 
 function rate(model: string) {
   const m = MODEL_POOL.find(x => x.id === model);
@@ -31,8 +35,10 @@ const costOf = (model: string, tin: number, tout: number) => (tin / 1e6) * rate(
 interface CallResult { text: string; model: string; tokensIn: number; tokensOut: number; costUSD: number; }
 
 async function call(model: string, system: string, user: string, maxTokens = 220): Promise<CallResult> {
+  const tier = MODEL_POOL.find((m) => m.id === model)?.tier ?? 3;
+  let selectedModel = await quarkSelectAvailableModel(tier, { preferredModelId: model });
   const body: any = {
-    model, max_tokens: maxTokens,
+    model: selectedModel.id, max_tokens: maxTokens,
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     usage: { include: true },
   };
@@ -45,14 +51,33 @@ async function call(model: string, system: string, user: string, maxTokens = 220
       method: 'POST', headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body), signal: ctrl.signal,
     });
-    d = await resp.json();
+    if (!resp.ok) {
+      const errText = await resp.text();
+      if (isLikelyModelAvailabilityError(resp.status, errText)) {
+        markModelTemporarilyUnavailable(selectedModel.id);
+        selectedModel = await quarkSelectAvailableModel(tier, {
+          excludeModelIds: [selectedModel.id],
+        });
+        const retryBody = { ...body, model: selectedModel.id };
+        const retry = await fetch(`${OR_URL}/chat/completions`, {
+          method: 'POST', headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(retryBody), signal: ctrl.signal,
+        });
+        d = await retry.json();
+      } else {
+        d = { error: { message: `openrouter ${resp.status}: ${errText.slice(0, 180)}` } };
+      }
+    } else {
+      d = await resp.json();
+    }
   } catch (e: any) {
     d = { error: { message: e?.name === 'AbortError' ? 'call timed out' : (e?.message || 'call failed') } };
   } finally {
     clearTimeout(timer);
   }
   const tin = d.usage?.prompt_tokens ?? 0, tout = d.usage?.completion_tokens ?? 0;
-  return { text: (d.choices?.[0]?.message?.content || d.error?.message || '').trim(), model: d.model || model, tokensIn: tin, tokensOut: tout, costUSD: costOf(model, tin, tout) };
+  const usedModel = d.model || selectedModel.id;
+  return { text: (d.choices?.[0]?.message?.content || d.error?.message || '').trim(), model: usedModel, tokensIn: tin, tokensOut: tout, costUSD: costOf(usedModel, tin, tout) };
 }
 
 export interface MissionAlternative {

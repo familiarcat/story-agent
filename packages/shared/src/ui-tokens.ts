@@ -18,6 +18,7 @@ export const SEMANTIC_TOKEN_NAMES = [
   'onAccent',
 ] as const;
 export type SemanticTokenName = (typeof SEMANTIC_TOKEN_NAMES)[number];
+export type WebviewThemeId = 'lcars' | 'dark' | 'light' | 'vscode';
 
 export const DASHBOARD_TOKEN_BINDINGS: Record<SemanticTokenName, string> = {
   text: 'var(--text)',
@@ -47,14 +48,62 @@ export const VSCODE_TOKEN_BINDINGS: Record<SemanticTokenName, string> = {
   onAccent: 'var(--vscode-button-foreground)',
 };
 
+// Explicit cross-surface theme parity with packages/ui/src/app/globals.css.
+export const WEBVIEW_THEME_BINDINGS: Record<Exclude<WebviewThemeId, 'vscode'>, Record<SemanticTokenName, string>> = {
+  lcars: {
+    text: '#ffd9b3',
+    muted: '#bcbce8',
+    border: '#8a6a8a',
+    surface: '#000000',
+    card: '#16161f',
+    accent: '#cc99cc',
+    primary: '#99ccff',
+    ok: '#99cc99',
+    warn: '#ffcc66',
+    danger: '#cc6666',
+    onAccent: '#000000',
+  },
+  dark: {
+    text: '#eef1f6',
+    muted: '#bcc6d6',
+    border: '#3b4759',
+    surface: '#0b0e14',
+    card: '#151a23',
+    accent: '#22c55e',
+    primary: '#38bdf8',
+    ok: '#22c55e',
+    warn: '#f59e0b',
+    danger: '#ef4444',
+    onAccent: '#ffffff',
+  },
+  light: {
+    text: '#0f172a',
+    muted: '#4b5563',
+    border: '#cbd2dc',
+    surface: '#f9fafb',
+    card: '#ffffff',
+    accent: '#059669',
+    primary: '#0891b2',
+    ok: '#16a34a',
+    warn: '#d97706',
+    danger: '#dc2626',
+    onAccent: '#ffffff',
+  },
+};
+
 export function tokenCssBlock(bindings: Record<SemanticTokenName, string>): string {
   const decls = SEMANTIC_TOKEN_NAMES.map((name) => `--sa-${name}: ${bindings[name]};`).join(' ');
   return `:root{${decls}}`;
 }
 
+export function getWebviewBindings(theme: WebviewThemeId = 'vscode'): Record<SemanticTokenName, string> {
+  if (theme === 'vscode') return VSCODE_TOKEN_BINDINGS;
+  return WEBVIEW_THEME_BINDINGS[theme];
+}
+
 // Worf security ruling: token injection must be a static nonce'd style block; never external stylesheets.
-export function webviewTokenStyle(nonce: string): string {
-  return `<style nonce="${nonce}">${tokenCssBlock(VSCODE_TOKEN_BINDINGS)}</style>`;
+export function webviewTokenStyle(nonce: string, theme: WebviewThemeId = 'vscode'): string {
+  return `<style nonce="${nonce}">${tokenCssBlock(getWebviewBindings(theme))}</style>`;
 }
 
 export function saVar(name: SemanticTokenName): string {

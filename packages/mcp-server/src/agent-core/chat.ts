@@ -10,8 +10,12 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { randomUUID } from 'node:crypto';
 import { searchCrewPersonalMemories, storeObservationMemory } from '@story-agent/shared/db';
 import type { ObservationMemoryRecord, ObservationDebateResult } from '@story-agent/shared';
-import { quarkSelectModel } from '../lib/crew-team-assembly.js';
 import type { TeamMember } from '../lib/crew-team-assembly.js';
+import {
+  quarkSelectAvailableModel,
+  markModelTemporarilyUnavailable,
+  isLikelyModelAvailabilityError,
+} from '../lib/openrouter-model-availability.js';
 import { buildBridges } from './bridges.js';
 import { recordCost } from './cost-ledger.js';
 import { checkBudget, getConfig as getCostGovernanceConfig } from './cost-governance.js';
@@ -725,7 +729,7 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
     : optimizePromptForDispatch(dispatchMessage);
 
   const tier = classifyTier(dispatchMessage);
-  const picked = quarkSelectModel(tier);
+  let picked = await quarkSelectAvailableModel(tier);
   // CREW-ALWAYS: Force crew self-organization on all prompts (no complexity threshold)
   const crewPreflightEnabled = true;
   const activationPhrase = controls.activationPhrase;
@@ -850,14 +854,29 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
     { role: 'user', content: optimizedPrompt.dispatchMessage },
   ];
 
-  const r = await fetch(`${OR_URL}/chat/completions`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: picked.id, messages, max_tokens: 900 }),
-  });
-  if (!r.ok) throw new Error(`openrouter ${r.status}`);
-
-  const d: any = await r.json();
+  let d: any;
+  let responseStatus = 0;
+  let responseText = '';
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const r = await fetch(`${OR_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: picked.id, messages, max_tokens: 900 }),
+    });
+    responseStatus = r.status;
+    if (r.ok) {
+      d = await r.json();
+      break;
+    }
+    responseText = await r.text();
+    if (attempt === 0 && isLikelyModelAvailabilityError(responseStatus, responseText)) {
+      markModelTemporarilyUnavailable(picked.id);
+      picked = await quarkSelectAvailableModel(tier, { excludeModelIds: [picked.id] });
+      continue;
+    }
+    throw new Error(`openrouter ${responseStatus}`);
+  }
+  if (!d) throw new Error(`openrouter ${responseStatus}: ${responseText.slice(0, 180)}`);
   const answer = d?.choices?.[0]?.message?.content ?? '(no response)';
   const usage = d?.usage ?? {};
   const tokensIn = usage.prompt_tokens ?? 0;

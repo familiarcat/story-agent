@@ -13,6 +13,7 @@ import { registerNativeChatProvider } from './nativeChatProvider';
 import { AhaSyncPoller } from './ahaSyncPoller';
 import { registerUpdateAhaStatus, resolveDashboardBase } from './commands/updateAhaStatus';
 import { CrewStreamRelay } from './crewStreamRelay';
+import { withDashboardTheme } from './lib/dashboardThemeLink';
 
 function dashboardBase(): string {
   return vscode.workspace.getConfiguration('storyAgent').get<string>('dashboardUrl') ?? 'http://localhost:3000';
@@ -79,7 +80,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.workspace
           .getConfiguration('storyAgent')
           .get<string>('dashboardUrl') ?? 'http://localhost:3000';
-      vscode.env.openExternal(vscode.Uri.parse(`${base}/dashboard`));
+      vscode.env.openExternal(vscode.Uri.parse(withDashboardTheme(`${base}/dashboard`)));
     }),
 
     vscode.commands.registerCommand('story-agent.openObservationLounge', () => {
@@ -87,7 +88,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.workspace
           .getConfiguration('storyAgent')
           .get<string>('dashboardUrl') ?? 'http://localhost:3000';
-      vscode.env.openExternal(vscode.Uri.parse(`${base}/observation-lounge`));
+      vscode.env.openExternal(vscode.Uri.parse(withDashboardTheme(`${base}/observation-lounge`)));
     }),
 
     vscode.commands.registerCommand('story-agent.openInnovationLounge', () => {
@@ -95,7 +96,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.workspace
           .getConfiguration('storyAgent')
           .get<string>('dashboardUrl') ?? 'http://localhost:3000';
-      vscode.env.openExternal(vscode.Uri.parse(`${base}/innovation-lounge`));
+      vscode.env.openExternal(vscode.Uri.parse(withDashboardTheme(`${base}/innovation-lounge`)));
     }),
 
     vscode.commands.registerCommand('story-agent.openSidebar', () => {
@@ -111,7 +112,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Navigation-tree leaves → open a specific dashboard page.
     vscode.commands.registerCommand('story-agent.openDashboardPath', (path: string) => {
-      vscode.env.openExternal(vscode.Uri.parse(`${dashboardBase()}${path}`));
+      vscode.env.openExternal(vscode.Uri.parse(withDashboardTheme(`${dashboardBase()}${path}`)));
     }),
 
     // New crew-related commands
@@ -183,14 +184,14 @@ export function activate(context: vscode.ExtensionContext): void {
       const base = resolveDashboardBase();
       const ref = item?.story?.referenceNum;
       if (ref) {
-        vscode.env.openExternal(vscode.Uri.parse(`${base}/story/${encodeURIComponent(ref)}`));
+        vscode.env.openExternal(vscode.Uri.parse(withDashboardTheme(`${base}/story/${encodeURIComponent(ref)}`)));
         return;
       }
       if (item?.release) {
-        vscode.env.openExternal(vscode.Uri.parse(`${base}/sprint`));
+        vscode.env.openExternal(vscode.Uri.parse(withDashboardTheme(`${base}/sprint`)));
         return;
       }
-      vscode.env.openExternal(vscode.Uri.parse(`${base}/dashboard`));
+      vscode.env.openExternal(vscode.Uri.parse(withDashboardTheme(`${base}/dashboard`)));
     }),
 
     // Aha tree → refresh, and "Prepare with crew" (story → /prepare mission flow, crew Aha-nav plan).
