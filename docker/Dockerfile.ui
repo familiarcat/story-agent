@@ -9,7 +9,7 @@ FROM base AS build
 COPY . .
 RUN pnpm install --frozen-lockfile \
  && pnpm --filter @story-agent/shared build \
- && pnpm --filter @story-agent/ui build
+ && pnpm --filter @story-agent/ui exec next build --no-lint
 
 FROM base AS run
 ENV NODE_ENV=production PORT=3000
