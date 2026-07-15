@@ -9,6 +9,7 @@
  * extension becomes a thin client instead of re-implementing the loop.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
+import { randomUUID } from 'node:crypto';
 import { guardListen } from '../lib/port-guard.js';
 import { handleChatRequest, handleOpenAICompatibleChatRequest } from './chat.js';
 import { recordCost, costSummary } from './cost-ledger.js';
@@ -21,7 +22,7 @@ import { listClientHierarchy } from '@story-agent/shared/client-security-policy'
 import { hydrateClientPolicies } from '@story-agent/shared/client-registry';
 import { credentialStatus, listCredentialProviders } from '@story-agent/shared/worfgate-credentials';
 import { listSkillTheories } from '@story-agent/shared/skill-theory';
-import { getRecentObservationMemories } from '@story-agent/shared/db';
+import { getRecentObservationMemories, storeCrewExecutionOutcome } from '@story-agent/shared/db';
 import '../lib/skill-theories.js';
 import '../lib/skill-theories-generated.js';
 
@@ -200,6 +201,8 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
     };
 
     const clientId = body.clientId ?? resolveClientId(req.headers as Record<string, string | string[] | undefined>);
+    const attemptId = randomUUID();
+    const runStart = Date.now();
     try {
       const result = await runAgentLoop(input, {
         workspace: body.workspace,
@@ -217,8 +220,25 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
         const tt = (result as any).totalTokens ?? 0;
         recordCost({ timestamp: new Date().toISOString(), surface: 'agent', model: (result as any).model ?? 'unknown', provider: ((result as any).model ?? '').split('/')[0] || 'openrouter', tokensIn: Math.round(tt / 2), tokensOut: Math.round(tt / 2), costUSD: (result as any).totalCostUSD ?? 0 });
       } catch { /* ledger best-effort */ }
+      void storeCrewExecutionOutcome({
+        crewId: 'agent',
+        attemptId,
+        taskDescription: input,
+        status: 'success',
+        durationSeconds: Math.max(1, Math.round((Date.now() - runStart) / 1000)),
+        confidenceLevel: result.stalled ? 'low' : 'high',
+      });
       send(result, 'done');
     } catch (e: any) {
+      void storeCrewExecutionOutcome({
+        crewId: 'agent',
+        attemptId,
+        taskDescription: input,
+        status: 'failed',
+        durationSeconds: Math.max(1, Math.round((Date.now() - runStart) / 1000)),
+        confidenceLevel: 'low',
+        error: e?.message || String(e),
+      });
       send({ type: 'error', text: e?.message || String(e) }, 'error');
     } finally {
       res.end();
