@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { AhaProject, AhaSprint, AhaSprintStory } from '@story-agent/shared';
 import { ClientScopeSelector } from '@/components/ClientScopeSelector';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ComponentLoadingRegion } from '@/components/ComponentLoadingRegion';
 import { GravityVelocityMini } from '@/components/GravityVelocityMini';
 import { SprintCalendarPlanner } from '@/components/SprintCalendarPlanner';
 import { useAhaEvents } from '@/hooks/useAhaEvents';
@@ -39,13 +40,15 @@ export default function SprintPage() {
   useEffect(() => {
     setLoadingProjects(true);
     fetch('/api/aha/projects')
-      .then(r => r.json())
+      .then((res) => res.json())
       .then((data: AhaProject[]) => {
         setProjects(data);
         if (data.length > 0) setSelectedProjectId(data[0].id);
       })
       .catch(() => setError('Failed to load projects'))
-      .finally(() => setLoadingProjects(false));
+      .finally(() => {
+        setLoadingProjects(false);
+      });
   }, []);
 
   const loadSprints = useCallback(async (projectId: string) => {
@@ -121,120 +124,127 @@ export default function SprintPage() {
       </div>
 
       {/* Project + Sprint selectors */}
-      <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.85rem 1rem' }}>
-        <label>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: 4 }}>Aha Project</div>
-          <select
-            value={selectedProjectId}
-            onChange={e => setSelectedProjectId(e.target.value)}
-            disabled={loadingProjects}
-            style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.875rem' }}
-          >
-            {projects.map(p => <option key={p.id} value={p.id}>{p.name}{p.referencePrefix ? ` (${p.referencePrefix})` : ''}</option>)}
-          </select>
-        </label>
-        <label>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: 4 }}>Sprint / Release</div>
-          <select
-            value={selectedSprintId}
-            onChange={e => setSelectedSprintId(e.target.value)}
-            disabled={loadingSprints || sprints.length === 0}
-            style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.875rem' }}
-          >
-            {sprints.length === 0 && <option value="">No sprints found</option>}
-            {sprints.map(s => <option key={s.id} value={s.id}>{s.name}{s.startDate ? ` · ${s.startDate}` : ''}</option>)}
-          </select>
-        </label>
-      </div>
+      <ComponentLoadingRegion
+        loading={loadingProjects || loadingSprints}
+        source="Sprint Board"
+        summary={loadingProjects ? 'Loading Aha projects and default sprint context.' : 'Loading sprint releases for selected project.'}
+        minHeight={130}
+      >
+        <div className="card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.85rem 1rem' }}>
+          <label>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: 4 }}>Aha Project</div>
+            <select
+              value={selectedProjectId}
+              onChange={e => setSelectedProjectId(e.target.value)}
+              disabled={loadingProjects}
+              style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.875rem' }}
+            >
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}{p.referencePrefix ? ` (${p.referencePrefix})` : ''}</option>)}
+            </select>
+          </label>
+          <label>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: 4 }}>Sprint / Release</div>
+            <select
+              value={selectedSprintId}
+              onChange={e => setSelectedSprintId(e.target.value)}
+              disabled={loadingSprints || sprints.length === 0}
+              style={{ width: '100%', padding: '0.4rem 0.5rem', fontSize: '0.875rem' }}
+            >
+              {sprints.length === 0 && <option value="">No sprints found</option>}
+              {sprints.map(s => <option key={s.id} value={s.id}>{s.name}{s.startDate ? ` · ${s.startDate}` : ''}</option>)}
+            </select>
+          </label>
+        </div>
+      </ComponentLoadingRegion>
 
       {error && <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</div>}
 
       {/* Sprint summary card */}
       {sprintView && (
         <>
-          <div className="card" style={{ marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '1rem' }}>{sprintView.sprint.name}</div>
-                {sprintView.sprint.startDate && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                    {sprintView.sprint.startDate} → {sprintView.sprint.endDate ?? 'no end date'}
-                    {sprintView.sprint.startDate && sprintView.sprint.endDate && (() => {
-                      const start = new Date(sprintView.sprint.startDate!);
-                      const end = new Date(sprintView.sprint.endDate!);
-                      const days = Math.round((end.getTime() - start.getTime()) / 86400000);
-                      return ` · ${days} days`;
-                    })()}
-                  </div>
-                )}
+          <ComponentLoadingRegion
+            loading={loadingStories}
+            source="Sprint Board"
+            summary={`Loading stories and metrics for ${sprintView.sprint.name}.`}
+            minHeight={320}
+          >
+            <div className="card" style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1rem' }}>{sprintView.sprint.name}</div>
+                  {sprintView.sprint.startDate && (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                      {sprintView.sprint.startDate} → {sprintView.sprint.endDate ?? 'no end date'}
+                      {sprintView.sprint.startDate && sprintView.sprint.endDate && (() => {
+                        const start = new Date(sprintView.sprint.startDate!);
+                        const end = new Date(sprintView.sprint.endDate!);
+                        const days = Math.round((end.getTime() - start.getTime()) / 86400000);
+                        return ` · ${days} days`;
+                      })()}
+                    </div>
+                  )}
+                </div>
+                <a href={sprintView.sprint.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem' }}>Open in Aha ↗</a>
               </div>
-              <a href={sprintView.sprint.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem' }}>Open in Aha ↗</a>
+              <PointsBar done={sprintView.sprint.doneStoryPoints} total={sprintView.sprint.totalStoryPoints} />
+              <GravityVelocityMini stories={sprintView.stories} donePoints={sprintView.sprint.doneStoryPoints} />
+              <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                <span>📋 {sprintView.sprint.featureCount} stories</span>
+                <span>✅ {sprintView.sprint.doneStoryPoints} pts done</span>
+                <span>🔄 {sprintView.sprint.remainingStoryPoints} pts remaining</span>
+                <span>📊 {sprintView.sprint.totalStoryPoints} pts total capacity</span>
+              </div>
             </div>
-            <PointsBar done={sprintView.sprint.doneStoryPoints} total={sprintView.sprint.totalStoryPoints} />
-            <GravityVelocityMini stories={sprintView.stories} donePoints={sprintView.sprint.doneStoryPoints} />
-            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-              <span>📋 {sprintView.sprint.featureCount} stories</span>
-              <span>✅ {sprintView.sprint.doneStoryPoints} pts done</span>
-              <span>🔄 {sprintView.sprint.remainingStoryPoints} pts remaining</span>
-              <span>📊 {sprintView.sprint.totalStoryPoints} pts total capacity</span>
-            </div>
-          </div>
 
-          {/* Stories table */}
-          {loadingStories ? (
-            <div className="card" style={{ color: 'var(--text-dim)', textAlign: 'center' }}>Loading stories…</div>
-          ) : (
-            <>
-              <SprintCalendarPlanner
-                sprintId={sprintView.sprint.id}
-                sprintName={sprintView.sprint.name}
-                startDate={sprintView.sprint.startDate}
-                endDate={sprintView.sprint.endDate}
-                stories={sprintView.stories}
-              />
-              <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: '1rem' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Reference</th>
-                      <th>Title</th>
-                      <th style={{ textAlign: 'center' }}>Points</th>
-                      <th>Status</th>
-                      <th></th>
+            <SprintCalendarPlanner
+              sprintId={sprintView.sprint.id}
+              sprintName={sprintView.sprint.name}
+              startDate={sprintView.sprint.startDate}
+              endDate={sprintView.sprint.endDate}
+              stories={sprintView.stories}
+            />
+            <div className="card" style={{ padding: 0, overflow: 'hidden', marginTop: '1rem' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Title</th>
+                    <th style={{ textAlign: 'center' }}>Points</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sprintView.stories.map(s => (
+                    <tr key={s.referenceNum}>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600 }}>{s.referenceNum}</td>
+                      <td style={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</td>
+                      <td style={{ textAlign: 'center', fontWeight: 700 }}>{s.storyPoints ?? '—'}</td>
+                      <td>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: statusColor(s.workflowStatus) }}>
+                          {s.workflowStatus}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <a href={s.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem' }}>Aha ↗</a>
+                          <a
+                            href={`/observation-lounge?ref=${encodeURIComponent(s.referenceNum)}`}
+                            style={{ fontSize: '0.78rem' }}
+                          >
+                            Start →
+                          </a>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sprintView.stories.map(s => (
-                      <tr key={s.referenceNum}>
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600 }}>{s.referenceNum}</td>
-                        <td style={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</td>
-                        <td style={{ textAlign: 'center', fontWeight: 700 }}>{s.storyPoints ?? '—'}</td>
-                        <td>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: statusColor(s.workflowStatus) }}>
-                            {s.workflowStatus}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <a href={s.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.78rem' }}>Aha ↗</a>
-                            <a
-                              href={`/observation-lounge?ref=${encodeURIComponent(s.referenceNum)}`}
-                              style={{ fontSize: '0.78rem' }}
-                            >
-                              Start →
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {sprintView.stories.length === 0 && (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dim)' }}>No stories in this sprint.</div>
-                )}
-              </div>
-            </>
-          )}
+                  ))}
+                </tbody>
+              </table>
+              {sprintView.stories.length === 0 && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dim)' }}>No stories in this sprint.</div>
+              )}
+            </div>
+          </ComponentLoadingRegion>
         </>
       )}
     </div>

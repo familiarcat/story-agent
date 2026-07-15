@@ -7,77 +7,78 @@
  * where the NavBar dropdowns take over (see .app-shell in globals.css).
  */
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { useSidebar } from './SidebarProvider';
 import { DOMAIN_GROUPS } from './domains';
 import type { CSSProperties } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useLoadingState } from './LoadingStateProvider';
 
 export default function SideNav() {
   const pathname = usePathname();
   const { isCollapsed, toggleCollapse, setCollapsed } = useSidebar();
-  const isHome = pathname === '/';
+  const { beginNavigationLoading } = useLoadingState();
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
   const surfaces = DOMAIN_GROUPS.flatMap((g) => g.items);
   const palette = ['#f39b35', '#e7c066', '#bb93c7', '#86b0db'];
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-sidenav-hidden', isHome ? 'true' : 'false');
-    if (isHome && isCollapsed) {
-      setCollapsed(false);
-    }
-    return () => {
-      document.documentElement.setAttribute('data-sidenav-hidden', 'false');
+    const media = window.matchMedia('(max-width: 900px)');
+    const syncViewport = () => {
+      const compact = media.matches;
+      setIsCompactViewport(compact);
+      if (compact) {
+        setCollapsed(true);
+      }
     };
-  }, [isCollapsed, isHome, setCollapsed]);
 
-  if (isHome) return null;
+    syncViewport();
+    media.addEventListener('change', syncViewport);
+    return () => media.removeEventListener('change', syncViewport);
+  }, [setCollapsed]);
+
+  const toggleTitle = isCollapsed ? 'Expand navigation' : 'Collapse navigation';
 
   return (
-    <>
-      <aside className={`app-sidenav${isCollapsed ? ' app-sidenav--collapsed' : ''}`} aria-label="Global navigation">
-        <div className="app-sidenav-topbar">
-          <div className="app-sidenav-brand">LCARS · STORY AGENT</div>
-          <button
-            onClick={toggleCollapse}
-            aria-label="Collapse sidebar"
-            aria-expanded={!isCollapsed}
-            className="app-sidenav-toggle-btn"
-            title="Collapse navigation"
-          >
-            ◀
-          </button>
-        </div>
-
-        <nav className="app-sidenav-stack">
-          {surfaces.map((s, idx) => {
-            const active = pathname === s.href || (s.href !== '/' && pathname?.startsWith(`${s.href}/`));
-            const bg = s.hub ? '#e9d2ae' : palette[idx % palette.length];
-            const chipStyle = { '--nav-chip-bg': bg } as CSSProperties;
-            return (
-              <a
-                key={s.href}
-                href={s.href}
-                className={`app-sidenav-link app-sidenav-link--chip${active ? ' active' : ''}`}
-                title={s.desc}
-                style={chipStyle}
-              >
-                <span className="app-sidenav-link-icon" aria-hidden>{s.icon}</span>
-                <span>{s.label.toUpperCase()}</span>
-              </a>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {isCollapsed ? (
+    <aside className={`app-sidenav${isCollapsed ? ' app-sidenav--collapsed' : ''}`} aria-label="Global navigation">
+      <div className="app-sidenav-topbar">
+        <div className="app-sidenav-brand">LCARS · STORY AGENT</div>
         <button
           onClick={toggleCollapse}
-          aria-label="Re-expand sidebar"
-          className="app-sidenav-reopen"
-          title="Expand navigation"
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!isCollapsed}
+          className="app-sidenav-toggle-btn"
+          title={toggleTitle}
         >
-          NAV ▶
+          {isCollapsed ? '▶' : '◀'}
         </button>
-      ) : null}
-    </>
+      </div>
+
+      <nav className="app-sidenav-stack">
+        {surfaces.map((s, idx) => {
+          const active = pathname === s.href || (s.href !== '/' && pathname?.startsWith(`${s.href}/`));
+          const bg = s.hub ? '#e9d2ae' : palette[idx % palette.length];
+          const chipStyle = { '--nav-chip-bg': bg } as CSSProperties;
+          return (
+            <Link
+              key={s.href}
+              href={s.href}
+              onClick={() => {
+                if (!active) {
+                  beginNavigationLoading(s.label, 'Global Navigation');
+                }
+              }}
+              className={`app-sidenav-link app-sidenav-link--chip${active ? ' active' : ''}`}
+              title={s.label}
+              data-label={s.label.toUpperCase()}
+              style={chipStyle}
+            >
+              <span className="app-sidenav-link-icon" aria-hidden>{s.icon}</span>
+              <span className="app-sidenav-link-label">{s.label.toUpperCase()}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
   );
 }

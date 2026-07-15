@@ -4,6 +4,7 @@ import NavBar from '../components/NavBar';
 import SideNav from '../components/SideNav';
 import { ThemeProvider, THEME_INIT_SCRIPT } from '../components/ThemeProvider';
 import { SidebarProvider, SIDEBAR_INIT_SCRIPT } from '../components/SidebarProvider';
+import { LoadingStateProvider } from '../components/LoadingStateProvider';
 import DevTour from '../components/dev-tour/DevTour';
 
 export const metadata: Metadata = {
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 navigation on every route, never re-mounted on transitions. */}
             <div className="app-shell">
               <SideNav />
-              <main className="app-main">{children}</main>
+              <main className="app-main">
+                <LoadingStateProvider>{children}</LoadingStateProvider>
+              </main>
             </div>
             {/* Developer-only guided tour — hard-gated, never ships to production (see DevTour). */}
             <DevTour />
