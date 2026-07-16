@@ -14,6 +14,38 @@ type SprintView = {
   stories: AhaSprintStory[];
 };
 
+type WorkflowComment = {
+  body: string;
+  createdAt: string | null;
+  author: string;
+};
+
+type WorkflowRequirement = {
+  referenceNum: string;
+  name: string;
+  workflowStatus: string;
+  assigneeName: string | null;
+  url: string;
+  comments: WorkflowComment[];
+};
+
+type WorkflowStory = {
+  referenceNum: string;
+  name: string;
+  workflowStatus: string;
+  assigneeName: string | null;
+  storyPoints: number | null;
+  url: string;
+  comments: WorkflowComment[];
+  requirements: WorkflowRequirement[];
+};
+
+type WorkflowView = {
+  releaseId: string;
+  stories: WorkflowStory[];
+  generatedAt: string;
+};
+
 function PointsBar({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
@@ -35,7 +67,10 @@ export default function SprintPage() {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingSprints, setLoadingSprints] = useState(false);
   const [loadingStories, setLoadingStories] = useState(false);
+  const [loadingWorkflow, setLoadingWorkflow] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [workflowView, setWorkflowView] = useState<WorkflowView | null>(null);
   const [controlBusy, setControlBusy] = useState(false);
   const [newSprintName, setNewSprintName] = useState('');
   const [newSprintStart, setNewSprintStart] = useState('');
@@ -88,22 +123,49 @@ export default function SprintPage() {
     }
   }, []);
 
+  const loadSprintWorkflow = useCallback(async (releaseId: string) => {
+    setLoadingWorkflow(true);
+    setWorkflowError(null);
+    try {
+      const res = await fetch(`/api/aha/workflow?releaseId=${encodeURIComponent(releaseId)}`);
+      const data = await res.json() as WorkflowView;
+      if (!res.ok) throw new Error((data as unknown as { error?: string }).error ?? 'Failed workflow load');
+      setWorkflowView(data);
+    } catch (e) {
+      setWorkflowError(e instanceof Error ? e.message : 'Failed to load workflow integration view');
+      setWorkflowView(null);
+    } finally {
+      setLoadingWorkflow(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (selectedProjectId) void loadSprints(selectedProjectId);
   }, [selectedProjectId, loadSprints]);
 
   useEffect(() => {
     const sprint = sprints.find(s => s.id === selectedSprintId);
-    if (selectedSprintId && sprint) void loadSprintStories(selectedSprintId, sprint);
-    else setSprintView(null);
-  }, [selectedSprintId, sprints, loadSprintStories]);
+    if (selectedSprintId && sprint) {
+      void loadSprintStories(selectedSprintId, sprint);
+      void loadSprintWorkflow(selectedSprintId);
+    } else {
+      setSprintView(null);
+      setWorkflowView(null);
+    }
+  }, [selectedSprintId, sprints, loadSprintStories, loadSprintWorkflow]);
 
   // Cross-surface sync: refetch when another surface (MCP crew, extension) changed Aha.
   useAhaEvents(events => {
     if (events.some(e => e.resourceType === 'release') && selectedProjectId) void loadSprints(selectedProjectId);
     const sprint = sprints.find(s => s.id === selectedSprintId);
-    if (events.some(e => e.resourceType === 'story') && selectedSprintId && sprint) void loadSprintStories(selectedSprintId, sprint);
-  }, { resourceTypes: ['story', 'release'] });
+    if (events.some(e => e.resourceType === 'story') && selectedSprintId && sprint) {
+      void loadSprintStories(selectedSprintId, sprint);
+      void loadSprintWorkflow(selectedSprintId);
+    }
+    if (events.some(e => e.resourceType === 'requirement') && selectedSprintId) {
+      void loadSprintWorkflow(selectedSprintId);
+    }
+  }, { resourceTypes: ['story', 'release', 'requirement'] });
 
   const statusColor = (status: string): string => {
     const s = status.toLowerCase();
@@ -112,6 +174,8 @@ export default function SprintPage() {
     if (s.includes('block')) return 'var(--danger)';
     return 'var(--text-dim)';
   };
+
+  const storyWorkflowMap = new Map((workflowView?.stories ?? []).map((s) => [s.referenceNum, s]));
 
   const postWithConfirm = useCallback(async (resource: 'sprint' | 'story' | 'task', payload: Record<string, unknown>) => {
     const dryRun = await fetch(`/api/aha/resource/${resource}`, {
@@ -332,6 +396,7 @@ export default function SprintPage() {
                   <tr>
                     <th>Reference</th>
                     <th>Title</th>
+                    <th>Owner</th>
                     <th style={{ textAlign: 'center' }}>Points</th>
                     <th>Status</th>
                     <th></th>
@@ -342,6 +407,9 @@ export default function SprintPage() {
                     <tr key={s.referenceNum}>
                       <td style={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 600 }}>{s.referenceNum}</td>
                       <td style={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</td>
+                      <td style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                        {storyWorkflowMap.get(s.referenceNum)?.assigneeName ?? 'Unassigned'}
+                      </td>
                       <td style={{ textAlign: 'center', fontWeight: 700 }}>{s.storyPoints ?? '—'}</td>
                       <td>
                         <span style={{ fontSize: '0.78rem', fontWeight: 600, color: statusColor(s.workflowStatus) }}>
@@ -365,6 +433,78 @@ export default function SprintPage() {
               </table>
               {sprintView.stories.length === 0 && (
                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dim)' }}>No stories in this sprint.</div>
+              )}
+            </div>
+
+            <div className="card" style={{ marginTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <div style={{ fontWeight: 700 }}>Aha Workflow Integration</div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                  {workflowView?.generatedAt ? `Updated ${new Date(workflowView.generatedAt).toLocaleTimeString()}` : 'Awaiting data'}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.8rem' }}>
+                Crew ownership, task progression, and latest autonomous Aha comments for this sprint.
+              </div>
+
+              {workflowError && <div style={{ color: 'var(--danger)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{workflowError}</div>}
+              {loadingWorkflow && <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>Loading workflow integration…</div>}
+
+              {!loadingWorkflow && workflowView && workflowView.stories.length === 0 && (
+                <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>No workflow stories found for this sprint.</div>
+              )}
+
+              {!loadingWorkflow && workflowView && workflowView.stories.length > 0 && (
+                <div style={{ display: 'grid', gap: '0.85rem' }}>
+                  {workflowView.stories.map((story) => (
+                    <div key={story.referenceNum} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '0.7rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{story.referenceNum} · {story.name}</div>
+                          <div style={{ fontSize: '0.77rem', color: 'var(--text-dim)' }}>
+                            Owner: {story.assigneeName ?? 'Unassigned'} · Status: <span style={{ color: statusColor(story.workflowStatus), fontWeight: 700 }}>{story.workflowStatus}</span>
+                            {story.storyPoints != null ? ` · ${story.storyPoints} pts` : ''}
+                          </div>
+                        </div>
+                        <a href={story.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem' }}>Open ↗</a>
+                      </div>
+
+                      <div style={{ marginTop: '0.55rem', fontSize: '0.76rem', color: 'var(--text-dim)' }}>
+                        Latest story comments: {story.comments.length}
+                      </div>
+                      {story.comments.length > 0 && (
+                        <div style={{ display: 'grid', gap: '0.3rem', marginTop: '0.35rem' }}>
+                          {story.comments.map((comment, idx) => (
+                            <div key={`${story.referenceNum}-comment-${idx}`} style={{ fontSize: '0.75rem', borderLeft: '2px solid var(--border)', paddingLeft: '0.5rem' }}>
+                              <span style={{ color: 'var(--text-dim)' }}>{comment.author}</span>: {comment.body.slice(0, 170)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: '0.65rem', fontSize: '0.76rem', color: 'var(--text-dim)' }}>
+                        Tasks: {story.requirements.length}
+                      </div>
+                      {story.requirements.length > 0 && (
+                        <div style={{ display: 'grid', gap: '0.35rem', marginTop: '0.35rem' }}>
+                          {story.requirements.map((req) => (
+                            <div key={req.referenceNum} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem', border: '1px solid var(--border)', borderRadius: 6, padding: '0.45rem 0.5rem' }}>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {req.referenceNum} · {req.name}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+                                  {req.assigneeName ?? 'Unassigned'} · <span style={{ color: statusColor(req.workflowStatus), fontWeight: 700 }}>{req.workflowStatus}</span> · comments {req.comments.length}
+                                </div>
+                              </div>
+                              <a href={req.url} target="_blank" rel="noreferrer" style={{ fontSize: '0.72rem', alignSelf: 'center' }}>Aha ↗</a>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </ComponentLoadingRegion>

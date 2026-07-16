@@ -127,21 +127,21 @@ export class AhaProjectStructureProvider
         .map((status) => ({ status, stories: element.storiesByStatus[status] ?? [] }))
         .filter(({ stories }) => stories.length > 0)
         .map(({ status, stories }) =>
-          new StatusGroupTreeItem(status, stories, element.projectId, this.onDidChangeTreeDataEmitter)
+          new StatusGroupTreeItem(status, stories, element.projectId, element.release.id, this.onDidChangeTreeDataEmitter)
         );
     }
 
     // Status group level: show individual stories
     if (element instanceof StatusGroupTreeItem) {
       return element.stories.map(
-        (s) => new StoryTreeItem(s, element.projectId, this.onDidChangeTreeDataEmitter)
+        (s) => new StoryTreeItem(s, element.projectId, element.releaseId, this.onDidChangeTreeDataEmitter)
       );
     }
 
     // Backlog group level: show stories
     if (element instanceof BacklogGroupTreeItem) {
       return element.stories.map(
-        (s) => new StoryTreeItem(s, element.projectId, this.onDidChangeTreeDataEmitter)
+        (s) => new StoryTreeItem(s, element.projectId, null, this.onDidChangeTreeDataEmitter)
       );
     }
 
@@ -244,6 +244,7 @@ class StatusGroupTreeItem extends vscode.TreeItem {
     readonly status: SystemStatusBucket,
     readonly stories: AhaSprintStory[],
     readonly projectId: string,
+    readonly releaseId: string,
     private onDidChangeTreeData: vscode.EventEmitter<
       ProjectStructureItem | undefined | null | void
     >
@@ -280,10 +281,12 @@ class BacklogGroupTreeItem extends vscode.TreeItem {
 
 class StoryTreeItem extends vscode.TreeItem {
   private readonly _projectId: string;
+  private readonly _releaseId: string | null;
 
   constructor(
     readonly story: AhaSprintStory | AhaStory,
     projectId: string,
+    releaseId: string | null,
     private onDidChangeTreeData: vscode.EventEmitter<
       ProjectStructureItem | undefined | null | void
     >
@@ -294,8 +297,12 @@ class StoryTreeItem extends vscode.TreeItem {
 
     super(`${formatRefLabel(refNum, story.name)}${storyPoints}`);
     this._projectId = projectId;
+    this._releaseId = releaseId;
     this.contextValue = 'ahaStory';
-    this.tooltip = story.url;
+    const status = typeof (story as { workflowStatus?: string }).workflowStatus === 'string'
+      ? (story as { workflowStatus: string }).workflowStatus
+      : 'unknown';
+    this.tooltip = `${story.url}\nStatus: ${status}\nRelease: ${releaseId ?? 'unreleased backlog'}`;
     this.iconPath = new vscode.ThemeIcon(TIER_ICONS.story);
     this.command = {
       title: 'Open Story',
@@ -306,6 +313,10 @@ class StoryTreeItem extends vscode.TreeItem {
 
   get projectId(): string {
     return this._projectId;
+  }
+
+  get releaseId(): string | null {
+    return this._releaseId;
   }
 
   getTreeItem(): vscode.TreeItem {

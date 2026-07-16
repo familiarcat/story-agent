@@ -160,6 +160,11 @@
         "command": "story-agent.createAhaTask",
         "title": "Story Agent: Create Aha Task",
         "icon": "$(checklist)"
+      },
+      {
+        "command": "story-agent.showAhaWorkflow",
+        "title": "Story Agent: Show Aha Workflow Integration",
+        "icon": "$(git-pull-request-go-to-changes)"
       }
     ],
     "viewsContainers": {
@@ -246,6 +251,16 @@
           "command": "story-agent.createAhaTask",
           "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
           "group": "inline"
+        },
+        {
+          "command": "story-agent.showAhaWorkflow",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaRelease",
+          "group": "navigation"
+        },
+        {
+          "command": "story-agent.showAhaWorkflow",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
+          "group": "navigation"
         }
       ],
       "editor/context": [

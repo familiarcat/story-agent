@@ -13,6 +13,7 @@ import { registerNativeChatProvider } from './nativeChatProvider';
 import { AhaSyncPoller } from './ahaSyncPoller';
 import { registerUpdateAhaStatus, resolveDashboardBase } from './commands/updateAhaStatus';
 import { registerAhaCrudCommands } from './commands/ahaCrud';
+import { registerShowAhaWorkflowCommand } from './commands/showAhaWorkflow';
 import { CrewStreamRelay } from './crewStreamRelay';
 import { withDashboardTheme } from './lib/dashboardThemeLink';
 
@@ -232,6 +233,8 @@ export function activate(context: vscode.ExtensionContext): void {
   registerUpdateAhaStatus(context, { refreshTree: () => projectStructureProvider.refresh() });
   // Worf-gated direct Aha CRUD from VS Code (sprint/story/task create)
   registerAhaCrudCommands(context, { refreshTree: () => projectStructureProvider.refresh() });
+  // Visual workflow panel backed by dashboard parity API (/api/aha/workflow)
+  registerShowAhaWorkflowCommand(context, { refreshTree: () => projectStructureProvider.refresh() });
 
   // ── Chat participant ──────────────────────────────────────────────────────
   registerParticipant(context);
