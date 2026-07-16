@@ -149,8 +149,8 @@ pnpm ext:package
 pnpm ext:install-local
 
 # Install on others' machines
-# Send: packages/vscode-extension/story-agent-vscode-1.0.0.vsix
-# They run: code --install-extension story-agent-vscode-1.0.0.vsix
+# Send: the generated VSIX from packages/vscode-extension/
+# They run: code --install-extension <path-to-vsix> --force
 ```
 
 ## Useful VSCode APIs

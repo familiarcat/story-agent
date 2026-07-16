@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { execSync } from 'child_process';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, readdirSync, statSync } from 'fs';
 
 /**
  * Strategic script to package and install the Sovereign Factory VS Code Extension.
@@ -25,10 +25,19 @@ async function finalizeVsCodeDeployment() {
     // Note: requires 'vsce' to be installed or available via pnpm
     execSync('pnpm --filter story-agent-vscode package', { stdio: 'inherit' });
 
-    const vsixFile = join(extensionPath, 'story-agent-vscode-1.0.0.vsix');
-    if (existsSync(vsixFile)) {
+    const vsixCandidates = readdirSync(extensionPath)
+      .filter((name) => name.endsWith('.vsix') && name.startsWith('story-agent-vscode-'))
+      .map((name) => {
+        const filePath = join(extensionPath, name);
+        return { filePath, mtimeMs: statSync(filePath).mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+    const latestVsix = vsixCandidates[0]?.filePath;
+
+    if (latestVsix && existsSync(latestVsix)) {
       console.log('🚀 [TACTICAL] Installing extension to local VS Code instance...');
-      execSync(`code --install-extension ${vsixFile} --force`, { stdio: 'inherit' });
+      execSync(`code --install-extension ${latestVsix} --force`, { stdio: 'inherit' });
       
       console.log('\n✅ [BRIDGE] Sovereign Factory VS Code Plugin successfully installed.');
       console.log('🖖 [CREW] You can now open VS Code and use the "Assume Station" command to begin self-referential creation.');
