@@ -145,6 +145,21 @@
         "command": "story-agent.openAhaInDashboard",
         "title": "Story Agent: Open in Dashboard",
         "icon": "$(dashboard)"
+      },
+      {
+        "command": "story-agent.createAhaSprint",
+        "title": "Story Agent: Create Aha Sprint",
+        "icon": "$(calendar)"
+      },
+      {
+        "command": "story-agent.createAhaStory",
+        "title": "Story Agent: Create Aha Story",
+        "icon": "$(add)"
+      },
+      {
+        "command": "story-agent.createAhaTask",
+        "title": "Story Agent: Create Aha Task",
+        "icon": "$(checklist)"
       }
     ],
     "viewsContainers": {
@@ -216,6 +231,21 @@
           "command": "story-agent.openAhaInDashboard",
           "when": "view == storyAgent.projectStructure && viewItem == ahaRelease",
           "group": "navigation"
+        },
+        {
+          "command": "story-agent.createAhaSprint",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaProject",
+          "group": "inline"
+        },
+        {
+          "command": "story-agent.createAhaStory",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaRelease",
+          "group": "inline"
+        },
+        {
+          "command": "story-agent.createAhaTask",
+          "when": "view == storyAgent.projectStructure && viewItem == ahaStory",
+          "group": "inline"
         }
       ],
       "editor/context": [

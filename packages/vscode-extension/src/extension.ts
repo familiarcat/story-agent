@@ -12,6 +12,7 @@ import { runNodeActions } from './selectionActions';
 import { registerNativeChatProvider } from './nativeChatProvider';
 import { AhaSyncPoller } from './ahaSyncPoller';
 import { registerUpdateAhaStatus, resolveDashboardBase } from './commands/updateAhaStatus';
+import { registerAhaCrudCommands } from './commands/ahaCrud';
 import { CrewStreamRelay } from './crewStreamRelay';
 import { withDashboardTheme } from './lib/dashboardThemeLink';
 
@@ -229,6 +230,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Worf-gated Aha story status quick-update (dry-run → confirm → write)
   registerUpdateAhaStatus(context, { refreshTree: () => projectStructureProvider.refresh() });
+  // Worf-gated direct Aha CRUD from VS Code (sprint/story/task create)
+  registerAhaCrudCommands(context, { refreshTree: () => projectStructureProvider.refresh() });
 
   // ── Chat participant ──────────────────────────────────────────────────────
   registerParticipant(context);

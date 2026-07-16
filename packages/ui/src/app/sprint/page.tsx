@@ -36,6 +36,14 @@ export default function SprintPage() {
   const [loadingSprints, setLoadingSprints] = useState(false);
   const [loadingStories, setLoadingStories] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [controlBusy, setControlBusy] = useState(false);
+  const [newSprintName, setNewSprintName] = useState('');
+  const [newSprintStart, setNewSprintStart] = useState('');
+  const [newSprintEnd, setNewSprintEnd] = useState('');
+  const [newStoryName, setNewStoryName] = useState('');
+  const [newStoryDescription, setNewStoryDescription] = useState('');
+  const [newTaskStoryRef, setNewTaskStoryRef] = useState('');
+  const [newTaskName, setNewTaskName] = useState('');
 
   useEffect(() => {
     setLoadingProjects(true);
@@ -105,6 +113,93 @@ export default function SprintPage() {
     return 'var(--text-dim)';
   };
 
+  const postWithConfirm = useCallback(async (resource: 'sprint' | 'story' | 'task', payload: Record<string, unknown>) => {
+    const dryRun = await fetch(`/api/aha/resource/${resource}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, actor: 'dashboard' }),
+    });
+    const dryRunData = await dryRun.json();
+    if (!dryRun.ok) throw new Error(dryRunData.error || `Dry-run failed (${dryRun.status})`);
+
+    const confirmed = window.confirm(`WorfGate preview for ${resource}:\n\n${JSON.stringify(dryRunData.proposed ?? dryRunData, null, 2).slice(0, 700)}\n\nApply this change?`);
+    if (!confirmed) return null;
+
+    const apply = await fetch(`/api/aha/resource/${resource}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, actor: 'dashboard', confirm: true }),
+    });
+    const applyData = await apply.json();
+    if (!apply.ok) throw new Error(applyData.error || `Apply failed (${apply.status})`);
+    return applyData;
+  }, []);
+
+  const onCreateSprint = useCallback(async () => {
+    if (!selectedProjectId || !newSprintName.trim()) return;
+    setControlBusy(true);
+    setError(null);
+    try {
+      await postWithConfirm('sprint', {
+        mode: 'create',
+        projectId: selectedProjectId,
+        name: newSprintName.trim(),
+        startDate: newSprintStart || undefined,
+        endDate: newSprintEnd || undefined,
+      });
+      setNewSprintName('');
+      setNewSprintStart('');
+      setNewSprintEnd('');
+      await loadSprints(selectedProjectId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create sprint');
+    } finally {
+      setControlBusy(false);
+    }
+  }, [selectedProjectId, newSprintName, newSprintStart, newSprintEnd, postWithConfirm, loadSprints]);
+
+  const onCreateStory = useCallback(async () => {
+    if (!selectedSprintId || !newStoryName.trim()) return;
+    setControlBusy(true);
+    setError(null);
+    try {
+      await postWithConfirm('story', {
+        mode: 'create',
+        releaseId: selectedSprintId,
+        name: newStoryName.trim(),
+        description: newStoryDescription || undefined,
+      });
+      setNewStoryName('');
+      setNewStoryDescription('');
+      const sprint = sprints.find(s => s.id === selectedSprintId);
+      if (sprint) await loadSprintStories(selectedSprintId, sprint);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create story');
+    } finally {
+      setControlBusy(false);
+    }
+  }, [selectedSprintId, newStoryName, newStoryDescription, postWithConfirm, sprints, loadSprintStories]);
+
+  const onCreateTask = useCallback(async () => {
+    if (!newTaskStoryRef.trim() || !newTaskName.trim()) return;
+    setControlBusy(true);
+    setError(null);
+    try {
+      await postWithConfirm('task', {
+        mode: 'create',
+        featureRef: newTaskStoryRef.trim(),
+        name: newTaskName.trim(),
+      });
+      setNewTaskName('');
+      const sprint = sprints.find(s => s.id === selectedSprintId);
+      if (sprint && selectedSprintId) await loadSprintStories(selectedSprintId, sprint);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create task');
+    } finally {
+      setControlBusy(false);
+    }
+  }, [newTaskStoryRef, newTaskName, postWithConfirm, sprints, selectedSprintId, loadSprintStories]);
+
   return (
     <div style={{ maxWidth: 1000 }}>
       <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Sprint' }]} />
@@ -156,6 +251,34 @@ export default function SprintPage() {
           </label>
         </div>
       </ComponentLoadingRegion>
+
+      <div className="card" style={{ marginBottom: '1rem', display: 'grid', gap: '0.85rem' }}>
+        <div style={{ fontWeight: 700 }}>Aha Control Panel (Dashboard)</div>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+          Full control actions are Worf-gated: each mutation runs dry-run preview, then applies on confirmation.
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gap: '0.4rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Create Sprint in selected project</div>
+            <input value={newSprintName} onChange={e => setNewSprintName(e.target.value)} placeholder="Sprint name" style={{ padding: '0.4rem 0.5rem' }} />
+            <input value={newSprintStart} onChange={e => setNewSprintStart(e.target.value)} placeholder="Start YYYY-MM-DD" style={{ padding: '0.4rem 0.5rem' }} />
+            <input value={newSprintEnd} onChange={e => setNewSprintEnd(e.target.value)} placeholder="End YYYY-MM-DD" style={{ padding: '0.4rem 0.5rem' }} />
+            <button className="btn btn-secondary" disabled={controlBusy || !selectedProjectId || !newSprintName.trim()} onClick={onCreateSprint}>Create Sprint</button>
+          </div>
+          <div style={{ display: 'grid', gap: '0.4rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Create Story in selected sprint</div>
+            <input value={newStoryName} onChange={e => setNewStoryName(e.target.value)} placeholder="Story name" style={{ padding: '0.4rem 0.5rem' }} />
+            <input value={newStoryDescription} onChange={e => setNewStoryDescription(e.target.value)} placeholder="Description (optional)" style={{ padding: '0.4rem 0.5rem' }} />
+            <button className="btn btn-secondary" disabled={controlBusy || !selectedSprintId || !newStoryName.trim()} onClick={onCreateStory}>Create Story</button>
+          </div>
+          <div style={{ display: 'grid', gap: '0.4rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Create Task under a story</div>
+            <input value={newTaskStoryRef} onChange={e => setNewTaskStoryRef(e.target.value)} placeholder="Story ref (e.g. PROD-22)" style={{ padding: '0.4rem 0.5rem' }} />
+            <input value={newTaskName} onChange={e => setNewTaskName(e.target.value)} placeholder="Task name" style={{ padding: '0.4rem 0.5rem' }} />
+            <button className="btn btn-secondary" disabled={controlBusy || !newTaskStoryRef.trim() || !newTaskName.trim()} onClick={onCreateTask}>Create Task</button>
+          </div>
+        </div>
+      </div>
 
       {error && <div style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</div>}
 

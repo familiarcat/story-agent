@@ -40,3 +40,32 @@ export const createAhaStory = (releaseId: string, input: {
   uncertainty?: number;
 }): Promise<AhaStory> =>
   client().createFeature(releaseId, input);
+export const updateAhaStory = (referenceNum: string, input: {
+  name?: string;
+  description?: string;
+  workflowStatus?: string;
+}): Promise<void> => client().updateFeature(referenceNum, input);
+export const createAhaRelease = (productId: string, input: {
+  name: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<AhaSprint> => client().createRelease(productId, input);
+export const updateAhaRelease = (releaseId: string, input: {
+  name?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<AhaSprint> => client().updateRelease(releaseId, input);
+export const createAhaRequirement = (featureRef: string, input: {
+  name: string;
+  description?: string;
+}): Promise<{ id: string; referenceNum: string; name: string; description: string; url: string }> =>
+  client().createRequirement(featureRef, input);
+export const listAhaRequirements = (featureRef: string): Promise<Array<{ id: string; referenceNum: string; name: string; description: string; url: string }>> =>
+  client().listRequirements(featureRef);
+export const getAhaRequirement = (referenceNum: string): Promise<{ id: string; referenceNum: string; name: string; description: string; url: string }> =>
+  client().getRequirement(referenceNum);
+export const updateAhaRequirement = (referenceNum: string, input: {
+  name?: string;
+  description?: string;
+}): Promise<void> => client().updateRequirement(referenceNum, input);
+export const deleteAhaRequirement = (referenceNum: string): Promise<void> => client().deleteRequirement(referenceNum);

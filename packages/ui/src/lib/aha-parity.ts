@@ -15,10 +15,18 @@ import {
   listAhaEpicsForProject,
   getAhaEpic,
   getAhaStory,
-  updateAhaStoryStatus,
+  updateAhaStory,
   listAhaSprints,
   getAhaSprint,
   getProjectHierarchy,
+  createAhaStory,
+  createAhaRelease,
+  updateAhaRelease,
+  listAhaRequirements,
+  getAhaRequirement,
+  createAhaRequirement,
+  updateAhaRequirement,
+  deleteAhaRequirement,
 } from '@/lib/aha';
 import { emitAhaEventSafe, type AhaActor, type AhaResourceType } from '@story-agent/shared/aha-events';
 
@@ -35,8 +43,10 @@ export interface AhaResourceDef {
   listParam?: string;
   get?: (id: string) => Promise<unknown>;
   list?: (parentId: string, page: number) => Promise<unknown>;
+  create?: (body: Record<string, unknown>) => Promise<unknown>;
   /** Gated write (requires confirm). */
   update?: (id: string, body: Record<string, unknown>) => Promise<unknown>;
+  delete?: (id: string) => Promise<void>;
   fields: string[];
   /** 'live' = wired to a client fn; 'planned' = manifested but not yet implemented (returns 501). */
   status: 'live' | 'planned';
@@ -64,15 +74,49 @@ export const PARITY_MANIFEST: Record<ResourceName, AhaResourceDef> = {
     getParam: 'reference', listParam: 'projectId',
     get: (ref) => getAhaStory(ref),
     list: (projectId, page) => listAhaStoriesForProject(projectId, page),
-    update: (id, body) => updateAhaStoryStatus(id, String(body.statusName ?? '')),
+    create: (body) => createAhaStory(String(body.releaseId ?? ''), {
+      name: String(body.name ?? ''),
+      description: typeof body.description === 'string' ? body.description : undefined,
+      storyPoints: typeof body.storyPoints === 'number' ? body.storyPoints : undefined,
+    }),
+    update: (id, body) => updateAhaStory(id, {
+      name: typeof body.name === 'string' ? body.name : undefined,
+      description: typeof body.description === 'string' ? body.description : undefined,
+      workflowStatus: typeof body.statusName === 'string' ? body.statusName : undefined,
+    }),
     fields: ['referenceNum', 'name', 'status'], status: 'live',
   },
-  task: { resource: 'task', ahaPrimitive: 'requirement', parent: 'story', fields: ['id', 'name'], status: 'planned' },
+  task: {
+    resource: 'task', ahaPrimitive: 'requirement', parent: 'story',
+    getParam: 'requirementRef', listParam: 'featureRef',
+    get: (id) => getAhaRequirement(id),
+    list: (featureRef) => listAhaRequirements(featureRef),
+    create: (body) => createAhaRequirement(String(body.featureRef ?? ''), {
+      name: String(body.name ?? ''),
+      description: typeof body.description === 'string' ? body.description : undefined,
+    }),
+    update: (id, body) => updateAhaRequirement(id, {
+      name: typeof body.name === 'string' ? body.name : undefined,
+      description: typeof body.description === 'string' ? body.description : undefined,
+    }),
+    delete: (id) => deleteAhaRequirement(id),
+    fields: ['referenceNum', 'name', 'description'], status: 'live',
+  },
   sprint: {
     resource: 'sprint', ahaPrimitive: 'release', parent: 'project',
     getParam: 'releaseId', listParam: 'projectId',
     get: (id) => getAhaSprint(id),
     list: (projectId) => listAhaSprints(projectId),
+    create: (body) => createAhaRelease(String(body.projectId ?? ''), {
+      name: String(body.name ?? ''),
+      startDate: typeof body.startDate === 'string' ? body.startDate : undefined,
+      endDate: typeof body.endDate === 'string' ? body.endDate : undefined,
+    }),
+    update: (id, body) => updateAhaRelease(id, {
+      name: typeof body.name === 'string' ? body.name : undefined,
+      startDate: typeof body.startDate === 'string' ? body.startDate : undefined,
+      endDate: typeof body.endDate === 'string' ? body.endDate : undefined,
+    }),
     fields: ['id', 'name'], status: 'live',
   },
 };
@@ -143,30 +187,50 @@ export function makeAhaResourceRoute(def: AhaResourceDef) {
       }
     },
     async POST(request: Request): Promise<Response> {
-      if (!def.update) return json({ error: `resource '${def.resource}' is read-only` }, 405);
+      if (!def.create && !def.update && !def.delete) return json({ error: `resource '${def.resource}' is read-only` }, 405);
       let body: Record<string, unknown> = {};
       try { body = await request.json(); } catch { return json({ error: 'bad_json' }, 400); }
+      const mode = String(body.mode ?? 'update').toLowerCase();
+      const isCreate = mode === 'create';
+      const isDelete = mode === 'delete';
       const idKey = def.getParam ?? 'id';
       const id = String(body[idKey] ?? body.id ?? '');
-      if (!id) return json({ error: `'${idKey}' required` }, 400);
+      if (!isCreate && !id) return json({ error: `'${idKey}' required` }, 400);
       // WorfGate: writes require an explicit confirm:true; otherwise return a dry-run preview (no mutation).
       if (body.confirm !== true) {
-        return json({ dryRun: true, resource: def.resource, ahaPrimitive: def.ahaPrimitive, id, proposed: body, note: 'Set confirm:true to apply (Worf-gated write).' });
+        return json({ dryRun: true, resource: def.resource, ahaPrimitive: def.ahaPrimitive, id: id || null, mode, proposed: body, note: 'Set confirm:true to apply (Worf-gated write).' });
       }
       try {
-        const result = await def.update(id, body);
+        let result: unknown = null;
+        let operation: 'created' | 'updated' | 'deleted' = 'updated';
+        let resourceId = id;
+        if (isCreate) {
+          if (!def.create) return json({ error: `resource '${def.resource}' does not support create` }, 405);
+          result = await def.create(body);
+          operation = 'created';
+          resourceId = String((result as Record<string, unknown> | null)?.referenceNum ?? (result as Record<string, unknown> | null)?.id ?? id ?? '');
+        } else if (isDelete) {
+          if (!def.delete) return json({ error: `resource '${def.resource}' does not support delete` }, 405);
+          await def.delete(id);
+          result = { deleted: true };
+          operation = 'deleted';
+        } else {
+          if (!def.update) return json({ error: `resource '${def.resource}' does not support update` }, 405);
+          result = await def.update(id, body);
+          operation = 'updated';
+        }
         // Sync ledger (Worf ruling AHA-SYNC-TIERS): emit AFTER the Aha write succeeds; emit failure
         // must never fail the write — emitAhaEventSafe swallows and logs.
         const eventType = EVENT_RESOURCE_TYPE[def.resource];
         if (eventType) {
           await emitAhaEventSafe({
             resourceType: eventType,
-            resourceId: id,
-            operation: 'status_changed',
+            resourceId: resourceId || id,
+            operation,
             actor: parseAhaActor(body.actor),
           });
         }
-        return json({ ok: true, resource: def.resource, id, result: result ?? null, audited: true });
+        return json({ ok: true, resource: def.resource, id: resourceId || id, mode, result: result ?? null, audited: true });
       } catch (e) {
         return json({ error: `aha ${def.resource} write failed`, details: e instanceof Error ? e.message : String(e) }, 500);
       }

@@ -40,6 +40,32 @@ export interface AhaClient {
     riskLevel?: StoryRiskLevel;
     uncertainty?: number;
   }): Promise<AhaStory>;
+  updateFeature(referenceNum: string, input: {
+    name?: string;
+    description?: string;
+    workflowStatus?: string;
+  }): Promise<void>;
+  createRelease(productId: string, input: {
+    name: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<AhaSprint>;
+  updateRelease(releaseId: string, input: {
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<AhaSprint>;
+  createRequirement(featureRef: string, input: {
+    name: string;
+    description?: string;
+  }): Promise<{ id: string; referenceNum: string; name: string; description: string; url: string }>;
+  listRequirements(featureRef: string): Promise<Array<{ id: string; referenceNum: string; name: string; description: string; url: string }>>;
+  getRequirement(referenceNum: string): Promise<{ id: string; referenceNum: string; name: string; description: string; url: string }>;
+  updateRequirement(referenceNum: string, input: {
+    name?: string;
+    description?: string;
+  }): Promise<void>;
+  deleteRequirement(referenceNum: string): Promise<void>;
   getRoadmap(projectId: string): Promise<{
     project: AhaProject;
     releases: Array<AhaSprint & { stories: AhaSprintStory[] }>;
@@ -73,6 +99,18 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
     if (!res.ok) throw new Error(`Aha API error ${res.status}: ${await res.text()}`);
     return res.json() as Promise<Record<string, unknown>>;
   }
+  async function del(path: string): Promise<void> {
+    const res = await f(`${base}/${path}`, { method: 'DELETE', headers: headers() });
+    if (!res.ok) throw new Error(`Aha API error ${res.status}: ${await res.text()}`);
+  }
+
+  const mapRequirement = (req: Record<string, unknown>) => ({
+    id: String(req.id ?? ''),
+    referenceNum: String(req.reference_num ?? req.id ?? ''),
+    name: String(req.name ?? ''),
+    description: String((req.description as Record<string, unknown> | undefined)?.body ?? ''),
+    url: String(req.url ?? ''),
+  });
 
   const listStoriesForProject: AhaClient['listStoriesForProject'] = async (projectId, page = 1) => {
     const data = await get(`products/${projectId}/features?page=${page}&per_page=50`);
@@ -198,6 +236,55 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
         feature: { name: input.name, score, ...(input.description ? { description: input.description } : {}) },
       });
       return mapFeatureToStory(data.feature as Record<string, unknown>);
+    },
+    async updateFeature(referenceNum, input) {
+      const feature: Record<string, unknown> = {};
+      if (typeof input.name === 'string') feature.name = input.name;
+      if (typeof input.description === 'string') feature.description = input.description;
+      if (typeof input.workflowStatus === 'string') feature.workflow_status = { name: input.workflowStatus };
+      await send('PUT', `features/${referenceNum}`, { feature });
+    },
+    async createRelease(productId, input) {
+      const release: Record<string, unknown> = { name: input.name };
+      if (input.startDate) release.start_date = input.startDate;
+      if (input.endDate) release.release_date = input.endDate;
+      const data = await send('POST', `products/${productId}/releases`, { release });
+      return mapRelease(data.release as Record<string, unknown>);
+    },
+    async updateRelease(releaseId, input) {
+      const release: Record<string, unknown> = {};
+      if (typeof input.name === 'string') release.name = input.name;
+      if (typeof input.startDate === 'string') release.start_date = input.startDate;
+      if (typeof input.endDate === 'string') release.release_date = input.endDate;
+      const data = await send('PUT', `releases/${releaseId}`, { release });
+      return mapRelease(data.release as Record<string, unknown>);
+    },
+    async createRequirement(featureRef, input) {
+      const data = await send('POST', `features/${featureRef}/requirements`, {
+        requirement: {
+          name: input.name,
+          ...(input.description ? { description: input.description } : {}),
+        },
+      });
+      return mapRequirement(data.requirement as Record<string, unknown>);
+    },
+    async listRequirements(featureRef) {
+      const data = await get(`features/${featureRef}/requirements?per_page=100`);
+      const reqs = (data.requirements as Record<string, unknown>[] | undefined) ?? [];
+      return reqs.map(mapRequirement);
+    },
+    async getRequirement(referenceNum) {
+      const data = await get(`requirements/${referenceNum}`);
+      return mapRequirement(data.requirement as Record<string, unknown>);
+    },
+    async updateRequirement(referenceNum, input) {
+      const requirement: Record<string, unknown> = {};
+      if (typeof input.name === 'string') requirement.name = input.name;
+      if (typeof input.description === 'string') requirement.description = input.description;
+      await send('PUT', `requirements/${referenceNum}`, { requirement });
+    },
+    async deleteRequirement(referenceNum) {
+      await del(`requirements/${referenceNum}`);
     },
   };
 }
