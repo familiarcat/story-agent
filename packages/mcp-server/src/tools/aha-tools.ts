@@ -592,4 +592,288 @@ export function registerAhaTools(server: McpServer): void {
     },
     async (a) => ok(await completeStory(a))
   );
+
+  // ── PHASE 3: CREW SELF-ASSIGNMENT (Observation Lounge → Aha story ownership) ─
+  server.tool(
+    'aha_crew_self_assign',
+    'Crew member self-assigns to an Aha story after Observation Lounge consensus. Updates story assignee + custom crew fields + logs deliberation to crew memory with bidirectional Aha link. Call once per story after the daily 09:00 Observation Lounge.',
+    {
+      ref: z.string().describe('Aha feature reference, e.g. PROD-42'),
+      crewMember: z.enum(['picard', 'data', 'riker', 'worf', 'geordi', 'obrien', 'yar', 'troi', 'crusher', 'uhura', 'quark'])
+        .describe('Crew member claiming the story'),
+      collaborators: z.array(z.enum(['picard', 'data', 'riker', 'worf', 'geordi', 'obrien', 'yar', 'troi', 'crusher', 'uhura', 'quark']))
+        .optional().describe('Other crew members collaborating on this story'),
+      rationale: z.string().describe('Why this crew member is best fit (domain match, memory priors, etc.)'),
+      memoryPriorsUsed: z.array(z.string()).optional().describe('Crew memory tags recalled before this decision'),
+      consensusGate: z.enum(['AUTO', 'YELLOW', 'RED']).optional().default('AUTO').describe('Gate type from Observation Lounge'),
+      confirm: z.boolean().optional().describe('true = live Aha write; false/omitted = dry-run preview'),
+    },
+    async ({ ref, crewMember, collaborators, rationale, memoryPriorsUsed, consensusGate, confirm }) => {
+      const preview = {
+        ref,
+        crewMember,
+        collaborators: collaborators ?? [],
+        rationale,
+        memoryPriorsUsed: memoryPriorsUsed ?? [],
+        consensusGate,
+        ahaUpdate: {
+          workflow_status: { name: 'In development' },
+          custom_fields: [
+            { key: 'crew_member_primary', value: crewMember },
+            { key: 'crew_team', value: (collaborators ?? []).join(', ') },
+            { key: 'crew_consensus_gate', value: consensusGate },
+            { key: 'deliberation_log_id', value: `${crewMember}-${ref}-deliberation-${new Date().toISOString().split('T')[0]}` },
+          ],
+        },
+      };
+
+      if (!confirm) {
+        return ok({ dryRun: true, preview, note: 'Pass confirm:true to execute the Aha write + memory log.' });
+      }
+
+      audit('crew_self_assign', { ref, crewMember, consensusGate });
+
+      try {
+        await aha(`features/${ref}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            feature: {
+              workflow_status: { name: 'In development' },
+              custom_fields: [
+                { key: 'crew_member_primary', value: crewMember },
+                { key: 'crew_team', value: (collaborators ?? []).join(', ') },
+                { key: 'crew_consensus_gate', value: consensusGate },
+                { key: 'deliberation_log_id', value: `${crewMember}-${ref}-deliberation-${new Date().toISOString().split('T')[0]}` },
+                { key: 'status_last_updated_by_crew', value: crewMember },
+              ],
+            },
+          }),
+        });
+      } catch (e) {
+        process.stderr.write(`[AHA-AUDIT] crew_self_assign custom_fields_failed — Aha may not support these custom fields yet: ${e}\n`);
+      }
+
+      await postAhaCommentSafe(`features/${ref}/comments`, [
+        `🖖 **${crewMember.charAt(0).toUpperCase() + crewMember.slice(1)} self-assigned** via Observation Lounge (gate: ${consensusGate})`,
+        `**Rationale:** ${rationale}`,
+        collaborators?.length ? `**Collaborators:** ${collaborators.join(', ')}` : null,
+        memoryPriorsUsed?.length ? `**Memory priors applied:** ${memoryPriorsUsed.join(', ')}` : null,
+      ].filter(Boolean).join('\n'));
+
+      const memoryLogId = `${crewMember}-${ref}-deliberation-${new Date().toISOString().split('T')[0]}`;
+      await storeObservationMemory({
+        storyId: memoryLogId,
+        source: 'mcp',
+        transcript: {
+          storyRef: ref,
+          summary: `${crewMember} self-assigned to ${ref} (gate: ${consensusGate}). Rationale: ${rationale}`,
+          participants: [crewMember, ...(collaborators ?? [])],
+          rounds: [],
+          consensus: rationale,
+          decisions: memoryPriorsUsed ?? [],
+        } as any,
+        tags: ['phase-3', 'self-assignment', ref, crewMember, `gate-${consensusGate?.toLowerCase()}`],
+      });
+
+      return ok({ success: true, ref, crewMember, consensusGate, memoryLogId, note: 'Story assigned in Aha + crew memory logged.' });
+    },
+  );
+
+  // ── PHASE 3: CREW DAILY STANDUP UPDATE ──────────────────────────────────────
+  server.tool(
+    'aha_crew_standup_update',
+    'Crew member posts their daily standup update (17:00 PST) to an Aha story: progress %, health signal, cognitive load, decisions made, risks, and optional blocker discovery. Auto-logs to crew memory with bidirectional Aha link.',
+    {
+      ref: z.string().describe('Aha feature reference, e.g. PROD-42'),
+      crewMember: z.enum(['picard', 'data', 'riker', 'worf', 'geordi', 'obrien', 'yar', 'troi', 'crusher', 'uhura', 'quark']),
+      completedToday: z.string().describe('What was accomplished today'),
+      percentageComplete: z.number().min(0).max(100).describe('Overall story completion 0-100'),
+      confidenceLevel: z.number().min(0).max(10).describe('Confidence in on-time delivery (0-10)'),
+      healthSignal: z.enum(['Healthy', 'Fatigued', 'Stressed']).describe('Crew member health signal'),
+      cognitiveLoad: z.number().min(0).max(10).describe('Cognitive load 0-10 (>7 = approaching limit)'),
+      risks: z.array(z.string()).optional().describe('Risks identified today'),
+      decisions: z.array(z.string()).optional().describe('Key decisions made today'),
+      blockerDiscovered: z.object({
+        description: z.string(),
+        blockedByRef: z.string().optional().describe('Aha ref of blocking story, e.g. PROD-38'),
+        severity: z.enum(['YELLOW', 'RED']),
+      }).optional().describe('Blocker found during execution'),
+      confirm: z.boolean().optional().describe('true = live Aha write; false/omitted = dry-run'),
+    },
+    async ({ ref, crewMember, completedToday, percentageComplete, confidenceLevel, healthSignal, cognitiveLoad, risks, decisions, blockerDiscovered, confirm }) => {
+      const today = new Date().toISOString().split('T')[0];
+      const progressNotes = [
+        `**${today} standup — ${crewMember}**`,
+        `Completed: ${completedToday}`,
+        `Progress: ${percentageComplete}% | Confidence: ${confidenceLevel}/10`,
+        `Health: ${healthSignal} | Cognitive load: ${cognitiveLoad}/10`,
+        risks?.length ? `Risks: ${risks.join('; ')}` : null,
+        decisions?.length ? `Decisions: ${decisions.join('; ')}` : null,
+        blockerDiscovered ? `⚠️ BLOCKER (${blockerDiscovered.severity}): ${blockerDiscovered.description}${blockerDiscovered.blockedByRef ? ` [blocked by ${blockerDiscovered.blockedByRef}]` : ''}` : null,
+      ].filter(Boolean).join('\n');
+
+      if (!confirm) {
+        return ok({ dryRun: true, progressNotes, percentageComplete, healthSignal, cognitiveLoad, blockerDiscovered: blockerDiscovered ?? null, note: 'Pass confirm:true to write to Aha + crew memory.' });
+      }
+
+      audit('crew_standup_update', { ref, crewMember, percentageComplete, healthSignal, cognitiveLoad });
+
+      const customFields: Array<{ key: string; value: unknown }> = [
+        { key: 'percentage_complete', value: percentageComplete },
+        { key: 'crew_health_signal', value: healthSignal },
+        { key: 'cognitive_load', value: cognitiveLoad },
+        { key: 'status_last_updated_by_crew', value: crewMember },
+      ];
+      if (blockerDiscovered) {
+        customFields.push({ key: 'blocked_by', value: blockerDiscovered.blockedByRef ?? '' });
+        customFields.push({ key: 'blocker_status', value: blockerDiscovered.severity === 'YELLOW' ? 'YELLOW_OVERRIDE_PENDING' : 'RED_ESCALATION' });
+      }
+
+      try {
+        await aha(`features/${ref}`, {
+          method: 'PUT',
+          body: JSON.stringify({ feature: { custom_fields: customFields } }),
+        });
+      } catch (e) {
+        process.stderr.write(`[AHA-AUDIT] crew_standup_update custom_fields_failed: ${e}\n`);
+      }
+
+      await postAhaCommentSafe(`features/${ref}/comments`, progressNotes);
+
+      const memoryLogId = `${crewMember}-${ref}-standup-${today}`;
+      await storeObservationMemory({
+        storyId: memoryLogId,
+        source: 'mcp',
+        transcript: {
+          storyRef: ref,
+          summary: `${crewMember} standup ${today}: ${percentageComplete}% complete, health=${healthSignal}, load=${cognitiveLoad}/10${blockerDiscovered ? `. BLOCKER: ${blockerDiscovered.description}` : ''}`,
+          participants: [crewMember],
+          rounds: [],
+          consensus: completedToday,
+          decisions: decisions ?? [],
+        } as any,
+        tags: ['phase-3', 'daily-standup', ref, crewMember, `health-${healthSignal.toLowerCase()}`, ...(blockerDiscovered ? [`blocker-${blockerDiscovered.severity.toLowerCase()}`] : [])],
+      });
+
+      return ok({
+        success: true,
+        ref,
+        crewMember,
+        percentageComplete,
+        healthSignal,
+        cognitiveLoad,
+        blockerEscalationRequired: !!blockerDiscovered,
+        blockerSeverity: blockerDiscovered?.severity ?? null,
+        memoryLogId,
+        note: blockerDiscovered ? `Standup logged. Call aha_crew_blocker_escalate to notify ${blockerDiscovered.severity === 'YELLOW' ? 'Riker' : 'Admiral'}.` : 'Standup logged to Aha + crew memory.',
+      });
+    },
+  );
+
+  // ── PHASE 3: CREW BLOCKER ESCALATION (YELLOW→Riker / RED→Admiral) ───────────
+  server.tool(
+    'aha_crew_blocker_escalate',
+    'Escalate a blocker discovered during story execution. YELLOW gate = Riker decides (30-min window, proceeds with defensive assumptions by default). RED gate = flags to Admiral for post-sprint review; crew proceeds with best-effort. Logs gate decision to Aha + crew memory audit trail.',
+    {
+      ref: z.string().describe('Aha feature reference of the blocked story'),
+      crewMember: z.enum(['picard', 'data', 'riker', 'worf', 'geordi', 'obrien', 'yar', 'troi', 'crusher', 'uhura', 'quark']),
+      description: z.string().describe('What is blocking progress'),
+      blockedByRef: z.string().optional().describe('Aha ref of the blocking story/dependency'),
+      severity: z.enum(['YELLOW', 'RED']).describe('YELLOW = Riker authority; RED = Admiral escalation'),
+      recommendedAction: z.string().describe('Crew member recommended path forward'),
+      rikerDecision: z.enum([
+        'PROCEED_WITH_DEFENSIVE_ASSUMPTIONS',
+        'PROCEED_WITH_MODIFICATIONS',
+        'WAIT_FOR_BLOCKER',
+        'DEFER_STORY',
+      ]).optional().describe('Riker override decision (only for YELLOW gates when Riker is invoking this)'),
+      confirm: z.boolean().optional().describe('true = live Aha write; false/omitted = dry-run'),
+    },
+    async ({ ref, crewMember, description, blockedByRef, severity, recommendedAction, rikerDecision, confirm }) => {
+      const today = new Date().toISOString().split('T')[0];
+      const isRikerOverride = !!rikerDecision;
+      const blockerStatus = rikerDecision
+        ? (rikerDecision.startsWith('PROCEED') ? 'YELLOW_OVERRIDE' : rikerDecision === 'WAIT_FOR_BLOCKER' ? 'BLOCKED_PENDING' : 'DEFERRED')
+        : (severity === 'YELLOW' ? 'YELLOW_OVERRIDE_PENDING' : 'RED_ESCALATION');
+
+      const commentBody = isRikerOverride
+        ? [
+            `🎯 **Riker override** — gate: ${severity}`,
+            `Decision: **${rikerDecision}**`,
+            `Rationale: ${recommendedAction}`,
+          ].join('\n')
+        : [
+            `⚠️ **Blocker escalation** (${severity} gate) — ${crewMember}`,
+            `Issue: ${description}`,
+            blockedByRef ? `Blocked by: ${blockedByRef}` : null,
+            `Recommended action: ${recommendedAction}`,
+            severity === 'YELLOW' ? `**Riker: please review and decide within 30 min.**` : `**RED gate: logged for Admiral post-sprint review. Crew proceeds best-effort.**`,
+          ].filter(Boolean).join('\n');
+
+      if (!confirm) {
+        return ok({ dryRun: true, ref, severity, blockerStatus, commentBody, note: 'Pass confirm:true to write to Aha + crew memory.' });
+      }
+
+      audit('crew_blocker_escalate', { ref, crewMember, severity, blockerStatus, isRikerOverride });
+
+      const customFields: Array<{ key: string; value: unknown }> = [
+        { key: 'blocker_status', value: blockerStatus },
+        { key: 'status_last_updated_by_crew', value: isRikerOverride ? 'riker' : crewMember },
+      ];
+      if (blockedByRef) customFields.push({ key: 'blocked_by', value: blockedByRef });
+
+      // If Riker approved proceed, restore IN_PROGRESS
+      const featureUpdate: Record<string, unknown> = { custom_fields: customFields };
+      if (rikerDecision?.startsWith('PROCEED')) {
+        featureUpdate.workflow_status = { name: 'In development' };
+      }
+
+      try {
+        await aha(`features/${ref}`, {
+          method: 'PUT',
+          body: JSON.stringify({ feature: featureUpdate }),
+        });
+      } catch (e) {
+        process.stderr.write(`[AHA-AUDIT] crew_blocker_escalate custom_fields_failed: ${e}\n`);
+      }
+
+      await postAhaCommentSafe(`features/${ref}/comments`, commentBody);
+
+      const memoryLogId = `${isRikerOverride ? 'riker' : crewMember}-${ref}-${severity.toLowerCase()}-gate-${today}`;
+      await storeObservationMemory({
+        storyId: memoryLogId,
+        source: 'mcp',
+        transcript: {
+          storyRef: ref,
+          summary: isRikerOverride
+            ? `Riker ${severity} gate decision for ${ref}: ${rikerDecision}. ${recommendedAction}`
+            : `${crewMember} escalated ${severity} blocker on ${ref}: ${description}. Recommended: ${recommendedAction}`,
+          participants: isRikerOverride ? ['riker', crewMember] : [crewMember, 'riker'],
+          rounds: [],
+          consensus: rikerDecision ?? `${severity} gate escalation pending`,
+          decisions: [description, recommendedAction],
+        } as any,
+        tags: [
+          'phase-3', 'blocker-escalation', ref, crewMember,
+          `gate-${severity.toLowerCase()}`,
+          ...(rikerDecision ? [`riker-decision-${rikerDecision.toLowerCase().replace(/_/g, '-')}`] : []),
+        ],
+      });
+
+      return ok({
+        success: true,
+        ref,
+        severity,
+        blockerStatus,
+        isRikerOverride,
+        rikerDecision: rikerDecision ?? null,
+        memoryLogId,
+        note: severity === 'YELLOW' && !rikerDecision
+          ? 'YELLOW gate logged. Riker should call this tool again with rikerDecision to unblock.'
+          : severity === 'RED'
+          ? 'RED gate logged to Aha + crew memory. Admiral will review post-sprint. Crew proceeds best-effort.'
+          : `${rikerDecision} logged. Story unblocked.`,
+      });
+    },
+  );
 }

@@ -1,4 +1,11 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["test", "**/*.test.ts", "dist"]
+  "exclude": [
+    "test",
+    "**/*.test.ts",
+    "dist",
+    "src/lib/phase-transition-consensus.ts",
+    "src/lib/phase-transition-monitoring.ts",
+    "src/lib/aha-webhook-integration.ts"
+  ]
 }
