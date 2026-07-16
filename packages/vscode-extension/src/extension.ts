@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { registerParticipant } from './participant';
 import { StorySidebarProvider } from './sidebar';
 import { StoryExecutionPanel } from './panels/StoryExecutionPanel';
+import { ChatPanel } from './panels/ChatPanel';
 import { CrewCopilotProvider } from './providers/CrewCopilotProvider';
 import { AhaProjectStructureProvider } from './providers/AhaProjectStructureProvider';
 import { NavigationTreeProvider } from './providers/NavigationTreeProvider';
@@ -138,6 +139,14 @@ export function activate(context: vscode.ExtensionContext): void {
         }
       }
     ),
+
+    vscode.commands.registerCommand('story-agent.openChat', () => {
+      try {
+        ChatPanel.show(context);
+      } catch (err) {
+        vscode.window.showErrorMessage(`Failed to open chat panel: ${err}`);
+      }
+    }),
 
     vscode.commands.registerCommand('storyAgent.viewCrewMember', async (crewId: string) => {
       const crewNames: Record<string, string> = {

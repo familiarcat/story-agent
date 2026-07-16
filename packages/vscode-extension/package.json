@@ -165,6 +165,11 @@
         "command": "story-agent.showAhaWorkflow",
         "title": "Story Agent: Show Aha Workflow Integration",
         "icon": "$(git-pull-request-go-to-changes)"
+      },
+      {
+        "command": "story-agent.openChat",
+        "title": "Story Agent: Open Chat (at bottom)",
+        "icon": "$(comment)"
       }
     ],
     "viewsContainers": {
@@ -277,6 +282,12 @@
         "key": "ctrl+i",
         "mac": "cmd+i",
         "when": "editorTextFocus && !editorReadonly"
+      },
+      {
+        "command": "story-agent.openChat",
+        "key": "ctrl+shift+k",
+        "mac": "cmd+shift+k",
+        "when": "!terminalFocus"
       }
     ],
     "configuration": {
