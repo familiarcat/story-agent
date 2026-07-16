@@ -18,6 +18,8 @@ export const listAhaStoriesForProject = (projectId: string, page = 1): Promise<A
 export const listAhaProjects = (page = 1): Promise<AhaProject[]> => client().listProjects(page);
 export const updateAhaStoryStatus = (featureId: string, statusName: string): Promise<void> => client().updateStoryStatus(featureId, statusName);
 export const linkAhaStoryToPR = (featureId: string, prUrl: string, prTitle: string): Promise<void> => client().linkStoryToPR(featureId, prUrl, prTitle);
+export const addAhaStoryComment = (featureId: string, body: string): Promise<void> => client().addStoryComment(featureId, body);
+export const addAhaRequirementComment = (requirementRef: string, body: string): Promise<void> => client().addRequirementComment(requirementRef, body);
 export const listAhaSprints = (projectId: string): Promise<AhaSprint[]> => client().listSprints(projectId);
 export const getAhaSprint = (releaseId: string): Promise<AhaSprint> => client().getSprint(releaseId);
 export const getAhaSprintStories = (releaseId: string): Promise<AhaSprintStory[]> => client().getSprintStories(releaseId);

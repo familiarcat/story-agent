@@ -33,6 +33,7 @@ export const getProjectHierarchy = (projectId: string) => client().getHierarchy(
 export const createAhaStory = (releaseId: string, input: {
   name: string;
   description?: string;
+  assigneeId?: string;
   storyPoints?: number;
   dependencyCount?: number;
   integrationSurfaceCount?: number;
@@ -44,6 +45,7 @@ export const updateAhaStory = (referenceNum: string, input: {
   name?: string;
   description?: string;
   workflowStatus?: string;
+  assigneeId?: string;
 }): Promise<void> => client().updateFeature(referenceNum, input);
 export const createAhaRelease = (productId: string, input: {
   name: string;
@@ -58,6 +60,7 @@ export const updateAhaRelease = (releaseId: string, input: {
 export const createAhaRequirement = (featureRef: string, input: {
   name: string;
   description?: string;
+  assigneeId?: string;
 }): Promise<{ id: string; referenceNum: string; name: string; description: string; url: string }> =>
   client().createRequirement(featureRef, input);
 export const listAhaRequirements = (featureRef: string): Promise<Array<{ id: string; referenceNum: string; name: string; description: string; url: string }>> =>
@@ -67,5 +70,7 @@ export const getAhaRequirement = (referenceNum: string): Promise<{ id: string; r
 export const updateAhaRequirement = (referenceNum: string, input: {
   name?: string;
   description?: string;
+  workflowStatus?: string;
+  assigneeId?: string;
 }): Promise<void> => client().updateRequirement(referenceNum, input);
 export const deleteAhaRequirement = (referenceNum: string): Promise<void> => client().deleteRequirement(referenceNum);

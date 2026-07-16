@@ -28,7 +28,18 @@ import {
   updateAhaRequirement,
   deleteAhaRequirement,
 } from '@/lib/aha';
+import { decideCrewAssignment, resolvePrimaryAhaAssigneeId } from '@story-agent/shared';
 import { emitAhaEventSafe, type AhaActor, type AhaResourceType } from '@story-agent/shared/aha-events';
+
+function resolveDefaultAssigneeId(body: Record<string, unknown>): string | undefined {
+  const explicit = typeof body.assigneeId === 'string' ? body.assigneeId : undefined;
+  if (explicit) return explicit;
+  const assignment = decideCrewAssignment({
+    title: typeof body.name === 'string' ? body.name : undefined,
+    description: typeof body.description === 'string' ? body.description : undefined,
+  });
+  return resolvePrimaryAhaAssigneeId(assignment, process.env) ?? undefined;
+}
 
 export type AhaPrimitive = 'workspace' | 'initiative' | 'epic' | 'feature' | 'requirement' | 'release';
 export type ResourceName = 'firm' | 'client' | 'project' | 'epic' | 'story' | 'task' | 'sprint';
@@ -77,12 +88,14 @@ export const PARITY_MANIFEST: Record<ResourceName, AhaResourceDef> = {
     create: (body) => createAhaStory(String(body.releaseId ?? ''), {
       name: String(body.name ?? ''),
       description: typeof body.description === 'string' ? body.description : undefined,
+      assigneeId: resolveDefaultAssigneeId(body),
       storyPoints: typeof body.storyPoints === 'number' ? body.storyPoints : undefined,
     }),
     update: (id, body) => updateAhaStory(id, {
       name: typeof body.name === 'string' ? body.name : undefined,
       description: typeof body.description === 'string' ? body.description : undefined,
       workflowStatus: typeof body.statusName === 'string' ? body.statusName : undefined,
+      assigneeId: resolveDefaultAssigneeId(body),
     }),
     fields: ['referenceNum', 'name', 'status'], status: 'live',
   },
@@ -94,10 +107,13 @@ export const PARITY_MANIFEST: Record<ResourceName, AhaResourceDef> = {
     create: (body) => createAhaRequirement(String(body.featureRef ?? ''), {
       name: String(body.name ?? ''),
       description: typeof body.description === 'string' ? body.description : undefined,
+      assigneeId: resolveDefaultAssigneeId(body),
     }),
     update: (id, body) => updateAhaRequirement(id, {
       name: typeof body.name === 'string' ? body.name : undefined,
       description: typeof body.description === 'string' ? body.description : undefined,
+      workflowStatus: typeof body.statusName === 'string' ? body.statusName : undefined,
+      assigneeId: resolveDefaultAssigneeId(body),
     }),
     delete: (id) => deleteAhaRequirement(id),
     fields: ['referenceNum', 'name', 'description'], status: 'live',

@@ -14,11 +14,11 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getCrewAhaMatrix, authorizeAhaWrite } from '../lib/crew-aha-roles.js';
 import { resolveAhaCredentials } from '@story-agent/shared/aha-credentials';
-import { estimateStoryGravity, type StoryRiskLevel } from '@story-agent/shared';
+import { AGILE_SPRINT_GUARDRAILS, buildCrewCompletionComment, decideCrewAssignment, estimateStoryGravity, resolvePrimaryAhaAssigneeId, type StoryRiskLevel } from '@story-agent/shared';
 // cross-surface sync ledger (AHA-SYNC-TIERS)
 import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
 import { executeAhaStoryWithMemory } from '../lib/crew-aha-mission.js';
-import { getRelevantObservationMemories, getRecentObservationMemories } from '@story-agent/shared/db';
+import { getRelevantObservationMemories, getRecentObservationMemories, storeObservationMemory } from '@story-agent/shared/db';
 import { gateAhaWrite } from '../lib/crew-aha-automode.js';
 import { syncCrewResultToAha } from '../lib/crew-aha-sync.js';
 import { getAhaStory } from '../lib/aha.js';
@@ -40,6 +40,46 @@ async function aha(path: string, init?: RequestInit): Promise<any> {
 const ok = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] });
 const audit = (op: string, detail: Record<string, unknown>) =>
   process.stderr.write(`[AHA-AUDIT] ${op} ${JSON.stringify(detail)}\n`);
+
+const COMPLETED_STATUS_RE = /\b(done|complete|completed|shipped|fulfilled)\b/i;
+
+function shouldPublishCompletionComment(status?: string): boolean {
+  return typeof status === 'string' && COMPLETED_STATUS_RE.test(status);
+}
+
+async function postAhaCommentSafe(path: string, body: string): Promise<void> {
+  try {
+    await aha(path, { method: 'POST', body: JSON.stringify({ comment: { body } }) });
+  } catch (error) {
+    process.stderr.write(`[AHA-AUDIT] comment-failed ${JSON.stringify({ path, error: error instanceof Error ? error.message : String(error) })}\n`);
+  }
+}
+
+async function storeAgileSprintMemorySafe(input: {
+  agentId: string;
+  action: 'create' | 'update';
+  sprintId: string;
+  sprintName: string;
+  productPrefix?: string;
+}): Promise<void> {
+  try {
+    await storeObservationMemory({
+      storyId: `agile-sprint-${input.sprintId}`,
+      source: 'mcp',
+      transcript: {
+        storyRef: `agile-sprint-${input.sprintId}`,
+        summary: `${input.action} sprint board ${input.sprintName}`,
+        participants: ['riker', 'quark', input.agentId],
+        rounds: [],
+        consensus: 'Sprint updates must preserve explicit ownership, status freshness, and completion evidence.',
+        decisions: AGILE_SPRINT_GUARDRAILS,
+      } as any,
+      tags: ['agile', 'sprint-board', 'riker', 'quark', `action-${input.action}`],
+    });
+  } catch (error) {
+    process.stderr.write(`[AHA-AUDIT] agile-memory-failed ${JSON.stringify({ sprintId: input.sprintId, error: error instanceof Error ? error.message : String(error) })}\n`);
+  }
+}
 
 export function registerAhaTools(server: McpServer): void {
   // ── Crew self-organization: who owns which Aha! capability, on which model tier ──
@@ -152,6 +192,8 @@ export function registerAhaTools(server: McpServer): void {
     async ({ agentId, releaseId, name, description, storyPoints, dependencyCount, integrationSurfaceCount, riskLevel, uncertainty, epic, confirm }) => {
       const authz = authorizeAhaWrite(agentId, 'aha:create-feature');
       if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const assignment = decideCrewAssignment({ title: name, description });
+      const assigneeId = resolvePrimaryAhaAssigneeId(assignment, process.env);
       const estimate = estimateStoryGravity({
         name,
         description,
@@ -169,7 +211,7 @@ export function registerAhaTools(server: McpServer): void {
         agent: agentId,
         identity: authz.reason,
         classification,
-        wouldCreate: { releaseId, name, description, epic, score: finalStoryPoints },
+        wouldCreate: { releaseId, name, description, epic, score: finalStoryPoints, assignedCrew: assignment.primary, assignedAhaUserId: assigneeId },
         estimation: {
           model: estimate.model,
           suggestedStoryPoints: estimate.storyPoints,
@@ -183,12 +225,21 @@ export function registerAhaTools(server: McpServer): void {
       audit('create-feature', { agentId, releaseId, name, epic, decision: classification.decision });
       const feature: Record<string, unknown> = { name, description, score: finalStoryPoints };
       if (epic) feature.epic = epic;  // Aha links both the epic and the sprint from the release-scoped create.
+      if (assigneeId) feature.assigned_to_user = { id: assigneeId };
       const res = await aha(`releases/${releaseId}/features`, { method: 'POST', body: JSON.stringify({ feature }) });
+      const ref = String(res.feature?.reference_num ?? res.feature?.id ?? '');
+      await postAhaCommentSafe(`features/${ref}/comments`, buildCrewCompletionComment({
+        actor: assignment.primary,
+        summary: `Initial ownership assigned to ${assignment.primary}. Advisor lane: ${assignment.advisors.join(', ')}.`,
+      }));
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'created', resourceId: String(res.feature?.reference_num ?? res.feature?.id ?? ''), meta: { sprint_id: releaseId } });
       return ok({
         created: res.feature?.reference_num,
         name: res.feature?.name,
         by: agentId,
+        assignedCrew: assignment.primary,
+        assignedAhaUserId: assigneeId,
+        assignmentReason: assignment.reason,
         storyPoints: res.feature?.score ?? finalStoryPoints,
         estimation: {
           model: estimate.model,
@@ -217,18 +268,28 @@ export function registerAhaTools(server: McpServer): void {
     async ({ agentId, reference, name, description, workflowStatus, confirm }) => {
       const authz = authorizeAhaWrite(agentId, 'aha:update-feature');
       if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const assignment = decideCrewAssignment({ title: name, description });
+      const assigneeId = resolvePrimaryAhaAssigneeId(assignment, process.env);
       const feature: Record<string, unknown> = {};
       if (name) feature.name = name;
       if (description) feature.description = description;
       if (workflowStatus) feature.workflow_status = workflowStatus;
+      if (assigneeId) feature.assigned_to_user = { id: assigneeId };
       // Auto-mode: status changes are stakeholder-sensitive → CONFIRM; plain field edits → AUTO.
       const { proceed, classification } = gateAhaWrite({ verb: 'update', resource: 'feature', fieldsMutated: Object.keys(feature), agentId }, confirm);
       if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, reference, wouldUpdate: feature, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('update-feature', { agentId, reference, fields: Object.keys(feature), decision: classification.decision });
       const res = await aha(`features/${reference}`, { method: 'PUT', body: JSON.stringify({ feature }) });
+      if (shouldPublishCompletionComment(workflowStatus)) {
+        await postAhaCommentSafe(`features/${reference}/comments`, buildCrewCompletionComment({
+          actor: assignment.primary,
+          summary: `Workflow moved to '${workflowStatus}' and execution outcomes were synchronized by the autonomous crew lane.`,
+          includeChecklist: true,
+        }));
+      }
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: workflowStatus ? 'status_changed' : 'updated', resourceId: reference, meta: workflowStatus ? { status_to: workflowStatus } : undefined });
-      return ok({ updated: res.feature?.reference_num, status: res.feature?.workflow_status?.name, by: agentId, autoMode: classification });
+      return ok({ updated: res.feature?.reference_num, status: res.feature?.workflow_status?.name, by: agentId, assignedCrew: assignment.primary, assignedAhaUserId: assigneeId, autoMode: classification });
     },
   );
 
@@ -255,6 +316,13 @@ export function registerAhaTools(server: McpServer): void {
       if (startDate) release.start_date = startDate;
       if (endDate) release.release_date = endDate;
       const res = await aha(`products/${productPrefix}/releases`, { method: 'POST', body: JSON.stringify({ release }) });
+      await storeAgileSprintMemorySafe({
+        agentId,
+        action: 'create',
+        sprintId: String(res.release?.id ?? name),
+        sprintName: String(res.release?.name ?? name),
+        productPrefix,
+      });
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'release', operation: 'created', resourceId: String(res.release?.id ?? res.release?.reference_num ?? ''), meta: { project_id: productPrefix } });
       return ok({ created: res.release?.reference_num, id: res.release?.id, name: res.release?.name, by: agentId, autoMode: classification });
     },
@@ -298,13 +366,22 @@ export function registerAhaTools(server: McpServer): void {
     async ({ agentId, featureRef, name, description, confirm }) => {
       const authz = authorizeAhaWrite(agentId, 'aha:create-requirement');
       if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const assignment = decideCrewAssignment({ title: name, description });
+      const assigneeId = resolvePrimaryAhaAssigneeId(assignment, process.env);
       const { proceed, classification } = gateAhaWrite({ verb: 'create', resource: 'requirement', publishedState: 'draft', agentId }, confirm);
       if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
-      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { featureRef, name, description }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
+      if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, wouldCreate: { featureRef, name, description, assignedCrew: assignment.primary, assignedAhaUserId: assigneeId }, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('create-requirement', { agentId, featureRef, name, decision: classification.decision });
-      const res = await aha(`features/${featureRef}/requirements`, { method: 'POST', body: JSON.stringify({ requirement: { name, description } }) });
+      const requirement: Record<string, unknown> = { name, description };
+      if (assigneeId) requirement.assigned_to_user = { id: assigneeId };
+      const res = await aha(`features/${featureRef}/requirements`, { method: 'POST', body: JSON.stringify({ requirement }) });
+      const reqRef = String(res.requirement?.reference_num ?? res.requirement?.id ?? '');
+      await postAhaCommentSafe(`requirements/${reqRef}/comments`, buildCrewCompletionComment({
+        actor: assignment.primary,
+        summary: `Task ownership assigned to ${assignment.primary}. Advisor lane: ${assignment.advisors.join(', ')}.`,
+      }));
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'requirement', operation: 'created', resourceId: String(res.requirement?.reference_num ?? res.requirement?.id ?? '') });
-      return ok({ created: res.requirement?.reference_num, id: res.requirement?.id, name: res.requirement?.name, by: agentId, autoMode: classification });
+      return ok({ created: res.requirement?.reference_num, id: res.requirement?.id, name: res.requirement?.name, by: agentId, assignedCrew: assignment.primary, assignedAhaUserId: assigneeId, autoMode: classification });
     },
   );
 
@@ -332,6 +409,12 @@ export function registerAhaTools(server: McpServer): void {
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, id, wouldUpdate: release, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('update-release', { agentId, id, fields: Object.keys(release), decision: classification.decision });
       const res = await aha(`releases/${id}`, { method: 'PUT', body: JSON.stringify({ release }) });
+      await storeAgileSprintMemorySafe({
+        agentId,
+        action: 'update',
+        sprintId: id,
+        sprintName: String(res.release?.name ?? id),
+      });
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'release', operation: 'updated', resourceId: id, meta: { sprint_id: id } });
       return ok({ updated: res.release?.reference_num, id: res.release?.id, name: res.release?.name, by: agentId, autoMode: classification });
     },
@@ -371,21 +454,34 @@ export function registerAhaTools(server: McpServer): void {
       reference: z.string().describe('Requirement reference, e.g. JONAH-9-1'),
       name: z.string().optional(),
       description: z.string().optional(),
+      workflowStatus: z.string().optional().describe('Optional requirement workflow status name'),
+      completionSummary: z.string().optional().describe('Optional completion details to post as an Aha comment when task is fulfilled'),
       confirm: z.boolean().optional(),
     },
-    async ({ agentId, reference, name, description, confirm }) => {
+    async ({ agentId, reference, name, description, workflowStatus, completionSummary, confirm }) => {
       const authz = authorizeAhaWrite(agentId, 'aha:update-requirement');
       if (!authz.authorized) return ok({ rejected: true, reason: authz.reason });
+      const assignment = decideCrewAssignment({ title: name, description: `${description ?? ''}\n${completionSummary ?? ''}` });
+      const assigneeId = resolvePrimaryAhaAssigneeId(assignment, process.env);
       const requirement: Record<string, unknown> = {};
       if (name) requirement.name = name;
       if (description) requirement.description = description;
+      if (workflowStatus) requirement.workflow_status = { name: workflowStatus };
+      if (assigneeId) requirement.assigned_to_user = { id: assigneeId };
       const { proceed, classification } = gateAhaWrite({ verb: 'update', resource: 'requirement', fieldsMutated: Object.keys(requirement), agentId }, confirm);
       if (classification.decision === 'block') return ok({ blocked: true, agent: agentId, classification });
       if (!proceed) return ok({ dryRun: true, agent: agentId, identity: authz.reason, classification, reference, wouldUpdate: requirement, note: `auto-mode=${classification.decision}: re-call with confirm:true to execute.` });
       audit('update-requirement', { agentId, reference, fields: Object.keys(requirement), decision: classification.decision });
       const res = await aha(`requirements/${reference}`, { method: 'PUT', body: JSON.stringify({ requirement }) });
+      if (completionSummary || shouldPublishCompletionComment(workflowStatus)) {
+        await postAhaCommentSafe(`requirements/${reference}/comments`, buildCrewCompletionComment({
+          actor: assignment.primary,
+          summary: completionSummary ?? `Requirement moved to '${workflowStatus}' and marked fulfilled by the autonomous crew lane.`,
+          includeChecklist: shouldPublishCompletionComment(workflowStatus),
+        }));
+      }
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'requirement', operation: 'updated', resourceId: reference });
-      return ok({ updated: res.requirement?.reference_num, name: res.requirement?.name, by: agentId, autoMode: classification });
+      return ok({ updated: res.requirement?.reference_num, name: res.requirement?.name, by: agentId, status: workflowStatus ?? null, assignedCrew: assignment.primary, assignedAhaUserId: assigneeId, autoMode: classification });
     },
   );
 

@@ -10,6 +10,7 @@ export * from './system-status.js';
 // Async status registry — live cross-process view of in-flight async work (surfaced on every prompt).
 export * from './async-status.js';
 export * from './story-gravity.js';
+export * from './crew-assignment.js';
 export * from './design-doctrine.js';
 export * from './design-theme-layers.js';
 

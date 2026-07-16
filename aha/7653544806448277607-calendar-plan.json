@@ -1,0 +1,19 @@
+{
+  "sprintId": "7653544806448277607",
+  "sprintName": "Example release 1",
+  "exportedAt": "2026-07-16T00:43:51.325Z",
+  "slotMinutes": 120,
+  "dayCapacityHours": 8,
+  "plan": {
+    "backlog": [
+      "PROD-1",
+      "PROD-2",
+      "PROD-3",
+      "PROD-4",
+      "PROD-8",
+      "PROD-9",
+      "PROD-10"
+    ],
+    "days": {}
+  }
+}

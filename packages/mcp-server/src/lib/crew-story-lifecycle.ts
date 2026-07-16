@@ -8,7 +8,8 @@
 import { execSync } from 'node:child_process';
 import { executeAhaStoryWithMemory } from './crew-aha-mission.js';
 import { ahaRefToBranchName, slugify } from './git-aha-branching.js';
-import { linkAhaStoryToPR, updateAhaStoryStatus } from './aha.js';
+import { linkAhaStoryToPR, updateAhaStoryStatus, addAhaStoryComment } from './aha.js';
+import { buildCrewCompletionComment } from '@story-agent/shared';
 // cross-surface sync (AHA-SYNC-TIERS)
 import { emitAhaEventSafe } from '@story-agent/shared/aha-events';
 
@@ -101,6 +102,10 @@ export async function linkStoryToPR(input: {
 
   await linkAhaStoryToPR(input.ref, input.prUrl, input.prTitle);
   await updateAhaStoryStatus(input.ref, 'In code review');
+  await addAhaStoryComment(input.ref, buildCrewCompletionComment({
+    actor: 'riker',
+    summary: `PR linked for review: ${input.prTitle} (${input.prUrl}). Story moved to In code review.`,
+  }));
   void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'linked', resourceId: input.ref });
   void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'status_changed', resourceId: input.ref, meta: { status_to: 'In code review' } });
   return { ref: input.ref, prUrl: input.prUrl, linked: true };
@@ -119,6 +124,11 @@ export async function completeStory(input: {
   }
 
   await updateAhaStoryStatus(input.ref, 'Shipped');
+  await addAhaStoryComment(input.ref, buildCrewCompletionComment({
+    actor: 'riker',
+    summary: `Story marked Shipped after merge-readiness completion. Branch lifecycle target: ${input.branch}.`,
+    includeChecklist: true,
+  }));
   void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'status_changed', resourceId: input.ref, meta: { status_to: 'Shipped' } });
   let deleted = false;
   try {

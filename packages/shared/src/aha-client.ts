@@ -28,12 +28,15 @@ export interface AhaClient {
   listProjects(page?: number): Promise<AhaProject[]>;
   updateStoryStatus(featureId: string, statusName: string): Promise<void>;
   linkStoryToPR(featureId: string, prUrl: string, prTitle: string): Promise<void>;
+  addStoryComment(featureId: string, body: string): Promise<void>;
+  addRequirementComment(requirementRef: string, body: string): Promise<void>;
   listSprints(projectId: string): Promise<AhaSprint[]>;
   getSprint(releaseId: string): Promise<AhaSprint>;
   getSprintStories(releaseId: string): Promise<AhaSprintStory[]>;
   createFeature(releaseId: string, input: {
     name: string;
     description?: string;
+    assigneeId?: string;
     storyPoints?: number;
     dependencyCount?: number;
     integrationSurfaceCount?: number;
@@ -44,6 +47,7 @@ export interface AhaClient {
     name?: string;
     description?: string;
     workflowStatus?: string;
+    assigneeId?: string;
   }): Promise<void>;
   createRelease(productId: string, input: {
     name: string;
@@ -58,12 +62,15 @@ export interface AhaClient {
   createRequirement(featureRef: string, input: {
     name: string;
     description?: string;
+    assigneeId?: string;
   }): Promise<{ id: string; referenceNum: string; name: string; description: string; url: string }>;
   listRequirements(featureRef: string): Promise<Array<{ id: string; referenceNum: string; name: string; description: string; url: string }>>;
   getRequirement(referenceNum: string): Promise<{ id: string; referenceNum: string; name: string; description: string; url: string }>;
   updateRequirement(referenceNum: string, input: {
     name?: string;
     description?: string;
+    workflowStatus?: string;
+    assigneeId?: string;
   }): Promise<void>;
   deleteRequirement(referenceNum: string): Promise<void>;
   getRoadmap(projectId: string): Promise<{
@@ -218,6 +225,12 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
     async linkStoryToPR(featureId, prUrl, prTitle) {
       await send('POST', `features/${featureId}/comments`, { comment: { body: `Pull Request opened: [${prTitle}](${prUrl})` } });
     },
+    async addStoryComment(featureId, body) {
+      await send('POST', `features/${featureId}/comments`, { comment: { body } });
+    },
+    async addRequirementComment(requirementRef, body) {
+      await send('POST', `requirements/${requirementRef}/comments`, { comment: { body } });
+    },
     async getSprint(releaseId) {
       const data = await get(`releases/${releaseId}`);
       return mapRelease(data.release as Record<string, unknown>);
@@ -232,8 +245,14 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
         uncertainty: input.uncertainty,
       });
       const score = input.storyPoints ?? estimated.storyPoints;
+      const feature: Record<string, unknown> = {
+        name: input.name,
+        score,
+      };
+      if (input.description) feature.description = input.description;
+      if (input.assigneeId) feature.assigned_to_user = { id: input.assigneeId };
       const data = await send('POST', `releases/${releaseId}/features`, {
-        feature: { name: input.name, score, ...(input.description ? { description: input.description } : {}) },
+        feature,
       });
       return mapFeatureToStory(data.feature as Record<string, unknown>);
     },
@@ -242,6 +261,9 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
       if (typeof input.name === 'string') feature.name = input.name;
       if (typeof input.description === 'string') feature.description = input.description;
       if (typeof input.workflowStatus === 'string') feature.workflow_status = { name: input.workflowStatus };
+      if (typeof input.assigneeId === 'string' && input.assigneeId.length > 0) {
+        feature.assigned_to_user = { id: input.assigneeId };
+      }
       await send('PUT', `features/${referenceNum}`, { feature });
     },
     async createRelease(productId, input) {
@@ -264,6 +286,7 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
         requirement: {
           name: input.name,
           ...(input.description ? { description: input.description } : {}),
+          ...(input.assigneeId ? { assigned_to_user: { id: input.assigneeId } } : {}),
         },
       });
       return mapRequirement(data.requirement as Record<string, unknown>);
@@ -281,6 +304,10 @@ export function createAhaClient(cfg: AhaClientConfig): AhaClient {
       const requirement: Record<string, unknown> = {};
       if (typeof input.name === 'string') requirement.name = input.name;
       if (typeof input.description === 'string') requirement.description = input.description;
+      if (typeof input.workflowStatus === 'string') requirement.workflow_status = { name: input.workflowStatus };
+      if (typeof input.assigneeId === 'string' && input.assigneeId.length > 0) {
+        requirement.assigned_to_user = { id: input.assigneeId };
+      }
       await send('PUT', `requirements/${referenceNum}`, { requirement });
     },
     async deleteRequirement(referenceNum) {
