@@ -487,7 +487,7 @@ function CrewExecutionTab({
   );
 }
 
-function CrewMemberExecutionCard({ member }: { member: any }) {
+function CrewMemberExecutionCard({ member }: { member: unknown }) {
   const statusEmoji = {
     pending: '⏳',
     executing: '🔄',
@@ -498,26 +498,26 @@ function CrewMemberExecutionCard({ member }: { member: any }) {
   return (
     <div className="card" style={{ padding: 'var(--space-3)', marginBottom: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-        <span style={{ fontWeight: 600 }}>{statusEmoji[member.status as keyof typeof statusEmoji]} {member.crewName}</span>
-        {member.confidence && <span className="meta">{member.confidence}% confident</span>}
+        <span style={{ fontWeight: 600 }}>{statusEmoji[(member as Record<string, unknown>).status as keyof typeof statusEmoji]} {String((member as Record<string, unknown>).crewName)}</span>
+        {(member as Record<string, unknown>).confidence ? <span className="meta">{String((member as Record<string, unknown>).confidence)}% confident</span> : null}
       </div>
 
-      {member.findings && (
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dim)', marginBottom: 'var(--space-2)' }}>{member.findings}</p>
-      )}
+      {(member as Record<string, unknown>).findings ? (
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-dim)', marginBottom: 'var(--space-2)' }}>{String((member as Record<string, unknown>).findings)}</p>
+      ) : null}
 
-      {member.recommendations && member.recommendations.length > 0 && (
+      {(member as Record<string, unknown>).recommendations && ((member as Record<string, unknown>).recommendations as Array<unknown>).length > 0 ? (
         <div style={{ fontSize: 'var(--text-xs)', marginTop: 'var(--space-2)', display: 'grid', gap: 'var(--space-1)' }}>
           <strong style={{ display: 'block' }}>Recommendations:</strong>
           <ul style={{ display: 'grid', gap: 'var(--space-1)', marginLeft: 'var(--space-3)', listStyle: 'none' }}>
-            {member.recommendations.map((rec: string, idx: number) => (
-              <li key={idx}>→ {rec}</li>
+            {((member as Record<string, unknown>).recommendations as Array<unknown>).map((rec, idx) => (
+              <li key={idx}>→ {String(rec)}</li>
             ))}
           </ul>
         </div>
-      )}
+      ) : null}
 
-      {member.isVeto && (
+      {(member as Record<string, unknown>).isVeto ? (
         <div
           style={{
             marginTop: 'var(--space-2)',
@@ -532,7 +532,7 @@ function CrewMemberExecutionCard({ member }: { member: any }) {
         >
           🛑 SECURITY VETO
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

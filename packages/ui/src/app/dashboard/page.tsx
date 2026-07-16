@@ -372,7 +372,7 @@ export default async function Dashboard({
             Client → Project → Sprint → Story visibility with security-aware delivery context.
           </p>
         </div>
-        <a href="/story/new" className="btn btn-primary">+ New Story</a>
+          <Link href="/story/new" className="btn btn-primary">+ New Story</Link>
       </div>
 
       <div className="card" style={{ marginBottom: '1.25rem' }}>
@@ -586,7 +586,7 @@ export default async function Dashboard({
               ? 'No stories matched the stakeholder filters. Adjust filters to evaluate additional stories.'
               : 'No stories tracked locally yet. Aha is the source of truth — projects and stories live there until imported.'}
           </p>
-          <a href="/story/new" className="btn btn-primary">Import a story from Aha →</a>
+          <Link href="/story/new" className="btn btn-primary">Import a story from Aha →</Link>
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

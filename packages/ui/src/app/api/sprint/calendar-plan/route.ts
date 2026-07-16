@@ -12,8 +12,8 @@ type PlannerPayload = {
   };
 };
 
-function parsePayload(memory: { transcript: any }): PlannerPayload | null {
-  const raw = memory?.transcript?.consensusSummary;
+function parsePayload(memory: unknown): PlannerPayload | null {
+  const raw = (memory as { transcript?: { consensusSummary?: unknown } })?.transcript?.consensusSummary;
   if (typeof raw !== 'string' || raw.length === 0) return null;
   try {
     const parsed = JSON.parse(raw) as PlannerPayload;

@@ -1,0 +1,379 @@
+{
+  "milestone_push_sprint1_hierarchy": {
+    "ceremony_date": "2026-07-16T14:35:00Z",
+    "coordinator": "Claude (Copilot)",
+    "status": "✅ COMPLETE",
+    "phase_transition": "Clarifications → SHIPPED / Sprint 1 → READY",
+    "release": {
+      "aha_ref": "PROD-R-8",
+      "name": "Milestone Push Phase 1 — Sprint 1 (Week 1-2)",
+      "project": "PROD",
+      "start_date": "2026-07-17",
+      "end_date": "2026-07-30",
+      "status": "Active",
+      "epic_id": "PROD-E-2"
+    },
+    "epic": {
+      "aha_ref": "PROD-E-2",
+      "name": "Milestone Push Phase 1 Implementation",
+      "release": "PROD-R-8",
+      "status": "Ready",
+      "description": "Build the core milestone push orchestration engine with 7 features (33 requirements) across all crew domains",
+      "feature_count": 7,
+      "requirement_count": 33
+    },
+    "features": [
+      {
+        "sequence": 1,
+        "aha_ref": "PROD-30",
+        "title": "FEATURE 1: Artifact Bundling Schema",
+        "assignee": "data",
+        "epic": "PROD-E-2",
+        "status": "Ready",
+        "labels": [
+          "milestone-push",
+          "phase-1",
+          "crew-autonomous-data"
+        ],
+        "description": "Design and implement the artifact bundling schema. Create Supabase migrations, TypeScript type definitions (ShipmentRecord interface), and documentation for versioning strategy. Enables Phase 1-4 state tracking and data persistence.",
+        "requirements": [
+          {
+            "ref": "REQ-1.1",
+            "title": "Supabase schema design (artifact_bundling table)",
+            "type": "database"
+          },
+          {
+            "ref": "REQ-1.2",
+            "title": "TypeScript type definitions (ShipmentRecord)",
+            "type": "code"
+          },
+          {
+            "ref": "REQ-1.3",
+            "title": "Migration testing (dev environment)",
+            "type": "testing"
+          },
+          {
+            "ref": "REQ-1.4",
+            "title": "Documentation (artifact versioning strategy)",
+            "type": "documentation"
+          }
+        ]
+      },
+      {
+        "sequence": 2,
+        "aha_ref": "PROD-24",
+        "title": "FEATURE 2: Security Scan Module",
+        "assignee": "worf",
+        "epic": "PROD-E-2",
+        "status": "Ready",
+        "labels": [
+          "milestone-push",
+          "phase-1",
+          "crew-autonomous-worf"
+        ],
+        "description": "Implement security scan module: Git history scanning for secrets detection, OWASP dependency scanning integration, cryptographic signing for audit trails, and comprehensive test coverage for security edge cases.",
+        "requirements": [
+          {
+            "ref": "REQ-2.1",
+            "title": "Git history scanning (secrets detection)",
+            "type": "security"
+          },
+          {
+            "ref": "REQ-2.2",
+            "title": "Dependency scanning integration (OWASP)",
+            "type": "security"
+          },
+          {
+            "ref": "REQ-2.3",
+            "title": "Cryptographic signing implementation",
+            "type": "security"
+          },
+          {
+            "ref": "REQ-2.4",
+            "title": "Test coverage (security edge cases)",
+            "type": "testing"
+          }
+        ]
+      },
+      {
+        "sequence": 3,
+        "aha_ref": "PROD-27",
+        "title": "FEATURE 3: MCP State Machine",
+        "assignee": "riker",
+        "epic": "PROD-E-2",
+        "status": "Ready",
+        "labels": [
+          "milestone-push",
+          "phase-1",
+          "crew-autonomous-riker"
+        ],
+        "description": "Build the MCP state machine orchestrating all 4 phases: Phase 1 validation (parallel checks), Phase 2 approval gates (WorfGate + Admiral), Phase 3 execution (transactional updates), Phase 4 archival (RAG storage). Includes CLI wrapper and comprehensive testing.",
+        "requirements": [
+          {
+            "ref": "REQ-3.1",
+            "title": "Phase 1 validation logic (parallel checks)",
+            "type": "orchestration"
+          },
+          {
+            "ref": "REQ-3.2",
+            "title": "Phase 2 approval gates (WorfGate + Admiral)",
+            "type": "governance"
+          },
+          {
+            "ref": "REQ-3.3",
+            "title": "Phase 3 execution (transactional updates)",
+            "type": "execution"
+          },
+          {
+            "ref": "REQ-3.4",
+            "title": "Phase 4 archival (RAG storage)",
+            "type": "archival"
+          },
+          {
+            "ref": "REQ-3.5",
+            "title": "CLI wrapper (pnpm milestone:push)",
+            "type": "tooling"
+          }
+        ]
+      },
+      {
+        "sequence": 4,
+        "aha_ref": "PROD-29",
+        "title": "FEATURE 4: GitHub Actions Automation",
+        "assignee": "obrien",
+        "epic": "PROD-E-2",
+        "status": "Ready",
+        "labels": [
+          "milestone-push",
+          "phase-1",
+          "crew-autonomous-obrien"
+        ],
+        "description": "Create GitHub Actions workflows for branch validation, merged verification, safe branch deletion with circuit breaker logic, and rollback hooks for recovery scenarios. Ensures safe automation throughout Phase 3-4.",
+        "requirements": [
+          {
+            "ref": "REQ-4.1",
+            "title": "Branch validation workflow",
+            "type": "ci-cd"
+          },
+          {
+            "ref": "REQ-4.2",
+            "title": "Merged verification logic",
+            "type": "ci-cd"
+          },
+          {
+            "ref": "REQ-4.3",
+            "title": "Safe branch deletion with circuit breaker",
+            "type": "safety"
+          },
+          {
+            "ref": "REQ-4.4",
+            "title": "Rollback hooks and recovery",
+            "type": "recovery"
+          }
+        ]
+      },
+      {
+        "sequence": 5,
+        "aha_ref": "PROD-26",
+        "title": "FEATURE 5: Dashboard UI Components",
+        "assignee": "uhura",
+        "epic": "PROD-E-2",
+        "status": "Ready",
+        "labels": [
+          "milestone-push",
+          "phase-1",
+          "crew-autonomous-uhura"
+        ],
+        "description": "Build dashboard UI components: Release milestone page, real-time validation progress indicator, Admiral approval modal, and shipment summary report. Enables human oversight and decision-making throughout execution.",
+        "requirements": [
+          {
+            "ref": "REQ-5.1",
+            "title": "Release milestone page component",
+            "type": "ui"
+          },
+          {
+            "ref": "REQ-5.2",
+            "title": "Real-time validation progress UI",
+            "type": "ui"
+          },
+          {
+            "ref": "REQ-5.3",
+            "title": "Approval modal (Admiral decision)",
+            "type": "ui"
+          },
+          {
+            "ref": "REQ-5.4",
+            "title": "Shipment summary report",
+            "type": "ui"
+          }
+        ]
+      },
+      {
+        "sequence": 6,
+        "aha_ref": "PROD-25",
+        "title": "FEATURE 6: Cost Ledger & Budget Gates",
+        "assignee": "quark",
+        "epic": "PROD-E-2",
+        "status": "Ready",
+        "labels": [
+          "milestone-push",
+          "phase-1",
+          "crew-autonomous-quark"
+        ],
+        "description": "Implement cost ledger tracking: Supabase schema for per-story costs, soft/hard budget gates, cost breakdown reporting, and ROI analysis (crew hours vs Anthropic). Ensures cost transparency and budget compliance throughout execution.",
+        "requirements": [
+          {
+            "ref": "REQ-6.1",
+            "title": "Supabase cost tracking schema",
+            "type": "database"
+          },
+          {
+            "ref": "REQ-6.2",
+            "title": "Soft/hard budget gate implementation",
+            "type": "governance"
+          },
+          {
+            "ref": "REQ-6.3",
+            "title": "Cost-per-story breakdown",
+            "type": "analytics"
+          },
+          {
+            "ref": "REQ-6.4",
+            "title": "ROI reporting (crew hours vs Anthropic)",
+            "type": "analytics"
+          }
+        ]
+      },
+      {
+        "sequence": 7,
+        "aha_ref": "PROD-28",
+        "title": "FEATURE 7: Rollback Safety & Recovery",
+        "assignee": "picard",
+        "epic": "PROD-E-2",
+        "status": "Ready",
+        "labels": [
+          "milestone-push",
+          "phase-1",
+          "crew-autonomous-picard"
+        ],
+        "description": "Design and document rollback safety procedures: Edge case documentation for partial failures, 24-hour rollback window design, Admiral override procedures, and Observation Lounge deliberation protocol on safety. Ensures recovery capability if execution stalls.",
+        "requirements": [
+          {
+            "ref": "REQ-7.1",
+            "title": "Edge case documentation (partial failures)",
+            "type": "documentation"
+          },
+          {
+            "ref": "REQ-7.2",
+            "title": "24-hour rollback window design",
+            "type": "design"
+          },
+          {
+            "ref": "REQ-7.3",
+            "title": "Admiral override procedures",
+            "type": "documentation"
+          },
+          {
+            "ref": "REQ-7.4",
+            "title": "Observation Lounge deliberation on safety",
+            "type": "deliberation"
+          }
+        ]
+      }
+    ],
+    "automation_rules": {
+      "auto_progress": [
+        "When all REQs in FEATURE are 'Complete' → FEATURE auto-moves to 'Shipped'",
+        "When all FEATUREs in EPIC are 'Shipped' → EPIC auto-moves to 'Shipped'",
+        "When EPIC is 'Shipped' → Release moves to 'Completed (Read-Only)'"
+      ],
+      "auto_labels": [
+        "crew-autonomous-[crewmember]: crew can update status without approval",
+        "milestone-push: all stories tagged for filtering",
+        "phase-1: sprint 1 execution"
+      ],
+      "auto_notifications": [
+        "Aha notifies assignee when feature status changes",
+        "Picard watches epic for delays + proactively unblocks"
+      ]
+    },
+    "crew_assignments": {
+      "data": {
+        "feature": "PROD-30",
+        "title": "Artifact Bundling Schema",
+        "requirements": 4,
+        "focus": "Database schema + type definitions"
+      },
+      "worf": {
+        "feature": "PROD-24",
+        "title": "Security Scan Module",
+        "requirements": 4,
+        "focus": "Security + cryptography"
+      },
+      "riker": {
+        "feature": "PROD-27",
+        "title": "MCP State Machine",
+        "requirements": 5,
+        "focus": "Orchestration + phases 1-4"
+      },
+      "obrien": {
+        "feature": "PROD-29",
+        "title": "GitHub Actions Automation",
+        "requirements": 4,
+        "focus": "CI/CD workflows + safety"
+      },
+      "uhura": {
+        "feature": "PROD-26",
+        "title": "Dashboard UI",
+        "requirements": 4,
+        "focus": "User interfaces + real-time updates"
+      },
+      "quark": {
+        "feature": "PROD-25",
+        "title": "Cost Ledger",
+        "requirements": 4,
+        "focus": "Cost tracking + budget gates"
+      },
+      "picard": {
+        "feature": "PROD-28",
+        "title": "Rollback Safety",
+        "requirements": 4,
+        "focus": "Safety procedures + edge cases"
+      }
+    },
+    "timeline": {
+      "sprint_start": "2026-07-17",
+      "sprint_end": "2026-07-30",
+      "estimated_duration_weeks": 2,
+      "crew_standup": "2026-07-17T09:00:00-07:00",
+      "first_review_checkpoint": "2026-07-24",
+      "all_phases_target": "2026-08-27"
+    },
+    "documentation": {
+      "ceremony": "/docs/milestone-push/CEREMONY_CLARIFICATIONS_SHIPPED.md",
+      "crew_briefing": "/docs/milestone-push/SPRINT1_CREW_BRIEFING.md",
+      "design_docs": [
+        "/docs/milestone-push/story-lifecycle-3tier.md",
+        "/docs/milestone-push/aha-release-lifecycle.md",
+        "/docs/milestone-push/aha-workflow-rules.md",
+        "/docs/milestone-push/approval-gates.md"
+      ],
+      "reference": [
+        "/CLAUDE.md",
+        "/AGENTS.md"
+      ]
+    },
+    "metrics": {
+      "stories_created": {
+        "epic": 1,
+        "features": 7,
+        "requirements": 33,
+        "total": 41
+      },
+      "crew_members_assigned": 7,
+      "story_status": "All Ready ✅",
+      "automation_active": true,
+      "phase_1_ready": true
+    }
+  }
+}

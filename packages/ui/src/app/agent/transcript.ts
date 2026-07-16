@@ -8,7 +8,7 @@
 /** One parsed Server-Sent-Events frame: an optional `event:` name + the decoded `data:` JSON. */
 export interface SSEFrame {
   eventName: string | null;
-  data: any;
+  data: Record<string, unknown> | null;
 }
 
 /**

@@ -564,7 +564,7 @@ export default function ObservationLoungePage() {
                 🧠 Prior Memories That Influenced This Decision
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.6rem' }}>
-                {w.sharedMemories.length} relevant memories from the crew's collective experience
+                {w.sharedMemories.length} relevant memories from the crew&apos;s collective experience
               </div>
               {w.sharedMemories.map((memory, idx) => (
                 <div key={idx} style={{ marginBottom: '0.55rem', borderLeft: '3px solid var(--accent3)', paddingLeft: '0.65rem', background: 'var(--surface-2)', padding: '0.55rem 0.65rem', borderRadius: 4 }}>

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       const ids = idsParam.split(',').map(id => id.trim());
       personas = [];
       for (const id of ids) {
-        const persona = await getCrewPersona(id as any);
+        const persona = await getCrewPersona(id as 'picard' | 'data' | 'riker' | 'geordi' | 'obrien' | 'worf' | 'yar' | 'troi' | 'crusher' | 'uhura' | 'quark');
         if (persona) personas.push(persona);
       }
     } else {

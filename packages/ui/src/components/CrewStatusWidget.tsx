@@ -79,7 +79,7 @@ export function CrewStatusWidget() {
           const newTaskIds = [
             ...data.active_tasks,
             ...data.completed_tasks,
-          ].map((t: any) => `${t.crew_id}_${t.task}`);
+          ].map((t: { crew_id: string; task: string }) => `${t.crew_id}_${t.task}`);
 
           setVisibleUpdates(prev => {
             const updated = [...new Set([...newTaskIds, ...prev])];

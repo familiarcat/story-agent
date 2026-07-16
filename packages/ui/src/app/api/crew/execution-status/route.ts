@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
 
     // Parse outcomes into display format
     const activeTasks = recentOutcomes
-      .filter((o: any) => o.status === 'retry' || o.status === 'blocked')
-      .map((o: any) => ({
+      .filter((o: { status: string }) => o.status === 'retry' || o.status === 'blocked')
+      .map((o: { crew_id: string; task_description: string; status: string; timestamp: string }) => ({
         crew_id: o.crew_id,
         task: o.task_description,
         status: o.status,
@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
       }));
 
     const completedTasks = recentOutcomes
-      .filter((o: any) => o.status === 'success' || o.status === 'failed')
+      .filter((o: { status: string }) => o.status === 'success' || o.status === 'failed')
       .slice(0, 10)
-      .map((o: any) => ({
+      .map((o: { crew_id: string; task_description: string; status: string; duration_seconds?: number; confidence_level?: string; error_message?: string }) => ({
         crew_id: o.crew_id,
         task: o.task_description,
         status: o.status,

@@ -15,7 +15,7 @@ export async function GET(
   { params }: { params: Promise<{ crewId: string }> }
 ) {
   try {
-    const crewId = (await params).crewId as any;
+    const crewId = (await params).crewId as 'picard' | 'data' | 'riker' | 'geordi' | 'obrien' | 'worf' | 'yar' | 'troi' | 'crusher' | 'uhura' | 'quark';
     const includeHistory = request.nextUrl.searchParams.get('history') === 'true';
 
     const manifest = await getCrewSkillManifest(crewId);
@@ -29,7 +29,7 @@ export async function GET(
       );
     }
 
-    let response: any = {
+    const response: { success: boolean; manifest: unknown; history?: unknown } = {
       success: true,
       manifest,
     };

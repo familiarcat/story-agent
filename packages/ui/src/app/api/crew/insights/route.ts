@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Load real crew data from Supabase
     const roster = await getCrewRosterWithStats();
-    const insights: any[] = [];
+    const insights: Array<Record<string, unknown>> = [];
 
     // Build insights from crew specializations and improvements
     for (const member of roster) {
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
       // Create insight for each recent improvement
       recentImprovements.forEach((note, idx) => {
-        const insight: any = {
+        const insight: Record<string, unknown> = {
           id: `insight-${member.crewId}-${idx}`,
           type: member.crewId === 'worf' ? 'security_issue' : 
                 member.crewId === 'data' ? 'architecture_recommendation' :
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        insights: insights.sort((a, b) => b.confidence - a.confidence),
+        insights: insights.sort((a, b) => (b.confidence as number) - (a.confidence as number)),
         count: insights.length,
       },
       { status: 200 }

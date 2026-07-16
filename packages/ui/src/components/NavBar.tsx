@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { lcars } from '../lib/lcars';
 import { ThemeSwitcher } from './ThemeProvider';
 import { ClientMenu } from './ClientMenu';
@@ -27,9 +28,9 @@ export default function NavBar() {
       zIndex: 100,
       borderBottom: `1px solid ${lcars.border}`,
     }}>
-      <a href="/" style={{ background: lcars.neonCarrot, color: lcars.onAccent, textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', padding: '8px 14px', borderTopLeftRadius: 'var(--radius-elbow)', borderBottomLeftRadius: 6, borderTopRightRadius: 6, borderBottomRightRadius: 6, textTransform: 'uppercase', display: 'flex', alignItems: 'center' }}>
+      <Link href="/" style={{ background: lcars.neonCarrot, color: lcars.onAccent, textDecoration: 'none', fontWeight: 800, fontSize: '0.85rem', padding: '8px 14px', borderTopLeftRadius: 'var(--radius-elbow)', borderBottomLeftRadius: 6, borderTopRightRadius: 6, borderBottomRightRadius: 6, textTransform: 'uppercase', display: 'flex', alignItems: 'center' }}>
         🖖 Story Agent
-      </a>
+      </Link>
       <NavDropdowns />
       <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
         <ClientMenu />

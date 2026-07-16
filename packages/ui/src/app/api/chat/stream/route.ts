@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from 'crypto';
+import { randomUUID } from 'crypto';
 import { prepareObservationLoungePayload } from '../../aha/observation-lounge/route';
 import { resolveClientPolicy } from '@story-agent/shared/client-security-policy';
 

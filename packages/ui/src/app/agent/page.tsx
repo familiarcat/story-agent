@@ -53,26 +53,28 @@ export default function AgentPage() {
     requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }));
   }
 
-  function handleFrame(eventName: string | null, data: any) {
+  function handleFrame(eventName: string | null, data: unknown) {
     if (!data) return;
     // Running cost is SET-wise (cost/done carry cumulative spend) — one reducer for every frame.
-    setSessionCost(prev => cumulativeCost(prev, { eventName, data }));
+    setSessionCost(prev => cumulativeCost(prev, { eventName, data: data as Record<string, unknown> }));
     // The final `event: done` payload is the loop RESULT (finalText/totalCostUSD/model).
     if (eventName === 'done') {
-      pushEv({ kind: 'done', model: data.model, costUSD: data.totalCostUSD, text: data.finalText });
+      const done = data as { model: string; totalCostUSD: number; finalText: string };
+      pushEv({ kind: 'done', model: done.model, costUSD: done.totalCostUSD, text: done.finalText });
       return;
     }
-    switch (data.type) {
-      case 'model': setModel(data.model); pushEv({ kind: 'model', model: data.model }); break;
-      case 'lens': pushEv({ kind: 'lens', text: data.text }); break;
-      case 'text': pushEv({ kind: 'text', text: data.text }); break;
-      case 'tool_call': pushEv({ kind: 'tool_call', tool: data.tool, args: data.args }); break;
-      case 'gate': pushEv({ kind: 'gate', tool: data.tool, tier: data.tier, remediations: data.remediations, needsApproval: data.needsApproval, approvalId: data.approvalId }); break;
-      case 'tool_result': pushEv({ kind: 'tool_result', tool: data.tool, text: data.text, tier: data.tier }); break;
-      case 'cost': pushEv({ kind: 'cost', costUSD: data.costUSD, text: data.text }); break;
-      case 'escalation': pushEv({ kind: 'escalation', tool: data.tool, text: data.text }); break;
-      case 'retry': pushEv({ kind: 'retry', text: data.text }); break;
-      case 'error': pushEv({ kind: 'error', text: data.text }); break;
+    const frame = data as Record<string, unknown>;
+    switch (frame.type) {
+      case 'model': setModel(frame.model as string | null); pushEv({ kind: 'model', model: frame.model as string }); break;
+      case 'lens': pushEv({ kind: 'lens', text: frame.text as string }); break;
+      case 'text': pushEv({ kind: 'text', text: frame.text as string }); break;
+      case 'tool_call': pushEv({ kind: 'tool_call', tool: frame.tool as string, args: frame.args as Record<string, unknown> }); break;
+      case 'gate': pushEv({ kind: 'gate', tool: frame.tool as string, tier: frame.tier as string, remediations: frame.remediations as string[], needsApproval: frame.needsApproval as boolean, approvalId: frame.approvalId as string }); break;
+      case 'tool_result': pushEv({ kind: 'tool_result', tool: frame.tool as string, text: frame.text as string, tier: frame.tier as string }); break;
+      case 'cost': pushEv({ kind: 'cost', costUSD: frame.costUSD as number, text: frame.text as string }); break;
+      case 'escalation': pushEv({ kind: 'escalation', tool: frame.tool as string, text: frame.text as string }); break;
+      case 'retry': pushEv({ kind: 'retry', text: frame.text as string }); break;
+      case 'error': pushEv({ kind: 'error', text: frame.text as string }); break;
       // NOTE: 'done' is a NAMED SSE event (handled above), never a data.type — no case needed here.
       default: break;
     }
@@ -114,8 +116,9 @@ export default function AgentPage() {
           if (frame) handleFrame(frame.eventName, frame.data);
         }
       }
-    } catch (e: any) {
-      pushEv({ kind: 'error', text: e?.message || 'stream failed' });
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'stream failed';
+      pushEv({ kind: 'error', text: errorMessage });
     } finally {
       setBusy(false);
     }

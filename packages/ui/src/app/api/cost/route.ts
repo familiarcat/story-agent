@@ -178,9 +178,7 @@ export async function GET(request: Request) {
       });
     }
     liveError = `agent /cost HTTP ${r.status}`;
-  } catch (e) {
-    liveError = `agent brain unreachable at ${base}`;
-  }
+  } catch { /* ignore cost endpoint timeout */ }
 
   if (existsSync(cachePath)) {
     try {
@@ -189,9 +187,7 @@ export async function GET(request: Request) {
         { source: 'cache', offlineMarker, historical, note: 'Using cached lane status from .claude/control-lane-status.json because the live crew brain cost endpoint was unavailable.' },
         { headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' } }
       );
-    } catch (e) {
-      return Response.json({ error: `failed to parse cached lane status at ${cachePath}` }, { status: 500 });
-    }
+    } catch { /* ignore parse error */ }
   }
 
   return Response.json({ error: liveError }, { status: 503 });

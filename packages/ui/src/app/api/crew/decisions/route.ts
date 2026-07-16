@@ -16,7 +16,21 @@ export async function GET(request: NextRequest) {
 
     // Load real crew decisions from recent mission debriefs
     const recentDebriefs = await getRecentMissionDebriefs(20);
-    const decisions: any[] = [];
+    const decisions: Array<{
+      id: string;
+      type: string;
+      crewMember: string;
+      crewId: string;
+      authority: string;
+      missionId: string;
+      storyRef: string;
+      reasoning: string;
+      affectedTeams: string[];
+      approved: boolean;
+      requiresApproval: boolean;
+      timestamp: unknown;
+      skillVersion: string;
+    }> = [];
 
     // Build decisions from crew debriefs
     for (const debrief of recentDebriefs) {
@@ -59,7 +73,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        decisions: filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+        decisions: filtered.sort((a, b) => new Date(b.timestamp as string | number | Date).getTime() - new Date(a.timestamp as string | number | Date).getTime()),
         count: filtered.length,
       },
       { status: 200 }

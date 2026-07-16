@@ -56,7 +56,7 @@ async function getAvailableModelIds(forceRefresh = false): Promise<Set<string> |
       headers: { Authorization: `Bearer ${OR_KEY}` },
     });
     if (!resp.ok) return availableModelIdsCache;
-    const body: any = await resp.json();
+    const body: { data?: Array<{ id: string }> } = await resp.json();
     const ids = new Set<string>();
     for (const item of body?.data ?? []) {
       if (typeof item?.id === 'string' && item.id.trim()) ids.add(item.id.trim());
@@ -116,7 +116,7 @@ async function ragContext(query: string): Promise<{ text: string; sources: strin
     });
     clearTimeout(t);
     if (!resp.ok) return { text: '', sources: [] };
-    const d: any = await resp.json();
+    const d = await resp.json() as { memories?: Array<{ storyId: string; text: string }>; docs?: Array<{ title: string; snippet: string }> };
     const blocks: string[] = [], sources: string[] = [];
     for (const m of d.memories ?? []) { sources.push(`crew-memory:${m.storyId}`); blocks.push(`// crew memory (${m.storyId})\n${m.text}`); }
     for (const doc of d.docs ?? []) { sources.push(`docs:${doc.title}`); blocks.push(`// doc: ${doc.title}\n${doc.snippet}`); }
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     });
     clearTimeout(t);
     if (a.ok) {
-      const d: any = await a.json();
+      const d = await a.json() as { model: string; tier: string; provider?: string; tokensIn?: number; tokensOut?: number; costUSD?: number; sources?: string[]; answer?: string };
       const meta = { model: d.model, tier: String(d.tier), provider: d.provider ?? 'openrouter', tokensIn: d.tokensIn ?? 0, tokensOut: d.tokensOut ?? 0, costUSD: d.costUSD ?? 0, sources: d.sources ?? [] };
       return new Response(`${d.answer ?? ''}${META}${JSON.stringify(meta)}`, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
-      const reader = (orResp.body as any).getReader();
+      const reader = (orResp.body as ReadableStream<Uint8Array>).getReader();
       const dec = new TextDecoder();
       let buffer = '', usageIn = 0, usageOut = 0, answerLen = 0;
       while (true) {
