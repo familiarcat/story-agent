@@ -368,8 +368,15 @@ export class VelocityCacheManager {
     const cached = await this.warmCache.get(key);
     if (cached) return cached;
 
-    // Query cold storage
-    const trend = await this.coldCache.trendAnalysis(sprintId, lookbackDays);
+    // Query cold storage (returns AggregatedMetrics)
+    const metrics = await this.coldCache.trendAnalysis(sprintId, lookbackDays);
+
+    // Convert AggregatedMetrics to TrendAnalysis
+    const trend: TrendAnalysis = {
+      trend: 'stable', // TODO: compute from metrics.sprintVelocity trends
+      percentChange: 0, // TODO: compute from historical velocity
+      snapshots: [], // TODO: extract from metrics if available
+    };
 
     // Cache result for 1 hour
     // (Note: warm cache expects AggregatedMetrics, so we'll skip caching the trend here)
