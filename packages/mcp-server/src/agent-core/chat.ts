@@ -10,6 +10,7 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { randomUUID } from 'node:crypto';
 import { searchCrewPersonalMemories, storeObservationMemory } from '@story-agent/shared/db';
 import type { ObservationMemoryRecord, ObservationDebateResult } from '@story-agent/shared';
+import { resolveWorfGateCredential } from '@story-agent/shared/worfgate-credentials';
 import type { TeamMember } from '../lib/crew-team-assembly.js';
 import {
   quarkSelectAvailableModel,
@@ -25,8 +26,6 @@ import { analyzeMission } from '../lib/mission-analyzer.js';
 import { buildCrewInventory } from '../lib/crew-skill-registry.js';
 import { assembleTeamsForMission } from '../lib/team-assembly-engine.js';
 
-const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
-const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
 const AUTO_CREW_PREFLIGHT = process.env.STORY_AGENT_CHAT_CREW_PREFLIGHT !== 'false';
 const ACTIVATION_CLIENT_ALLOWLIST = (process.env.STORY_AGENT_CHAT_ACTIVATION_CLIENT_ALLOWLIST || '')
   .split(',')
@@ -324,7 +323,7 @@ function normalizeAudioFormat(mimeType: string): string | null {
   return null;
 }
 
-async function transcribeAudioAttachment(attachment: NormalizedAttachment): Promise<string | null> {
+async function transcribeAudioAttachment(attachment: NormalizedAttachment, OR_URL: string, OR_KEY: string): Promise<string | null> {
   if (!attachment.dataUrl || !attachment.mimeType.startsWith('audio/')) return null;
   const parsed = parseBase64DataUrl(attachment.dataUrl);
   if (!parsed) return null;
@@ -361,14 +360,14 @@ async function transcribeAudioAttachment(attachment: NormalizedAttachment): Prom
   }
 }
 
-async function buildAttachmentNotes(attachments: NormalizedAttachment[]): Promise<string[]> {
+async function buildAttachmentNotes(attachments: NormalizedAttachment[], OR_URL: string, OR_KEY: string): Promise<string[]> {
   if (!attachments.length) return [];
   const notes: string[] = ['MULTIMODAL ATTACHMENTS:'];
   let transcribed = 0;
   for (const [idx, attachment] of attachments.entries()) {
     notes.push(`- ${idx + 1}. ${attachment.name} (${attachment.kind}, ${attachment.mimeType}, ${Math.round(attachment.size / 1024)}KB)`);
     if (attachment.kind === 'audio' && transcribed < 2 && attachment.size <= 8 * 1024 * 1024) {
-      const transcript = await transcribeAudioAttachment(attachment);
+      const transcript = await transcribeAudioAttachment(attachment, OR_URL, OR_KEY);
       if (transcript) {
         notes.push(`  transcript: ${transcript.slice(0, 1200)}`);
         transcribed += 1;
@@ -830,7 +829,20 @@ async function autoLogCrewContext(
 }
 
 export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<CanonicalChatResponse> {
-  if (!OR_KEY) throw new Error('openrouter_not_configured');
+  // Resolve credentials through WorfGate (authorized, audited, credential provider chain)
+  const keyResult = resolveWorfGateCredential('CREW_LLM_APPROVED_KEY', {
+    operation: 'llm:call',
+    crewId: 'agent', // Crew identity for authorization
+  });
+  if (!keyResult.authorized) throw new Error(`worfgate_denied: ${keyResult.reason}`);
+  if (!keyResult.available || !keyResult.value) throw new Error('openrouter_not_configured');
+  const OR_KEY = keyResult.value;
+
+  const urlResult = resolveWorfGateCredential('CREW_LLM_APPROVED_URL', {
+    operation: 'llm:call',
+    crewId: 'agent',
+  });
+  const OR_URL = (urlResult.available && urlResult.value ? urlResult.value : 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 
   const originalMessage = String(body.message ?? '').trim();
   if (!originalMessage) throw new Error('message_required');
@@ -966,7 +978,7 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   const costGovernanceConfig = getCostGovernanceConfig();
   const requestId = randomUUID();
 
-  const attachmentNotes = await buildAttachmentNotes(attachments);
+  const attachmentNotes = await buildAttachmentNotes(attachments, OR_URL, OR_KEY);
   const userContent = buildUserContentParts(
     attachmentNotes.length ? `${optimizedPrompt.dispatchMessage}\n\n${attachmentNotes.join('\n')}` : optimizedPrompt.dispatchMessage,
     attachments,

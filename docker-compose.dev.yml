@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # RAG server (Redis-backed observation memory + embeddings)
+  rag:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.turbo
+    environment:
+      NODE_ENV: development
+      SUPABASE_MODE: auto
+      CREW_FRUGAL: 'true'
+      STORY_AGENT_RAG_PORT: '3102'
+    ports:
+      - '3102:3102'
+    command: >
+      sh -c "npm run --workspace=@story-agent/mcp-server start:rag"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3102/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # MCP server (crew tools + agent-core loop)
+  mcp:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.turbo
+    environment:
+      NODE_ENV: development
+      SUPABASE_MODE: auto
+      CREW_FRUGAL: 'true'
+      STORY_AGENT_MCP_PORT: '3103'
+      STORY_AGENT_AGENT_PORT: '3103'
+      RAG_URL: 'http://rag:3102'
+    ports:
+      - '3103:3103'
+    command: >
+      sh -c "npm run --workspace=@story-agent/mcp-server start:mcp"
+    networks:
+      - internal
+    depends_on:
+      rag:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3103/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # WebSocket proxy for VSCode chat routing
+  chat-proxy:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.turbo
+    environment:
+      NODE_ENV: development
+      SUPABASE_MODE: auto
+      CREW_FRUGAL: 'true'
+      STORY_AGENT_CHAT_PROXY_PORT: '3105'
+      MCP_URL: 'http://mcp:3103'
+      RAG_URL: 'http://rag:3102'
+    ports:
+      - '3105:3105'
+    command: >
+      sh -c "npm run --workspace=@story-agent/mcp-server start:chat-proxy"
+    networks:
+      - internal
+    depends_on:
+      mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3105/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Next.js UI (web dashboard)
+  ui:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.turbo
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_MCP_URL: 'http://localhost:3103'
+      NEXT_PUBLIC_RAG_URL: 'http://localhost:3102'
+      NEXT_PUBLIC_CHAT_PROXY_URL: 'ws://localhost:3105/chat-ws'
+    ports:
+      - '3000:3000'
+    command: >
+      sh -c "npm run --workspace=@story-agent/ui dev"
+    networks:
+      - internal
+    depends_on:
+      - mcp
+
+networks:
+  internal:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: 'true'
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

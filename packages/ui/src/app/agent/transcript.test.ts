@@ -9,7 +9,7 @@ describe('parseSSEFrame', () => {
   it('parses a data-only frame (no event name)', () => {
     const f = parseSSEFrame('data: {"type":"model","model":"deepseek/deepseek-chat"}');
     expect(f?.eventName).toBeNull();
-    expect(f?.data.type).toBe('model');
+    expect(f?.data?.type).toBe('model');
   });
   it('returns null for a partial / non-json frame', () => {
     expect(parseSSEFrame('data: {oops')).toBeNull();

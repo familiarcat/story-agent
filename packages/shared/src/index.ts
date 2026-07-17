@@ -241,6 +241,7 @@ export * from './business-tier.js';
 export * from './entitlements.js';
 export * from './entitlement-sync.js';
 export * from './worfgate-credentials.js';
+export * from './worfgate-sync-validator.js';
 export * from './skill-theory.js';
 export interface StoryMission {
   story: AgileStory;

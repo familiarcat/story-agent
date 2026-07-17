@@ -94,7 +94,7 @@ function main() {
     '--format=cjs',
     '--platform=node',
     '--sourcemap',
-    '--watch'
+    '--watch=forever'
   ], {
     cwd: __dirname,
     stdio: ['inherit', 'pipe', 'pipe'],

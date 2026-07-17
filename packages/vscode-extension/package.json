@@ -430,6 +430,11 @@
           "default": "",
           "description": "Optional bearer token for the agent-core endpoint (matches AGENT_SERVICE_TOKEN). Falls back to the AGENT_SERVICE_TOKEN env var."
         },
+        "storyAgent.chat.chatProxyUrl": {
+          "type": "string",
+          "default": "http://localhost:3103",
+          "description": "WebSocket chat proxy URL for VSCode chat client (auto-reconnect, message batching). Defaults to MCP server URL. Falls back to the STORY_AGENT_CHAT_PROXY_URL env var."
+        },
         "storyAgent.chat.autoCrewStreamRelay": {
           "type": "boolean",
           "default": true,
@@ -489,10 +494,12 @@
     "@story-agent/shared": "workspace:*"
   },
   "devDependencies": {
+    "@story-agent/ui": "workspace:*",
     "@types/node": "^22.10.5",
     "@types/vscode": "^1.99.0",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "^0.24.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.8"
   }
 }

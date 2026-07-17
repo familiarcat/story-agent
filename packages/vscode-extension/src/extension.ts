@@ -17,12 +17,54 @@ import { registerAhaCrudCommands } from './commands/ahaCrud';
 import { registerShowAhaWorkflowCommand } from './commands/showAhaWorkflow';
 import { CrewStreamRelay } from './crewStreamRelay';
 import { withDashboardTheme } from './lib/dashboardThemeLink';
+import { initializeChatClient, disposeChatClient } from './chat/chat-engine';
+import { initSyncManager, disposeSyncManager } from './chat/sync-manager';
 
 function dashboardBase(): string {
   return vscode.workspace.getConfiguration('storyAgent').get<string>('dashboardUrl') ?? 'http://localhost:3000';
 }
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  // ── Initialize Sync Manager ────────────────────────────────────────────────
+  try {
+    initSyncManager({
+      batchIntervalMs: 300,
+      idleThresholdMs: 300,
+      maxBatchSize: 50,
+    });
+    console.log('[activate] Sync manager initialized');
+  } catch (err) {
+    console.warn('[activate] Sync manager setup error:', err);
+  }
+
+  // ── Initialize WebSocket chat client on activation ───────────────────────
+  try {
+    const chatProxyUrl = vscode.workspace.getConfiguration('storyAgent').get<string>('chat.chatProxyUrl') || 'http://localhost:3103';
+    await initializeChatClient({
+      chatProxyUrl,
+      provider: 'auto',
+      budget: 200_000,
+      cacheTtlMs: 60 * 60_000,
+      ragTopK: 4,
+      tieringEnabled: true,
+      costProfile: 'cost_optimized',
+      mcpUrl: 'http://localhost:3103',
+      orUrl: 'https://openrouter.ai/api/v1',
+      orKey: '',
+      orPrimaryModel: 'deepseek/deepseek-chat',
+      orCheapModel: 'meta-llama/llama-3.3-70b-instruct',
+      smallModelFamily: 'gpt-4o-mini',
+      capableModelFamily: 'gpt-4o',
+      ragUseCloud: true,
+      ragServiceUrl: 'http://localhost:3102',
+      ragServiceToken: '',
+    }).catch(err => {
+      console.warn('[activate] Failed to initialize chat client:', err);
+      // Non-blocking: chat will degrade gracefully
+    });
+  } catch (err) {
+    console.warn('[activate] Chat client setup error:', err);
+  }
   // ── Tree Data Providers ──────────────────────────────────────────────────
   // Unified navigation tree (UI-unification plan §1): all primary objects in one place.
   context.subscriptions.push(
@@ -254,6 +296,8 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 }
 
-export function deactivate(): void {
-  // nothing
+export async function deactivate(): Promise<void> {
+  // Clean up resources on deactivation
+  await disposeChatClient();
+  disposeSyncManager();
 }

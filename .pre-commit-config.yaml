@@ -1,0 +1,230 @@
+repos:
+  # ── Secret scanning (TruffleHog) ──────────────────────────────────────────
+  # CRITICAL: Detects leaked credentials, API keys, tokens BEFORE they reach git.
+  # Scans all file types; runs fast. Worf-owned gate: no secrets escape the repo.
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: v3.64.0
+    hooks:
+      - id: trufflehog
+        name: TruffleHog Secret Scanning
+        description: Scan for leaked secrets, API keys, tokens, credentials
+        entry: trufflehog filesystem --debug --fail
+        language: python
+        types: [text]
+        # Exclude common non-secret files
+        exclude: |
+          (?x)^(
+            package-lock\.json|
+            pnpm-lock\.yaml|
+            yarn\.lock|
+            \.lock$|
+            \.md$|
+            \.json$|
+            dist/|
+            build/|
+            node_modules/|
+            terraform\.tfstate|
+            terraform\.tfstate\.backup
+          )
+        stages: [commit, push]
+        # Run on all file changes, not just staged
+        always_run: false
+        pass_filenames: false
+
+  # ── Committed Secret Scanner (detect-secrets) ─────────────────────────────
+  # Complementary to TruffleHog: catches patterns detect-secrets knows about.
+  # Better for known API key formats (OpenRouter, Supabase, AWS, etc).
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        name: Detect Secrets
+        description: Scan for potential secrets using pattern matching
+        args: ['scan', '--baseline', '.secrets.baseline']
+        language: python
+        types: [text]
+        exclude: |
+          (?x)^(
+            \.secrets\.baseline|
+            package-lock\.json|
+            pnpm-lock\.yaml|
+            yarn\.lock|
+            \.lock$|
+            \.md$|
+            dist/|
+            build/|
+            node_modules/
+          )
+
+  # ── Commit message linting ───────────────────────────────────────────────
+  # Ensures commit messages follow conventional commits + reference story IDs.
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.12.0
+    hooks:
+      - id: commitizen
+        name: Commitizen Commit Message Check
+        description: Validate commit messages follow conventional commits format
+        stages: [commit-msg]
+        language: python
+        entry: cz check
+        always_run: true
+
+  # ── YAML validation ──────────────────────────────────────────────────────
+  # Catches malformed YAML (supabase migrations, docker-compose, workflows, etc).
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        name: YAML Lint
+        description: Lint YAML files for syntax errors
+        types: [yaml]
+        args: [--config-data, '{extends: default, rules: {line-length: {max: 200}, indentation: {spaces: 2}}}']
+
+  # ── JSON validation ──────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-json
+        name: Check JSON
+        description: Validate JSON file syntax
+        types: [json]
+
+      - id: check-yaml
+        name: Check YAML
+        description: Validate YAML file syntax
+        types: [yaml]
+
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        description: Prevent commits with merge conflict markers
+        types: [text]
+
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        description: Remove trailing whitespace from files
+        types: [text]
+
+      - id: end-of-file-fixer
+        name: Fix end of file
+        description: Ensure files end with newline
+        types: [text]
+
+      - id: check-case-conflict
+        name: Check for case conflicts
+        description: Prevent accidental case-sensitivity conflicts
+        types: [text]
+
+  # ── TypeScript/JavaScript linting ────────────────────────────────────────
+  # Uses the project's eslint config (monorepo-aware).
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.54.0
+    hooks:
+      - id: eslint
+        name: ESLint
+        description: Lint TypeScript/JavaScript with project eslint config
+        types: [ts, tsx, js, jsx]
+        args: ['--fix']
+        additional_dependencies: ['eslint', '@typescript-eslint/eslint-plugin', '@typescript-eslint/parser']
+        exclude: |
+          (?x)^(
+            node_modules/|
+            dist/|
+            build/|
+            \.next/
+          )
+
+  # ── Terraform validation ─────────────────────────────────────────────────
+  # Validates Terraform config (static syntax check, no AWS/backend access).
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.86.0
+    hooks:
+      - id: terraform_fmt
+        name: Terraform Format
+        description: Format Terraform files
+        language: docker_image
+        entry: ghcr.io/antonbabenko/pre-commit-terraform:latest terraform fmt
+        types: [terraform]
+
+      - id: terraform_validate
+        name: Terraform Validate
+        description: Validate Terraform syntax
+        language: docker_image
+        entry: ghcr.io/antonbabenko/pre-commit-terraform:latest terraform validate
+        types: [terraform]
+
+  # ── Dockerfile linting ───────────────────────────────────────────────────
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        name: Hadolint Docker Linting
+        description: Lint Dockerfiles for best practices
+        types: [dockerfile]
+
+  # ── Shell script linting ─────────────────────────────────────────────────
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.5
+    hooks:
+      - id: shellcheck
+        name: ShellCheck
+        description: Lint shell scripts
+        types: [shell]
+
+  # ── Credential patterns (WorfGate-specific) ──────────────────────────────
+  # Custom hook to catch common credential files that should NEVER be committed.
+  - repo: local
+    hooks:
+      - id: detect-worfgate-credential-files
+        name: Detect WorfGate Credential Files
+        description: Prevent committing ~/.alexai-secrets or .env files
+        entry: bash -c 'if git diff --cached --name-only | grep -E "^(\.\.?|.*/)?(\.env|\.secrets|\.zshrc|\.bashrc|credentials|.*-secrets)" | grep -v "\.gitignore"; then echo "ERROR: Credentials files detected in staging. These must live in ~/.alexai-secrets or ~/.zshrc, NEVER in git. Use WorfGate to broker them."; exit 1; fi'
+        language: system
+        types: [text]
+        stages: [commit]
+        pass_filenames: false
+
+      - id: detect-aws-credentials
+        name: Detect AWS Credentials in Code
+        description: Prevent committing AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY
+        entry: bash -c 'if git diff --cached | grep -E "(AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|aws_access_key_id|aws_secret_access_key)" | grep -v "^-" | head -1; then echo "ERROR: AWS credentials detected. Store in ~/.alexai-secrets and broker via WorfGate."; exit 1; fi'
+        language: system
+        types: [text]
+        stages: [commit]
+        pass_filenames: false
+
+      - id: detect-api-keys
+        name: Detect API Keys in Code
+        description: Prevent committing OPENROUTER_API_KEY, SUPABASE keys, AHA_API_KEY
+        entry: bash -c 'if git diff --cached | grep -iE "(OPENROUTER_API_KEY|SUPABASE.*KEY|AHA_API_KEY|GITHUB_TOKEN|FIGMA_API_KEY)" | grep -v "^-" | grep -v "name:" | head -1; then echo "ERROR: API key detected. Broker through WorfGate, never commit."; exit 1; fi'
+        language: system
+        types: [text]
+        stages: [commit]
+        pass_filenames: false
+
+# ── Global Settings ──────────────────────────────────────────────────────────
+
+# Minimum pre-commit version (ensures reliable hook execution)
+minimum_pre_commit_version: '3.0.0'
+
+# Fail fast: stop at first hook failure (security is critical)
+fail_fast: true
+
+# Per-file concurrency (parallel execution where safe)
+default_stages: [commit, push]
+
+# Additional excludes (global, applies to all hooks)
+exclude: |
+  (?x)^(
+    terraform\.tfstate.*|
+    \.tfstate\.backup|
+    node_modules/|
+    dist/|
+    build/|
+    \.next/|
+    __pycache__/|
+    \.pytest_cache/|
+    \.git/|
+    \.github/workflows/.*\.ya?ml|
+    supabase/migrations/.*\.sql|
+    \.env\.example
+  )

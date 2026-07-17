@@ -1,16 +1,18 @@
 /**
- * Chat Panel — native VS Code webview for crew chat with file system access.
- * 
+ * Chat Panel — native VS Code webview for crew chat with WebSocket backing.
+ *
  * Provides a persistent, dockable chat interface at the bottom of VS Code that:
- * - Connects to the crew's /chat endpoint (OpenRouter Quark-optimized)
+ * - Connects to the crew via WebSocket proxy (auto-reconnect, batching)
  * - Maintains conversation history per session
  * - Can attach file references and workspace context
  * - Shows cost/model metadata for each response
+ * - Displays connection status and priority queue status
  */
 
 import * as vscode from 'vscode';
 import { randomBytes } from 'crypto';
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
+import { getChatClient, getChatClientStatus } from '../chat/chat-engine';
 
 function getNonce(): string {
   return randomBytes(16).toString('base64');
@@ -29,16 +31,15 @@ export class ChatPanel {
   private panel: vscode.WebviewPanel;
   private context: vscode.ExtensionContext;
   private history: ChatMessage[] = [];
-  private agentUrl: string;
+  private sessionId = `session-${Date.now()}`;
 
-  private constructor(context: vscode.ExtensionContext, agentUrl: string) {
+  private constructor(context: vscode.ExtensionContext) {
     this.context = context;
-    this.agentUrl = agentUrl;
 
     this.panel = vscode.window.createWebviewPanel(
       'storyAgentChat',
       '💬 Story Agent Chat',
-      vscode.ViewColumn.Bottom,
+      { viewColumn: vscode.ViewColumn.Two, preserveFocus: true },
       {
         enableScripts: true,
         enableForms: true,
@@ -54,14 +55,10 @@ export class ChatPanel {
 
   /** Get or create the singleton chat panel instance */
   static show(context: vscode.ExtensionContext): ChatPanel {
-    const agentUrl = vscode.workspace
-      .getConfiguration('storyAgent')
-      .get<string>('agentUrl') || 'http://localhost:3103';
-
     if (!ChatPanel.instance) {
-      ChatPanel.instance = new ChatPanel(context, agentUrl);
+      ChatPanel.instance = new ChatPanel(context);
     } else {
-      ChatPanel.instance.panel.reveal(vscode.ViewColumn.Bottom);
+      ChatPanel.instance.panel.reveal(vscode.ViewColumn.Two, false);
     }
     return ChatPanel.instance;
   }
@@ -86,7 +83,7 @@ export class ChatPanel {
           });
 
           try {
-            const response = await this.callCrewChat(userMessage);
+            const response = await this.callCrewChatViaWebSocket(userMessage);
 
             // Add assistant response to history
             this.history.push({
@@ -172,20 +169,21 @@ export class ChatPanel {
     });
   }
 
-  private async callCrewChat(message: string): Promise<{
+  private async callCrewChatViaWebSocket(message: string): Promise<{
     answer: string;
     model: string;
     costUSD: number;
     sources: string[];
   }> {
-    const dashboardUrl = vscode.workspace
-      .getConfiguration('storyAgent')
-      .get<string>('dashboardUrl') || 'http://localhost:3000';
-
     // Convert history to chat format (last 8 turns)
     const chatHistory = this.history
       .slice(-8)
       .map(m => ({ role: m.role, content: m.content }));
+
+    // For now, use HTTP to the dashboard API (production would use WebSocket message ID tracking)
+    const dashboardUrl = vscode.workspace
+      .getConfiguration('storyAgent')
+      .get<string>('dashboardUrl') || 'http://localhost:3000';
 
     const response = await fetch(`${dashboardUrl}/api/chat`, {
       method: 'POST',

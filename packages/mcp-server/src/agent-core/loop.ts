@@ -13,6 +13,7 @@
 import OpenAI from 'openai';
 import { randomUUID } from 'node:crypto';
 import { quarkSelectModel, quarkCheapestAnthropic, MODEL_POOL } from '../lib/crew-team-assembly.js';
+import { resolveWorfGateCredential } from '@story-agent/shared/worfgate-credentials';
 import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
 import { gateLocalOp, type WorfTier } from './worfgate-local.js';
 import { EditSession, MUTATING_TOOLS, verifyTouched } from './edit-session.js';
@@ -186,9 +187,6 @@ export function composeLens(input: string, tools: AgentTool[]): ComposedLens {
   return { lens, reason: `composed ${lens.length}/${tools.length} tools: ${lens.map(t => t.name).join(', ')}` };
 }
 
-const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
-const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
-
 const DEFAULT_SYSTEM = [
   'You are the Story Agent — an autonomous coding assistant powered by the OpenRouter crew.',
   'You operate in the user\'s workspace with real tools: read/write/edit files, search code, run shell, git.',
@@ -236,7 +234,20 @@ export async function callWithRetry<T>(fn: () => Promise<T>, attempts: number, e
 
 /** Run the autonomous agent loop on a single user request. */
 export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}): Promise<AgentRunResult> {
-  if (!OR_KEY) throw new Error('CREW_LLM_APPROVED_KEY not set — cannot reach OpenRouter.');
+  // Resolve credentials through WorfGate (authorized, audited, credential provider chain)
+  const keyResult = resolveWorfGateCredential('CREW_LLM_APPROVED_KEY', {
+    operation: 'llm:call',
+    crewId: opts.crewId || 'agent',
+  });
+  if (!keyResult.authorized) throw new Error(`worfgate_denied: ${keyResult.reason}`);
+  if (!keyResult.available || !keyResult.value) throw new Error('CREW_LLM_APPROVED_KEY not set — cannot reach OpenRouter.');
+  const OR_KEY = keyResult.value;
+
+  const urlResult = resolveWorfGateCredential('CREW_LLM_APPROVED_URL', {
+    operation: 'llm:call',
+    crewId: opts.crewId || 'agent',
+  });
+  const OR_URL = (urlResult.available && urlResult.value ? urlResult.value : 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 
   const workspace = opts.workspace || process.env.STORY_AGENT_WORKSPACE || process.cwd();
   const tools = opts.tools || AGENT_TOOLS;
