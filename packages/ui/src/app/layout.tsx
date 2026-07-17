@@ -5,6 +5,7 @@ import SideNav from '../components/SideNav';
 import { ThemeProvider, THEME_INIT_SCRIPT } from '../components/ThemeProvider';
 import { SidebarProvider, SIDEBAR_INIT_SCRIPT } from '../components/SidebarProvider';
 import { LoadingStateProvider } from '../components/LoadingStateProvider';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import DevTour from '../components/dev-tour/DevTour';
 
 export const metadata: Metadata = {
@@ -24,21 +25,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
       </head>
       <body>
-        <ThemeProvider>
-          <SidebarProvider>
-            <NavBar />
-            {/* Crew ruling (UI-GLOBAL-NAV): SideNav lives in the ROOT layout — persistent global
-                navigation on every route, never re-mounted on transitions. */}
-            <div className="app-shell">
-              <SideNav />
-              <main className="app-main">
-                <LoadingStateProvider>{children}</LoadingStateProvider>
-              </main>
-            </div>
-            {/* Developer-only guided tour — hard-gated, never ships to production (see DevTour). */}
-            <DevTour />
-          </SidebarProvider>
-        </ThemeProvider>
+        <ErrorBoundary>
+          <ThemeProvider>
+            <SidebarProvider>
+              <NavBar />
+              {/* Crew ruling (UI-GLOBAL-NAV): SideNav lives in the ROOT layout — persistent global
+                  navigation on every route, never re-mounted on transitions. */}
+              <div className="app-shell">
+                <SideNav />
+                <main className="app-main">
+                  <LoadingStateProvider>{children}</LoadingStateProvider>
+                </main>
+              </div>
+              {/* Developer-only guided tour — hard-gated, never ships to production (see DevTour). */}
+              <DevTour />
+            </SidebarProvider>
+          </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

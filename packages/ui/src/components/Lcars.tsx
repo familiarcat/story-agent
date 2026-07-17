@@ -14,7 +14,7 @@ export function LcarsScreen({ title, status, children }: { title: string; status
   return (
     <main style={{ background: lcars.black, color: lcars.text, fontFamily: MONO, minHeight: '100vh', padding: '0.75rem', letterSpacing: '0.03em' }}>
       <header style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <div style={{ background: lcars.neonCarrot, color: lcars.onAccent, borderTopLeftRadius: 'var(--radius-elbow)', borderBottomLeftRadius: 6, borderTopRightRadius: 6, borderBottomRightRadius: 6, padding: '8px 16px', fontWeight: 800, textTransform: 'var(--uppercase)' as CSSProperties['textTransform'] }}>{title}</div>
+        <h1 style={{ background: lcars.neonCarrot, color: lcars.onAccent, borderTopLeftRadius: 'var(--radius-elbow)', borderBottomLeftRadius: 6, borderTopRightRadius: 6, borderBottomRightRadius: 6, padding: '8px 16px', fontWeight: 800, textTransform: 'var(--uppercase)' as CSSProperties['textTransform'], margin: 0, fontSize: 'inherit' }}>{title}</h1>
         {status ? <div style={{ flex: 1, background: lcars.eggplant, borderRadius: 6, padding: '8px 14px', color: lcars.tanoi, fontSize: '0.78rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center' }}>{status}</div> : <div style={{ flex: 1 }} />}
       </header>
       {children}

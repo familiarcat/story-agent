@@ -190,6 +190,7 @@ export function ThemeSwitcher() {
     >
       <button
         type="button"
+        data-testid="theme-toggle"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => {

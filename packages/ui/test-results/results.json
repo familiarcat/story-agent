@@ -1,0 +1,1740 @@
+{
+  "config": {
+    "argv": [
+      "/Users/bradygeorgen/.nvm/versions/node/v22.19.0/bin/node",
+      "/Users/bradygeorgen/Developer/story-agent/node_modules/.pnpm/@playwright+test@1.61.1/node_modules/@playwright/test/cli.js",
+      "test",
+      "--project=chromium"
+    ],
+    "configFile": "/Users/bradygeorgen/Developer/story-agent/packages/ui/playwright.config.ts",
+    "rootDir": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.e2e.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "./test-results/html"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "./test-results/results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "./test-results/junit.xml"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.61.1",
+    "workers": 1,
+    "webServer": {
+      "command": "pnpm dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "critical-path.e2e.ts",
+      "file": "critical-path.e2e.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Route Navigation - Critical Paths",
+          "file": "critical-path.e2e.ts",
+          "line": 34,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should navigate to /dashboard and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3341,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:07.959Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-270440b2735145bfd055",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/dashboard should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1703,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:12.246Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-d470bc963f54752d044e",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /sprint and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 896,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:13.964Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-3c4a3510270f5c9b0b75",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/sprint should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 898,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:14.871Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-0f441b522f366b707848",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /story/new and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 666,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:15.777Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-263822044b4b44692a7d",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/story/new should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 406,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:16.452Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-f47d2c3e6dcc36501944",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /agent and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 774,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:16.865Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-75c9c46d6d1e4e3f7cac",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/agent should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 436,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:17.647Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-e719d090a1fec801d0c0",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /docs and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 853,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:18.092Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-407e2efbb8d959eeb448",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/docs should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 401,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:18.955Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-4c753c68c58e97c673eb",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /vision and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1111,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:19.363Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-5385b78409db120632c6",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/vision should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 405,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:20.483Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-6abac2e6e77dc5d0e65b",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /cost and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 836,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:20.895Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-e024a3232adc8aa1cafd",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/cost should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 950,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:21.738Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-a9d047fbd5f73a92c4bb",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /learnings and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 828,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:22.695Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-66187181631bd6add9a0",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/learnings should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 971,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:23.534Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-0b91c57f8f59d4e99c41",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /crew/memories and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 739,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:24.516Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-2b8bec80f850706dda55",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/crew/memories should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1080,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:25.262Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-2177bcbec8b7051854a0",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /crew/observations and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1039,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:26.347Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-4259d582f1650eac9d10",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/crew/observations should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1107,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:27.395Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-ccee783fc7c1788a5f1f",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            },
+            {
+              "title": "should navigate to /observation-lounge and render page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 969,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:28.511Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-47b5839b4aacc3c6edc0",
+              "file": "critical-path.e2e.ts",
+              "line": 36,
+              "column": 9
+            },
+            {
+              "title": "/observation-lounge should have accessible main content area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 411,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:29.487Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-6296d7aca72b2b24440c",
+              "file": "critical-path.e2e.ts",
+              "line": 56,
+              "column": 9
+            }
+          ]
+        },
+        {
+          "title": "Sidebar Persistence",
+          "file": "critical-path.e2e.ts",
+          "line": 72,
+          "column": 6,
+          "specs": [
+            {
+              "title": "sidebar collapse state persists across navigation",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 30609,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                            "column": 26,
+                            "line": 89
+                          },
+                          "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-testid=\"sidebar-toggle\"]').first()\u001b[22m\n\n\n  87 |\n  88 |     // Collapse sidebar\n> 89 |     await collapseButton.click();\n     |                          ^\n  90 |     await page.waitForTimeout(300); // Wait for animation\n  91 |\n  92 |     // Verify collapsed (narrower or hidden)\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:89:26"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:48:29.905Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-870bad0e14d90ef2182d",
+              "file": "critical-path.e2e.ts",
+              "line": 73,
+              "column": 7
+            },
+            {
+              "title": "sidebar navigation items are clickable",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 2561,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"/dashboard\"\u001b[39m\nReceived string:        \u001b[31m\"http://localhost:3000\u001b[7m/dashboard\u001b[27m\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"/dashboard\"\u001b[39m\nReceived string:        \u001b[31m\"http://localhost:3000\u001b[7m/dashboard\u001b[27m\"\u001b[39m\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:135:28",
+                        "location": {
+                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                          "column": 28,
+                          "line": 135
+                        },
+                        "snippet": "  133 |\n  134 |     // Verify navigation occurred\n> 135 |     expect(page.url()).not.toContain('/dashboard');\n      |                            ^\n  136 |   });\n  137 | });\n  138 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                            "column": 28,
+                            "line": 135
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"/dashboard\"\u001b[39m\nReceived string:        \u001b[31m\"http://localhost:3000\u001b[7m/dashboard\u001b[27m\"\u001b[39m\n\n  133 |\n  134 |     // Verify navigation occurred\n> 135 |     expect(page.url()).not.toContain('/dashboard');\n      |                            ^\n  136 |   });\n  137 | });\n  138 |\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:135:28"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:00.782Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                        "column": 28,
+                        "line": 135
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-22f6e6ac042f010eb0bf",
+              "file": "critical-path.e2e.ts",
+              "line": 122,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Theme Switching",
+          "file": "critical-path.e2e.ts",
+          "line": 139,
+          "column": 6,
+          "specs": [
+            {
+              "title": "theme toggle switches between LCARS, dark, and light",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1776,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"lcars\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"lcars\"\u001b[39m\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:169:28",
+                        "location": {
+                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                          "column": 28,
+                          "line": 169
+                        },
+                        "snippet": "  167 |       });\n  168 |\n> 169 |       expect(newTheme).not.toBe(initialTheme);\n      |                            ^\n  170 |\n  171 |       // Reload and verify persists\n  172 |       await page.reload();"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                            "column": 28,
+                            "line": 169
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"lcars\"\u001b[39m\n\n  167 |       });\n  168 |\n> 169 |       expect(newTheme).not.toBe(initialTheme);\n      |                            ^\n  170 |\n  171 |       // Reload and verify persists\n  172 |       await page.reload();\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:169:28"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:03.679Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                        "column": 28,
+                        "line": 169
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-6687b50d514749c254f0",
+              "file": "critical-path.e2e.ts",
+              "line": 140,
+              "column": 7
+            },
+            {
+              "title": "dark mode is visually distinct from light mode",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 2300,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"rgb(0, 0, 0)\"\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"rgb(0, 0, 0)\"\u001b[39m\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:213:24",
+                        "location": {
+                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                          "column": 24,
+                          "line": 213
+                        },
+                        "snippet": "  211 |\n  212 |     // Colors should be different\n> 213 |     expect(darkBg).not.toBe(lightBg);\n      |                        ^\n  214 |   });\n  215 | });\n  216 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                            "column": 24,
+                            "line": 213
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"rgb(0, 0, 0)\"\u001b[39m\n\n  211 |\n  212 |     // Colors should be different\n> 213 |     expect(darkBg).not.toBe(lightBg);\n      |                        ^\n  214 |   });\n  215 | });\n  216 |\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:213:24"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:05.753Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                        "column": 24,
+                        "line": 213
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-381af9df609190b50305",
+              "file": "critical-path.e2e.ts",
+              "line": 183,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "VSCode Sync Integration",
+          "file": "critical-path.e2e.ts",
+          "line": 217,
+          "column": 6,
+          "specs": [
+            {
+              "title": "chat messages from VSCode appear in web UI",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5544,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Test sync message')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Test sync message')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Test sync message')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Test sync message')\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:243:7",
+                        "location": {
+                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                          "column": 7,
+                          "line": 243
+                        },
+                        "snippet": "  241 |     await expect(\n  242 |       page.locator('text=Test sync message')\n> 243 |     ).toBeVisible({ timeout: 5000 });\n      |       ^\n  244 |   });\n  245 | });\n  246 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                            "column": 7,
+                            "line": 243
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Test sync message')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Test sync message')\u001b[22m\n\n\n  241 |     await expect(\n  242 |       page.locator('text=Test sync message')\n> 243 |     ).toBeVisible({ timeout: 5000 });\n      |       ^\n  244 |   });\n  245 | });\n  246 |\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:243:7"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:08.350Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                        "column": 7,
+                        "line": 243
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-0261b583316097ab6822",
+              "file": "critical-path.e2e.ts",
+              "line": 218,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Error Handling",
+          "file": "critical-path.e2e.ts",
+          "line": 247,
+          "column": 6,
+          "specs": [
+            {
+              "title": "gracefully handles server unavailable",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5500,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:261:32",
+                        "location": {
+                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                          "column": 32,
+                          "line": 261
+                        },
+                        "snippet": "  259 |       .or(page.locator('text=/unavailable|error|failed/i')).first();\n  260 |\n> 261 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  262 |   });\n  263 |\n  264 |   test('recovers when server comes back online', async ({ page }) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                            "column": 32,
+                            "line": 261
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n\n\n  259 |       .or(page.locator('text=/unavailable|error|failed/i')).first();\n  260 |\n> 261 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  262 |   });\n  263 |\n  264 |   test('recovers when server comes back online', async ({ page }) => {\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:261:32"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:14.205Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                        "column": 32,
+                        "line": 261
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-2b2e5b73a052dbe38046",
+              "file": "critical-path.e2e.ts",
+              "line": 248,
+              "column": 7
+            },
+            {
+              "title": "recovers when server comes back online",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5517,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:281:32",
+                        "location": {
+                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                          "column": 32,
+                          "line": 281
+                        },
+                        "snippet": "  279 |       .locator('[data-testid=\"error-message\"]')\n  280 |       .or(page.locator('text=/unavailable/i')).first();\n> 281 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  282 |\n  283 |     // Unblock API\n  284 |     requestsBlocked = false;"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                            "column": 32,
+                            "line": 281
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n\n\n  279 |       .locator('[data-testid=\"error-message\"]')\n  280 |       .or(page.locator('text=/unavailable/i')).first();\n> 281 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  282 |\n  283 |     // Unblock API\n  284 |     requestsBlocked = false;\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:281:32"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:20.014Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
+                        "column": 32,
+                        "line": 281
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-2fc7d41050f60571a3e0",
+              "file": "critical-path.e2e.ts",
+              "line": 264,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Role-Based Access",
+          "file": "critical-path.e2e.ts",
+          "line": 293,
+          "column": 6,
+          "specs": [
+            {
+              "title": "admin role sees all UI elements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2212,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:25.830Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-a3fb84c8da238f32a4ad",
+              "file": "critical-path.e2e.ts",
+              "line": 294,
+              "column": 7
+            },
+            {
+              "title": "user role sees only assigned items",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1767,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:28.141Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-b5b03e4c78440079b7eb",
+              "file": "critical-path.e2e.ts",
+              "line": 311,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Security Assertions",
+          "file": "critical-path.e2e.ts",
+          "line": 331,
+          "column": 6,
+          "specs": [
+            {
+              "title": "no credentials in page source",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3722,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:29.917Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-b333b0307ede9f91bc6a",
+              "file": "critical-path.e2e.ts",
+              "line": 332,
+              "column": 7
+            },
+            {
+              "title": "no credentials in console logs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3636,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:33.647Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-b6982e0b49bb057b89e8",
+              "file": "critical-path.e2e.ts",
+              "line": 339,
+              "column": 7
+            },
+            {
+              "title": "requests include WorfGate headers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 996,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:37.292Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-59e3a7fd17c02cad3b2f",
+              "file": "critical-path.e2e.ts",
+              "line": 346,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Performance Baselines",
+          "file": "critical-path.e2e.ts",
+          "line": 369,
+          "column": 6,
+          "specs": [
+            {
+              "title": "dashboard loads within 5 seconds",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1141,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:38.296Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-13556f1728a48a78415c",
+              "file": "critical-path.e2e.ts",
+              "line": 370,
+              "column": 7
+            },
+            {
+              "title": "navigation between routes completes within 3 seconds",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1278,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:39.442Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-92e305d9d44daf3e016c",
+              "file": "critical-path.e2e.ts",
+              "line": 380,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "Accessibility Basics",
+          "file": "critical-path.e2e.ts",
+          "line": 396,
+          "column": 6,
+          "specs": [
+            {
+              "title": "page has proper heading hierarchy",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3870,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:40.725Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-f42b24267aca19156fda",
+              "file": "critical-path.e2e.ts",
+              "line": 397,
+              "column": 7
+            },
+            {
+              "title": "buttons and links are keyboard accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 615,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T07:49:44.603Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "cadc2321d8503bf5d991-7b919f4f80941e65ad3c",
+              "file": "critical-path.e2e.ts",
+              "line": 412,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-07-17T07:48:04.096Z",
+    "duration": 101201.98300000001,
+    "expected": 31,
+    "skipped": 0,
+    "unexpected": 7,
+    "flaky": 0
+  }
+}

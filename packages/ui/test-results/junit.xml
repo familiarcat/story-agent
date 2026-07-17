@@ -1,0 +1,360 @@
+<testsuites id="" name="" tests="38" failures="6" skipped="0" errors="1" time="101.20198300000001">
+<testsuite name="critical-path.e2e.ts" timestamp="2026-07-17T07:48:07.756Z" hostname="chromium" tests="38" failures="6" skipped="0" time="93.864" errors="1">
+<testcase name="Route Navigation - Critical Paths › should navigate to /dashboard and render page" classname="critical-path.e2e.ts" time="3.341">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /dashboard should have accessible main content area" classname="critical-path.e2e.ts" time="1.703">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /sprint and render page" classname="critical-path.e2e.ts" time="0.896">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /sprint should have accessible main content area" classname="critical-path.e2e.ts" time="0.898">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /story/new and render page" classname="critical-path.e2e.ts" time="0.666">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /story/new should have accessible main content area" classname="critical-path.e2e.ts" time="0.406">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /agent and render page" classname="critical-path.e2e.ts" time="0.774">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /agent should have accessible main content area" classname="critical-path.e2e.ts" time="0.436">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /docs and render page" classname="critical-path.e2e.ts" time="0.853">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /docs should have accessible main content area" classname="critical-path.e2e.ts" time="0.401">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /vision and render page" classname="critical-path.e2e.ts" time="1.111">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /vision should have accessible main content area" classname="critical-path.e2e.ts" time="0.405">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /cost and render page" classname="critical-path.e2e.ts" time="0.836">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /cost should have accessible main content area" classname="critical-path.e2e.ts" time="0.95">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /learnings and render page" classname="critical-path.e2e.ts" time="0.828">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /learnings should have accessible main content area" classname="critical-path.e2e.ts" time="0.971">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /crew/memories and render page" classname="critical-path.e2e.ts" time="0.739">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /crew/memories should have accessible main content area" classname="critical-path.e2e.ts" time="1.08">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /crew/observations and render page" classname="critical-path.e2e.ts" time="1.039">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /crew/observations should have accessible main content area" classname="critical-path.e2e.ts" time="1.107">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › should navigate to /observation-lounge and render page" classname="critical-path.e2e.ts" time="0.969">
+</testcase>
+<testcase name="Route Navigation - Critical Paths › /observation-lounge should have accessible main content area" classname="critical-path.e2e.ts" time="0.411">
+</testcase>
+<testcase name="Sidebar Persistence › sidebar collapse state persists across navigation" classname="critical-path.e2e.ts" time="30.609">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/video.webm]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/error-context.md]]
+]]>
+</system-out>
+<error message="Test timeout of 30000ms exceeded." type="Error">
+<![CDATA[  [chromium] › critical-path.e2e.ts:73:7 › Sidebar Persistence › sidebar collapse state persists across navigation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="sidebar-toggle"]').first()
+
+
+      87 |
+      88 |     // Collapse sidebar
+    > 89 |     await collapseButton.click();
+         |                          ^
+      90 |     await page.waitForTimeout(300); // Wait for animation
+      91 |
+      92 |     // Verify collapsed (narrower or hidden)
+        at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:89:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/error-context.md
+]]>
+</error>
+</testcase>
+<testcase name="Sidebar Persistence › sidebar navigation items are clickable" classname="critical-path.e2e.ts" time="2.561">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/video.webm]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/error-context.md]]
+]]>
+</system-out>
+<failure message="expect(received).not.toContain(expected) // indexOf" type="expect.not.toContain">
+<![CDATA[  [chromium] › critical-path.e2e.ts:122:7 › Sidebar Persistence › sidebar navigation items are clickable 
+
+    Error: expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "/dashboard"
+    Received string:        "http://localhost:3000/dashboard"
+
+      133 |
+      134 |     // Verify navigation occurred
+    > 135 |     expect(page.url()).not.toContain('/dashboard');
+          |                            ^
+      136 |   });
+      137 | });
+      138 |
+        at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:135:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/error-context.md
+]]>
+</failure>
+</testcase>
+<testcase name="Theme Switching › theme toggle switches between LCARS, dark, and light" classname="critical-path.e2e.ts" time="1.776">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/video.webm]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/error-context.md]]
+]]>
+</system-out>
+<failure message="expect(received).not.toBe(expected) // Object.is equality" type="expect.not.toBe">
+<![CDATA[  [chromium] › critical-path.e2e.ts:140:7 › Theme Switching › theme toggle switches between LCARS, dark, and light 
+
+    Error: expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "lcars"
+
+      167 |       });
+      168 |
+    > 169 |       expect(newTheme).not.toBe(initialTheme);
+          |                            ^
+      170 |
+      171 |       // Reload and verify persists
+      172 |       await page.reload();
+        at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:169:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/error-context.md
+]]>
+</failure>
+</testcase>
+<testcase name="Theme Switching › dark mode is visually distinct from light mode" classname="critical-path.e2e.ts" time="2.3">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/video.webm]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/error-context.md]]
+]]>
+</system-out>
+<failure message="expect(received).not.toBe(expected) // Object.is equality" type="expect.not.toBe">
+<![CDATA[  [chromium] › critical-path.e2e.ts:183:7 › Theme Switching › dark mode is visually distinct from light mode 
+
+    Error: expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "rgb(0, 0, 0)"
+
+      211 |
+      212 |     // Colors should be different
+    > 213 |     expect(darkBg).not.toBe(lightBg);
+          |                        ^
+      214 |   });
+      215 | });
+      216 |
+        at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:213:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/error-context.md
+]]>
+</failure>
+</testcase>
+<testcase name="VSCode Sync Integration › chat messages from VSCode appear in web UI" classname="critical-path.e2e.ts" time="5.544">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/video.webm]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/error-context.md]]
+]]>
+</system-out>
+<failure message="expect(locator).toBeVisible() failed" type="expect.toBeVisible">
+<![CDATA[  [chromium] › critical-path.e2e.ts:218:7 › VSCode Sync Integration › chat messages from VSCode appear in web UI 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('text=Test sync message')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('text=Test sync message')
+
+
+      241 |     await expect(
+      242 |       page.locator('text=Test sync message')
+    > 243 |     ).toBeVisible({ timeout: 5000 });
+          |       ^
+      244 |   });
+      245 | });
+      246 |
+        at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:243:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/error-context.md
+]]>
+</failure>
+</testcase>
+<testcase name="Error Handling › gracefully handles server unavailable" classname="critical-path.e2e.ts" time="5.5">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/video.webm]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/error-context.md]]
+]]>
+</system-out>
+<failure message="expect(locator).toBeVisible() failed" type="expect.toBeVisible">
+<![CDATA[  [chromium] › critical-path.e2e.ts:248:7 › Error Handling › gracefully handles server unavailable ─
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-testid="error-message"]').or(locator('text=/unavailable|error|failed/i')).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('[data-testid="error-message"]').or(locator('text=/unavailable|error|failed/i')).first()
+
+
+      259 |       .or(page.locator('text=/unavailable|error|failed/i')).first();
+      260 |
+    > 261 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });
+          |                                ^
+      262 |   });
+      263 |
+      264 |   test('recovers when server comes back online', async ({ page }) => {
+        at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:261:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/error-context.md
+]]>
+</failure>
+</testcase>
+<testcase name="Error Handling › recovers when server comes back online" classname="critical-path.e2e.ts" time="5.517">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/video.webm]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/error-context.md]]
+]]>
+</system-out>
+<failure message="expect(locator).toBeVisible() failed" type="expect.toBeVisible">
+<![CDATA[  [chromium] › critical-path.e2e.ts:264:7 › Error Handling › recovers when server comes back online 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-testid="error-message"]').or(locator('text=/unavailable/i')).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('[data-testid="error-message"]').or(locator('text=/unavailable/i')).first()
+
+
+      279 |       .locator('[data-testid="error-message"]')
+      280 |       .or(page.locator('text=/unavailable/i')).first();
+    > 281 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });
+          |                                ^
+      282 |
+      283 |     // Unblock API
+      284 |     requestsBlocked = false;
+        at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:281:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/error-context.md
+]]>
+</failure>
+</testcase>
+<testcase name="Role-Based Access › admin role sees all UI elements" classname="critical-path.e2e.ts" time="2.212">
+</testcase>
+<testcase name="Role-Based Access › user role sees only assigned items" classname="critical-path.e2e.ts" time="1.767">
+</testcase>
+<testcase name="Security Assertions › no credentials in page source" classname="critical-path.e2e.ts" time="3.722">
+</testcase>
+<testcase name="Security Assertions › no credentials in console logs" classname="critical-path.e2e.ts" time="3.636">
+</testcase>
+<testcase name="Security Assertions › requests include WorfGate headers" classname="critical-path.e2e.ts" time="0.996">
+</testcase>
+<testcase name="Performance Baselines › dashboard loads within 5 seconds" classname="critical-path.e2e.ts" time="1.141">
+</testcase>
+<testcase name="Performance Baselines › navigation between routes completes within 3 seconds" classname="critical-path.e2e.ts" time="1.278">
+</testcase>
+<testcase name="Accessibility Basics › page has proper heading hierarchy" classname="critical-path.e2e.ts" time="3.87">
+</testcase>
+<testcase name="Accessibility Basics › buttons and links are keyboard accessible" classname="critical-path.e2e.ts" time="0.615">
+</testcase>
+</testsuite>
+</testsuites>

@@ -19,7 +19,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     video: 'retain-on-failure',
   },
-  outputDir: './test-results',
+  outputDir: './test-results/artifacts',
   reporter: [
     ['html', { outputFolder: './test-results/html' }],
     ['json', { outputFile: './test-results/results.json' }],

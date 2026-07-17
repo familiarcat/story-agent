@@ -138,7 +138,7 @@ export default function AgentPage() {
         Every tool call is governed by WorfGate (🟢 allow · 🟡 remediated · 🔴 blocked).
       </p>
 
-      <div ref={scrollRef} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '1rem', height: '62vh', overflowY: 'auto', background: 'var(--surface)' }}>
+      <div ref={scrollRef} data-testid="chat-panel" style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '1rem', height: '62vh', overflowY: 'auto', background: 'var(--surface)' }}>
         {events.length === 0 && (
           <p style={{ color: 'var(--text-dim)' }}>
             Give the agent a coding task — e.g. “List the files in packages/shared/src and summarize delegation-router.ts”,
@@ -229,7 +229,7 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
       );
     case 'error':
       return (
-        <div role="alert" style={{ margin: '0.4rem 0', padding: '0.6rem 0.8rem', background: color.errBg, border: `1px solid ${color.errBorder}`, borderRadius: 6, color: color.errText, fontSize: '0.85rem', lineHeight: 1.5 }}>
+        <div role="alert" data-testid="error-message" style={{ margin: '0.4rem 0', padding: '0.6rem 0.8rem', background: color.errBg, border: `1px solid ${color.errBorder}`, borderRadius: 6, color: color.errText, fontSize: '0.85rem', lineHeight: 1.5 }}>
           ⚠️ <strong>Error:</strong> {sanitizeError(e.text)}
         </div>
       );

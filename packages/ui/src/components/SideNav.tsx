@@ -40,7 +40,7 @@ export default function SideNav() {
   const toggleTitle = isCollapsed ? 'Expand navigation' : 'Collapse navigation';
 
   return (
-    <aside className={`app-sidenav${isCollapsed ? ' app-sidenav--collapsed' : ''}`} aria-label="Global navigation">
+    <aside data-testid="app-sidenav" className={`app-sidenav${isCollapsed ? ' app-sidenav--collapsed' : ''}`} aria-label="Global navigation">
       <div className="app-sidenav-topbar">
         <div className="app-sidenav-brand">LCARS · STORY AGENT</div>
         <button
@@ -71,6 +71,7 @@ export default function SideNav() {
               className={`app-sidenav-link app-sidenav-link--chip${active ? ' active' : ''}`}
               title={s.label}
               data-label={s.label.toUpperCase()}
+              data-testid="nav-item"
               style={chipStyle}
             >
               <span className="app-sidenav-link-icon" aria-hidden>{s.icon}</span>
