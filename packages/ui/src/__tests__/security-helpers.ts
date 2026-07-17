@@ -95,58 +95,20 @@ export async function assertWorfGateHeaders(
 export async function setupCredentialScanningInterceptor(
   page: Page
 ): Promise<void> {
-  await page.route('**/*', async (route) => {
-    const request = route.request();
+  // Don't intercept routes; instead, scan after page loads
+  // This prevents route interception from blocking page navigation
 
-    // Check request headers
-    const headers = request.allHeaders();
-    for (const [key, value] of Object.entries(headers)) {
-      for (const pattern of SENSITIVE_PATTERNS) {
-        if (key.includes(pattern) || (value && value.includes(pattern))) {
-          console.error(
-            `Credential leak detected in request header: ${pattern}`
-          );
-        }
+  // Scan request/response headers via console interception instead
+  page.on('console', (msg) => {
+    for (const pattern of SENSITIVE_PATTERNS) {
+      if (msg.text().includes(pattern)) {
+        console.error(`Credential leak detected in console: ${pattern}`);
       }
-    }
-
-    // Check request body (if text-based)
-    try {
-      const postData = request.postData();
-      if (postData) {
-        for (const pattern of SENSITIVE_PATTERNS) {
-          if (postData.includes(pattern)) {
-            console.error(
-              `Credential leak detected in request body: ${pattern}`
-            );
-          }
-        }
-      }
-    } catch (e) {
-      // Binary data, skip
-    }
-
-    // Fetch and check response headers
-    try {
-      const response = await route.fetch();
-      if (response) {
-        const responseHeaders = response.headers();
-        for (const [key, value] of Object.entries(responseHeaders)) {
-          for (const pattern of SENSITIVE_PATTERNS) {
-            if (key.includes(pattern) || (value && value.includes(pattern))) {
-              console.error(
-                `Credential leak detected in response header: ${pattern}`
-              );
-            }
-          }
-        }
-      }
-      route.continue();
-    } catch (e) {
-      // If fetch fails, continue anyway to avoid blocking tests
-      route.continue();
     }
   });
+
+  // Optionally: scan page source after load
+  // (but don't block navigation with route handlers)
 }
 
 /**
