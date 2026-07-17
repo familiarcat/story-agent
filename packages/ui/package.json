@@ -9,6 +9,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --project=chromium",
+    "test:e2e:ui": "playwright test --headed --project=chromium",
+    "test:e2e:debug": "playwright test --debug --project=chromium",
     "validate:openapi-local-servers": "sh -c 'spec_url=${OPENAPI_URL:-http://localhost:3001/api/openapi}; body=$(curl -fsS \"$spec_url\"); echo \"$body\" | grep -q -- \"url: /api\" && ! echo \"$body\" | grep -q -- \"story-agent-alb\"'"
   },
   "dependencies": {
@@ -21,6 +25,7 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",

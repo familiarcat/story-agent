@@ -1,0 +1,27 @@
+# UI Testing Snapshots
+
+This directory stores Playwright visual regression test snapshots.
+
+## Directory Structure
+
+```
+ui-snapshots/
+├── {route}/           # e.g., dashboard, sprint, agent, etc.
+│   ├── chromium/      # Chromium browser snapshots
+│   │   ├── latest.png # Latest screenshot
+│   │   └── ...        # Previous versions (auto-pruned to 5)
+│   ├── firefox/
+│   │   └── latest.png
+│   └── webkit/
+│       └── latest.png
+```
+
+## Retention Policy
+
+- Keep maximum 5 versions per route/browser combo
+- Auto-prune on each CI run
+- `.gitkeep` tracks directory (snapshots are gitignored)
+
+## Usage
+
+See `docs/UI-TESTING-AUTOMATION.md` for full testing guide.
