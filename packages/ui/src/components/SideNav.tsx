@@ -49,6 +49,7 @@ export default function SideNav() {
           aria-expanded={!isCollapsed}
           className="app-sidenav-toggle-btn"
           title={toggleTitle}
+          data-testid="sidebar-toggle"
         >
           {isCollapsed ? '▶' : '◀'}
         </button>
