@@ -3,8 +3,7 @@
     "argv": [
       "/Users/bradygeorgen/.nvm/versions/node/v22.19.0/bin/node",
       "/Users/bradygeorgen/Developer/story-agent/node_modules/.pnpm/@playwright+test@1.61.1/node_modules/@playwright/test/cli.js",
-      "test",
-      "--project=chromium"
+      "test"
     ],
     "configFile": "/Users/bradygeorgen/Developer/story-agent/packages/ui/playwright.config.ts",
     "rootDir": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__",
@@ -111,12 +110,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3341,
+                      "duration": 3028,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:07.959Z",
+                      "startTime": "2026-07-17T08:06:07.642Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -145,12 +144,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1703,
+                      "duration": 2286,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:12.246Z",
+                      "startTime": "2026-07-17T08:06:11.086Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -179,12 +178,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 896,
+                      "duration": 776,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:13.964Z",
+                      "startTime": "2026-07-17T08:06:13.385Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -213,12 +212,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 898,
+                      "duration": 767,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:14.871Z",
+                      "startTime": "2026-07-17T08:06:14.168Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -247,12 +246,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 666,
+                      "duration": 626,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:15.777Z",
+                      "startTime": "2026-07-17T08:06:14.942Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -281,12 +280,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 406,
+                      "duration": 429,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:16.452Z",
+                      "startTime": "2026-07-17T08:06:15.576Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -315,12 +314,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 774,
+                      "duration": 871,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:16.865Z",
+                      "startTime": "2026-07-17T08:06:16.013Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -349,12 +348,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 436,
+                      "duration": 447,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:17.647Z",
+                      "startTime": "2026-07-17T08:06:16.892Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -383,12 +382,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 853,
+                      "duration": 875,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:18.092Z",
+                      "startTime": "2026-07-17T08:06:17.346Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -417,12 +416,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 401,
+                      "duration": 436,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:18.955Z",
+                      "startTime": "2026-07-17T08:06:18.231Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -451,12 +450,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1111,
+                      "duration": 660,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:19.363Z",
+                      "startTime": "2026-07-17T08:06:18.673Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -485,12 +484,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 405,
+                      "duration": 394,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:20.483Z",
+                      "startTime": "2026-07-17T08:06:19.341Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -519,12 +518,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 836,
+                      "duration": 769,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:20.895Z",
+                      "startTime": "2026-07-17T08:06:19.743Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -553,12 +552,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 950,
+                      "duration": 914,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:21.738Z",
+                      "startTime": "2026-07-17T08:06:20.520Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -587,12 +586,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 828,
+                      "duration": 975,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:22.695Z",
+                      "startTime": "2026-07-17T08:06:21.442Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -621,12 +620,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 971,
+                      "duration": 844,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:23.534Z",
+                      "startTime": "2026-07-17T08:06:22.428Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -655,12 +654,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 739,
+                      "duration": 821,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:24.516Z",
+                      "startTime": "2026-07-17T08:06:23.282Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -689,12 +688,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1080,
+                      "duration": 1103,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:25.262Z",
+                      "startTime": "2026-07-17T08:06:24.113Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -723,12 +722,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1039,
+                      "duration": 769,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:26.347Z",
+                      "startTime": "2026-07-17T08:06:25.227Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -757,12 +756,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1107,
+                      "duration": 1027,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:27.395Z",
+                      "startTime": "2026-07-17T08:06:26.003Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -791,12 +790,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 969,
+                      "duration": 1091,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:28.511Z",
+                      "startTime": "2026-07-17T08:06:27.037Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -825,12 +824,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 411,
+                      "duration": 496,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:29.487Z",
+                      "startTime": "2026-07-17T08:06:28.137Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -867,7 +866,7 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "timedOut",
-                      "duration": 30609,
+                      "duration": 30762,
                       "error": {
                         "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
                         "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
@@ -888,7 +887,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:48:29.905Z",
+                      "startTime": "2026-07-17T08:06:28.644Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -933,7 +932,7 @@
                       "workerIndex": 1,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 2561,
+                      "duration": 2794,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"/dashboard\"\u001b[39m\nReceived string:        \u001b[31m\"http://localhost:3000\u001b[7m/dashboard\u001b[27m\"\u001b[39m",
                         "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"/dashboard\"\u001b[39m\nReceived string:        \u001b[31m\"http://localhost:3000\u001b[7m/dashboard\u001b[27m\"\u001b[39m\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:135:28",
@@ -957,7 +956,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:00.782Z",
+                      "startTime": "2026-07-17T08:06:59.806Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -1001,7 +1000,7 @@
           "specs": [
             {
               "title": "theme toggle switches between LCARS, dark, and light",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1014,58 +1013,18 @@
                     {
                       "workerIndex": 2,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 1776,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"lcars\"\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"lcars\"\u001b[39m\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:169:28",
-                        "location": {
-                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                          "column": 28,
-                          "line": 169
-                        },
-                        "snippet": "  167 |       });\n  168 |\n> 169 |       expect(newTheme).not.toBe(initialTheme);\n      |                            ^\n  170 |\n  171 |       // Reload and verify persists\n  172 |       await page.reload();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                            "column": 28,
-                            "line": 169
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"lcars\"\u001b[39m\n\n  167 |       });\n  168 |\n> 169 |       expect(newTheme).not.toBe(initialTheme);\n      |                            ^\n  170 |\n  171 |       // Reload and verify persists\n  172 |       await page.reload();\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:169:28"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 3295,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:03.679Z",
+                      "startTime": "2026-07-17T08:07:03.308Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-71b3f-etween-LCARS-dark-and-light-chromium/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                        "column": 28,
-                        "line": 169
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "cadc2321d8503bf5d991-6687b50d514749c254f0",
@@ -1075,7 +1034,7 @@
             },
             {
               "title": "dark mode is visually distinct from light mode",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1086,65 +1045,25 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 2300,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"rgb(0, 0, 0)\"\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"rgb(0, 0, 0)\"\u001b[39m\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:213:24",
-                        "location": {
-                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                          "column": 24,
-                          "line": 213
-                        },
-                        "snippet": "  211 |\n  212 |     // Colors should be different\n> 213 |     expect(darkBg).not.toBe(lightBg);\n      |                        ^\n  214 |   });\n  215 | });\n  216 |"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                            "column": 24,
-                            "line": 213
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: not \u001b[32m\"rgb(0, 0, 0)\"\u001b[39m\n\n  211 |\n  212 |     // Colors should be different\n> 213 |     expect(darkBg).not.toBe(lightBg);\n      |                        ^\n  214 |   });\n  215 | });\n  216 |\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:213:24"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 2332,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:05.753Z",
+                      "startTime": "2026-07-17T08:07:06.718Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Theme-d4ee4-ly-distinct-from-light-mode-chromium/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                        "column": 24,
-                        "line": 213
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "cadc2321d8503bf5d991-381af9df609190b50305",
               "file": "critical-path.e2e.ts",
-              "line": 183,
+              "line": 205,
               "column": 7
             }
           ]
@@ -1152,12 +1071,12 @@
         {
           "title": "VSCode Sync Integration",
           "file": "critical-path.e2e.ts",
-          "line": 217,
+          "line": 239,
           "column": 6,
           "specs": [
             {
               "title": "chat messages from VSCode appear in web UI",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1168,65 +1087,25 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 5544,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Test sync message')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Test sync message')\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Test sync message')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Test sync message')\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:243:7",
-                        "location": {
-                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                          "column": 7,
-                          "line": 243
-                        },
-                        "snippet": "  241 |     await expect(\n  242 |       page.locator('text=Test sync message')\n> 243 |     ).toBeVisible({ timeout: 5000 });\n      |       ^\n  244 |   });\n  245 | });\n  246 |"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                            "column": 7,
-                            "line": 243
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=Test sync message')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Test sync message')\u001b[22m\n\n\n  241 |     await expect(\n  242 |       page.locator('text=Test sync message')\n> 243 |     ).toBeVisible({ timeout: 5000 });\n      |       ^\n  244 |   });\n  245 | });\n  246 |\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:243:7"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 410,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:08.350Z",
+                      "startTime": "2026-07-17T08:07:09.059Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-VSCod-545b9-rom-VSCode-appear-in-web-UI-chromium/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                        "column": 7,
-                        "line": 243
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "cadc2321d8503bf5d991-0261b583316097ab6822",
               "file": "critical-path.e2e.ts",
-              "line": 218,
+              "line": 240,
               "column": 7
             }
           ]
@@ -1234,7 +1113,7 @@
         {
           "title": "Error Handling",
           "file": "critical-path.e2e.ts",
-          "line": 247,
+          "line": 269,
           "column": 6,
           "specs": [
             {
@@ -1250,34 +1129,34 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 5,
+                      "workerIndex": 2,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 5500,
+                      "duration": 5484,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:261:32",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:283:32",
                         "location": {
                           "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
                           "column": 32,
-                          "line": 261
+                          "line": 283
                         },
-                        "snippet": "  259 |       .or(page.locator('text=/unavailable|error|failed/i')).first();\n  260 |\n> 261 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  262 |   });\n  263 |\n  264 |   test('recovers when server comes back online', async ({ page }) => {"
+                        "snippet": "  281 |       .or(page.locator('text=/unavailable|error|failed/i')).first();\n  282 |\n> 283 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  284 |   });\n  285 |\n  286 |   test('recovers when server comes back online', async ({ page }) => {"
                       },
                       "errors": [
                         {
                           "location": {
                             "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
                             "column": 32,
-                            "line": 261
+                            "line": 283
                           },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n\n\n  259 |       .or(page.locator('text=/unavailable|error|failed/i')).first();\n  260 |\n> 261 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  262 |   });\n  263 |\n  264 |   test('recovers when server comes back online', async ({ page }) => {\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:261:32"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n\n\n  281 |       .or(page.locator('text=/unavailable|error|failed/i')).first();\n  282 |\n> 283 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  284 |   });\n  285 |\n  286 |   test('recovers when server comes back online', async ({ page }) => {\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:283:32"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:14.205Z",
+                      "startTime": "2026-07-17T08:07:09.476Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -1299,7 +1178,7 @@
                       "errorLocation": {
                         "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
                         "column": 32,
-                        "line": 261
+                        "line": 283
                       }
                     }
                   ],
@@ -1308,7 +1187,7 @@
               ],
               "id": "cadc2321d8503bf5d991-2b2e5b73a052dbe38046",
               "file": "critical-path.e2e.ts",
-              "line": 248,
+              "line": 270,
               "column": 7
             },
             {
@@ -1324,34 +1203,34 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 6,
+                      "workerIndex": 3,
                       "parallelIndex": 0,
                       "status": "failed",
-                      "duration": 5517,
+                      "duration": 5618,
                       "error": {
                         "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:281:32",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:303:32",
                         "location": {
                           "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
                           "column": 32,
-                          "line": 281
+                          "line": 303
                         },
-                        "snippet": "  279 |       .locator('[data-testid=\"error-message\"]')\n  280 |       .or(page.locator('text=/unavailable/i')).first();\n> 281 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  282 |\n  283 |     // Unblock API\n  284 |     requestsBlocked = false;"
+                        "snippet": "  301 |       .locator('[data-testid=\"error-message\"]')\n  302 |       .or(page.locator('text=/unavailable/i')).first();\n> 303 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  304 |\n  305 |     // Unblock API\n  306 |     requestsBlocked = false;"
                       },
                       "errors": [
                         {
                           "location": {
                             "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
                             "column": 32,
-                            "line": 281
+                            "line": 303
                           },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n\n\n  279 |       .locator('[data-testid=\"error-message\"]')\n  280 |       .or(page.locator('text=/unavailable/i')).first();\n> 281 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  282 |\n  283 |     // Unblock API\n  284 |     requestsBlocked = false;\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:281:32"
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n\n\n  301 |       .locator('[data-testid=\"error-message\"]')\n  302 |       .or(page.locator('text=/unavailable/i')).first();\n> 303 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  304 |\n  305 |     // Unblock API\n  306 |     requestsBlocked = false;\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:303:32"
                         }
                       ],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:20.014Z",
+                      "startTime": "2026-07-17T08:07:15.199Z",
                       "annotations": [],
                       "attachments": [
                         {
@@ -1373,7 +1252,7 @@
                       "errorLocation": {
                         "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
                         "column": 32,
-                        "line": 281
+                        "line": 303
                       }
                     }
                   ],
@@ -1382,7 +1261,7 @@
               ],
               "id": "cadc2321d8503bf5d991-2fc7d41050f60571a3e0",
               "file": "critical-path.e2e.ts",
-              "line": 264,
+              "line": 286,
               "column": 7
             }
           ]
@@ -1390,7 +1269,7 @@
         {
           "title": "Role-Based Access",
           "file": "critical-path.e2e.ts",
-          "line": 293,
+          "line": 315,
           "column": 6,
           "specs": [
             {
@@ -1406,15 +1285,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2212,
+                      "duration": 1878,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:25.830Z",
+                      "startTime": "2026-07-17T08:07:21.152Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1424,7 +1303,7 @@
               ],
               "id": "cadc2321d8503bf5d991-a3fb84c8da238f32a4ad",
               "file": "critical-path.e2e.ts",
-              "line": 294,
+              "line": 316,
               "column": 7
             },
             {
@@ -1440,15 +1319,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1767,
+                      "duration": 1941,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:28.141Z",
+                      "startTime": "2026-07-17T08:07:23.132Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1458,7 +1337,7 @@
               ],
               "id": "cadc2321d8503bf5d991-b5b03e4c78440079b7eb",
               "file": "critical-path.e2e.ts",
-              "line": 311,
+              "line": 333,
               "column": 7
             }
           ]
@@ -1466,7 +1345,7 @@
         {
           "title": "Security Assertions",
           "file": "critical-path.e2e.ts",
-          "line": 331,
+          "line": 353,
           "column": 6,
           "specs": [
             {
@@ -1482,15 +1361,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3722,
+                      "duration": 3984,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:29.917Z",
+                      "startTime": "2026-07-17T08:07:25.081Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1500,7 +1379,7 @@
               ],
               "id": "cadc2321d8503bf5d991-b333b0307ede9f91bc6a",
               "file": "critical-path.e2e.ts",
-              "line": 332,
+              "line": 354,
               "column": 7
             },
             {
@@ -1516,15 +1395,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3636,
+                      "duration": 3421,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:33.647Z",
+                      "startTime": "2026-07-17T08:07:29.072Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1534,7 +1413,7 @@
               ],
               "id": "cadc2321d8503bf5d991-b6982e0b49bb057b89e8",
               "file": "critical-path.e2e.ts",
-              "line": 339,
+              "line": 361,
               "column": 7
             },
             {
@@ -1550,15 +1429,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 996,
+                      "duration": 977,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:37.292Z",
+                      "startTime": "2026-07-17T08:07:32.500Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1568,7 +1447,7 @@
               ],
               "id": "cadc2321d8503bf5d991-59e3a7fd17c02cad3b2f",
               "file": "critical-path.e2e.ts",
-              "line": 346,
+              "line": 368,
               "column": 7
             }
           ]
@@ -1576,7 +1455,7 @@
         {
           "title": "Performance Baselines",
           "file": "critical-path.e2e.ts",
-          "line": 369,
+          "line": 391,
           "column": 6,
           "specs": [
             {
@@ -1592,15 +1471,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1141,
+                      "duration": 1136,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:38.296Z",
+                      "startTime": "2026-07-17T08:07:33.484Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1610,7 +1489,7 @@
               ],
               "id": "cadc2321d8503bf5d991-13556f1728a48a78415c",
               "file": "critical-path.e2e.ts",
-              "line": 370,
+              "line": 392,
               "column": 7
             },
             {
@@ -1626,15 +1505,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1278,
+                      "duration": 1472,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:39.442Z",
+                      "startTime": "2026-07-17T08:07:34.625Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1644,7 +1523,7 @@
               ],
               "id": "cadc2321d8503bf5d991-92e305d9d44daf3e016c",
               "file": "critical-path.e2e.ts",
-              "line": 380,
+              "line": 402,
               "column": 7
             }
           ]
@@ -1652,7 +1531,7 @@
         {
           "title": "Accessibility Basics",
           "file": "critical-path.e2e.ts",
-          "line": 396,
+          "line": 418,
           "column": 6,
           "specs": [
             {
@@ -1668,15 +1547,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3870,
+                      "duration": 3763,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:40.725Z",
+                      "startTime": "2026-07-17T08:07:36.103Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1686,7 +1565,7 @@
               ],
               "id": "cadc2321d8503bf5d991-f42b24267aca19156fda",
               "file": "critical-path.e2e.ts",
-              "line": 397,
+              "line": 419,
               "column": 7
             },
             {
@@ -1702,15 +1581,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 7,
+                      "workerIndex": 4,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 615,
+                      "duration": 532,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T07:49:44.603Z",
+                      "startTime": "2026-07-17T08:07:39.873Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1720,7 +1599,7 @@
               ],
               "id": "cadc2321d8503bf5d991-7b919f4f80941e65ad3c",
               "file": "critical-path.e2e.ts",
-              "line": 412,
+              "line": 434,
               "column": 7
             }
           ]
@@ -1730,11 +1609,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-17T07:48:04.096Z",
-    "duration": 101201.98300000001,
-    "expected": 31,
+    "startTime": "2026-07-17T08:06:04.506Z",
+    "duration": 96001.136,
+    "expected": 34,
     "skipped": 0,
-    "unexpected": 7,
+    "unexpected": 4,
     "flaky": 0
   }
 }

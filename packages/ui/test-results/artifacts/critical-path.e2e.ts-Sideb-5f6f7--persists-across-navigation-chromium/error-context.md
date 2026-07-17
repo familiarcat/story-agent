@@ -593,40 +593,40 @@ Call log:
   151 |       // Store initial theme
   152 |       const initialTheme = await page.evaluate(() => {
   153 |         return document.documentElement.getAttribute('data-theme') ||
-  154 |           localStorage.getItem('theme') ||
-  155 |           'system';
+  154 |           localStorage.getItem('sa-theme') ||
+  155 |           'lcars';
   156 |       });
   157 | 
-  158 |       // Click theme toggle
+  158 |       // Click theme toggle to open menu
   159 |       await themeToggle.click();
-  160 |       await page.waitForTimeout(500);
+  160 |       await page.waitForTimeout(300);
   161 | 
-  162 |       // Verify theme changed
-  163 |       const newTheme = await page.evaluate(() => {
-  164 |         return document.documentElement.getAttribute('data-theme') ||
-  165 |           localStorage.getItem('theme') ||
-  166 |           'system';
-  167 |       });
-  168 | 
-  169 |       expect(newTheme).not.toBe(initialTheme);
-  170 | 
-  171 |       // Reload and verify persists
-  172 |       await page.reload();
-  173 |       const persistedTheme = await page.evaluate(() => {
-  174 |         return document.documentElement.getAttribute('data-theme') ||
-  175 |           localStorage.getItem('theme') ||
-  176 |           'system';
-  177 |       });
+  162 |       // Get first non-current theme option and click it
+  163 |       const themeOptions = page.locator('[role="option"]');
+  164 |       const optionCount = await themeOptions.count();
+  165 | 
+  166 |       let newTheme = initialTheme;
+  167 |       for (let i = 0; i < optionCount; i++) {
+  168 |         const optionTheme = await themeOptions.nth(i).textContent();
+  169 |         if (optionTheme && !optionTheme.toLowerCase().includes(initialTheme.toLowerCase())) {
+  170 |           await themeOptions.nth(i).click();
+  171 |           newTheme = optionTheme.toLowerCase();
+  172 |           break;
+  173 |         }
+  174 |       }
+  175 | 
+  176 |       // Wait for state update
+  177 |       await page.waitForTimeout(500);
   178 | 
-  179 |       expect(persistedTheme).toBe(newTheme);
-  180 |     }
-  181 |   });
-  182 | 
-  183 |   test('dark mode is visually distinct from light mode', async ({ page }) => {
-  184 |     await page.goto('/dashboard');
+  179 |       // Verify theme changed in DOM
+  180 |       const currentTheme = await page.evaluate(() => {
+  181 |         return document.documentElement.getAttribute('data-theme') ||
+  182 |           localStorage.getItem('sa-theme') ||
+  183 |           'lcars';
+  184 |       });
   185 | 
-  186 |     // Set to light mode
-  187 |     await page.evaluate(() => {
-  188 |       localStorage.setItem('theme', 'light');
-  189 |       document.documentElement.setAttribute('data-theme', 'light');
+  186 |       expect(currentTheme).not.toBe(initialTheme);
+  187 | 
+  188 |       // Flush storage and reload
+  189 |       await page.evaluate(() => {
 ```

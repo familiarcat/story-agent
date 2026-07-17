@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { color, tier as TIER_COLOR, font } from '@/lib/tokens';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -35,7 +35,22 @@ export default function AgentPage() {
   const [model, setModel] = useState<string | null>(null);
   const [sessionCost, setSessionCost] = useState(0);
   const [decided, setDecided] = useState<Record<string, 'approve' | 'deny'>>({});
+  const [lastErrorId, setLastErrorId] = useState<number | null>(null);
+  const [lastTask, setLastTask] = useState<string>('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // TEAM B: Listen for VSCode chat messages
+  useEffect(() => {
+    function handleVScodeMessage(e: Event) {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.type === 'chat-message' && customEvent.detail?.text) {
+        // Inject message into events display
+        pushEv({ kind: 'user', text: customEvent.detail.text });
+      }
+    }
+    window.addEventListener('vscode-message', handleVScodeMessage);
+    return () => window.removeEventListener('vscode-message', handleVScodeMessage);
+  }, []);
 
   async function approve(id: string, decision: 'approve' | 'deny') {
     setDecided(d => ({ ...d, [id]: decision }));
@@ -80,12 +95,14 @@ export default function AgentPage() {
     }
   }
 
-  async function run() {
-    const task = input.trim();
+  async function run(retryFor?: string) {
+    const task = retryFor || input.trim();
     if (!task || busy) return;
     setInput('');
     setBusy(true);
     setModel(null);
+    setLastTask(task);
+    setLastErrorId(null);
     setEvents([{ kind: 'user', text: task }]);
     setSessionCost(0);
     setDecided({});
@@ -98,6 +115,8 @@ export default function AgentPage() {
       });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+        const errorId = Date.now();
+        setLastErrorId(errorId);
         pushEv({ kind: 'error', text: err.error || `HTTP ${resp.status}` });
         return;
       }
@@ -118,6 +137,8 @@ export default function AgentPage() {
       }
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : 'stream failed';
+      const errorId = Date.now();
+      setLastErrorId(errorId);
       pushEv({ kind: 'error', text: errorMessage });
     } finally {
       setBusy(false);
@@ -145,7 +166,7 @@ export default function AgentPage() {
             or “Add a comment to the top of README.md”. Quark picks the model; you watch the tool loop run live.
           </p>
         )}
-        {events.map((e, i) => <EventRow key={i} e={e} decided={decided} onApprove={approve} />)}
+        {events.map((e, i) => <EventRow key={i} e={e} decided={decided} onApprove={approve} onRetry={() => { setEvents([]); run(lastTask); }} busy={busy} />)}
         {busy && <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>…working</div>}
       </div>
 
@@ -166,7 +187,7 @@ export default function AgentPage() {
   );
 }
 
-function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'approve' | 'deny'>; onApprove: (id: string, d: 'approve' | 'deny') => void }) {
+function EventRow({ e, decided, onApprove, onRetry, busy }: { e: Ev; decided: Record<string, 'approve' | 'deny'>; onApprove: (id: string, d: 'approve' | 'deny') => void; onRetry?: () => void; busy?: boolean }) {
   const mono: React.CSSProperties = { fontFamily: font.mono, fontSize: '0.8rem' };
   switch (e.kind) {
     case 'user':
@@ -229,8 +250,13 @@ function EventRow({ e, decided, onApprove }: { e: Ev; decided: Record<string, 'a
       );
     case 'error':
       return (
-        <div role="alert" data-testid="error-message" style={{ margin: '0.4rem 0', padding: '0.6rem 0.8rem', background: color.errBg, border: `1px solid ${color.errBorder}`, borderRadius: 6, color: color.errText, fontSize: '0.85rem', lineHeight: 1.5 }}>
-          ⚠️ <strong>Error:</strong> {sanitizeError(e.text)}
+        <div role="alert" data-testid="error-message" style={{ margin: '0.4rem 0', padding: '0.6rem 0.8rem', background: color.errBg, border: `1px solid ${color.errBorder}`, borderRadius: 6, color: color.errText, fontSize: '0.85rem', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: '0.8rem', justifyContent: 'space-between' }}>
+          <span>⚠️ <strong>Error:</strong> {sanitizeError(e.text)}</span>
+          {onRetry && (
+            <button onClick={onRetry} disabled={busy} style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: 4, border: `1px solid ${color.errText}`, background: 'transparent', color: color.errText, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.5 : 1, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              Retry
+            </button>
+          )}
         </div>
       );
     default:

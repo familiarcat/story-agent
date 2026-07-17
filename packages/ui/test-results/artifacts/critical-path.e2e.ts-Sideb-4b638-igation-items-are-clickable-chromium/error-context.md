@@ -555,86 +555,86 @@ Received string:        "http://localhost:3000/dashboard"
   151 |       // Store initial theme
   152 |       const initialTheme = await page.evaluate(() => {
   153 |         return document.documentElement.getAttribute('data-theme') ||
-  154 |           localStorage.getItem('theme') ||
-  155 |           'system';
+  154 |           localStorage.getItem('sa-theme') ||
+  155 |           'lcars';
   156 |       });
   157 | 
-  158 |       // Click theme toggle
+  158 |       // Click theme toggle to open menu
   159 |       await themeToggle.click();
-  160 |       await page.waitForTimeout(500);
+  160 |       await page.waitForTimeout(300);
   161 | 
-  162 |       // Verify theme changed
-  163 |       const newTheme = await page.evaluate(() => {
-  164 |         return document.documentElement.getAttribute('data-theme') ||
-  165 |           localStorage.getItem('theme') ||
-  166 |           'system';
-  167 |       });
-  168 | 
-  169 |       expect(newTheme).not.toBe(initialTheme);
-  170 | 
-  171 |       // Reload and verify persists
-  172 |       await page.reload();
-  173 |       const persistedTheme = await page.evaluate(() => {
-  174 |         return document.documentElement.getAttribute('data-theme') ||
-  175 |           localStorage.getItem('theme') ||
-  176 |           'system';
-  177 |       });
+  162 |       // Get first non-current theme option and click it
+  163 |       const themeOptions = page.locator('[role="option"]');
+  164 |       const optionCount = await themeOptions.count();
+  165 | 
+  166 |       let newTheme = initialTheme;
+  167 |       for (let i = 0; i < optionCount; i++) {
+  168 |         const optionTheme = await themeOptions.nth(i).textContent();
+  169 |         if (optionTheme && !optionTheme.toLowerCase().includes(initialTheme.toLowerCase())) {
+  170 |           await themeOptions.nth(i).click();
+  171 |           newTheme = optionTheme.toLowerCase();
+  172 |           break;
+  173 |         }
+  174 |       }
+  175 | 
+  176 |       // Wait for state update
+  177 |       await page.waitForTimeout(500);
   178 | 
-  179 |       expect(persistedTheme).toBe(newTheme);
-  180 |     }
-  181 |   });
-  182 | 
-  183 |   test('dark mode is visually distinct from light mode', async ({ page }) => {
-  184 |     await page.goto('/dashboard');
+  179 |       // Verify theme changed in DOM
+  180 |       const currentTheme = await page.evaluate(() => {
+  181 |         return document.documentElement.getAttribute('data-theme') ||
+  182 |           localStorage.getItem('sa-theme') ||
+  183 |           'lcars';
+  184 |       });
   185 | 
-  186 |     // Set to light mode
-  187 |     await page.evaluate(() => {
-  188 |       localStorage.setItem('theme', 'light');
-  189 |       document.documentElement.setAttribute('data-theme', 'light');
-  190 |     });
-  191 |     await page.reload();
-  192 | 
-  193 |     const lightBg = await page.evaluate(() => {
-  194 |       return window
-  195 |         .getComputedStyle(document.body)
-  196 |         .getPropertyValue('background-color');
-  197 |     });
-  198 | 
-  199 |     // Set to dark mode
-  200 |     await page.evaluate(() => {
-  201 |       localStorage.setItem('theme', 'dark');
-  202 |       document.documentElement.setAttribute('data-theme', 'dark');
-  203 |     });
-  204 |     await page.reload();
-  205 | 
-  206 |     const darkBg = await page.evaluate(() => {
-  207 |       return window
-  208 |         .getComputedStyle(document.body)
-  209 |         .getPropertyValue('background-color');
-  210 |     });
-  211 | 
-  212 |     // Colors should be different
-  213 |     expect(darkBg).not.toBe(lightBg);
-  214 |   });
-  215 | });
-  216 | 
-  217 | test.describe('VSCode Sync Integration', () => {
-  218 |   test('chat messages from VSCode appear in web UI', async ({
-  219 |     page,
-  220 |     context,
-  221 |   }) => {
-  222 |     await page.goto('/agent');
-  223 | 
-  224 |     // Verify chat panel is visible
-  225 |     const chatPanel = page.locator('[data-testid="chat-panel"]').first();
-  226 |     await expect(chatPanel).toBeVisible({ timeout: 5000 });
+  186 |       expect(currentTheme).not.toBe(initialTheme);
+  187 | 
+  188 |       // Flush storage and reload
+  189 |       await page.evaluate(() => {
+  190 |         return new Promise(resolve => setTimeout(resolve, 100));
+  191 |       });
+  192 |       await page.reload({ waitUntil: 'load' });
+  193 | 
+  194 |       // Verify theme persisted
+  195 |       const persistedTheme = await page.evaluate(() => {
+  196 |         return document.documentElement.getAttribute('data-theme') ||
+  197 |           localStorage.getItem('sa-theme') ||
+  198 |           'lcars';
+  199 |       });
+  200 | 
+  201 |       expect(persistedTheme).toBe(currentTheme);
+  202 |     }
+  203 |   });
+  204 | 
+  205 |   test('dark mode is visually distinct from light mode', async ({ page }) => {
+  206 |     await page.goto('/dashboard');
+  207 | 
+  208 |     // Set to light mode
+  209 |     await page.evaluate(() => {
+  210 |       localStorage.setItem('theme', 'light');
+  211 |       document.documentElement.setAttribute('data-theme', 'light');
+  212 |     });
+  213 |     await page.reload();
+  214 | 
+  215 |     const lightBg = await page.evaluate(() => {
+  216 |       return window
+  217 |         .getComputedStyle(document.body)
+  218 |         .getPropertyValue('background-color');
+  219 |     });
+  220 | 
+  221 |     // Set to dark mode
+  222 |     await page.evaluate(() => {
+  223 |       localStorage.setItem('theme', 'dark');
+  224 |       document.documentElement.setAttribute('data-theme', 'dark');
+  225 |     });
+  226 |     await page.reload();
   227 | 
-  228 |     // Simulate VSCode message injection (would be real in prod)
-  229 |     await page.evaluate(() => {
-  230 |       const event = new CustomEvent('vscode-message', {
-  231 |         detail: {
-  232 |           type: 'chat-message',
-  233 |           text: 'Test sync message',
-  234 |           timestamp: Date.now(),
-  235 |         },
+  228 |     const darkBg = await page.evaluate(() => {
+  229 |       return window
+  230 |         .getComputedStyle(document.body)
+  231 |         .getPropertyValue('background-color');
+  232 |     });
+  233 | 
+  234 |     // Colors should be different
+  235 |     expect(darkBg).not.toBe(lightBg);
 ```
