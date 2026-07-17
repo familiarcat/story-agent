@@ -95,7 +95,7 @@ export async function assertWorfGateHeaders(
 export async function setupCredentialScanningInterceptor(
   page: Page
 ): Promise<void> {
-  await page.route('**/*', (route) => {
+  await page.route('**/*', async (route) => {
     const request = route.request();
 
     // Check request headers
@@ -126,16 +126,12 @@ export async function setupCredentialScanningInterceptor(
       // Binary data, skip
     }
 
-    route.continue();
-  });
-
-  await page.route('**/*', async (route) => {
+    // Fetch and check response headers
     try {
       const response = await route.fetch();
       if (response) {
-        // Check response headers
-        const headers = response.headers();
-        for (const [key, value] of Object.entries(headers)) {
+        const responseHeaders = response.headers();
+        for (const [key, value] of Object.entries(responseHeaders)) {
           for (const pattern of SENSITIVE_PATTERNS) {
             if (key.includes(pattern) || (value && value.includes(pattern))) {
               console.error(
@@ -145,10 +141,11 @@ export async function setupCredentialScanningInterceptor(
           }
         }
       }
+      route.continue();
     } catch (e) {
-      // If route fetch fails, continue anyway
+      // If fetch fails, continue anyway to avoid blocking tests
+      route.continue();
     }
-    route.continue();
   });
 }
 
