@@ -129,20 +129,24 @@ export async function setupCredentialScanningInterceptor(
     route.continue();
   });
 
-  await page.route('**/*', (route) => {
-    const response = route.response();
-    if (response) {
-      // Check response headers
-      const headers = response.headers();
-      for (const [key, value] of Object.entries(headers)) {
-        for (const pattern of SENSITIVE_PATTERNS) {
-          if (key.includes(pattern) || (value && value.includes(pattern))) {
-            console.error(
-              `Credential leak detected in response header: ${pattern}`
-            );
+  await page.route('**/*', async (route) => {
+    try {
+      const response = await route.fetch();
+      if (response) {
+        // Check response headers
+        const headers = response.headers();
+        for (const [key, value] of Object.entries(headers)) {
+          for (const pattern of SENSITIVE_PATTERNS) {
+            if (key.includes(pattern) || (value && value.includes(pattern))) {
+              console.error(
+                `Credential leak detected in response header: ${pattern}`
+              );
+            }
           }
         }
       }
+    } catch (e) {
+      // If route fetch fails, continue anyway
     }
     route.continue();
   });
