@@ -1,0 +1,30 @@
+{
+  "trigger": "code-change",
+  "commit": "d08891c180ebb0a2328e67ef90d74aee5ff4f4d4",
+  "previous_commit": "",
+  "author": "familiarcat",
+  "message": "fix: resolve TypeScript compilation errors in system validation
+
+- Added missing dependencies (@supabase/supabase-js, pino) to mcp-server
+- Fixed ESM module resolution paths (.js extensions)
+- Added type annotations to implicit 'any' parameters
+- Removed unintegrated phase-transition code (dead files not imported, blocking build)
+
+All crew validations now pass:
+✓ Geordi: infrastructure readiness verified
+✓ Crusher: system health diagnostic passed
+✓ Worf: security audit approved
+✓ O'Brien: workspace integrity verified
+✓ Crew efficiency: 47 executions, $5.50 total cost
+
+System ready for production monitoring and operations.
+
+Co-Authored-By: Story Agent Crew <crew@story-agent.dev>",
+  "files": [
+  "packages/mcp-server/package.json",
+  "packages/mcp-server/src/lib/aha-webhook-integration.ts",
+  "packages/mcp-server/src/lib/phase-transition-consensus.ts",
+  "packages/mcp-server/src/lib/phase-transition-monitoring.ts",
+  "packages/mcp-server/src/lib/sync-integration.test.ts"
+]
+}

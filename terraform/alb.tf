@@ -207,6 +207,10 @@ resource "aws_lb_listener_rule" "mcp_ws" {
           arn    = aws_lb_target_group.mcp_ws_canary[0].arn
           weight = 5
         }
+        stickiness {
+          enabled  = true
+          duration = 3600
+        }
       }
     }
     dynamic "forward" {
@@ -215,6 +219,10 @@ resource "aws_lb_listener_rule" "mcp_ws" {
         target_group {
           arn    = aws_lb_target_group.mcp_ws.arn
           weight = 100
+        }
+        stickiness {
+          enabled  = true
+          duration = 3600
         }
       }
     }

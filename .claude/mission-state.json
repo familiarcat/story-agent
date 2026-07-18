@@ -1,0 +1,9 @@
+{
+  "status": "active",
+  "type": "canary-deployment",
+  "started": "2026-07-18T00:15:00Z",
+  "phase": "monitoring",
+  "traffic_split": "95-production-5-staging",
+  "monitoring_window": "T+1h-to-T+24h",
+  "escalation_enabled": true
+}
