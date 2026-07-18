@@ -103,7 +103,16 @@ export class ChatPanel {
               sources: response.sources,
             });
           } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : String(err);
+            // FIX #2: Sanitize error messages (no tokens/paths/URLs)
+            let errorMsg = err instanceof Error ? err.message : String(err);
+            // Remove common secret patterns
+            errorMsg = errorMsg
+              .replace(/\/[\w\/.:-]+/g, '[path]') // file paths
+              .replace(/https?:\/\/[^\s]+/g, '[url]') // URLs
+              .replace(/Bearer\s+\S+/gi, '[bearer-token]') // bearer tokens
+              .replace(/api[-_]?key\s*[:=]\s*\S+/gi, '[api-key]') // API keys
+              .replace(/token\s*[:=]\s*\S+/gi, '[token]'); // tokens
+
             this.panel.webview.postMessage({
               command: 'error',
               message: errorMsg,
@@ -175,52 +184,52 @@ export class ChatPanel {
     costUSD: number;
     sources: string[];
   }> {
+    // FIX #5: Use actual WebSocket ChatClient instead of HTTP
+    const chatClient = getChatClient();
+    if (!chatClient) {
+      throw new Error('Chat client not initialized');
+    }
+
     // Convert history to chat format (last 8 turns)
     const chatHistory = this.history
       .slice(-8)
       .map(m => ({ role: m.role, content: m.content }));
 
-    // For now, use HTTP to the dashboard API (production would use WebSocket message ID tracking)
-    const dashboardUrl = vscode.workspace
-      .getConfiguration('storyAgent')
-      .get<string>('dashboardUrl') || 'http://localhost:3000';
+    return new Promise((resolve, reject) => {
+      // Generate unique message ID
+      const msgId = `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    const response = await fetch(`${dashboardUrl}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      // Set up response handler
+      const unsubscribe = chatClient.onChatResponse(msgId, (response) => {
+        if (response.done) {
+          unsubscribe();
+          resolve({
+            answer: response.content,
+            model: response.model,
+            costUSD: response.costUSD,
+            sources: response.sources || [],
+          });
+        }
+      });
+
+      // Send request via WebSocket
+      chatClient.send({
         message,
-        history: chatHistory,
-      }),
+        priority: 'high',
+        sessionId: this.sessionId,
+        userId: vscode.env.sessionId || 'vscode-user',
+        context: chatHistory as any,
+      }).catch((err) => {
+        unsubscribe();
+        reject(err);
+      });
+
+      // Timeout: 30s max (matches HTTP timeout)
+      setTimeout(() => {
+        unsubscribe();
+        reject(new Error('Chat response timeout'));
+      }, 30000);
     });
-
-    if (!response.ok) {
-      throw new Error(`Chat API error: ${response.status}`);
-    }
-
-    const text = await response.text();
-
-    // Parse response: answer is separated from metadata by ␞ sentinel
-    const META = '␞ META ␞';
-    const [answerPart, metaPart] = text.split(META);
-
-    let answer = answerPart.trim();
-    let model = '';
-    let costUSD = 0;
-    let sources: string[] = [];
-
-    if (metaPart) {
-      try {
-        const meta = JSON.parse(metaPart);
-        model = meta.model || '';
-        costUSD = meta.costUSD || 0;
-        sources = meta.sources || [];
-      } catch {
-        // Ignore parse errors, use defaults
-      }
-    }
-
-    return { answer, model, costUSD, sources };
   }
 
   private updatePanel(): void {

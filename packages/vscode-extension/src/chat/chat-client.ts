@@ -87,6 +87,10 @@ export class ChatClient {
   // Metrics
   private sessionMetrics = { totalCost: 0, totalTokens: 0, requestCount: 0 };
 
+  // FIX #4: Rate limit handling
+  private rateLimitBackoffMs = 0;
+  private rateLimitRetryAfter = 0;
+
   constructor(url: string, sessionId: string, userId: string) {
     this.url = url;
     this.sessionId = sessionId;
@@ -159,6 +163,17 @@ export class ChatClient {
 
   /** Send a chat message */
   async send(request: ChatRequest): Promise<void> {
+    // FIX #4: Check rate limit backoff
+    if (this.rateLimitBackoffMs > 0) {
+      const now = Date.now();
+      if (now < this.rateLimitRetryAfter) {
+        const waitMs = this.rateLimitRetryAfter - now;
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+      } else {
+        this.rateLimitBackoffMs = 0;
+      }
+    }
+
     // If low priority, add to batch queue
     if (request.priority === 'low') {
       this.lowPriorityQueue.push(request);
@@ -195,6 +210,8 @@ export class ChatClient {
     for (const request of batch) {
       this.send({ ...request, priority: 'high' }).catch(err => {
         this.errorHandlers.forEach(h => h(err));
+        // FIX #3: Re-queue failed requests so they're not lost
+        this.lowPriorityQueue.unshift(request);
       });
     }
   }
@@ -203,6 +220,26 @@ export class ChatClient {
   private handleMessage(data: string): void {
     try {
       const response: ChatResponse = JSON.parse(data);
+
+      // FIX #4: Detect rate limit (429) responses
+      const responseWithStatus = response as ChatResponse & { statusCode?: number; retryAfter?: string };
+      if (responseWithStatus.statusCode === 429) {
+        // Parse Retry-After header (seconds or HTTP-date)
+        let backoffMs = 60000; // Default 60s
+        if (responseWithStatus.retryAfter) {
+          const retryAfterSec = parseInt(responseWithStatus.retryAfter);
+          if (!isNaN(retryAfterSec)) {
+            backoffMs = retryAfterSec * 1000;
+          }
+        }
+        this.rateLimitBackoffMs = backoffMs;
+        this.rateLimitRetryAfter = Date.now() + backoffMs;
+
+        // Emit error but don't crash
+        const error = new Error(`Rate limited. Retry after ${Math.ceil(backoffMs / 1000)}s`);
+        this.errorHandlers.forEach(h => h(error));
+        return;
+      }
 
       // Track metrics
       this.sessionMetrics.totalCost += response.costUSD;

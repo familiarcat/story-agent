@@ -1,52 +1,88 @@
-<testsuites id="" name="" tests="38" failures="3" skipped="0" errors="0" time="74.910576">
-<testsuite name="critical-path.e2e.ts" timestamp="2026-07-17T11:39:19.054Z" hostname="chromium" tests="38" failures="3" skipped="0" time="68.589" errors="0">
-<testcase name="Route Navigation - Critical Paths › should navigate to /dashboard and render page" classname="critical-path.e2e.ts" time="2.912">
+<testsuites id="" name="" tests="38" failures="3" skipped="0" errors="1" time="146.915234">
+<testsuite name="critical-path.e2e.ts" timestamp="2026-07-17T23:05:40.271Z" hostname="chromium" tests="38" failures="3" skipped="0" time="134.272" errors="1">
+<testcase name="Route Navigation - Critical Paths › should navigate to /dashboard and render page" classname="critical-path.e2e.ts" time="3.902">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /dashboard should have accessible main content area" classname="critical-path.e2e.ts" time="1.695">
+<testcase name="Route Navigation - Critical Paths › /dashboard should have accessible main content area" classname="critical-path.e2e.ts" time="2.205">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /sprint and render page" classname="critical-path.e2e.ts" time="0.865">
+<testcase name="Route Navigation - Critical Paths › should navigate to /sprint and render page" classname="critical-path.e2e.ts" time="1.233">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /sprint should have accessible main content area" classname="critical-path.e2e.ts" time="0.852">
+<testcase name="Route Navigation - Critical Paths › /sprint should have accessible main content area" classname="critical-path.e2e.ts" time="0.82">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /story/new and render page" classname="critical-path.e2e.ts" time="0.623">
+<testcase name="Route Navigation - Critical Paths › should navigate to /story/new and render page" classname="critical-path.e2e.ts" time="0.669">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /story/new should have accessible main content area" classname="critical-path.e2e.ts" time="0.422">
+<testcase name="Route Navigation - Critical Paths › /story/new should have accessible main content area" classname="critical-path.e2e.ts" time="0.53">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /agent and render page" classname="critical-path.e2e.ts" time="0.943">
+<testcase name="Route Navigation - Critical Paths › should navigate to /agent and render page" classname="critical-path.e2e.ts" time="1.095">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /agent should have accessible main content area" classname="critical-path.e2e.ts" time="0.423">
+<testcase name="Route Navigation - Critical Paths › /agent should have accessible main content area" classname="critical-path.e2e.ts" time="0.507">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /docs and render page" classname="critical-path.e2e.ts" time="1.071">
+<testcase name="Route Navigation - Critical Paths › should navigate to /docs and render page" classname="critical-path.e2e.ts" time="1.271">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /docs should have accessible main content area" classname="critical-path.e2e.ts" time="0.388">
+<testcase name="Route Navigation - Critical Paths › /docs should have accessible main content area" classname="critical-path.e2e.ts" time="1.031">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /vision and render page" classname="critical-path.e2e.ts" time="0.763">
+<testcase name="Route Navigation - Critical Paths › should navigate to /vision and render page" classname="critical-path.e2e.ts" time="1.333">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /vision should have accessible main content area" classname="critical-path.e2e.ts" time="0.425">
+<testcase name="Route Navigation - Critical Paths › /vision should have accessible main content area" classname="critical-path.e2e.ts" time="0.837">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /cost and render page" classname="critical-path.e2e.ts" time="0.756">
+<testcase name="Route Navigation - Critical Paths › should navigate to /cost and render page" classname="critical-path.e2e.ts" time="1.329">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /cost should have accessible main content area" classname="critical-path.e2e.ts" time="0.886">
+<testcase name="Route Navigation - Critical Paths › /cost should have accessible main content area" classname="critical-path.e2e.ts" time="1.277">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /learnings and render page" classname="critical-path.e2e.ts" time="0.749">
+<testcase name="Route Navigation - Critical Paths › should navigate to /learnings and render page" classname="critical-path.e2e.ts" time="1.324">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /learnings should have accessible main content area" classname="critical-path.e2e.ts" time="0.872">
+<testcase name="Route Navigation - Critical Paths › /learnings should have accessible main content area" classname="critical-path.e2e.ts" time="1.357">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /crew/memories and render page" classname="critical-path.e2e.ts" time="0.72">
+<testcase name="Route Navigation - Critical Paths › should navigate to /crew/memories and render page" classname="critical-path.e2e.ts" time="1.027">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /crew/memories should have accessible main content area" classname="critical-path.e2e.ts" time="1.149">
+<testcase name="Route Navigation - Critical Paths › /crew/memories should have accessible main content area" classname="critical-path.e2e.ts" time="1.493">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /crew/observations and render page" classname="critical-path.e2e.ts" time="0.786">
+<testcase name="Route Navigation - Critical Paths › should navigate to /crew/observations and render page" classname="critical-path.e2e.ts" time="1.165">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /crew/observations should have accessible main content area" classname="critical-path.e2e.ts" time="1.007">
+<testcase name="Route Navigation - Critical Paths › /crew/observations should have accessible main content area" classname="critical-path.e2e.ts" time="1.929">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › should navigate to /observation-lounge and render page" classname="critical-path.e2e.ts" time="0.935">
+<testcase name="Route Navigation - Critical Paths › should navigate to /observation-lounge and render page" classname="critical-path.e2e.ts" time="1.937">
 </testcase>
-<testcase name="Route Navigation - Critical Paths › /observation-lounge should have accessible main content area" classname="critical-path.e2e.ts" time="0.451">
+<testcase name="Route Navigation - Critical Paths › /observation-lounge should have accessible main content area" classname="critical-path.e2e.ts" time="1.221">
 </testcase>
-<testcase name="Sidebar Persistence › sidebar collapse state persists across navigation" classname="critical-path.e2e.ts" time="5.467">
+<testcase name="Sidebar Persistence › sidebar collapse state persists across navigation" classname="critical-path.e2e.ts" time="34.565">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/video.webm]]
+
+[[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/error-context.md]]
+]]>
+</system-out>
+<error message="Test timeout of 30000ms exceeded." type="Error">
+<![CDATA[  [chromium] › critical-path.e2e.ts:73:7 › Sidebar Persistence › sidebar collapse state persists across navigation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: page.waitForLoadState: Test timeout of 30000ms exceeded.
+
+       98 |     // Navigate to different route
+       99 |     await page.goto('/sprint');
+    > 100 |     await page.waitForLoadState('networkidle');
+          |                ^
+      101 |
+      102 |     // Verify sidebar state persisted (still collapsed)
+      103 |     const sidebarAfterNav = page.locator('[data-testid="app-sidenav"]').first();
+        at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:100:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../../test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/error-context.md
+]]>
+</error>
 </testcase>
-<testcase name="Sidebar Persistence › sidebar navigation items are clickable" classname="critical-path.e2e.ts" time="3.1">
+<testcase name="Sidebar Persistence › sidebar navigation items are clickable" classname="critical-path.e2e.ts" time="5.506">
 <system-out>
 <![CDATA[
 [[ATTACHMENT|artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/test-failed-1.png]]
@@ -85,13 +121,13 @@
 ]]>
 </failure>
 </testcase>
-<testcase name="Theme Switching › theme toggle switches between LCARS, dark, and light" classname="critical-path.e2e.ts" time="3.575">
+<testcase name="Theme Switching › theme toggle switches between LCARS, dark, and light" classname="critical-path.e2e.ts" time="4.391">
 </testcase>
-<testcase name="Theme Switching › dark mode is visually distinct from light mode" classname="critical-path.e2e.ts" time="1.829">
+<testcase name="Theme Switching › dark mode is visually distinct from light mode" classname="critical-path.e2e.ts" time="4.085">
 </testcase>
-<testcase name="VSCode Sync Integration › chat messages from VSCode appear in web UI" classname="critical-path.e2e.ts" time="0.405">
+<testcase name="VSCode Sync Integration › chat messages from VSCode appear in web UI" classname="critical-path.e2e.ts" time="0.63">
 </testcase>
-<testcase name="Error Handling › gracefully handles server unavailable" classname="critical-path.e2e.ts" time="5.541">
+<testcase name="Error Handling › gracefully handles server unavailable" classname="critical-path.e2e.ts" time="5.736">
 <system-out>
 <![CDATA[
 [[ATTACHMENT|artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/test-failed-1.png]]
@@ -137,7 +173,7 @@
 ]]>
 </failure>
 </testcase>
-<testcase name="Error Handling › recovers when server comes back online" classname="critical-path.e2e.ts" time="5.757">
+<testcase name="Error Handling › recovers when server comes back online" classname="critical-path.e2e.ts" time="5.691">
 <system-out>
 <![CDATA[
 [[ATTACHMENT|artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/test-failed-1.png]]
@@ -183,23 +219,23 @@
 ]]>
 </failure>
 </testcase>
-<testcase name="Role-Based Access › admin role sees all UI elements" classname="critical-path.e2e.ts" time="3.439">
+<testcase name="Role-Based Access › admin role sees all UI elements" classname="critical-path.e2e.ts" time="2.6">
 </testcase>
-<testcase name="Role-Based Access › user role sees only assigned items" classname="critical-path.e2e.ts" time="2.631">
+<testcase name="Role-Based Access › user role sees only assigned items" classname="critical-path.e2e.ts" time="1.925">
 </testcase>
-<testcase name="Security Assertions › no credentials in page source" classname="critical-path.e2e.ts" time="3.558">
+<testcase name="Security Assertions › no credentials in page source" classname="critical-path.e2e.ts" time="10.077">
 </testcase>
-<testcase name="Security Assertions › no credentials in console logs" classname="critical-path.e2e.ts" time="4.212">
+<testcase name="Security Assertions › no credentials in console logs" classname="critical-path.e2e.ts" time="7.005">
 </testcase>
-<testcase name="Security Assertions › requests include WorfGate headers" classname="critical-path.e2e.ts" time="0.96">
+<testcase name="Security Assertions › requests include WorfGate headers" classname="critical-path.e2e.ts" time="1.276">
 </testcase>
-<testcase name="Performance Baselines › dashboard loads within 5 seconds" classname="critical-path.e2e.ts" time="1.951">
+<testcase name="Performance Baselines › dashboard loads within 5 seconds" classname="critical-path.e2e.ts" time="1.721">
 </testcase>
-<testcase name="Performance Baselines › navigation between routes completes within 3 seconds" classname="critical-path.e2e.ts" time="1.792">
+<testcase name="Performance Baselines › navigation between routes completes within 3 seconds" classname="critical-path.e2e.ts" time="1.696">
 </testcase>
-<testcase name="Accessibility Basics › page has proper heading hierarchy" classname="critical-path.e2e.ts" time="4.011">
+<testcase name="Accessibility Basics › page has proper heading hierarchy" classname="critical-path.e2e.ts" time="15.982">
 </testcase>
-<testcase name="Accessibility Basics › buttons and links are keyboard accessible" classname="critical-path.e2e.ts" time="0.668">
+<testcase name="Accessibility Basics › buttons and links are keyboard accessible" classname="critical-path.e2e.ts" time="1.894">
 </testcase>
 </testsuite>
 </testsuites>
