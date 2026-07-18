@@ -5,7 +5,7 @@
       "cron": "30 * * * *",
       "prompt": "CANARY MONITORING HOURLY CYCLE — Crew Deliberation\n\nExecute canary monitoring assessment for current hour:\n\n1. **Geordi (Infrastructure):** Fetch CloudWatch ALB metrics (last hour):\n   - Latency p50/p95/p99\n   - Error rates: 5xx, 4xx, 429, 401, timeout\n   - Connection pool utilization\n   - Compare vs production baseline\n\n2. **Crusher (Health):** Sample ECS canary task:\n   - CPU%, Memory%, Network I/O\n   - Container log anomalies (last 60 min)\n   - Health check status\n   - Task lifecycle health\n\n3. **Worf (Security):** Security scan:\n   - TLS certificate validity\n   - No new security alerts\n   - Container image integrity\n   - IAM permissions check\n\n4. **O'Brien (DevOps):** Operational readiness:\n   - Test rollback procedure (non-destructive)\n   - Verify ALB weighted routing active\n   - SNS subscriptions alive\n   - Automated remediation ready\n\n5. **Data (Architecture):** Divergence drift check:\n   - Compare current canary config vs baseline\n   - Detect any configuration drift\n   - Assess risk changes\n\n6. **Riker (Synthesis):** Generate hourly ruling:\n   - Consolidate all 5 crew assessments\n   - Determine status: GREEN | YELLOW | RED\n   - Apply decision thresholds (error rate, latency, CPU)\n   - Store ruling to RAG as canary-riker-ruling-t{hour}h\n\n**Escalation Triggers:**\n- RED: Immediately alert orchestrator\n- YELLOW prolonged (>3 consecutive): Escalate to Picard\n- GREEN continuous: Log and continue\n\nStore all findings to RAG with tags: canary-monitoring, hourly-cycle, t{hour}h",
       "createdAt": 1784352150606,
-      "lastFiredAt": 1784352837695,
+      "lastFiredAt": 1784414429058,
       "recurring": true
     },
     {
@@ -13,7 +13,7 @@
       "cron": "*/2 * * * *",
       "prompt": "crew-code-change-detector: Check for new commits on main branch and trigger immediate Riker + Picard escalation if detected during active mission. Run detector script and invoke crew mission pipeline if changes found.",
       "createdAt": 1784352481956,
-      "lastFiredAt": 1784355681586,
+      "lastFiredAt": 1784414429058,
       "recurring": true
     }
   ]
