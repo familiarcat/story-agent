@@ -13,7 +13,7 @@
       "cron": "*/2 * * * *",
       "prompt": "crew-code-change-detector: Check for new commits on main branch and trigger immediate Riker + Picard escalation if detected during active mission. Run detector script and invoke crew mission pipeline if changes found.",
       "createdAt": 1784352481956,
-      "lastFiredAt": 1784354357105,
+      "lastFiredAt": 1784355681586,
       "recurring": true
     }
   ]
