@@ -832,7 +832,7 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   // Resolve credentials through WorfGate (authorized, audited, credential provider chain)
   const keyResult = resolveWorfGateCredential('CREW_LLM_APPROVED_KEY', {
     operation: 'llm:call',
-    crewId: 'agent', // Crew identity for authorization
+    crewId: 'quark', // Crew identity for authorization
   });
   if (!keyResult.authorized) throw new Error(`worfgate_denied: ${keyResult.reason}`);
   if (!keyResult.available || !keyResult.value) throw new Error('openrouter_not_configured');
@@ -840,7 +840,7 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
 
   const urlResult = resolveWorfGateCredential('CREW_LLM_APPROVED_URL', {
     operation: 'llm:call',
-    crewId: 'agent',
+    crewId: 'quark',
   });
   const OR_URL = (urlResult.available && urlResult.value ? urlResult.value : 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 
