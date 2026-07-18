@@ -107,6 +107,22 @@ variable "openrouter_model_cheap" {
   default = "anthropic/claude-haiku-4.5"
 }
 
+variable "enable_canary_deployment" {
+  description = "Enable canary deployment (5% traffic split) for staged rollout"
+  type        = bool
+  default     = false
+}
+
+variable "mcp_image_canary" {
+  description = "ECR image URI for the MCP canary variant (staging image). If empty, uses mcp_image."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.mcp_image_canary == "" || can(regex("\\.dkr\\.ecr\\..+\\.amazonaws\\.com/.+(:.+|@sha256:[0-9a-f]{64})$", var.mcp_image_canary))
+    error_message = "mcp_image_canary must be a valid ECR URI (…/repo:tag or …/repo@sha256:<digest>)."
+  }
+}
+
 variable "tags" {
   type    = map(string)
   default = { Project = "story-agent", ManagedBy = "terraform" }
@@ -124,3 +140,10 @@ variable "cost_alert_email" {
   type        = string
   default     = ""
 }
+
+variable "canary_alert_email" {
+  description = "Email to notify for canary deployment alerts (latency, errors, health). Required if enable_canary_deployment is true."
+  type        = string
+  default     = ""
+}
+

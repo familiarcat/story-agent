@@ -116,6 +116,116 @@ resource "aws_ecs_service" "mcp" {
   depends_on                        = [aws_lb_listener.main]
 }
 
+# ── MCP canary task (5% traffic variant for staged rollout) ──────────────────
+resource "aws_ecs_task_definition" "mcp_canary" {
+  family                   = "${local.name}-mcp-canary"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "1024"
+  memory                   = "2048"
+  execution_role_arn       = aws_iam_role.execution.arn
+  task_role_arn            = aws_iam_role.task.arn
+  runtime_platform {
+    cpu_architecture        = "ARM64"
+    operating_system_family = "LINUX"
+  }
+  container_definitions = jsonencode([{
+    name      = "mcp-canary"
+    image     = var.mcp_image_canary != "" ? var.mcp_image_canary : var.mcp_image
+    essential = true
+    portMappings = [
+      { containerPort = 3101, protocol = "tcp", name = "http-mcp" },
+      { containerPort = 3102, protocol = "tcp", name = "rag" },
+      { containerPort = 8000, protocol = "tcp", name = "ws" },
+    ]
+    environment = [
+      { name = "SUPABASE_MODE", value = "live" },
+      { name = "CREW_LLM_PROVIDER", value = "approved" },
+      { name = "CREW_LLM_APPROVED_URL", value = "https://openrouter.ai/api/v1" },
+      { name = "CREW_LLM_MODEL_PROFILE", value = "cost_optimized" },
+      { name = "CREW_LLM_APPROVED_MODEL", value = var.openrouter_model },
+      { name = "CREW_LLM_APPROVED_MODEL_CHEAP", value = var.openrouter_model_cheap },
+      { name = "AWS_AHA_SECRET_ID", value = var.aha_secret_name },
+      { name = "AWS_REGION", value = var.region },
+      { name = "STORY_AGENT_HTTP_PORT", value = "3101" },
+      { name = "STORY_AGENT_RAG_PORT", value = "3102" },
+      { name = "STORY_AGENT_WS_PORT", value = "8000" },
+      { name = "CANARY_VARIANT", value = "true" },
+    ]
+    secrets = concat(local.runtime_secrets, [
+      { name = "REDIS_URL", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:REDIS_URL::" },
+    ])
+    healthCheck = {
+      command     = ["CMD-SHELL", "node -e \"fetch('http://localhost:3102/rag/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval    = 30
+      timeout     = 5
+      retries     = 3
+      startPeriod = 30
+    }
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.mcp_canary.name
+        "awslogs-region"        = var.region
+        "awslogs-stream-prefix" = "mcp-canary"
+      }
+    }
+  }])
+}
+
+resource "aws_ecs_service" "mcp_canary" {
+  count                              = var.enable_canary_deployment ? 1 : 0
+  name                               = "${local.name}-mcp-canary"
+  cluster                            = aws_ecs_cluster.main.id
+  task_definition                    = aws_ecs_task_definition.mcp_canary.arn
+  desired_count                      = 1
+  launch_type                        = "FARGATE"
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+  availability_zone_rebalancing      = "DISABLED"
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [aws_security_group.service.id]
+    assign_public_ip = var.assign_public_ip
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.mcp_http_canary[0].arn
+    container_name   = "mcp-canary"
+    container_port   = 3101
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.mcp_ws_canary[0].arn
+    container_name   = "mcp-canary"
+    container_port   = 8000
+  }
+  service_registries {
+    registry_arn = aws_service_discovery_service.mcp_canary[0].arn
+  }
+  health_check_grace_period_seconds = 60
+  depends_on                        = [aws_lb_listener.main]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_service_discovery_service" "mcp_canary" {
+  count = var.enable_canary_deployment ? 1 : 0
+  name  = "mcp-canary"
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.internal.id
+    dns_records {
+      ttl  = 10
+      type = "A"
+    }
+    routing_policy = "MULTIVALUE"
+  }
+}
+
 # ── UI task ──────────────────────────────────────────────────────────────────
 resource "aws_ecs_task_definition" "ui" {
   family                   = "${local.name}-ui"

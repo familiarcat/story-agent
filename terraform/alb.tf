@@ -75,6 +75,50 @@ resource "aws_lb_target_group" "mcp_ws" {
   }
 }
 
+# ── Canary target groups (5% traffic variant) ────────────────────────────────
+resource "aws_lb_target_group" "mcp_http_canary" {
+  count                = var.enable_canary_deployment ? 1 : 0
+  name                 = "${local.name}-mcp-http-canary"
+  port                 = 3101
+  protocol             = "HTTP"
+  vpc_id               = var.vpc_id
+  target_type          = "ip"
+  deregistration_delay = 300 # drain in-flight MCP requests
+  health_check {
+    port    = "3102"
+    path    = "/rag/health"
+    matcher = "200"
+    interval            = 10
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
+resource "aws_lb_target_group" "mcp_ws_canary" {
+  count                = var.enable_canary_deployment ? 1 : 0
+  name                 = "${local.name}-mcp-ws-canary"
+  port                 = 8000
+  protocol             = "HTTP"
+  vpc_id               = var.vpc_id
+  target_type          = "ip"
+  deregistration_delay = 60
+  stickiness {
+    type            = "lb_cookie"
+    enabled         = true
+    cookie_duration = 3600
+  }
+  health_check {
+    port    = "3102"
+    path    = "/rag/health"
+    matcher = "200"
+    interval            = 10
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
 # Agent-core SSE endpoint (/agent + /symphony) is mounted on the SAME MCP HTTP server (port 3101)
 # as /mcp — so it reuses the existing mcp_http target group. No separate target group, container
 # port, or ECS load_balancer block → no slow ECS service replacement (crew deploy-optimization).
@@ -117,8 +161,30 @@ resource "aws_lb_listener_rule" "mcp_http" {
   listener_arn = aws_lb_listener.main.arn
   priority     = 10
   action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.mcp_http.arn
+    type = var.enable_canary_deployment ? "forward" : "forward"
+    dynamic "forward" {
+      for_each = var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 95
+        }
+        target_group {
+          arn    = aws_lb_target_group.mcp_http_canary[0].arn
+          weight = 5
+        }
+      }
+    }
+    # Static forward when canary is disabled
+    dynamic "forward" {
+      for_each = !var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 100
+        }
+      }
+    }
   }
   condition {
     path_pattern { values = ["/mcp", "/mcp/*", "/rag/*", "/.well-known/mcp.json"] }
@@ -129,8 +195,29 @@ resource "aws_lb_listener_rule" "mcp_ws" {
   listener_arn = aws_lb_listener.main.arn
   priority     = 5
   action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.mcp_ws.arn
+    type = var.enable_canary_deployment ? "forward" : "forward"
+    dynamic "forward" {
+      for_each = var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_ws.arn
+          weight = 95
+        }
+        target_group {
+          arn    = aws_lb_target_group.mcp_ws_canary[0].arn
+          weight = 5
+        }
+      }
+    }
+    dynamic "forward" {
+      for_each = !var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_ws.arn
+          weight = 100
+        }
+      }
+    }
   }
   condition {
     path_pattern { values = ["/ws", "/ws/*"] }
@@ -143,8 +230,29 @@ resource "aws_lb_listener_rule" "mcp_agent" {
   listener_arn = aws_lb_listener.main.arn
   priority     = 8
   action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.mcp_http.arn
+    type = var.enable_canary_deployment ? "forward" : "forward"
+    dynamic "forward" {
+      for_each = var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 95
+        }
+        target_group {
+          arn    = aws_lb_target_group.mcp_http_canary[0].arn
+          weight = 5
+        }
+      }
+    }
+    dynamic "forward" {
+      for_each = !var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 100
+        }
+      }
+    }
   }
   condition {
     path_pattern { values = ["/agent", "/agent/*", "/symphony", "/chat", "/cost"] }
@@ -155,8 +263,29 @@ resource "aws_lb_listener_rule" "mcp_agent2" {
   listener_arn = aws_lb_listener.main.arn
   priority     = 7
   action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.mcp_http.arn
+    type = var.enable_canary_deployment ? "forward" : "forward"
+    dynamic "forward" {
+      for_each = var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 95
+        }
+        target_group {
+          arn    = aws_lb_target_group.mcp_http_canary[0].arn
+          weight = 5
+        }
+      }
+    }
+    dynamic "forward" {
+      for_each = !var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 100
+        }
+      }
+    }
   }
   condition {
     path_pattern { values = ["/learnings", "/aha/*"] }

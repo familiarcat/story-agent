@@ -40,6 +40,12 @@ resource "aws_cloudwatch_log_group" "mcp" {
   name              = "/ecs/${local.name}-mcp"
   retention_in_days = 30
 }
+
+resource "aws_cloudwatch_log_group" "mcp_canary" {
+  name              = "/ecs/${local.name}-mcp-canary"
+  retention_in_days = 30
+}
+
 resource "aws_cloudwatch_log_group" "ui" {
   name              = "/ecs/${local.name}-ui"
   retention_in_days = 30

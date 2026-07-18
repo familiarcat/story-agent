@@ -29,3 +29,29 @@ output "mcp_service" {
 output "ui_service" {
   value = aws_ecs_service.ui.name
 }
+
+output "mcp_canary_service" {
+  description = "Canary ECS service name (5% traffic variant)"
+  value       = try(aws_ecs_service.mcp_canary[0].name, null)
+}
+
+output "canary_enabled" {
+  description = "Whether canary deployment is active"
+  value       = var.enable_canary_deployment
+}
+
+output "canary_monitoring_dashboard" {
+  description = "CloudWatch dashboard URL for canary monitoring"
+  value       = "https://console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards:name=${local.name}-canary-monitoring"
+}
+
+output "canary_alerts_topic" {
+  description = "SNS topic ARN for canary deployment alerts"
+  value       = try(aws_sns_topic.canary_alerts[0].arn, null)
+}
+
+output "canary_log_group" {
+  description = "CloudWatch log group for canary task logs"
+  value       = aws_cloudwatch_log_group.mcp_canary.name
+}
+
