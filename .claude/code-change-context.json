@@ -1,33 +1,56 @@
 {
-  "trigger": "code-change",
-  "commit": "881a6c47ee2652f5b0d1f9fbc72dcd086b181924",
-  "previous_commit": "497a9a366e55e89c9f3510e589466d25552de8a5",
+  "trigger": "milestone-push",
+  "milestone": "Phase 2 Video Implementation",
+  "commit": "pending",
   "author": "familiarcat",
-  "message": "feat: VSCode chat feature system review milestone
+  "authorized_by": "Picard (Command)",
+  "timestamp": "2026-07-18T18:00:00Z",
+  "status": "ENGAGEMENT AUTHORIZED — PHASE A EXECUTION THIS WEEK",
 
-Comprehensive crew Observation Lounge assessment + Riker 4-phase execution plan.
+  "message": "milestone: Phase 2 Video Implementation — Crew Deliberation & Execution Plan
 
-CREW ASSESSMENT (All 11 members):
-- Data: Architecture sound, dynamic assembly needs validation (Phase 2)
-- Worf: Security strong, need jailbreak pattern + error sanitization (Phase 1, 5h)
-- Geordi: Infrastructure production-ready, monitoring improvements (Phase 3)
-- Yar: CRITICAL BLOCKER — unit tests missing for classification (Phase 1, 14h)
-- Troi: UX excellent, crew variance framing needed (Phase 4)
+CREW CONSENSUS: APPROVED FOR EXECUTION ✅
 
-RIKER EXECUTION PLAN: 4 phases, 50h over 2-3 weeks
-Phase 1 (Week 1): Security + unit tests (BLOCKER until 2026-07-22)
-Phase 2 (Week 1-2): Team assembly validation (Data, 11h)
-Phase 3 (Week 2): Integration + metrics (Geordi, 14h)
-Phase 4 (Week 2-3): UX polish + docs (Troi, 11h)
+Enabled Capabilities:
+- Crew video content learning (captions + speaker diarization)
+- Visual UI design reference library (optimized keyframes)
+- RAG integration (full transcripts + embeddings)
+- Autonomous crew operations (upload → learn → design)
 
-PICARD DECISION: GO FOR WEEK 2 CANARY with Phase 1 gate by 2026-07-22
+Locked Design Decisions:
+✅ Speaker Diarization: YES (+$0.01/video, dialogue context)
+✅ Dynamic Resolution Scaling: YES (-30% cost, ≥92% OCR accuracy)
+✅ Keyframe Auto-Tagging: YES (+$0.002/video, AI-driven content_type)
+✅ Video Formats: MP4 + MOV (covers 85%; Phase 3 expansion)
 
-SUCCESS CRITERIA: Test coverage ≥70%, accuracy ≥98%, latency <3s, cost ≤$0.05/user/day
+Final Cost: ~$0.072 per 30-sec video (competitive vs manual transcription)
 
-CREW SIGN-OFF: All 11 members unanimous (confidence 9.2/10)
+Phase A Timeline: 8 weeks (5-week critical path to MVP)
+- Track A: WorfGate Compliance (Weeks 1-2) — Worf lead
+- Track B: Frame Extraction (Weeks 2-4) — Riker + Geordi
+- Track C: OCR + Captions (Weeks 3-5) — Data + Yar
+- Track D: Storage + Integration (Weeks 4-6) — Geordi + O'Brien
+- Track E: Health + Observability (Weeks 5-7) — Crusher + O'Brien
+- Track F: QA Hardening (Weeks 6-8) — Yar + Worf
+- Track G: Rollout (Week 8+) — Uhura + Troi
 
-Co-Authored-By: Commander Riker (Tactical Authority) <noreply@crew.agent>",
+YELLOW-Gate Conditions (Parallel, Non-Blocking):
+- Security pen-test (codec + dynamic resolution) — Worf, EOW
+- Performance load test (keyframe tagging) — Yar + O'Brien, EOW
+- Codec compatibility validation — Data, EOW + 1 day
+- Cost approval (spot-instance burst) — Quark, EOW
+- Data residency compliance checks — Troi + Uhura, EOW
+
+Crew Consensus: 9/10 alignment | Risk: Medium (BALANCED approach)
+
+Authorization: APPROVED. Make it so.
+
+Co-Authored-By: Picard (Command) <noreply@crew.agent>
+Co-Authored-By: Riker (Execution Lead) <noreply@crew.agent>
+Co-Authored-By: Worf (Security Officer) <noreply@crew.agent>
+Co-Authored-By: Full 11-Member Crew <noreply@crew.agent>",
+
   "files": [
-  "docs/execution/MILESTONE_VSCODE_CHAT_FEATURE_SYSTEM_REVIEW.md"
+  "docs/execution/MILESTONE_PHASE2_VIDEO_IMPLEMENTATION.md"
 ]
 }
