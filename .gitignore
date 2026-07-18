@@ -47,3 +47,11 @@ docs/pitch/diagrams/
 
 # Generated per-scope decks (regenerate with `pnpm present`)
 docs/pitch/presentations/
+
+# Detector ephemeral state (regenerated each run)
+.claude/last-checked-commit
+.claude/scheduled_tasks.lock
+
+# Terraform build artifacts
+terraform/tfplan
+**/*.tfplan
