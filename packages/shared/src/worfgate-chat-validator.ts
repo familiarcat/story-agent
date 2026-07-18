@@ -95,6 +95,7 @@ const INJECTION_PATTERNS: Array<{ signal: string; pattern: RegExp }> = [
   { signal: 'override-instructions', pattern: /ignore\s+(all|any|previous|prior)\s+(instructions|rules|system)/i },
   { signal: 'prompt-exfiltration', pattern: /(reveal|print|dump|show|expose)\s+(the\s+)?(system|developer|assistant)\s+prompt/i },
   { signal: 'role-spoofing', pattern: /^\s*(system|developer|assistant)\s*:/im },
+  { signal: 'role-assumption', pattern: /\b(pretend|act\s+as|imagine|simulate)\s+(you\s+are|that\s+you)/i },
   { signal: 'policy-bypass', pattern: /(bypass|disable|remove)\s+(safety|guardrails?|worfgate|constraints)/i },
   { signal: 'tool-injection-markers', pattern: /<\|[^|>]+\|>|```(?:system|tool|code-execution)/i },
   { signal: 'function-override', pattern: /(?:override|redefine|replace)\s+(?:function|method|class|validator)/i },

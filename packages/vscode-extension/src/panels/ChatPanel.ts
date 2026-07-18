@@ -111,7 +111,9 @@ export class ChatPanel {
               .replace(/https?:\/\/[^\s]+/g, '[url]') // URLs
               .replace(/Bearer\s+\S+/gi, '[bearer-token]') // bearer tokens
               .replace(/api[-_]?key\s*[:=]\s*\S+/gi, '[api-key]') // API keys
-              .replace(/token\s*[:=]\s*\S+/gi, '[token]'); // tokens
+              .replace(/token\s*[:=]\s*\S+/gi, '[token]') // tokens
+              .replace(/\w+\s*=\s*([a-f0-9]{32,}|[a-zA-Z0-9_\-]{40,})/gi, '[secret]') // env secrets + SSH keys
+              .replace(/(?:postgres|mysql|mongodb):\/\/[^@]+@[^\s]+/gi, '[db-url]'); // database credentials
 
             this.panel.webview.postMessage({
               command: 'error',
