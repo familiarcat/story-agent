@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getRecentObservationMemories } from '@story-agent/shared/db';
+import { getRecentObservationMemories } from '@/lib/db';
 import type { ObservationMemoryRecord } from '@story-agent/shared';
 
 export async function GET(request: NextRequest) {

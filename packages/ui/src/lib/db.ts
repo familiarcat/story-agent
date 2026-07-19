@@ -10,4 +10,5 @@ export {
   storeObservationMemory,
   getRecentObservationMemories,
   getRelevantObservationMemories,
+  recordObservationMemoryOutcome,
 } from '@story-agent/shared/db';

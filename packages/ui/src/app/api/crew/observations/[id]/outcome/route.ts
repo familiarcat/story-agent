@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { recordObservationMemoryOutcome } from '@story-agent/shared/db';
+import { recordObservationMemoryOutcome } from '@/lib/db';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
