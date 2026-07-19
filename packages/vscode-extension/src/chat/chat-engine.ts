@@ -131,7 +131,11 @@ function getConfig(): EngineConfig {
     ragTopK: c.get<number>('chat.ragTopK') ?? 4,
     tieringEnabled: c.get<boolean>('chat.modelTiering') ?? true,
     costProfile: envFirst('CREW_LLM_MODEL_PROFILE', c.get<string>('chat.costProfile')) || 'cost_optimized',
-    mcpUrl: envFirst('STORY_AGENT_MCP_URL', c.get<string>('chat.mcpServerUrl')) || 'http://localhost:3103',
+    // Canonical crew-brain endpoint key is chat.agentServiceUrl / STORY_AGENT_AGENT_URL (the declared
+    // setting). Legacy chat.mcpServerUrl / STORY_AGENT_MCP_URL kept as fallback.
+    mcpUrl: envFirst('STORY_AGENT_AGENT_URL', c.get<string>('chat.agentServiceUrl'))
+      || envFirst('STORY_AGENT_MCP_URL', c.get<string>('chat.mcpServerUrl'))
+      || 'http://localhost:3103',
     orUrl: envFirst('CREW_LLM_APPROVED_URL', c.get<string>('chat.openRouterUrl')) || 'https://openrouter.ai/api/v1',
     orKey: envFirst('CREW_LLM_APPROVED_KEY', c.get<string>('chat.openRouterApiKey')),
     orPrimaryModel: envFirst('CREW_LLM_APPROVED_MODEL', c.get<string>('chat.openRouterModel')) || 'deepseek/deepseek-chat',

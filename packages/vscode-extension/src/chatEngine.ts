@@ -108,6 +108,7 @@ interface EngineConfig {
   costProfile: string; // 'cost_optimized' | 'quality_first' | ...
   // MCP server (crew-optimized routing)
   mcpUrl: string; // Story Agent MCP server (crew system)
+  clientId?: string; // optional client scope for crew RAG memory
   // OpenRouter (crew config, fallback only)
   orUrl: string;
   orKey: string;
@@ -137,8 +138,15 @@ function getConfig(): EngineConfig {
     ragTopK: c.get<number>('chat.ragTopK') ?? 4,
     tieringEnabled: c.get<boolean>('chat.modelTiering') ?? true,
     costProfile: envFirst('CREW_LLM_MODEL_PROFILE', c.get<string>('chat.costProfile')) || 'cost_optimized',
-    // MCP server — prefer env, then settings, then localhost default (crew-optimized routing)
-    mcpUrl: envFirst('STORY_AGENT_MCP_URL', c.get<string>('chat.mcpServerUrl')) || 'http://localhost:3103',
+    // Crew brain endpoint (/chat → Quark-optimized model selection). CANONICAL key is
+    // chat.agentServiceUrl / STORY_AGENT_AGENT_URL — the declared setting shared with agentClient,
+    // inlineChat, aha, ahaSyncPoller. Legacy chat.mcpServerUrl / STORY_AGENT_MCP_URL kept as a
+    // fallback for older configs. Reading the wrong key here silently dropped the native chat to
+    // localhost → direct-OpenRouter fallback (no Quark/Riker/Worf selection).
+    mcpUrl: envFirst('STORY_AGENT_AGENT_URL', c.get<string>('chat.agentServiceUrl'))
+      || envFirst('STORY_AGENT_MCP_URL', c.get<string>('chat.mcpServerUrl'))
+      || 'http://localhost:3103',
+    clientId: (c.get<string>('chat.clientId') || '').trim() || undefined,
     // OpenRouter — prefer the crew's env config, then settings, then sensible defaults (fallback only).
     orUrl: envFirst('CREW_LLM_APPROVED_URL', c.get<string>('chat.openRouterUrl')) || 'https://openrouter.ai/api/v1',
     orKey: envFirst('CREW_LLM_APPROVED_KEY', c.get<string>('chat.openRouterApiKey')),
@@ -289,7 +297,7 @@ function readCache(memento: vscode.Memento, key: string, ttlMs: number): CacheEn
 // Route all chat prompts through the MCP server's /chat endpoint, which runs
 // the full crew optimization pipeline (Quark cost routing, team assembly, RAG context, etc.)
 
-interface GenResult { text: string; tokensIn: number; tokensOut: number; model?: string; }
+interface GenResult { text: string; tokensIn: number; tokensOut: number; model?: string; provider?: string; costUSD?: number; sources?: string[]; }
 
 let availableModelIdsCache: Set<string> | null = null;
 let availableModelIdsExpiresAt = 0;
@@ -377,7 +385,8 @@ async function crewMcpStream(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: user,
-        // Optionally pass system context via history (MCP crew handles RAG independently)
+        clientId: cfg.clientId ?? null,
+        // MCP crew handles RAG + team assembly independently
         crewSelfOrganize: true, // Force crew preflight for cost-optimized routing
       }),
       signal: ctrl.signal,
@@ -395,7 +404,14 @@ async function crewMcpStream(
     // Stream the response back to the user
     stream.markdown(answer);
 
-    return { text: answer, tokensIn, tokensOut };
+    // Surface the crew's ACTUAL Quark/Riker/Worf selection (model, provider, real cost) so the
+    // Story Agent chat reads like Claude Code / Continue — not a fabricated local guess.
+    const model = typeof data.model === 'string' ? data.model : undefined;
+    const provider = typeof data.provider === 'string' ? data.provider : undefined;
+    const costUSD = typeof data.costUSD === 'number' ? data.costUSD : undefined;
+    const sources = Array.isArray(data.sources) ? data.sources.map(String) : undefined;
+
+    return { text: answer, tokensIn, tokensOut, model, provider, costUSD, sources };
   } catch (err) {
     if (ctrl.signal.aborted) {
       return { text: '(cancelled)', tokensIn: 0, tokensOut: 0 };
@@ -579,7 +595,10 @@ export async function runAssistantTurn(
     // team assembly, RAG context, and governance. This is THE single path for all NL prompts.
     try {
       gen = await crewMcpStream(SYSTEM_PROMPT, userContent, cfg, stream, cancel);
-      costUSD = estimateCost(provider === 'openrouter' ? cfg.orPrimaryModel : cfg.orCheapModel, gen.tokensIn, gen.tokensOut);
+      // Report the crew's REAL selection + cost (Quark chooses the model server-side). Only fall
+      // back to a local estimate if the crew brain didn't return telemetry.
+      if (gen.model) modelName = gen.model;
+      costUSD = gen.costUSD ?? estimateCost(gen.model || (provider === 'openrouter' ? cfg.orPrimaryModel : cfg.orCheapModel), gen.tokensIn, gen.tokensOut);
     } catch (mcpErr) {
       // Fallback to direct OpenRouter if MCP unavailable (e.g., server down during development)
       console.warn('[chatEngine] MCP crew unavailable, falling back to direct OpenRouter:', mcpErr instanceof Error ? mcpErr.message : String(mcpErr));
