@@ -1,0 +1,11 @@
+#!/bin/bash
+# Zero-token change detector for Story Agent
+# Runs on every commit to detect changes that need crew assessment
+
+# Exit immediately if any command fails
+set -e
+
+# Run the change detector in the workspace root
+bash scripts/crew-change-escalation-detector.sh .
+
+exit 0

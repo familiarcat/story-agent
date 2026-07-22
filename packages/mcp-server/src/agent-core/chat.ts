@@ -556,6 +556,41 @@ function isActivationPrompt(message: string): boolean {
   return detectExecutionActivationPhrase(message) !== null;
 }
 
+/** Detects direct imperative coding/ops requests (build, create, add, implement, fix, etc.).
+ * Returns true for direct action requests, false for questions or status requests.
+ * Be conservative: questions and status requests must return false.
+ */
+export function detectActionIntent(message: string): boolean {
+  const lower = message.toLowerCase();
+  const actionVerbs = [
+    'build', 'create', 'add', 'implement', 'fix', 'apply', 'refactor', 'update',
+    'edit', 'write', 'generate', 'commit', 'push', 'deploy', 'make it so'
+  ];
+  const actionPhrases = [
+    'to the codebase', 'in the codebase', 'and apply', 'the changes', 'the code'
+  ];
+
+  // Check for direct imperative verbs
+  const hasActionVerb = actionVerbs.some(verb => 
+    lower.startsWith(verb) || 
+    lower.includes(` ${verb} `) || 
+    lower.includes(` ${verb} the `)
+  );
+
+  // Check for action phrases
+  const hasActionPhrase = actionPhrases.some(phrase => lower.includes(phrase));
+
+  // Exclude questions and status requests
+  const isQuestion = lower.startsWith('can you ') || 
+                     lower.startsWith('what ') || 
+                     lower.startsWith('how ') || 
+                     lower.startsWith('is the ') || 
+                     lower.startsWith('status report') || 
+                     lower.includes('?');
+
+  return (hasActionVerb || hasActionPhrase) && !isQuestion;
+}
+
 export function buildExecutionActivationTask(
   phrase: 'make-it-so' | 'next-steps',
   history: CanonicalChatHistoryTurn[],
@@ -875,9 +910,18 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   const crewPreflightEnabled = true;
   const activationPhrase = controls.activationPhrase;
 
-  if (activationPhrase && hasActionableNextStepsHistory(history) && isActivationAllowedForClient(clientId)) {
-    const activationTask = buildExecutionActivationTask(activationPhrase, history);
+  // Execute for real via the agent-core loop when the user issues an explicit activation phrase
+  // (with actionable history, for allowlisted clients) OR a direct action-intent request. The
+  // detectActionIntent path is deliberately NOT gated by the client allowlist so ordinary
+  // "build/apply/fix/deploy" requests perform real work instead of a narrated (confabulated) answer.
+  const isActionIntent = detectActionIntent(dispatchMessage);
+  if ((activationPhrase && hasActionableNextStepsHistory(history) && isActivationAllowedForClient(clientId)) || isActionIntent) {
+    const taskPhrase: 'make-it-so' | 'next-steps' = activationPhrase ?? 'make-it-so';
+    const activationTask = isActionIntent
+      ? dispatchMessage
+      : buildExecutionActivationTask(taskPhrase, history);
     if (!activationTask) throw new Error('activation_context_required');
+
     const execution = await planThenExecute(activationTask, { clientId, maxIterations: 12, tier: 3 });
     const crewContext = crewPreflightEnabled
       ? await buildCrewSelfOrganizationContext(activationTask, clientId, execution.mission, {
@@ -904,7 +948,7 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
 
     return {
       answer: [
-        `Activation recognized: ${activationPhrase === 'make-it-so' ? 'Make it so.' : 'Next steps.'}`,
+        `Activation recognized: ${taskPhrase === 'make-it-so' ? 'Make it so.' : 'Next steps.'}`,
         '',
         execution.run.finalText || 'Execution completed.',
       ].join('\n'),
@@ -931,7 +975,7 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
       worfGate: controls.worfGate,
       executionActivation: {
         activated: true,
-        phrase: activationPhrase,
+        phrase: taskPhrase,
         task: activationTask,
         priorRuns: execution.priorRuns,
         missionId: execution.unifiedRun.missionId,
@@ -994,7 +1038,7 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   }
 
   const messages: Array<Record<string, unknown>> = [
-    { role: 'system', content: 'You are the Story Agent crew assistant (OpenRouter, Quark cost-optimized). Be concise and token-efficient: answer directly, prefer short code over prose. Use CONTEXT when relevant. If required context is missing, say exactly what is missing before assuming details. Do not invent files, APIs, outputs, or test results.' },
+    { role: 'system', content: 'You are the Story Agent crew assistant (OpenRouter, Quark cost-optimized). Be concise and token-efficient: answer directly, prefer short code over prose. Use CONTEXT when relevant. If required context is missing, say exactly what is missing before assuming details. Do not invent files, APIs, outputs, or test results. Unless execution actually ran, do not claim to have performed file/build/deploy actions.' },
     ...(hasCtx ? [{ role: 'system', content: `CONTEXT (crew RAG memory):\n${context}` }] : []),
     ...(crewContext ? [{ role: 'system', content: crewContext.prelude }] : []),
     ...history,

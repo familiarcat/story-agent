@@ -1,9 +1,63 @@
 {
-  "status": "active",
+  "status": "closed",
   "type": "canary-deployment",
   "started": "2026-07-18T00:15:00Z",
-  "phase": "monitoring",
+  "closed_at": "2026-07-22T21:58:00Z",
+  "closed_reason": "Operator killed the t112h escalation and closed the canary mission. Both technical blockers resolved + verified (deploy 4270e21, /chat + /agent HTTP 200); smoke gate green (3b197ce); hourly polling cron retired (moved to crew-owned zero-token poller). Continued ungrounded YELLOW cycles on a Section 31 ALPHA projection add no value.",
+  "phase": "closed-out",
   "traffic_split": "95-production-5-staging",
-  "monitoring_window": "T+1h-to-T+24h",
-  "escalation_enabled": true
+  "monitoring_window": "T+1h-to-T+24h (extended to T+48h at t24h; now overrun at ~T+112h, ~64h past bound)",
+  "escalation_enabled": true,
+  "deployment": {
+    "status": "complete",
+    "at": "2026-07-22T03:22:28Z",
+    "apply_run": "29887780082",
+    "git_sha": "4270e21",
+    "verified": {
+      "chat": "HTTP 200, deepseek/deepseek-chat, crewId quark",
+      "agent_health": "HTTP 200, gitSha 4270e21 (loop.ts crewId fix live)"
+    },
+    "note": "3 add/2 change/3 destroy (service-discovery/target-group replacement) applied clean. Deployed chat ~$0.0007/turn. RAG #746.",
+    "remaining": ["rebuild .vsix to ship extension error-transparency fix", "optional: set ElastiCache REDIS_URL; terraform/bootstrap state → S3 backend (RAG #740)"],
+    "resolved_remaining": ["ui-tests smoke gate — GREEN 38/38 via commit 3b197ce (2026-07-22), clears last gate for chat-as-primary (RAG #758)"]
+  },
+  "escalation": {
+    "active": false,
+    "at": "2026-07-22T21:58:00Z",
+    "resolved_at": "2026-07-22T21:58:00Z",
+    "resolved_by": "operator (killed escalation, close-out option B)",
+    "level": "orchestrator+picard",
+    "triggers": [
+      "consecutive-yellow-3: t24h/t96h/t112h all YELLOW (prolonged-YELLOW escalation)",
+      "decision-window-overrun: T+48h bound now ~T+112h (~64h past bound) with no active technical blocker"
+    ],
+    "resolution": "KILLED by operator. Chose close-out (option B): re-baseline/close the canary mission rather than promote. Basis: both prior blockers (worfgate-crewId /chat, agent handshake) RESOLVED + verified (deploy 4270e21, HTTP 200), smoke gate green (3b197ce), and the YELLOW rulings were ungrounded ALPHA projections with no live CloudWatch. 100% production promotion remains available as a separate human-gated action if/when desired.",
+    "prior_resolved": {
+      "at": "2026-07-22T00:08:28Z",
+      "resolved_at": "2026-07-22T01:32:44Z",
+      "triggers": ["code-change-during-active-mission: commits 1da9e34, a205cca", "decision-window-overrun: T+48h, ~T+96h"],
+      "resolution": "Operator drove the fix: WorfGate-crewId /chat fix rolled to Fargate via deploy run 29882699562 (SUCCESS), unblocked by deploy-role IAM fix (661963f) + agent-core loop crewId fix (20c9afa). /chat verified HTTP 200 via crewId 'quark'."
+    }
+  },
+  "last_ruling": {
+    "hour": "t112h",
+    "at": "2026-07-22T21:58:00Z",
+    "status": "YELLOW",
+    "disposition": "HOLD",
+    "reason": "Crew unanimous 8/8 HOLD (Picard/Data/Worf/Riker/Geordi/O'Brien/Troi/Crusher). BUT orchestrator flags: the two blockers driving prior YELLOWs are RESOLVED + verified (deploy 4270e21, /chat + /agent HTTP 200). Crew YELLOW rationale (auth-layer vulns, service-mesh/edge latency, pen-test) is UNGROUNDED — Section 31 ALPHA projection, no live CloudWatch, officers confabulating metrics. Real grounded state = blockers cleared. Remaining watch items are projections: comms-handshake-anomaly-rate, lane5-config-drift ~12%, tls-cipher-drift.",
+    "promotion_decision": "DEFERRED — 100% production promotion remains human-gated (irreversible); crew consensus do-not-promote, but HOLD basis is now ungrounded → escalated for human close-out.",
+    "watch_items": ["comms-handshake-anomaly-rate", "lane5-config-drift-12pct", "tls-cipher-drift"],
+    "consecutive_yellow": 3,
+    "escalated": "orchestrator+picard (consecutive-yellow-3 + window-overrun-64h)",
+    "rag_memory_id": 796,
+    "crew_cost_usd": 0.00179
+  },
+  "prior_ruling": {
+    "hour": "t96h",
+    "at": "2026-07-22T00:08:28Z",
+    "status": "YELLOW",
+    "disposition": "HOLD",
+    "consecutive_yellow": 2,
+    "rag_memory_id": 736
+  }
 }
