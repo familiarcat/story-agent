@@ -95,28 +95,26 @@ test.describe('Sidebar Persistence', () => {
       expandedWidth?.width || 500
     );
 
-    // Navigate to different route
-    await page.goto('/sprint');
-    await page.waitForLoadState('networkidle');
+    // Navigate to a LIGHT, reliably-rendering route. Data-heavy routes like /sprint keep an
+    // SSE/polling connection open (useAhaEvents), so 'networkidle' never settles and the sidenav
+    // isn't reliably present within timeout. Collapse persistence is route-agnostic — it's carried
+    // by the <html> data-sidebar-collapsed attribute + localStorage, not by any page's content.
+    await page.goto('/docs');
+    await page.waitForLoadState('domcontentloaded');
 
-    // Verify sidebar state persisted (still collapsed)
+    // Collapse state must persist across navigation. The authoritative signal is
+    // data-sidebar-collapsed="true" on <html> (SidebarProvider.setCollapsed writes it +
+    // localStorage; SIDEBAR_INIT_SCRIPT rehydrates it from localStorage on load). Assert the
+    // VALUE (not mere presence — the attribute is always present as 'true'|'false').
     const sidebarAfterNav = page.locator('[data-testid="app-sidenav"]').first();
-    const widthAfterNav = await sidebarAfterNav.boundingBox();
-    expect(widthAfterNav?.width || 0).toBeLessThanOrEqual(
-      expandedWidth?.width || 500
-    );
+    await expect(sidebarAfterNav).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar-collapsed', 'true');
+    await expect(sidebarAfterNav).toHaveClass(/app-sidenav--collapsed/);
 
-    // Reload page
+    // Reload — the init script must rehydrate the collapsed state from localStorage
     await page.reload();
-
-    // Verify sidebar still collapsed after reload
-    const sidebarAfterReload = page
-      .locator('[data-testid="app-sidenav"]')
-      .first();
-    const widthAfterReload = await sidebarAfterReload.boundingBox();
-    expect(widthAfterReload?.width || 0).toBeLessThanOrEqual(
-      expandedWidth?.width || 500
-    );
+    await expect(page.locator('[data-testid="app-sidenav"]').first()).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar-collapsed', 'true');
   });
 
   test('sidebar navigation items are clickable', async ({ page }) => {
@@ -127,12 +125,14 @@ test.describe('Sidebar Persistence', () => {
 
     expect(itemCount).toBeGreaterThan(0);
 
-    // Click first nav item
-    await navItems.first().click();
+    // Click a nav item that is NOT the current route (e.g., "Sprint")
+    const nonDashboardItem = navItems.filter({ hasText: 'Sprint' }).first();
+    await expect(nonDashboardItem).toBeVisible();
+    await nonDashboardItem.click();
     await page.waitForLoadState('networkidle');
 
-    // Verify navigation occurred
-    expect(page.url()).not.toContain('/dashboard');
+    // Verify navigation occurred to the clicked item's target
+    expect(page.url()).toContain('/sprint');
   });
 });
 
@@ -268,47 +268,47 @@ test.describe('VSCode Sync Integration', () => {
 
 test.describe('Error Handling', () => {
   test('gracefully handles server unavailable', async ({ page }) => {
-    // Block all API calls to simulate server down
-    await page.route('**/api/**', (route) => {
-      route.abort('failed');
-    });
+    // Hermetic: deterministically fail the agent stream API (no real backend toggling).
+    await page.route('**/api/agent/stream', (route) => route.abort('failed'));
 
     await page.goto('/agent');
 
-    // Should show error message or fallback UI
-    const errorMessage = page
-      .locator('[data-testid="error-message"]')
-      .or(page.locator('text=/unavailable|error|failed/i')).first();
+    // The /agent page only calls the API when a task is submitted — trigger it.
+    await page.locator('textarea').first().fill('list files in packages/shared');
+    await page.getByRole('button', { name: 'Run' }).click();
 
-    await expect(errorMessage).toBeVisible({ timeout: 5000 });
+    // The page must surface a visible error alert.
+    await expect(page.locator('[data-testid="error-message"]')).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('recovers when server comes back online', async ({ page }) => {
+    // Hermetic: fail the stream while "down", then fulfill a valid SSE once "recovered"
+    // (deterministic — never depends on a real backend being up in the test env).
     let requestsBlocked = true;
-
-    await page.route('**/api/**', (route) => {
-      if (requestsBlocked) {
-        route.abort('failed');
-      } else {
-        route.continue();
-      }
+    await page.route('**/api/agent/stream', (route) => {
+      if (requestsBlocked) return route.abort('failed');
+      return route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+        body: 'data: {"type":"done","text":"recovered"}\n\n',
+      });
     });
 
     await page.goto('/agent');
+    await page.locator('textarea').first().fill('list files in packages/shared');
+    await page.getByRole('button', { name: 'Run' }).click();
 
-    // Should show error
-    const errorMessage = page
-      .locator('[data-testid="error-message"]')
-      .or(page.locator('text=/unavailable/i')).first();
-    await expect(errorMessage).toBeVisible({ timeout: 5000 });
+    const errorMessage = page.locator('[data-testid="error-message"]').first();
+    await expect(errorMessage).toBeVisible({ timeout: 10000 });
 
-    // Unblock API
+    // Server back online → click Retry (inside the error alert). onRetry clears events and
+    // re-runs; the stream now succeeds, so the error must clear.
     requestsBlocked = false;
-    await page.locator('button:has-text("Retry")').first().click();
-    await page.waitForLoadState('networkidle');
+    await errorMessage.getByRole('button', { name: 'Retry' }).click();
 
-    // Error should disappear
-    await expect(errorMessage).not.toBeVisible({ timeout: 5000 });
+    await expect(errorMessage).not.toBeVisible({ timeout: 10000 });
   });
 });
 
