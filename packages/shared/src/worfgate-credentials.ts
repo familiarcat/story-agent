@@ -17,6 +17,7 @@ export type CredentialOperation =
   | 'github:push'
   | 'figma:tokens-sync'
   | 'figma:read'
+  | 'mcp:auth'
   | 'llm:call';
 
 export interface CredentialSpec {
@@ -50,6 +51,8 @@ export const CREW_CREDENTIAL_REGISTRY: Record<string, CredentialSpec> = {
   SUPABASE_KEY: { name: 'SUPABASE_KEY', description: 'Supabase service role key', operations: ['supabase:query'], required: false },
   CREW_LLM_APPROVED_KEY: { name: 'CREW_LLM_APPROVED_KEY', description: 'OpenRouter API key', operations: ['llm:call'], required: true },
   CREW_LLM_APPROVED_URL: { name: 'CREW_LLM_APPROVED_URL', description: 'OpenRouter base URL', operations: ['llm:call'], required: false },
+  STORY_AGENT_MCP_BEARER: { name: 'STORY_AGENT_MCP_BEARER', description: 'Bearer token for the HOSTED Story Agent MCP / agent-core HTTP endpoint (matches AGENT_SERVICE_TOKEN). Only the hosted lane needs it — local stdio MCP does not — so required:false; resolve via operation mcp:auth. Centralized in ~/.alexai-secrets, brokered by WorfGate, value never logged.', operations: ['mcp:auth'], required: false },
+  STORY_AGENT_MCP_SESSION_ID: { name: 'STORY_AGENT_MCP_SESSION_ID', description: 'Hosted MCP session-isolation header (non-secret identifier, e.g. "vscode-local-session"). Brokered alongside the bearer for the hosted lane.', operations: ['mcp:auth'], required: false },
   AHA_API_KEY: { name: 'AHA_API_KEY', description: 'Aha! REST API key', operations: ['aha:write', 'aha:read'], required: false },
   AHA_DOMAIN: { name: 'AHA_DOMAIN', description: 'Aha! domain', operations: ['aha:write', 'aha:read'], required: false },
   AWS_ACCESS_KEY_ID: { name: 'AWS_ACCESS_KEY_ID', description: 'AWS access key', operations: ['aws:deploy', 'aws:secrets'], required: false },
