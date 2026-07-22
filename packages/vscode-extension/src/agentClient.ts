@@ -201,7 +201,10 @@ export async function chatWithCrew(
   },
 ): Promise<CrewChatResult> {
   const clientId = opts?.clientId;
+  let lastError = '';
+  let lastBase = '';
   for (const base of agentCandidates()) {
+    lastBase = base;
     try {
       const resp = await fetch(base + '/chat', {
         method: 'POST',
@@ -213,7 +216,10 @@ export async function chatWithCrew(
           attachments: opts?.attachments ?? [],
         }),
       });
-      if (!resp.ok) continue;
+      if (!resp.ok) {
+        lastError = `HTTP ${resp.status}: ${(await resp.text().catch(() => '')).slice(0, 150)}`.trim();
+        continue;
+      }
       const d: any = await resp.json();
       return {
         ok: true,
@@ -230,9 +236,18 @@ export async function chatWithCrew(
         costAnalysis: d.costAnalysis,
         executionActivation: d.executionActivation,
       };
-    } catch { /* next candidate */ }
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      // next candidate
+    }
   }
-  return { ok: false };
+  // All candidates failed — surface the real reason instead of a bare {ok:false}
+  // (which the UI renders as a generic "chat unavailable" with no diagnostic).
+  const reason = lastError || 'no response';
+  return {
+    ok: false,
+    answer: `Agent service unreachable at ${lastBase || 'the configured endpoint'} — ${reason}. Start it with \`pnpm dev\` (local :3103), or set storyAgent.chat.agentServiceUrl to the deployed URL.`,
+  };
 }
 
 /**
