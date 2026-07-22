@@ -104,13 +104,30 @@ data "aws_iam_policy_document" "github_deploy" {
     resources = ["*"]
   }
   statement {
-    sid       = "DeployServices"
+    sid = "DeployServices"
     # route53:* — aws_service_discovery_private_dns_namespace creates a Route53 hosted zone.
     actions   = ["ecs:*", "elasticloadbalancing:*", "elasticache:*", "servicediscovery:*", "route53:*", "application-autoscaling:*", "logs:*", "ec2:Describe*", "ec2:CreateSecurityGroup", "ec2:AuthorizeSecurityGroup*", "ec2:RevokeSecurityGroup*", "ec2:CreateTags", "ec2:DeleteSecurityGroup", "ec2:ModifySecurityGroupRules"]
     resources = ["*"]
   }
   statement {
-    sid       = "Acm"
+    # Canary monitoring (terraform/canary-monitoring.tf): 5 CloudWatch metric alarms, a CloudWatch
+    # dashboard, and the story-agent-canary-alerts SNS topic + crew subscription. Terraform needs
+    # full manage (create/read/update/delete/tag) — NOT just publish — to plan+apply these. The
+    # deploy previously had no cloudwatch:/sns:, so `terraform plan` failed reading them (AccessDenied
+    # on DescribeAlarms / GetDashboard / GetTopicAttributes). Least-privilege: only these two services.
+    sid = "CanaryMonitoring"
+    actions = [
+      "cloudwatch:DescribeAlarms", "cloudwatch:PutMetricAlarm", "cloudwatch:DeleteAlarms",
+      "cloudwatch:ListTagsForResource", "cloudwatch:TagResource", "cloudwatch:UntagResource",
+      "cloudwatch:GetDashboard", "cloudwatch:PutDashboard", "cloudwatch:DeleteDashboards", "cloudwatch:ListDashboards",
+      "sns:CreateTopic", "sns:DeleteTopic", "sns:GetTopicAttributes", "sns:SetTopicAttributes",
+      "sns:Subscribe", "sns:Unsubscribe", "sns:GetSubscriptionAttributes", "sns:SetSubscriptionAttributes",
+      "sns:ListSubscriptionsByTopic", "sns:ListTagsForResource", "sns:TagResource", "sns:UntagResource",
+    ]
+    resources = ["*"]
+  }
+  statement {
+    sid = "Acm"
     # Public ACM cert for the app subdomain (terraform/acm.tf). DNS validation uses route53:* above.
     # RequestCertificate requires resource "*" (the cert ARN is unknown until the request succeeds).
     actions   = ["acm:RequestCertificate", "acm:DescribeCertificate", "acm:ListCertificates", "acm:DeleteCertificate", "acm:AddTagsToCertificate", "acm:RemoveTagsFromCertificate", "acm:ListTagsForCertificate"]
@@ -139,8 +156,8 @@ data "aws_iam_policy_document" "github_deploy" {
   }
   # Remote state backend access (S3 + DynamoDB lock) — so CI can read/write shared state.
   statement {
-    sid       = "TerraformStateBackend"
-    actions   = ["s3:ListBucket", "s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    sid     = "TerraformStateBackend"
+    actions = ["s3:ListBucket", "s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
     resources = [
       "arn:aws:s3:::tf-state-${data.aws_caller_identity.current.account_id}-${var.region}",
       "arn:aws:s3:::tf-state-${data.aws_caller_identity.current.account_id}-${var.region}/*",
