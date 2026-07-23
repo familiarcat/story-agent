@@ -44,6 +44,13 @@ export interface CanonicalChatRequest {
   crewSelfOrganize?: boolean;
   promptOptimizationMode?: 'safe' | 'off';
   attachments?: CanonicalChatAttachment[];
+  /**
+   * Absolute path of the caller's workspace. REQUIRED for real edits: when an activation/action-intent
+   * request runs the agent-core loop, the loop mutates files under this path. Without it the loop falls
+   * back to the SERVER's cwd (or a remote container fs) — edits then land somewhere the user's editor
+   * never sees, and a tool-less lane confabulates "CRUD complete". Sent by the VS Code client.
+   */
+  workspace?: string | null;
 }
 
 export interface CanonicalChatAttachment {
@@ -967,7 +974,14 @@ export async function runCanonicalChatTurn(
       : buildExecutionActivationTask(taskPhrase, history);
     if (!activationTask) throw new Error('activation_context_required');
 
-    const execution = await planThenExecute(activationTask, { clientId, maxIterations: 12, tier: 3 });
+    const execution = await planThenExecute(activationTask, {
+      clientId,
+      maxIterations: 12,
+      tier: 3,
+      // Run against the CALLER's workspace so edits land where the user can see them. Falls back to
+      // the server cwd only when the client omits it (legacy callers) — see CanonicalChatRequest.workspace.
+      workspace: body.workspace ?? undefined,
+    });
     const crewContext = crewPreflightEnabled
       ? await buildCrewSelfOrganizationContext(activationTask, clientId, execution.mission, {
           forceAllHands: controls.forceAllHands,
@@ -991,11 +1005,28 @@ export async function runCanonicalChatTurn(
       costUSD: totalCostUSD,
     });
 
+    // Ground-truth footer: report what the loop ACTUALLY did (from real tool calls), not what the
+    // model narrated. This structurally defeats confabulated "CRUD complete" reports — if no
+    // file-mutating tool succeeded, we say so plainly instead of trusting finalText.
+    const MUTATING = new Set(['write_file', 'edit_file', 'apply_patch', 'delete_file']);
+    const mutations = execution.run.toolCalls.filter((tc) => MUTATING.has(tc.tool) && tc.ok);
+    const mutationCounts = mutations.reduce<Record<string, number>>((acc, tc) => {
+      acc[tc.tool] = (acc[tc.tool] ?? 0) + 1;
+      return acc;
+    }, {});
+    const runWorkspace = body.workspace ?? '(server default — set the client `workspace` to edit local files)';
+    const groundTruth = mutations.length
+      ? `📝 **Files changed (${mutations.length})** in \`${runWorkspace}\` — ${Object.entries(mutationCounts).map(([t, n]) => `${t}×${n}`).join(', ')}. Run \`git status\` to review.`
+      : `⚠️ **No files were modified.** The loop made ${execution.run.toolCalls.length} tool call(s) but none successfully wrote/edited/deleted a file in \`${runWorkspace}\`. Any claim above of created/edited/deleted files is not reflected on disk.`;
+
     return {
       answer: [
         `Activation recognized: ${taskPhrase === 'make-it-so' ? 'Make it so.' : 'Next steps.'}`,
         '',
         execution.run.finalText || 'Execution completed.',
+        '',
+        '---',
+        groundTruth,
       ].join('\n'),
       model: execution.run.model || execution.plan.topModel,
       provider,
@@ -1293,6 +1324,7 @@ export async function handleChatRequest(req: IncomingMessage, res: ServerRespons
       crewSelfOrganize: body.crewSelfOrganize,
       promptOptimizationMode: body.promptOptimizationMode,
       attachments: body.attachments,
+      workspace: body.workspace ?? null,
     });
     json(200, result);
   } catch (e: any) {

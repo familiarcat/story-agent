@@ -19,12 +19,16 @@ import { CrewStreamRelay } from './crewStreamRelay';
 import { withDashboardTheme } from './lib/dashboardThemeLink';
 import { initializeChatClient, disposeChatClient } from './chat/chat-engine';
 import { initSyncManager, disposeSyncManager } from './chat/sync-manager';
+import { initControlLaneStatusBar } from './controlLaneStatusBar';
 
 function dashboardBase(): string {
   return vscode.workspace.getConfiguration('storyAgent').get<string>('dashboardUrl') ?? 'http://localhost:3000';
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  // ── Control-lane status bar (🟢 direct · 🟡 crew · 🔴 agent + session cost) ──
+  try { initControlLaneStatusBar(context); } catch (err) { console.warn('[activate] control-lane status bar error:', err); }
+
   // ── Initialize Sync Manager ────────────────────────────────────────────────
   try {
     initSyncManager({
