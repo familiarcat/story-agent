@@ -78,6 +78,7 @@ interface ChatProxyRequest {
   clientId?: string | null;
   priority?: 'high' | 'low';
   crewSelfOrganize?: boolean;
+  id?: string; // Client-supplied correlation ID
 }
 
 /**
@@ -278,7 +279,7 @@ export class ChatWebSocketProxy {
       return;
     }
 
-    const requestId = randomUUID();
+    const requestId = msg.id || randomUUID(); // Use client-supplied ID if available
     const startMs = Date.now();
     session.messageCount += 1;
     session.metrics.totalMessages += 1;

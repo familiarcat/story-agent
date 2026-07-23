@@ -24,6 +24,8 @@ interface ChatMessage {
   model?: string;
   costUSD?: number;
   timestamp?: number;
+  inProgress?: boolean; // Track if still receiving chunks
+  metadata?: Record<string, unknown>; // Store execution/crew metadata
 }
 
 export class ChatPanel {
@@ -221,11 +223,16 @@ export class ChatPanel {
             crewSelfOrganization: raw.crewSelfOrganization,
             costAnalysis: raw.costAnalysis,
           });
+        } else if (response.content) {
+          // Partial chunk frame — stream the accumulated answer into the webview live.
+          this.panel.webview.postMessage({ command: 'chunkUpdate', content: response.content });
         }
       });
 
-      // Send request via WebSocket
+      // Send request via WebSocket — pass msgId as the correlation id so the proxy echoes it
+      // back and the handler registered above (keyed by msgId) actually matches the response.
       chatClient.send({
+        id: msgId,
         message,
         priority: 'high',
         sessionId: this.sessionId,
@@ -543,6 +550,7 @@ export class ChatPanel {
     const thinkingEl = document.getElementById('thinkingIndicator');
 
     let isSending = false;
+    let streamingEl = null; // in-progress assistant bubble while chunks arrive
 
     function escapeHtml(s) {
       return String(s)
@@ -680,7 +688,24 @@ export class ChatPanel {
     window.addEventListener('message', (evt) => {
       const msg = evt.data;
       switch (msg.command) {
+        case 'chunkUpdate':
+          // Live token streaming: create the in-progress bubble on first chunk, update thereafter.
+          if (!streamingEl) {
+            streamingEl = document.createElement('div');
+            streamingEl.className = 'message assistant';
+            const b = document.createElement('div');
+            b.className = 'md-body';
+            streamingEl.appendChild(b);
+            messagesEl.appendChild(streamingEl);
+            thinkingEl.style.display = 'none';
+          }
+          streamingEl.querySelector('.md-body').innerHTML = renderMarkdown(msg.content);
+          streamingEl.scrollIntoView({ block: 'end' });
+          break;
+
         case 'messageReceived':
+          // Finalize: drop the streaming bubble and render the complete message with badges.
+          if (streamingEl) { streamingEl.remove(); streamingEl = null; }
           renderMessage('assistant', msg.content, {
             model: msg.model,
             costUSD: msg.costUSD,
@@ -704,6 +729,7 @@ export class ChatPanel {
           break;
 
         case 'error':
+          if (streamingEl) { streamingEl.remove(); streamingEl = null; }
           const errEl = document.createElement('div');
           errEl.className = 'error-message';
           errEl.textContent = '❌ ' + msg.message;
