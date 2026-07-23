@@ -214,6 +214,9 @@ export async function chatWithCrew(
           clientId: clientId ?? null,
           history: opts?.history ?? [],
           attachments: opts?.attachments ?? [],
+          // Send the real workspace so an activation/action-intent turn edits the user's local files
+          // (not the server cwd / a remote container). Mirrors what runAgentTurn already sends to /agent.
+          workspace: workspacePath(),
         }),
       });
       if (!resp.ok) {
