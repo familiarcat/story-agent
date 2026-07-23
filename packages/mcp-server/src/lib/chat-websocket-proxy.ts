@@ -48,7 +48,7 @@ interface ChatSession {
  * Outgoing message type for client responses.
  */
 interface ChatProxyResponse {
-  type: 'response' | 'error' | 'pong';
+  type: 'response' | 'chunk' | 'error' | 'pong';
   sessionId?: string;
   requestId?: string;
   answer?: string;
@@ -60,7 +60,10 @@ interface ChatProxyResponse {
   tokensOut?: number;
   crewSelfOrganization?: any;
   promptOptimization?: any;
+  executionActivation?: any;
   executionTime?: number;
+  /** Incremental streaming: false on partial 'chunk' frames, true (or absent) on the final frame. */
+  done?: boolean;
 }
 
 /**
@@ -284,12 +287,25 @@ export class ChatWebSocketProxy {
       // Route to canonical chat turn with latency budget
       const timeoutMs = session.isHighPriority ? 8000 : 15000; // High-priority: 8s, low-priority: 15s
       const chatResult = await Promise.race([
-        runCanonicalChatTurn({
-          message: msg.message,
-          history: msg.history,
-          clientId: msg.clientId ?? null,
-          crewSelfOrganize: msg.crewSelfOrganize !== false,
-        }),
+        runCanonicalChatTurn(
+          {
+            message: msg.message,
+            history: msg.history,
+            clientId: msg.clientId ?? null,
+            crewSelfOrganize: msg.crewSelfOrganize !== false,
+          },
+          {
+            // Forward incremental answer deltas as partial 'chunk' frames (done:false).
+            onDelta: (partial) => {
+              this.sendResponse(ws, sessionId, {
+                type: 'chunk',
+                requestId,
+                answer: partial,
+                done: false,
+              });
+            },
+          },
+        ),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('chat_timeout')), timeoutMs)
         ),
@@ -309,7 +325,9 @@ export class ChatWebSocketProxy {
         tokensOut: chatResult.tokensOut,
         crewSelfOrganization: chatResult.crewSelfOrganization,
         promptOptimization: chatResult.promptOptimization,
+        executionActivation: chatResult.executionActivation,
         executionTime: executionTimeMs,
+        done: true,
       });
     } catch (e: any) {
       const executionTimeMs = Date.now() - startMs;
