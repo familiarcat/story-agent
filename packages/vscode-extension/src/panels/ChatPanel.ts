@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import { randomBytes } from 'crypto';
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
 import { getChatClient, getChatClientStatus } from '../chat/chat-engine';
+import { updateControlLane, type ControlLane } from '../controlLaneStatusBar';
 
 function getNonce(): string {
   return randomBytes(16).toString('base64');
@@ -107,6 +108,11 @@ export class ChatPanel {
               crewSelfOrganization: response.crewSelfOrganization,
               costAnalysis: response.costAnalysis,
             });
+
+            // Update the persistent control-lane status bar (lane derived like the chat badges).
+            const ea = response.executionActivation as { activated?: boolean } | undefined;
+            const lane: ControlLane = ea?.activated ? 'claude' : (response.crewSelfOrganization ? 'crew' : 'shell');
+            updateControlLane(lane, response.costUSD);
           } catch (err) {
             // FIX #2: Sanitize error messages (no tokens/paths/URLs)
             let errorMsg = err instanceof Error ? err.message : String(err);
