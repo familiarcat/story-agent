@@ -101,6 +101,9 @@ export class ChatPanel {
               model: response.model,
               costUSD: response.costUSD,
               sources: response.sources,
+              executionActivation: response.executionActivation,
+              crewSelfOrganization: response.crewSelfOrganization,
+              costAnalysis: response.costAnalysis,
             });
           } catch (err) {
             // FIX #2: Sanitize error messages (no tokens/paths/URLs)
@@ -185,6 +188,9 @@ export class ChatPanel {
     model: string;
     costUSD: number;
     sources: string[];
+    executionActivation?: unknown;
+    crewSelfOrganization?: unknown;
+    costAnalysis?: unknown;
   }> {
     // FIX #5: Use actual WebSocket ChatClient instead of HTTP
     const chatClient = getChatClient();
@@ -205,11 +211,15 @@ export class ChatPanel {
       const unsubscribe = chatClient.onChatResponse(msgId, (response) => {
         if (response.done) {
           unsubscribe();
+          const raw = response as unknown as Record<string, unknown>;
           resolve({
             answer: response.content,
             model: response.model,
             costUSD: response.costUSD,
             sources: response.sources || [],
+            executionActivation: raw.executionActivation,
+            crewSelfOrganization: raw.crewSelfOrganization,
+            costAnalysis: raw.costAnalysis,
           });
         }
       });
@@ -427,6 +437,71 @@ export class ChatPanel {
       font-size: 12px;
     }
 
+    /* Rich markdown (Claude-Code parity) */
+    .md-body h1, .md-body h2, .md-body h3 {
+      margin: 6px 0 4px;
+      line-height: 1.3;
+      color: var(--sa-primary);
+    }
+    .md-body h1 { font-size: 16px; }
+    .md-body h2 { font-size: 14px; }
+    .md-body h3 { font-size: 13px; }
+    .md-body ul, .md-body ol { margin: 4px 0; padding-left: 20px; }
+    .md-body li { margin: 2px 0; }
+    .md-body a { color: var(--sa-primary); text-decoration: underline; }
+    .md-body code {
+      background: var(--vscode-editor-background);
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+    .code-block {
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--sa-border);
+      border-left: 3px solid var(--sa-primary);
+      border-radius: 3px;
+      padding: 8px 10px;
+      margin: 6px 0;
+      overflow-x: auto;
+    }
+    .code-block code { background: none; padding: 0; }
+
+    /* Control-lane + model/cost badges */
+    .badge {
+      display: inline-block;
+      padding: 1px 6px;
+      margin-right: 4px;
+      border-radius: 8px;
+      font-size: 10px;
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--sa-border);
+    }
+    .badge.lane-claude { border-color: var(--sa-danger); color: var(--sa-danger); }
+    .badge.lane-crew { border-color: var(--sa-primary); color: var(--sa-primary); }
+    .badge.lane-shell { border-color: var(--sa-muted); color: var(--sa-muted); }
+
+    /* Crew execution transparency */
+    .exec-block {
+      margin-top: 6px;
+      font-size: 11px;
+      border: 1px solid var(--sa-border);
+      border-radius: 3px;
+      background: var(--vscode-editor-background);
+    }
+    .exec-block > summary {
+      cursor: pointer;
+      padding: 4px 8px;
+      color: var(--sa-primary);
+      user-select: none;
+    }
+    .exec-block .exec-rows {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      padding: 4px 10px 8px;
+      color: var(--sa-muted);
+      font-family: var(--vscode-editor-font-family);
+    }
+
     .scroller-spacer {
       height: 1px;
       align-self: flex-end;
@@ -469,24 +544,80 @@ export class ChatPanel {
 
     let isSending = false;
 
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // XSS-safe markdown: escape first, then render a Claude-Code-like subset.
+    function renderMarkdown(raw) {
+      const blocks = [];
+      let text = String(raw).replace(/\`\`\`(\\w*)\\n?([\\s\\S]*?)\`\`\`/g, function (_, lang, code) {
+        blocks.push('<pre class="code-block"><code>' + escapeHtml(code.replace(/\\n$/, '')) + '</code></pre>');
+        return '@@CB' + (blocks.length - 1) + '@@';
+      });
+      text = escapeHtml(text);
+      text = text.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
+      text = text.replace(/^### (.*)$/gm, '<h3>$1</h3>')
+                 .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+                 .replace(/^# (.*)$/gm, '<h1>$1</h1>');
+      text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
+      text = text.replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
+      text = text.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g, '<a href="$2">$1</a>');
+      text = text.replace(/(?:^[-*] .*(?:\\n|$))+/gm, function (m) {
+        return '<ul>' + m.trim().split('\\n').map(function (l) { return '<li>' + l.replace(/^[-*] /, '') + '</li>'; }).join('') + '</ul>';
+      });
+      text = text.replace(/(?:^\\d+\\. .*(?:\\n|$))+/gm, function (m) {
+        return '<ol>' + m.trim().split('\\n').map(function (l) { return '<li>' + l.replace(/^\\d+\\. /, '') + '</li>'; }).join('') + '</ol>';
+      });
+      text = text.replace(/\\n/g, '<br>');
+      text = text.replace(/@@CB(\\d+)@@/g, function (_, i) { return blocks[+i]; });
+      return text;
+    }
+
+    function laneBadge(metadata) {
+      const ea = metadata.executionActivation;
+      if (ea && ea.activated) return { cls: 'lane-claude', label: '🔴 agent' };
+      if (metadata.crewSelfOrganization && metadata.crewSelfOrganization.enabled) return { cls: 'lane-crew', label: '🟡 crew' };
+      return { cls: 'lane-shell', label: '🟢 direct' };
+    }
+
     function renderMessage(role, content, metadata = {}) {
       const msgEl = document.createElement('div');
       msgEl.className = \`message \${role}\`;
 
-      let html = content;
-      // Simple markdown: **bold**, \`code\`
-      html = html.replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>');
-      html = html.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
+      const body = document.createElement('div');
+      body.className = 'md-body';
+      body.innerHTML = role === 'assistant' ? renderMarkdown(content) : escapeHtml(content);
+      msgEl.appendChild(body);
 
-      msgEl.innerHTML = html;
+      // Tool-call transparency: surface the agent-core execution when chat ran real work.
+      const ea = metadata.executionActivation;
+      if (ea && ea.activated) {
+        const exec = document.createElement('details');
+        exec.className = 'exec-block';
+        const rows = [];
+        if (ea.iterations !== undefined) rows.push('iterations: ' + escapeHtml(ea.iterations));
+        if (ea.toolCalls !== undefined) rows.push('tool calls: ' + escapeHtml(ea.toolCalls));
+        if (ea.missionId) rows.push('mission: ' + escapeHtml(ea.missionId));
+        if (ea.escalated) rows.push('escalated');
+        if (ea.stalled) rows.push('⚠ stalled');
+        exec.innerHTML = '<summary>🖖 Crew execution</summary><div class="exec-rows">' + rows.map(function (r) { return '<span>' + r + '</span>'; }).join('') + '</div>';
+        msgEl.appendChild(exec);
+      }
 
-      if (metadata.model || metadata.costUSD !== undefined) {
+      if (role === 'assistant' && (metadata.model || metadata.costUSD !== undefined)) {
         const metaEl = document.createElement('div');
         metaEl.className = 'message-meta';
-        const parts = [];
-        if (metadata.model) parts.push(\`<strong>\${metadata.model}</strong>\`);
-        if (metadata.costUSD !== undefined) parts.push(\`$\${metadata.costUSD.toFixed(5)}\`);
-        metaEl.innerHTML = parts.join(' · ');
+        const lane = laneBadge(metadata);
+        const parts = ['<span class="badge ' + lane.cls + '">' + lane.label + '</span>'];
+        if (metadata.model) parts.push('<span class="badge">' + escapeHtml(metadata.model) + '</span>');
+        if (metadata.costUSD !== undefined) parts.push('<span class="badge">$' + Number(metadata.costUSD).toFixed(5) + '</span>');
+        metaEl.innerHTML = parts.join(' ');
         msgEl.appendChild(metaEl);
       }
 
@@ -554,6 +685,9 @@ export class ChatPanel {
             model: msg.model,
             costUSD: msg.costUSD,
             sources: msg.sources,
+            executionActivation: msg.executionActivation,
+            crewSelfOrganization: msg.crewSelfOrganization,
+            costAnalysis: msg.costAnalysis,
           });
           break;
 

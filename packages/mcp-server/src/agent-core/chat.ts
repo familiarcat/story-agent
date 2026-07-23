@@ -863,7 +863,52 @@ async function autoLogCrewContext(
   } catch { /* auto-logging is best-effort */ }
 }
 
-export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<CanonicalChatResponse> {
+/**
+ * Consume an OpenRouter Chat Completions SSE stream: parse `data:` delta lines, accumulate the
+ * answer, and invoke onDelta with the running text per chunk. Returns a shape compatible with the
+ * non-streaming JSON response ({ choices:[{message:{content}}], usage }) so the caller is agnostic.
+ */
+async function consumeOpenRouterStream(
+  body: AsyncIterable<Uint8Array>,
+  onDelta: (partialAnswer: string) => void,
+): Promise<{ choices: Array<{ message: { content: string } }>; usage: Record<string, number> }> {
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let content = '';
+  let usage: Record<string, number> = {};
+  const handleLine = (line: string): void => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) return;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === '[DONE]') return;
+    try {
+      const j = JSON.parse(payload);
+      const delta = j?.choices?.[0]?.delta?.content;
+      if (delta) {
+        content += delta;
+        onDelta(content);
+      }
+      if (j?.usage) usage = j.usage;
+    } catch {
+      /* ignore keepalive / partial frames */
+    }
+  };
+  for await (const chunk of body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let idx: number;
+    while ((idx = buffer.indexOf('\n')) >= 0) {
+      handleLine(buffer.slice(0, idx));
+      buffer = buffer.slice(idx + 1);
+    }
+  }
+  if (buffer) handleLine(buffer);
+  return { choices: [{ message: { content: content || '(no response)' } }], usage };
+}
+
+export async function runCanonicalChatTurn(
+  body: CanonicalChatRequest,
+  opts: { onDelta?: (partialAnswer: string) => void } = {},
+): Promise<CanonicalChatResponse> {
   // Resolve credentials through WorfGate (authorized, audited, credential provider chain)
   const keyResult = resolveWorfGateCredential('CREW_LLM_APPROVED_KEY', {
     operation: 'llm:call',
@@ -1048,15 +1093,25 @@ export async function runCanonicalChatTurn(body: CanonicalChatRequest): Promise<
   let d: any;
   let responseStatus = 0;
   let responseText = '';
+  const wantStream = typeof opts.onDelta === 'function';
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const r = await fetch(`${OR_URL}/chat/completions`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: picked.id, messages, max_tokens: 900 }),
+      body: JSON.stringify({
+        model: picked.id,
+        messages,
+        max_tokens: 900,
+        ...(wantStream ? { stream: true, stream_options: { include_usage: true } } : {}),
+      }),
     });
     responseStatus = r.status;
     if (r.ok) {
-      d = await r.json();
+      // Opt-in streaming: parse the OpenRouter SSE deltas and forward accumulated text via onDelta.
+      // The non-streaming path (web /api/chat) is unchanged when onDelta is absent.
+      d = wantStream && r.body
+        ? await consumeOpenRouterStream(r.body as AsyncIterable<Uint8Array>, opts.onDelta!)
+        : await r.json();
       break;
     }
     responseText = await r.text();
