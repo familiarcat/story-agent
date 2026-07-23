@@ -39,6 +39,26 @@ unavailable, or a ≤few-line deterministic fix the loop stalled on) — call it
 the live-feedback + ask-first approval + self-healing-stall methodology in
 [docs/crew/live-feedback-and-approvals.md](docs/crew/live-feedback-and-approvals.md).
 
+**Autonomy envelope (set 2026-07-23 — loosen friction, keep the safety floor).** The operator has
+widened crew autonomy to cut round-trip time/cost. Honor these defaults:
+- **Fewer approval questions.** Proceed on sensible defaults; do NOT open multi-option approval
+  prompts for routine choices. Stop for input ONLY on genuinely irreversible or ambiguous decisions
+  (destructive data ops, security posture changes, or when the request is under-determined).
+- **CI-gated auto-merge.** Once ALL GitHub checks are green on a PR you opened, merge it to `main`
+  without asking. `main` stays protected by CI, so green == ratified.
+- **Auto-deploy on green main.** After a green merge to `main`, trigger the Fargate deploy
+  (`gh workflow run deploy.yml -f apply=true --ref main`) automatically. No deploy round-trip.
+- **KEEP build/test verification — non-negotiable.** ALWAYS re-run build/typecheck/tests on crew
+  output before landing it. The crew's chat lane confabulates and its agent-core loop budget-caps;
+  cheap re-verification is what makes autonomy safe (it caught a broken build, a double-execution
+  bug, and phantom scripts — every time). Never trust green self-report without re-running.
+- **Cost:** crew budget cap unchanged → keep agent-core tasks TIGHTLY SCOPED (one coherent file-set
+  per dispatch) so they finish without capping. Still hard-gated (require a human): anything the
+  harness classifier blocks that isn't the CI-green auto-merge/deploy path above, and self-granting
+  Claude Code permissions. Auto-merge/auto-deploy require the operator to add the matching allow
+  rules once via `/permissions` (`Bash(gh pr merge:*)`, `Bash(gh workflow run:*)`) — an agent cannot
+  self-escalate.
+
 **Reach the crew via MCP, not tsx scripts (when connected).** The repo registers a `story-agent` MCP
 server ([.mcp.json](.mcp.json) → [scripts/mcp-crew-stdio.sh](scripts/mcp-crew-stdio.sh)) exposing the
 crew's tools directly to Claude Code: `run_crew_mission_pipeline` (Observation Lounge engine),
