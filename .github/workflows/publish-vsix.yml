@@ -1,0 +1,43 @@
+name: Publish VSIX
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/vscode-extension/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build extension
+        run: pnpm --filter story-agent-vscode run build
+
+      - name: Package VSIX
+        working-directory: packages/vscode-extension
+        run: pnpm --filter story-agent-vscode exec vsce package --no-dependencies --allow-missing-repository -o story-agent.vsix
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-agent-vsix
+          path: packages/vscode-extension/story-agent.vsix

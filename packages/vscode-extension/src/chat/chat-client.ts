@@ -16,6 +16,7 @@
  */
 
 export interface ChatRequest {
+  id?: string; // Caller-supplied correlation id (echoed by the proxy for response routing)
   message: string;
   priority: 'high' | 'low'; // 'high' = real-time, 'low' = batched
   sessionId: string;
@@ -32,6 +33,9 @@ export interface ChatResponse {
   costUSD: number;
   sources: string[];
   done: boolean;
+  requestId?: string; // From proxy (echoed correlation ID)
+  answer?: string; // Alt field name from proxy
+  type?: 'response' | 'chunk'; // Message type indicator
 }
 
 export interface ChatMetrics {
@@ -191,7 +195,9 @@ export class ChatClient {
       if (!this.status.connected) throw new Error('Connection timeout');
     }
 
-    const id = this.generateMessageId();
+    // Use the caller-supplied correlation id when present so the proxy echoes it back and the
+    // caller's registered handler matches; otherwise generate one.
+    const id = request.id ?? this.generateMessageId();
     this.pendingRequests.set(id, { request, timeMs: Date.now() });
 
     const payload = {
@@ -219,15 +225,14 @@ export class ChatClient {
   /** Handle incoming WebSocket messages */
   private handleMessage(data: string): void {
     try {
-      const response: ChatResponse = JSON.parse(data);
+      const msg: any = JSON.parse(data);
 
       // FIX #4: Detect rate limit (429) responses
-      const responseWithStatus = response as ChatResponse & { statusCode?: number; retryAfter?: string };
-      if (responseWithStatus.statusCode === 429) {
+      if (msg.statusCode === 429) {
         // Parse Retry-After header (seconds or HTTP-date)
         let backoffMs = 60000; // Default 60s
-        if (responseWithStatus.retryAfter) {
-          const retryAfterSec = parseInt(responseWithStatus.retryAfter);
+        if (msg.retryAfter) {
+          const retryAfterSec = parseInt(msg.retryAfter);
           if (!isNaN(retryAfterSec)) {
             backoffMs = retryAfterSec * 1000;
           }
@@ -241,27 +246,48 @@ export class ChatClient {
         return;
       }
 
-      // Track metrics
-      this.sessionMetrics.totalCost += response.costUSD;
-      this.sessionMetrics.totalTokens += response.tokensIn + response.tokensOut;
-      this.sessionMetrics.requestCount += 1;
+      // Correlate by requestId (from proxy) or id (fallback)
+      const correlationId = msg.requestId || msg.id;
+      if (!correlationId) return; // No correlation ID, skip
+
+      // Normalize response: map proxy fields to ChatResponse fields
+      const response: ChatResponse = {
+        id: correlationId,
+        content: msg.answer || msg.content || '',
+        model: msg.model || '',
+        tokensIn: msg.tokensIn || 0,
+        tokensOut: msg.tokensOut || 0,
+        costUSD: msg.costUSD || 0,
+        sources: msg.sources || [],
+        done: msg.type === 'response' || msg.done === true, // type==='response' or done:true means final
+        requestId: msg.requestId,
+        answer: msg.answer,
+        type: msg.type,
+      };
+
+      // Track metrics (only on final response, done:true)
+      if (response.done) {
+        this.sessionMetrics.totalCost += response.costUSD;
+        this.sessionMetrics.totalTokens += response.tokensIn + response.tokensOut;
+        this.sessionMetrics.requestCount += 1;
+      }
 
       // Record latency if this is a pending request
-      const pending = this.pendingRequests.get(response.id);
+      const pending = this.pendingRequests.get(correlationId);
       if (pending) {
         const latencyMs = Date.now() - pending.timeMs;
         // Latency recorded for metrics display (but not exposed here)
       }
 
       // Invoke handler
-      const handler = this.chatHandlers.get(response.id);
+      const handler = this.chatHandlers.get(correlationId);
       if (handler) {
         handler(response);
 
-        // Remove handler if response is done
+        // Remove handler only if response is done (final frame)
         if (response.done) {
-          this.chatHandlers.delete(response.id);
-          this.pendingRequests.delete(response.id);
+          this.chatHandlers.delete(correlationId);
+          this.pendingRequests.delete(correlationId);
         }
       }
     } catch (err) {
