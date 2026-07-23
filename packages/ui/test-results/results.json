@@ -2,8 +2,9 @@
   "config": {
     "argv": [
       "/Users/bradygeorgen/.nvm/versions/node/v22.19.0/bin/node",
-      "/Users/bradygeorgen/Developer/story-agent/node_modules/.pnpm/@playwright+test@1.61.1/node_modules/@playwright/test/cli.js",
-      "test"
+      "/Users/bradygeorgen/Developer/story-agent/packages/ui/node_modules/@playwright/test/cli.js",
+      "test",
+      "--project=chromium"
     ],
     "configFile": "/Users/bradygeorgen/Developer/story-agent/packages/ui/playwright.config.ts",
     "rootDir": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__",
@@ -110,12 +111,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3902,
+                      "duration": 1287,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:40.502Z",
+                      "startTime": "2026-07-22T08:24:50.067Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -144,12 +145,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2205,
+                      "duration": 1290,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:45.913Z",
+                      "startTime": "2026-07-22T08:24:52.104Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -178,12 +179,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1233,
+                      "duration": 2842,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:48.132Z",
+                      "startTime": "2026-07-22T08:24:53.406Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -212,12 +213,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 820,
+                      "duration": 2236,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:49.378Z",
+                      "startTime": "2026-07-22T08:24:56.265Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -246,12 +247,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 669,
+                      "duration": 506,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:50.205Z",
+                      "startTime": "2026-07-22T08:24:58.520Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -280,12 +281,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 530,
+                      "duration": 450,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:50.883Z",
+                      "startTime": "2026-07-22T08:24:59.037Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -314,12 +315,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1095,
+                      "duration": 404,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:51.422Z",
+                      "startTime": "2026-07-22T08:24:59.494Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -348,12 +349,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 507,
+                      "duration": 471,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:52.530Z",
+                      "startTime": "2026-07-22T08:24:59.904Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -382,12 +383,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1271,
+                      "duration": 459,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:53.046Z",
+                      "startTime": "2026-07-22T08:25:00.384Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -416,12 +417,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1031,
+                      "duration": 435,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:54.330Z",
+                      "startTime": "2026-07-22T08:25:00.854Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -450,12 +451,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1333,
+                      "duration": 414,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:55.375Z",
+                      "startTime": "2026-07-22T08:25:01.297Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -484,12 +485,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 837,
+                      "duration": 421,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:56.722Z",
+                      "startTime": "2026-07-22T08:25:01.718Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -518,12 +519,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1329,
+                      "duration": 398,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:57.572Z",
+                      "startTime": "2026-07-22T08:25:02.145Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -552,12 +553,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1277,
+                      "duration": 390,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:05:58.917Z",
+                      "startTime": "2026-07-22T08:25:02.550Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -586,12 +587,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1324,
+                      "duration": 383,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:00.209Z",
+                      "startTime": "2026-07-22T08:25:02.946Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -620,12 +621,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1357,
+                      "duration": 350,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:01.552Z",
+                      "startTime": "2026-07-22T08:25:03.334Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -654,12 +655,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1027,
+                      "duration": 406,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:02.924Z",
+                      "startTime": "2026-07-22T08:25:03.689Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -688,12 +689,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1493,
+                      "duration": 414,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:03.963Z",
+                      "startTime": "2026-07-22T08:25:04.101Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -722,12 +723,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1165,
+                      "duration": 408,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:05.470Z",
+                      "startTime": "2026-07-22T08:25:04.520Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -756,12 +757,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1929,
+                      "duration": 386,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:06.649Z",
+                      "startTime": "2026-07-22T08:25:04.934Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -790,12 +791,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1937,
+                      "duration": 413,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:08.594Z",
+                      "startTime": "2026-07-22T08:25:05.326Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -824,12 +825,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1221,
+                      "duration": 423,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:10.550Z",
+                      "startTime": "2026-07-22T08:25:05.747Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -852,7 +853,7 @@
           "specs": [
             {
               "title": "sidebar collapse state persists across navigation",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -865,50 +866,18 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "timedOut",
-                      "duration": 34565,
-                      "error": {
-                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
-                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
-                      },
-                      "errors": [
-                        {
-                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
-                        },
-                        {
-                          "location": {
-                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                            "column": 16,
-                            "line": 100
-                          },
-                          "message": "Error: page.waitForLoadState: Test timeout of 30000ms exceeded.\n\n   98 |     // Navigate to different route\n   99 |     await page.goto('/sprint');\n> 100 |     await page.waitForLoadState('networkidle');\n      |                ^\n  101 |\n  102 |     // Verify sidebar state persisted (still collapsed)\n  103 |     const sidebarAfterNav = page.locator('[data-testid=\"app-sidenav\"]').first();\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:100:16"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 1565,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:11.788Z",
+                      "startTime": "2026-07-22T08:25:06.176Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-5f6f7--persists-across-navigation-chromium/error-context.md"
-                        }
-                      ]
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "cadc2321d8503bf5d991-870bad0e14d90ef2182d",
@@ -918,7 +887,7 @@
             },
             {
               "title": "sidebar navigation items are clickable",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -929,65 +898,25 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 1,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 5506,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"/dashboard\"\u001b[39m\nReceived string:        \u001b[31m\"http://localhost:3000\u001b[7m/dashboard\u001b[27m\"\u001b[39m",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"/dashboard\"\u001b[39m\nReceived string:        \u001b[31m\"http://localhost:3000\u001b[7m/dashboard\u001b[27m\"\u001b[39m\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:135:28",
-                        "location": {
-                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                          "column": 28,
-                          "line": 135
-                        },
-                        "snippet": "  133 |\n  134 |     // Verify navigation occurred\n> 135 |     expect(page.url()).not.toContain('/dashboard');\n      |                            ^\n  136 |   });\n  137 | });\n  138 |"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                            "column": 28,
-                            "line": 135
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mnot\u001b[2m.\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: not \u001b[32m\"/dashboard\"\u001b[39m\nReceived string:        \u001b[31m\"http://localhost:3000\u001b[7m/dashboard\u001b[27m\"\u001b[39m\n\n  133 |\n  134 |     // Verify navigation occurred\n> 135 |     expect(page.url()).not.toContain('/dashboard');\n      |                            ^\n  136 |   });\n  137 | });\n  138 |\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:135:28"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 1388,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:51.094Z",
+                      "startTime": "2026-07-22T08:25:07.749Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Sideb-4b638-igation-items-are-clickable-chromium/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                        "column": 28,
-                        "line": 135
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "cadc2321d8503bf5d991-22f6e6ac042f010eb0bf",
               "file": "critical-path.e2e.ts",
-              "line": 122,
+              "line": 120,
               "column": 7
             }
           ]
@@ -1011,15 +940,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4391,
+                      "duration": 2179,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:06:58.617Z",
+                      "startTime": "2026-07-22T08:25:09.146Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1045,15 +974,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4085,
+                      "duration": 1649,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:03.524Z",
+                      "startTime": "2026-07-22T08:25:11.332Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1087,15 +1016,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 630,
+                      "duration": 416,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:07.626Z",
+                      "startTime": "2026-07-22T08:25:12.989Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1118,7 +1047,7 @@
           "specs": [
             {
               "title": "gracefully handles server unavailable",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1129,60 +1058,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 2,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 5736,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:283:32",
-                        "location": {
-                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                          "column": 32,
-                          "line": 283
-                        },
-                        "snippet": "  281 |       .or(page.locator('text=/unavailable|error|failed/i')).first();\n  282 |\n> 283 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  284 |   });\n  285 |\n  286 |   test('recovers when server comes back online', async ({ page }) => {"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                            "column": 32,
-                            "line": 283
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable|error|failed/i')).first()\u001b[22m\n\n\n  281 |       .or(page.locator('text=/unavailable|error|failed/i')).first();\n  282 |\n> 283 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  284 |   });\n  285 |\n  286 |   test('recovers when server comes back online', async ({ page }) => {\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:283:32"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 514,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:08.268Z",
+                      "startTime": "2026-07-22T08:25:13.411Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-27834--handles-server-unavailable-chromium/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                        "column": 32,
-                        "line": 283
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "cadc2321d8503bf5d991-2b2e5b73a052dbe38046",
@@ -1192,7 +1081,7 @@
             },
             {
               "title": "recovers when server comes back online",
-              "ok": false,
+              "ok": true,
               "tags": [],
               "tests": [
                 {
@@ -1203,60 +1092,20 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 3,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 5691,
-                      "error": {
-                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n",
-                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:303:32",
-                        "location": {
-                          "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                          "column": 32,
-                          "line": 303
-                        },
-                        "snippet": "  301 |       .locator('[data-testid=\"error-message\"]')\n  302 |       .or(page.locator('text=/unavailable/i')).first();\n> 303 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  304 |\n  305 |     // Unblock API\n  306 |     requestsBlocked = false;"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                            "column": 32,
-                            "line": 303
-                          },
-                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('[data-testid=\"error-message\"]').or(locator('text=/unavailable/i')).first()\u001b[22m\n\n\n  301 |       .locator('[data-testid=\"error-message\"]')\n  302 |       .or(page.locator('text=/unavailable/i')).first();\n> 303 |     await expect(errorMessage).toBeVisible({ timeout: 5000 });\n      |                                ^\n  304 |\n  305 |     // Unblock API\n  306 |     requestsBlocked = false;\n    at /Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts:303:32"
-                        }
-                      ],
+                      "status": "passed",
+                      "duration": 558,
+                      "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:14.352Z",
+                      "startTime": "2026-07-22T08:25:13.931Z",
                       "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/test-failed-1.png"
-                        },
-                        {
-                          "name": "video",
-                          "contentType": "video/webm",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/video.webm"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "/Users/bradygeorgen/Developer/story-agent/packages/ui/test-results/artifacts/critical-path.e2e.ts-Error-38679-en-server-comes-back-online-chromium/error-context.md"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "/Users/bradygeorgen/Developer/story-agent/packages/ui/src/__tests__/critical-path.e2e.ts",
-                        "column": 32,
-                        "line": 303
-                      }
+                      "attachments": []
                     }
                   ],
-                  "status": "unexpected"
+                  "status": "expected"
                 }
               ],
               "id": "cadc2321d8503bf5d991-2fc7d41050f60571a3e0",
@@ -1285,15 +1134,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 2600,
+                      "duration": 1024,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:20.671Z",
+                      "startTime": "2026-07-22T08:25:14.495Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1319,15 +1168,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1925,
+                      "duration": 1058,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:23.422Z",
+                      "startTime": "2026-07-22T08:25:15.524Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1361,15 +1210,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 10077,
+                      "duration": 4304,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:25.363Z",
+                      "startTime": "2026-07-22T08:25:16.591Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1395,15 +1244,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 7005,
+                      "duration": 3568,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:35.459Z",
+                      "startTime": "2026-07-22T08:25:20.906Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1429,15 +1278,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1276,
+                      "duration": 976,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:42.488Z",
+                      "startTime": "2026-07-22T08:25:24.481Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1471,15 +1320,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1721,
+                      "duration": 1340,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:43.781Z",
+                      "startTime": "2026-07-22T08:25:25.464Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1505,15 +1354,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1696,
+                      "duration": 3878,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:45.513Z",
+                      "startTime": "2026-07-22T08:25:26.813Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1547,15 +1396,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 15982,
+                      "duration": 3999,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:07:47.217Z",
+                      "startTime": "2026-07-22T08:25:30.698Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1581,15 +1430,15 @@
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": 4,
+                      "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1894,
+                      "duration": 554,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-07-17T23:08:03.215Z",
+                      "startTime": "2026-07-22T08:25:34.706Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1609,11 +1458,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-17T23:05:38.274Z",
-    "duration": 146915.234,
-    "expected": 34,
+    "startTime": "2026-07-22T08:24:49.281Z",
+    "duration": 46046.843,
+    "expected": 38,
     "skipped": 0,
-    "unexpected": 4,
+    "unexpected": 0,
     "flaky": 0
   }
 }
