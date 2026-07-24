@@ -12,6 +12,8 @@
  */
 import OpenAI from 'openai';
 import { randomUUID } from 'node:crypto';
+import os from 'node:os';
+import { execSync } from 'node:child_process';
 import { quarkSelectModel, quarkCheapestAnthropic, MODEL_POOL } from '../lib/crew-team-assembly.js';
 import { resolveWorfGateCredential } from '@story-agent/shared/worfgate-credentials';
 import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
@@ -187,6 +189,21 @@ export function composeLens(input: string, tools: AgentTool[]): ComposedLens {
   return { lens, reason: `composed ${lens.length}/${tools.length} tools: ${lens.map(t => t.name).join(', ')}` };
 }
 
+function buildEnvContext(workspace: string): string {
+  let gitBranch = 'unknown';
+  try {
+    gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: workspace }).toString().trim();
+  } catch {}
+  return [
+    'ENVIRONMENT:',
+    `Platform: ${process.platform} ${os.release()}`,
+    `Shell: ${process.env.SHELL || 'unknown'}`,
+    `Node: ${process.version}`,
+    `Workspace: ${workspace}`,
+    `Git branch: ${gitBranch}`,
+  ].join('\n');
+}
+
 const DEFAULT_SYSTEM = [
   'You are the Story Agent — an autonomous coding assistant powered by the OpenRouter crew.',
   'You operate in the user\'s workspace with real tools: read/write/edit files, search code, run shell, git.',
@@ -318,7 +335,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   };
 
   const messages: any[] = [
-    { role: 'system', content: (opts.systemPrompt || DEFAULT_SYSTEM) + `\n\nWorkspace: ${workspace}` },
+    { role: 'system', content: (opts.systemPrompt || DEFAULT_SYSTEM) + '\n\n' + buildEnvContext(workspace) },
     { role: 'user', content: userInput },
   ];
 

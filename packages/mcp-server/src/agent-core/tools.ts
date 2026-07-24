@@ -160,6 +160,21 @@ const search_code: AgentTool = {
   },
 };
 
+/**
+ * Run a command through the user's OWN shell so their real environment is present —
+ * ~/.zshrc PATH (Homebrew /opt/homebrew/bin, /usr/local/bin), aliases, and env vars.
+ * bash -lc (the old default) never sources ~/.zshrc, so commands ran with a stripped
+ * PATH and the crew would confabulate "git not available / isolated sandbox".
+ * zsh needs -i (interactive) to source ~/.zshrc; other shells use -lc. Cross-platform
+ * safe: on Linux/Fargate where SHELL is unset or /bin/sh, falls back to bash -lc.
+ */
+function shellInvocation(command: string): [string, string[]] {
+  const sh = process.env.SHELL || '';
+  if (sh.endsWith('zsh')) return [sh, ['-ic', command]];
+  if (sh.endsWith('bash')) return [sh, ['-lc', command]];
+  return ['bash', ['-lc', command]];
+}
+
 const run_shell: AgentTool = {
   name: 'run_shell',
   description: 'Run a shell command in the workspace and return combined stdout/stderr. Use for tests, lint, build, git, etc.',
@@ -168,7 +183,8 @@ const run_shell: AgentTool = {
   }),
   handler: async (a, ctx) => {
     try {
-      const { stdout, stderr } = await pexec('bash', ['-lc', String(a.command)], {
+      const [shBin, shArgs] = shellInvocation(String(a.command));
+      const { stdout, stderr } = await pexec(shBin, shArgs, {
         cwd: ctx.workspace, maxBuffer: 16 * 1024 * 1024, timeout: 180_000,
       });
       return clip(`$ ${a.command}\n${stdout}${stderr ? '\n[stderr]\n' + stderr : ''}`);
