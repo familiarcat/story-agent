@@ -129,9 +129,11 @@ test.describe('Sidebar Persistence', () => {
     const nonDashboardItem = navItems.filter({ hasText: 'Sprint' }).first();
     await expect(nonDashboardItem).toBeVisible();
     await nonDashboardItem.click();
-    await page.waitForLoadState('networkidle');
 
-    // Verify navigation occurred to the clicked item's target
+    // Wait for the SPA navigation itself, not 'networkidle' — /sprint holds an SSE/polling
+    // connection open (useAhaEvents) so networkidle never settles (see the sibling test's note),
+    // which let this assertion run before the route change completed.
+    await page.waitForURL(/\/sprint/, { timeout: 15000 });
     expect(page.url()).toContain('/sprint');
   });
 });
