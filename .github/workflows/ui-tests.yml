@@ -24,38 +24,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # The UI imports compiled @story-agent/shared from dist (gitignored, not in CI),
+      # so build it before `next dev` or every shared import is "module not found".
+      - name: Build shared package
+        run: pnpm --filter @story-agent/shared run build
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install chromium
 
-      - name: Start services
-        run: |
-          # Start Next.js dev server in background
-          pnpm dev > /tmp/pnpm-dev.log 2>&1 &
-          DEV_PID=$!
-          echo "DEV_PID=$DEV_PID" >> $GITHUB_ENV
-
-      - name: Wait for services
-        run: |
-          npx wait-on http://localhost:3000 -t 60000 || {
-            echo "Service startup failed. Logs:"
-            cat /tmp/pnpm-dev.log
-            exit 1
-          }
-
+      # Playwright's own webServer (packages/ui/playwright.config.ts) starts `next dev`
+      # on :3000 and tears it down; a manual start here double-binds the port -> 120s timeout.
       - name: Run Playwright smoke tests
         run: pnpm --filter @story-agent/ui run test:e2e:smoke
         continue-on-error: false
@@ -70,6 +60,7 @@ jobs:
 
       - name: Comment PR with test results
         if: always()
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -82,15 +73,16 @@ jobs:
               const failed = results.stats.unexpected || 0;
               const flaky = results.stats.flaky || 0;
 
-              const comment = `## UI Test Results
-
-**Smoke Tests (Chromium):**
-- ✅ Passed: ${passed}
-- ❌ Failed: ${failed}
-- ⚠️ Flaky: ${flaky}
-
-[View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-              `;
+              const comment = [
+                '## UI Test Results',
+                '',
+                '**Smoke Tests (Chromium):**',
+                `- ✅ Passed: ${passed}`,
+                `- ❌ Failed: ${failed}`,
+                `- ⚠️ Flaky: ${flaky}`,
+                '',
+                `[View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`,
+              ].join('\n');
 
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
@@ -123,31 +115,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'pnpm'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # The UI imports compiled @story-agent/shared from dist (gitignored, not in CI),
+      # so build it before `next dev` or every shared import is "module not found".
+      - name: Build shared package
+        run: pnpm --filter @story-agent/shared run build
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install ${{ matrix.browser }}
 
-      - name: Start services
-        run: |
-          pnpm dev > /tmp/pnpm-dev.log 2>&1 &
-          echo "DEV_PID=$!" >> $GITHUB_ENV
-
-      - name: Wait for services
-        run: npx wait-on http://localhost:3000 -t 60000
-
+      # Playwright's webServer owns the dev server lifecycle (see smoke-tests job).
       - name: Run Playwright tests
         run: pnpm --filter @story-agent/ui run test:e2e --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/2
         continue-on-error: true
