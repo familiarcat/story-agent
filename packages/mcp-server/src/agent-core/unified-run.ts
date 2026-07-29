@@ -7,6 +7,7 @@
  * record is the unification: hypothesize → execute → remember becomes one loop over the shared RAG.
  */
 import { storeObservationMemory, getRelevantObservationMemories } from '@story-agent/shared/db';
+import { redactSecrets } from '@story-agent/shared/worfgate-redact';
 import type { ObservationDebateResult } from '@story-agent/shared';
 
 export interface UnifiedRunRecord {
@@ -26,6 +27,7 @@ export interface UnifiedRunRecord {
   };
   totalCostUSD: number;
   timestamp: string;
+  rollback?: { preRunGitRef: string | null; touchedFiles: string[]; parentMissionId: string | null };
 }
 
 /** PURE: assemble the linked record from a mission plan + an agent run. Never throws. */
@@ -36,13 +38,15 @@ export function buildUnifiedRunRecord(args: {
   plan: { missionPlan: string; topModel: string; costUSD: number };
   run: { iterations: number; toolCalls: unknown[]; escalated: boolean; stalled: boolean; totalCostUSD: number; finalText: string };
   timestamp: string;
+  rollback?: { preRunGitRef: string | null; touchedFiles: string[]; parentMissionId: string | null };
 }): UnifiedRunRecord {
   const planCostUSD = Number(args.plan?.costUSD ?? 0) || 0;
   const runCostUSD = Number(args.run?.totalCostUSD ?? 0) || 0;
   return {
     missionId: args.missionId,
     clientId: args.clientId ?? null,
-    task: args.task,
+    // Worf: this record is DURABLE and shared — never persist credential-shaped material.
+    task: redactSecrets(args.task),
     missionPlan: args.plan?.missionPlan ?? '',
     topModel: args.plan?.topModel ?? '',
     planCostUSD,
@@ -52,10 +56,11 @@ export function buildUnifiedRunRecord(args: {
       escalated: !!args.run?.escalated,
       stalled: !!args.run?.stalled,
       totalCostUSD: runCostUSD,
-      finalText: (args.run?.finalText ?? '').slice(0, 2000),
+      finalText: redactSecrets(args.run?.finalText ?? '').slice(0, 2000),
     },
     totalCostUSD: Number((planCostUSD + runCostUSD).toFixed(6)),
     timestamp: args.timestamp,
+    rollback: args.rollback,
   };
 }
 

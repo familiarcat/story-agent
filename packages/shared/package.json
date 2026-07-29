@@ -29,6 +29,10 @@
       "import": "./dist/src/worfgate-credentials.js",
       "types": "./dist/src/worfgate-credentials.d.ts"
     },
+    "./worfgate-redact": {
+      "import": "./dist/src/worfgate-redact.js",
+      "types": "./dist/src/worfgate-redact.d.ts"
+    },
     "./worfgate-credential-providers": {
       "import": "./dist/src/worfgate-credential-providers.js",
       "types": "./dist/src/worfgate-credential-providers.d.ts"

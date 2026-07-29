@@ -14,6 +14,7 @@ import OpenAI from 'openai';
 import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
+import { buildUnifiedRunRecord, storeUnifiedRun } from './unified-run.js';
 import { quarkSelectModel, quarkCheapestAnthropic, MODEL_POOL } from '../lib/crew-team-assembly.js';
 import { resolveWorfGateCredential } from '@story-agent/shared/worfgate-credentials';
 import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
@@ -43,8 +44,13 @@ export interface AgentEvent {
 }
 
 export interface RunAgentOptions {
+  storeRun?: boolean;
   workspace?: string;
   clientId?: string | null;
+  /** Optional mission ID for rollback and traceability. */
+  missionId?: string;
+  /** Optional parent mission ID for rollback and traceability. */
+  parentMissionId?: string | null;
   /** Optional crew ID for real-time stream logging (e.g., 'riker', 'geordi', 'worf'). */
   crewId?: string;
   /** Optional task ID for real-time stream logging (e.g., 'team_a_e2e', 'team_b_audit'). */
@@ -101,6 +107,8 @@ export interface AgentRunResult {
   rolledBack?: boolean;
   /** PROD-13 cost observatory — per-provider spend, burn rate, and whether the review threshold tripped. */
   observatory: { perProvider: Record<string, number>; burnRatePerTurnUSD: number; reviewTriggered: boolean };
+  /** Governance substrate: rollback pointer for autonomous operation */
+  rollback?: { preRunGitRef: string | null; touchedFiles: string[] };
 }
 
 /** Layer-4 explainable feedback card — a durable, recallable record of one agent run. */
@@ -267,6 +275,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const OR_URL = (urlResult.available && urlResult.value ? urlResult.value : 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 
   const workspace = opts.workspace || process.env.STORY_AGENT_WORKSPACE || process.cwd();
+  const preRunGitRef: string | null = (() => { try { return execSync('git rev-parse HEAD', { cwd: workspace, encoding: 'utf8', stdio: ['ignore','pipe','ignore'] }).trim() || null; } catch { return null; } })();
   const tools = opts.tools || AGENT_TOOLS;
   const maxIterations = opts.maxIterations ?? 25;
   const maxRetries = opts.maxRetries ?? 3;
@@ -343,6 +352,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     finalText: '', iterations: 0, toolCalls: [], model,
     totalCostUSD: 0, totalTokens: 0, escalated: false, budgetExceeded: false, stalled: false,
     observatory: { perProvider, burnRatePerTurnUSD: 0, reviewTriggered: false },
+    rollback: { preRunGitRef, touchedFiles: [] },
   };
 
   // Single completion path: persist the Layer-4 explainable feedback card (best-effort), emit done.
@@ -364,6 +374,20 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       }, workspace).catch(err => console.error('[CrewStream] Failed to log completion:', err));
     }
 
+    result.rollback = { preRunGitRef, touchedFiles: editSession.touched() };
+    if (opts.storeRun) {
+      try {
+        await storeUnifiedRun(buildUnifiedRunRecord({
+          missionId: opts.missionId || taskId,
+          clientId: opts.clientId ?? null,
+          task: userInput.slice(0, 240),
+          plan: { missionPlan: '', topModel: model, costUSD: 0 },
+          run: { iterations: result.iterations, toolCalls: result.toolCalls, escalated: result.escalated, stalled: result.stalled, totalCostUSD: result.totalCostUSD, finalText: result.finalText },
+          timestamp: new Date().toISOString(),
+          rollback: { preRunGitRef, touchedFiles: editSession.touched(), parentMissionId: opts.parentMissionId ?? null },
+        }));
+      } catch { /* governance telemetry is best-effort — never fail the run */ }
+    }
     if (opts.recordFeedback) {
       const posture = { green: 0, yellow: 0, red: 0 };
       for (const tc of result.toolCalls) if (tc.tier in posture) posture[tc.tier as keyof typeof posture]++;
