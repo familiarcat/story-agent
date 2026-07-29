@@ -21,11 +21,22 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # The extension imports @story-agent/shared and @story-agent/mcp-server through SUBPATH EXPORTS
+      # that resolve to ./dist/*.js, so those packages must be COMPILED before esbuild bundles the
+      # extension. Without these two steps esbuild cannot resolve the imports and the build dies —
+      # which is why this workflow had failed on every run since it was added (3 for 3, never once
+      # producing a VSIX). It is not a PR gate, so nothing surfaced it.
+      - name: Build shared (extension resolves its subpath exports from dist/)
+        run: pnpm --filter @story-agent/shared run build
+
+      - name: Build mcp-server (same reason)
+        run: pnpm --filter @story-agent/mcp-server run build
 
       - name: Build extension
         run: pnpm --filter story-agent-vscode run build
