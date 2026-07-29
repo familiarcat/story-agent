@@ -209,6 +209,21 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
         clientId,
         tier: body.tier,
         toolPolicy: body.toolPolicy,
+        // These were previously DROPPED here, so a dispatched task could not bound its own work: the
+        // caller's maxIterations was ignored, and autoEscalate could not be turned off — meaning any
+        // prompt over 1200 chars (shouldEscalate's length trigger) ran a full mission pipeline before
+        // executing, which hung a real dispatch. Forwarded now; each stays optional.
+        ...(body.maxIterations != null ? { maxIterations: Number(body.maxIterations) } : {}),
+        ...(body.maxNudges != null ? { maxNudges: Number(body.maxNudges) } : {}),
+        ...(body.tokenBudget != null ? { tokenBudget: Number(body.tokenBudget) } : {}),
+        ...(body.autoEscalate != null ? { autoEscalate: body.autoEscalate === true } : {}),
+        ...(body.crewId ? { crewId: String(body.crewId) } : {}),
+        ...(body.taskId ? { taskId: String(body.taskId) } : {}),
+        ...(body.missionId ? { missionId: String(body.missionId) } : {}),
+        ...(body.parentMissionId ? { parentMissionId: String(body.parentMissionId) } : {}),
+        ...(body.storeRun != null ? { storeRun: body.storeRun === true } : {}),
+        // Publish ratification stays opt-in per request AND still requires genuinely green CI.
+        ...(body.autoRatifyPublish != null ? { autoRatifyPublish: body.autoRatifyPublish === true } : {}),
         ...buildBridges(clientId),
         onEvent: (e) => send(e),
         requireApproval: body.requireApproval === true,

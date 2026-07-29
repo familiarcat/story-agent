@@ -18,6 +18,13 @@ import {
   isLikelyModelAvailabilityError,
 } from './openrouter-model-availability.js';
 import { recordCrewRun, beginAsync, heartbeatAsync, endAsync } from '@story-agent/shared';
+import {
+  buildDigest,
+  buildReflectionSystemPrompt,
+  summarizeReflection,
+  resolveReflectionRounds,
+  type ReflectionSummary,
+} from './reflection-rounds.js';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
@@ -98,9 +105,15 @@ export interface MissionPipelineResult {
   // Rule of Three: alternatives + variance detection
   alternatives?: MissionAlternative[];
   variance?: { exists: boolean; summary: string };
+  /** Opening (blind) positions, before any reflection. `contributions` holds the FINAL positions. */
+  openingPositions?: Array<{ crewId: string; model: string; text: string; costUSD: number }>;
+  /** Each reflection round's contributions, in order. */
+  reflections?: Array<Array<{ crewId: string; model: string; text: string; costUSD: number }>>;
+  /** Did anyone actually move? Carries the anti-theater warning. */
+  reflection?: ReflectionSummary;
 }
 
-export async function runMissionPipeline(nlInput: string, clientId?: string | null, complexity?: number): Promise<MissionPipelineResult> {
+export async function runMissionPipeline(nlInput: string, clientId?: string | null, complexity?: number, reflectionRounds?: number): Promise<MissionPipelineResult> {
   if (!OR_KEY) throw new Error('CREW_LLM_APPROVED_KEY not set');
   const ledger: CallResult[] = [];
 
@@ -125,21 +138,50 @@ export async function runMissionPipeline(nlInput: string, clientId?: string | nu
     // deliberation at tier-3 (deepseek) — no frontier escalation, the prior run's cost+latency driver.
     const plan = assembleAndOptimize(goals + '\n' + nlInput, FRUGAL ? 3 : 4);
 
-    // 4. CREW executes — each member contributes on their Quark-assigned model (lounge style).
-    const contributions = await Promise.all(plan.team.map(async (m) => {
+    // 4. CREW deliberates — round 1 is the BLIND opening position (each officer independent), then
+    // N reflection rounds where each officer reads the others and must declare REVISED / HELD /
+    // CONCEDED. Blind-only deliberation cannot catch a confabulation that another officer already
+    // contradicted, which is why rounds exist. See reflection-rounds.ts for the anti-theater rule.
+    let contributions = await Promise.all(plan.team.map(async (m) => {
       const r = await call(m.model,
         `You are ${m.crewId} (${m.domain}) of the Story Agent crew, in the Observation Lounge. Contribute YOUR domain's part toward the goals: a concrete position + one concern/resolution. 2-3 sentences.`,
         `GOALS:\n${goals}`, 160);
       ledger.push(r);
       return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
     }));
+
+    const openingPositions = contributions;
+    const reflectionRoundCount = resolveReflectionRounds(reflectionRounds);
+    const reflections: Array<Array<{ crewId: string; model: string; text: string; costUSD: number }>> = [];
+
+    for (let round = 2; round <= reflectionRoundCount + 1; round++) {
+      const previous = contributions;
+      const thisRound = await Promise.all(plan.team.map(async (m) => {
+        const digest = buildDigest(previous, m.crewId);
+        // Nothing to react to (solo team) → skip rather than have them argue with themselves.
+        if (!digest) return { crewId: m.crewId, model: m.model, text: previous.find(p => p.crewId === m.crewId)?.text ?? '', costUSD: 0 };
+        const r = await call(m.model,
+          buildReflectionSystemPrompt(m.crewId, m.domain, round - 1, reflectionRoundCount),
+          `GOALS:\n${goals}\n\nYOUR PREVIOUS POSITION:\n${previous.find(p => p.crewId === m.crewId)?.text ?? '(none)'}\n\nOTHER OFFICERS:\n${digest}`, 180);
+        ledger.push(r);
+        return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
+      }));
+      reflections.push(thisRound);
+      contributions = thisRound;
+      heartbeatAsync(asyncDir, asyncId, { progress: 40 + round * 8 }, Date.now());
+    }
+
+    const reflection = summarizeReflection(reflections);
     heartbeatAsync(asyncDir, asyncId, { progress: 65 }, Date.now());
 
     // 5. QUARK efficiency report — isolate cost across the crew.
     const perMember: Record<string, number> = {};
     const perProvider: Record<string, number> = {};
+    // Cost must span EVERY round, not just the final one — reflection multiplies officer calls, and
+    // reporting only the last round would understate the true spend by ~the number of rounds.
+    const allRounds = [openingPositions, ...reflections];
     for (const m of plan.team) {
-      const c = contributions.find(x => x.crewId === m.crewId)?.costUSD ?? 0;
+      const c = allRounds.reduce((sum, round) => sum + (round.find(x => x.crewId === m.crewId)?.costUSD ?? 0), 0);
       perMember[m.crewId] = Number(c.toFixed(5));
       perProvider[m.provider] = Number(((perProvider[m.provider] ?? 0) + c).toFixed(5));
     }
@@ -179,7 +221,11 @@ Risk: high
 Flag any disagreement between the three approaches (e.g., "teams diverged on whether to migrate vs patch"). If no variance, say "Consensus across all three approaches."`;
 
     const alternativesResp = await call(TOP_MODEL, alternativesPrompt,
-      `GOALS:\n${goals}\n\nCREW CONTRIBUTIONS:\n${contributions.map(c => `${c.crewId}: ${c.text}`).join('\n')}`, 900);
+      `GOALS:\n${goals}\n\nFINAL CREW POSITIONS (after ${reflection.rounds} reflection round(s)):\n` + contributions.map(c => `${c.crewId}: ${c.text}`).join('\n')
+      + `\n\nREFLECTION OUTCOME: ${reflection.note}`
+      + (reflection.theaterWarning
+          ? '\n\nIMPORTANT: no officer changed position, so their agreement is NOT corroboration. Do not present this plan as crew consensus — state that it is unvalidated by disagreement.'
+          : `\n\nOfficers who moved: ${reflection.positionsChanged.join(', ')}. Weight the positions that survived challenge over those that were merely repeated.`), 900);
     ledger.push(alternativesResp);
     heartbeatAsync(asyncDir, asyncId, { progress: 85 }, Date.now());
 
@@ -222,6 +268,7 @@ Flag any disagreement between the three approaches (e.g., "teams diverged on whe
       efficiency: { perMember, perProvider, totalCostUSD: finalTotalUSD, totalTokens },
       missionPlan: balancedPlan, topModel: TOP_MODEL,
       alternatives, variance,
+      openingPositions, reflections, reflection,
     };
   } catch (err) {
     endAsync(asyncDir, asyncId, 'failed', Date.now());
