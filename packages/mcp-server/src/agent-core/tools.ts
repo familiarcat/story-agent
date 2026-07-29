@@ -14,6 +14,8 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { deleteFileTool } from './delete-file.js';
 import { webFetchTool, webSearchTool } from './web-tools.js';
+import { taskPlanTool } from './task-plan-tool.js';
+import type { TaskPlan } from './task-plan.js';
 
 const pexec = promisify(execFile);
 
@@ -29,6 +31,8 @@ export interface ToolContext {
   clientId: string | null;
   /** Bridge: recall from cloud RAG (injected to avoid a hard dep cycle). */
   ragRecall?: (query: string, limit: number) => Promise<string>;
+  /** Per-run plan state backing the task_plan tool + the loop's completion contract. */
+  taskPlan?: TaskPlan;
   /** Bridge: escalate a hard/ambiguous task to the full crew mission pipeline. */
   crewDeliberate?: (brief: string) => Promise<string>;
 }
@@ -264,7 +268,7 @@ const crew_deliberate: AgentTool = {
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
-  read_file, write_file, edit_file, apply_patch, deleteFileTool, list_dir, search_code, glob_files, run_shell, git_status, git_diff, rag_recall, crew_deliberate, webSearchTool, webFetchTool,
+  read_file, write_file, edit_file, apply_patch, deleteFileTool, list_dir, search_code, glob_files, run_shell, git_status, git_diff, rag_recall, crew_deliberate, webSearchTool, webFetchTool, taskPlanTool,
 ];
 
 export const TOOLS_BY_NAME: Record<string, AgentTool> = Object.fromEntries(AGENT_TOOLS.map(t => [t.name, t]));

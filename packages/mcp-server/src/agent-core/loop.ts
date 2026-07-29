@@ -24,6 +24,7 @@ import { EditSession, MUTATING_TOOLS, verifyTouched } from './edit-session.js';
 import { getSkillTheory } from '@story-agent/shared/skill-theory';
 import '../lib/skill-theories.js'; // register tool theories so the lens can read them
 import { repairToolCallArgs } from './tool-call-repair.js';
+import { TaskPlan, buildIncompleteNudge } from './task-plan.js';
 import { nextEscalationTier } from './escalation-policy.js';
 import { logCrewProgress } from '@story-agent/shared';
 
@@ -57,6 +58,8 @@ export interface RunAgentOptions {
    * tool call, or file creation truncates mid-JSON. Default 4096 (was hard-coded 1500).
    */
   maxTokensPerTurn?: number;
+  /** Max corrective nudges when the run tries to finish with declared plan steps still open. Default 2. */
+  maxCompletionNudges?: number;
   workspace?: string;
   clientId?: string | null;
   /** Optional mission ID for rollback and traceability. */
@@ -121,6 +124,12 @@ export interface AgentRunResult {
   observatory: { perProvider: Record<string, number>; burnRatePerTurnUSD: number; reviewTriggered: boolean };
   /** Governance substrate: rollback pointer for autonomous operation */
   rollback?: { preRunGitRef: string | null; touchedFiles: string[] };
+  /**
+   * Completion contract: did the run FINISH its declared plan, or merely STOP? The pre-existing stall
+   * detector only fires on ZERO tool calls; this catches the far commoner shape — several successful
+   * calls, then a confident summary with declared steps still open.
+   */
+  completion?: { declared: boolean; total: number; completed: number; remaining: string[]; satisfied: boolean; note: string };
 }
 
 /** Layer-4 explainable feedback card — a durable, recallable record of one agent run. */
@@ -226,8 +235,14 @@ function buildEnvContext(workspace: string): string {
 
 const DEFAULT_SYSTEM = [
   'You are the Story Agent — an autonomous coding assistant powered by the OpenRouter crew.',
-  'You operate in the user\'s workspace with real tools: read/write/edit files, search code, run shell, git.',
+  'You operate in the user\'s workspace with real tools: read/write/edit files, search code, run shell, git,',
+  'find files by name (glob_files), and research the web (web_search, web_fetch).',
   'Work in small, verifiable steps. Read before you edit. After changes, run the relevant tests/build to verify.',
+  'For ANY task with more than one step: FIRST call task_plan action "declare" with your intended steps,',
+  'then call task_plan action "complete" as you finish each one. You will not be allowed to finish while',
+  'declared steps remain open — if a step truly cannot be done, call task_plan action "abandon" with a',
+  'specific reason. An honest stop is better than a summary that implies work you did not do.',
+  'A large file cannot fit in one tool call: create it with a short write_file, then extend it with apply_patch.',
   'Use rag_recall for prior crew decisions. For architecture/security/high-stakes choices, call crew_deliberate to escalate.',
   'When the task is complete, stop calling tools and give a concise summary of what you did and why.',
 ].join(' ');
@@ -333,9 +348,14 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   let consecutiveFailures = 0;
   emit({ type: 'model', model });
 
+  const taskPlan = new TaskPlan();
+  let completionNudges = 0;
+  const maxCompletionNudges = opts.maxCompletionNudges ?? 2;
+
   const ctx: ToolContext = {
     workspace, clientId: opts.clientId ?? null,
     ragRecall: opts.ragRecall, crewDeliberate: opts.crewDeliberate,
+    taskPlan,
   };
 
   const client = new OpenAI({ apiKey: OR_KEY, baseURL: OR_URL });
@@ -526,6 +546,22 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
         } else {
           emit({ type: 'verify', ok: true, text: 'edits pass scoped typecheck' });
         }
+      }
+      // COMPLETION CONTRACT. The model is about to finish. If it declared a plan and steps remain
+      // open, this is a STOP, not a finish — the exact silent-partial shape that reports success. Push
+      // the shortfall back (bounded) and let it either continue or abandon explicitly.
+      const assessment = taskPlan.assess();
+      if (!assessment.satisfied && assessment.declared && completionNudges < maxCompletionNudges) {
+        completionNudges++;
+        emit({ type: 'stall', attempt: completionNudges, text: `incomplete plan: ${assessment.note} (nudge ${completionNudges}/${maxCompletionNudges})` });
+        messages.push({ role: 'user', content: buildIncompleteNudge(assessment, taskPlan.render()) });
+        continue;
+      }
+      result.completion = assessment;
+      if (!assessment.satisfied) {
+        // Exhausted the nudges: record it loudly rather than letting the summary stand unchallenged.
+        result.stalled = true;
+        emit({ type: 'verify', ok: false, text: `run STOPPED with work outstanding — ${assessment.note}` });
       }
       result.finalText = msg.content || '';
       emit({ type: 'text', text: result.finalText });
