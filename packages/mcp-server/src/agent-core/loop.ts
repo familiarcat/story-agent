@@ -52,6 +52,11 @@ export interface RunAgentOptions {
    * STORY_AGENT_AUTO_RATIFY_PUBLISH=true). Never applies to deploys, migrations, or releases.
    */
   autoRatifyPublish?: boolean;
+  /**
+   * Max tokens per model turn. Must be large enough to hold a whole file body inside a write_file
+   * tool call, or file creation truncates mid-JSON. Default 4096 (was hard-coded 1500).
+   */
+  maxTokensPerTurn?: number;
   workspace?: string;
   clientId?: string | null;
   /** Optional mission ID for rollback and traceability. */
@@ -291,6 +296,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const tokenBudget = opts.tokenBudget ?? 400_000;
   const autoEscalate = opts.autoEscalate ?? true;
   const autoRatifyPublish = opts.autoRatifyPublish ?? process.env.STORY_AGENT_AUTO_RATIFY_PUBLISH === 'true';
+  const maxTokensPerTurn = Math.max(512, Math.min(16_000, opts.maxTokensPerTurn ?? 4096));
   const reviewThresholdUSD = opts.reviewThresholdUSD;
   const emit = opts.onEvent ?? (() => {});
 
@@ -444,7 +450,11 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       }, workspace).catch(err => console.error('[CrewStream] Failed to log iteration:', err));
     }
 
-    const body: any = { model, messages, tools: openaiTools, tool_choice: 'auto', max_tokens: 1500 };
+    // 1500 was a hard ceiling on how large a FILE the loop could ever create: a write_file call must
+    // carry the whole file body inside the tool-call arguments, so a ~5KB source file simply could not
+    // fit in the completion. It was cut off mid-JSON and surfaced as "arguments must be valid JSON",
+    // which pointed at the wrong problem entirely. Raised, and configurable per dispatch.
+    const body: any = { model, messages, tools: openaiTools, tool_choice: 'auto', max_tokens: maxTokensPerTurn };
 
     let resp: any;
     try {
@@ -466,6 +476,13 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     }
 
     const choice = resp.choices?.[0];
+    // A completion cut off at the token limit yields half-written tool-call JSON. Detect it here so
+    // the model is told the truth ("you were truncated, split the work") instead of receiving a
+    // misleading parse error about its own syntax.
+    const truncated = choice?.finish_reason === 'length';
+    if (truncated) {
+      emit({ type: 'retry', text: `completion hit the ${maxTokensPerTurn}-token turn limit — output was truncated` });
+    }
     const msg = choice?.message;
     if (!msg) {
       // Empty completion — treat as a transient hiccup and retry the turn rather than aborting.
@@ -540,8 +557,12 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       const mutatingBeforeRead = !!(name && MUTATING_TOOLS.has(name) && !sawOrientationStep);
 
       if (!repaired.ok) {
-        // Feed the repair error back as the tool result so the model retries with valid args.
-        output = `error: ${repaired.error}`;
+        // Feed the error back as the tool result so the model retries. When the turn was TRUNCATED the
+        // arguments were never complete, so blaming its JSON syntax sends it into a repair loop it
+        // cannot win — name the real cause and tell it how to get under the limit.
+        output = truncated
+          ? `error: your previous tool call was TRUNCATED at the ${maxTokensPerTurn}-token turn limit, so its arguments were cut off mid-JSON. Your syntax was not the problem — the content was too large for one call. Write the file in SMALLER PIECES: create it with a short write_file, then append each remaining section with apply_patch.`
+          : `error: ${repaired.error}`;
         ok = false;
       } else if (!tool) {
         output = `error: unknown tool ${name}`;

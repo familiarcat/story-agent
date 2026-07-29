@@ -35,8 +35,11 @@ export interface LocalGateResult {
   remediations: string[];
 }
 
-const GREEN_TOOLS = new Set(['read_file', 'list_dir', 'search_code', 'git_status', 'git_diff', 'rag_recall', 'crew_deliberate']);
-const YELLOW_TOOLS = new Set(['write_file', 'edit_file', 'apply_patch', 'run_shell', 'delete_file']);
+const GREEN_TOOLS = new Set(['read_file', 'list_dir', 'search_code', 'glob_files', 'git_status', 'git_diff', 'rag_recall', 'crew_deliberate']);
+// web_search / web_fetch mutate nothing locally, but they EGRESS — so they are bounded-but-not-free
+// rather than green. (Green means "pre-authorized, zero consequence"; sending a request to the
+// internet has consequence.) An unclassified tool would hit the deny-by-default red branch below.
+const YELLOW_TOOLS = new Set(['write_file', 'edit_file', 'apply_patch', 'run_shell', 'delete_file', 'web_search', 'web_fetch']);
 
 // Shell patterns that are irreversibly destructive at scale → red unless remediated away.
 const RED_SHELL = [

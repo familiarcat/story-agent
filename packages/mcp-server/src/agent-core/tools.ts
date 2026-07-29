@@ -13,6 +13,7 @@ import { promisify } from 'util';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { deleteFileTool } from './delete-file.js';
+import { webFetchTool, webSearchTool } from './web-tools.js';
 
 const pexec = promisify(execFile);
 
@@ -160,6 +161,28 @@ const search_code: AgentTool = {
   },
 };
 
+const glob_files: AgentTool = {
+  name: 'glob_files',
+  description: 'Find files in the workspace by NAME pattern (glob), e.g. "**/*.test.ts" or "packages/*/package.json". Returns matching paths, one per line. Use search_code to search file CONTENTS instead.',
+  schema: z.object({
+    pattern: z.string().describe('Glob pattern to match file paths, e.g. "**/*.ts".'),
+    limit: z.number().optional().describe('Max paths to return (default 200).'),
+  }),
+  handler: async (a, ctx) => {
+    // Reuses ripgrep's file walker so .gitignore is honoured and node_modules is skipped — the same
+    // engine search_code uses, rather than a second traversal implementation with different rules.
+    const limit = Math.max(1, Math.min(1000, Number(a.limit ?? 200)));
+    try {
+      const { stdout } = await pexec('rg', ['--files', '--glob', String(a.pattern), ctx.workspace], { maxBuffer: 8 * 1024 * 1024 });
+      const lines = stdout.split('\n').filter(Boolean).slice(0, limit);
+      return clip(lines.length ? lines.join('\n') : '(no files matched)');
+    } catch (e: any) {
+      if (e?.code === 1) return '(no files matched)';
+      throw e;
+    }
+  },
+};
+
 /**
  * Run a command through the user's OWN shell so their real environment is present —
  * ~/.zshrc PATH (Homebrew /opt/homebrew/bin, /usr/local/bin), aliases, and env vars.
@@ -241,7 +264,7 @@ const crew_deliberate: AgentTool = {
 };
 
 export const AGENT_TOOLS: AgentTool[] = [
-  read_file, write_file, edit_file, apply_patch, deleteFileTool, list_dir, search_code, run_shell, git_status, git_diff, rag_recall, crew_deliberate,
+  read_file, write_file, edit_file, apply_patch, deleteFileTool, list_dir, search_code, glob_files, run_shell, git_status, git_diff, rag_recall, crew_deliberate, webSearchTool, webFetchTool,
 ];
 
 export const TOOLS_BY_NAME: Record<string, AgentTool> = Object.fromEntries(AGENT_TOOLS.map(t => [t.name, t]));

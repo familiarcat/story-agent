@@ -18,7 +18,10 @@ export type CredentialOperation =
   | 'figma:tokens-sync'
   | 'figma:read'
   | 'mcp:auth'
-  | 'llm:call';
+  | 'llm:call'
+  /** Outbound web research (agent-core web_search). Distinct from llm:call so a search key is never
+   *  served to a model call and vice versa — least privilege per operation. */
+  | 'web:search';
 
 export interface CredentialSpec {
   /** Environment variable name (loaded from ~/.zshrc / ~/.alexai-secrets). */
@@ -61,6 +64,7 @@ export const CREW_CREDENTIAL_REGISTRY: Record<string, CredentialSpec> = {
   GITHUB_TOKEN: { name: 'GITHUB_TOKEN', description: 'GitHub PAT for branch/PR operations', operations: ['github:push'], required: false },
   TOKENS_STUDIO_GITHUB_PAT: { name: 'TOKENS_STUDIO_GITHUB_PAT', description: 'Fine-grained GitHub PAT for Tokens Studio Figma↔repo sync (this repo only; Contents R/W + Pull requests R/W). Centralized in ~/.alexai-secrets, brokered by WorfGate.', operations: ['figma:tokens-sync'], required: false },
   FIGMA_API_KEY: { name: 'FIGMA_API_KEY', description: 'Figma personal access token (READ-ONLY scope: File content read) for the GLips figma-context MCP — the cost-optimized free Figma path (no paid Dev seat). Egress = Figma API only. Centralized in ~/.alexai-secrets (NOT ~/.zshrc — non-interactive crew lane must resolve it), brokered by WorfGate, value never logged.', operations: ['figma:read'], required: false },
+  BING_SEARCH_V7_SUBSCRIPTION_KEY: { name: 'BING_SEARCH_V7_SUBSCRIPTION_KEY', description: 'Bing Web Search v7 key for agent-core web_search — the loop\'s only search egress. Scoped to web:search ONLY so it can never be served to an llm:call. Optional: without it web_search returns an explicit unavailable message and web_fetch still works with a known URL.', operations: ['web:search'], required: false },
 };
 
 export interface CredentialAccessResult {
