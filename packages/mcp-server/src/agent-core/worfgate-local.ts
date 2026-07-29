@@ -35,7 +35,7 @@ export interface LocalGateResult {
   remediations: string[];
 }
 
-const GREEN_TOOLS = new Set(['read_file', 'list_dir', 'search_code', 'glob_files', 'git_status', 'git_diff', 'rag_recall', 'crew_deliberate']);
+const GREEN_TOOLS = new Set(['read_file', 'list_dir', 'search_code', 'glob_files', 'git_status', 'git_diff', 'rag_recall', 'crew_deliberate', 'task_plan']);
 // web_search / web_fetch mutate nothing locally, but they EGRESS — so they are bounded-but-not-free
 // rather than green. (Green means "pre-authorized, zero consequence"; sending a request to the
 // internet has consequence.) An unclassified tool would hit the deny-by-default red branch below.
