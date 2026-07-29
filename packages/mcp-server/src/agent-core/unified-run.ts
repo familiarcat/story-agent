@@ -26,6 +26,7 @@ export interface UnifiedRunRecord {
   };
   totalCostUSD: number;
   timestamp: string;
+  rollback?: { preRunGitRef: string | null; touchedFiles: string[]; parentMissionId: string | null };
 }
 
 /** PURE: assemble the linked record from a mission plan + an agent run. Never throws. */
@@ -36,6 +37,7 @@ export function buildUnifiedRunRecord(args: {
   plan: { missionPlan: string; topModel: string; costUSD: number };
   run: { iterations: number; toolCalls: unknown[]; escalated: boolean; stalled: boolean; totalCostUSD: number; finalText: string };
   timestamp: string;
+  rollback?: { preRunGitRef: string | null; touchedFiles: string[]; parentMissionId: string | null };
 }): UnifiedRunRecord {
   const planCostUSD = Number(args.plan?.costUSD ?? 0) || 0;
   const runCostUSD = Number(args.run?.totalCostUSD ?? 0) || 0;
@@ -56,6 +58,7 @@ export function buildUnifiedRunRecord(args: {
     },
     totalCostUSD: Number((planCostUSD + runCostUSD).toFixed(6)),
     timestamp: args.timestamp,
+    rollback: args.rollback,
   };
 }
 

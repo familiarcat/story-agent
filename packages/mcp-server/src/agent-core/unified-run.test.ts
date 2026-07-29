@@ -31,4 +31,15 @@ describe('buildUnifiedRunRecord', () => {
     const stalled = { ...base, run: { ...base.run, stalled: true } };
     expect(buildUnifiedRunRecord(stalled).outcome.stalled).toBe(true);
   });
+
+  // Autonomy substrate: the rollback pointer is what makes unsupervised runs re-moldable —
+  // the pre-run git ref + touched files + parent mission must survive into the stored record.
+  it('carries the rollback pointer through verbatim', () => {
+    const rollback = { preRunGitRef: 'abc1234', touchedFiles: ['/ws/a.ts', '/ws/b.ts'], parentMissionId: 'm0' };
+    expect(buildUnifiedRunRecord({ ...base, rollback }).rollback).toEqual(rollback);
+  });
+
+  it('leaves rollback undefined when no pointer was captured', () => {
+    expect(buildUnifiedRunRecord(base).rollback).toBeUndefined();
+  });
 });
