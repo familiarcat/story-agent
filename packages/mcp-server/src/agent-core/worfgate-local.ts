@@ -54,17 +54,34 @@ const RED_SHELL = [
  * loop's own rollback machinery does not cover them. Deliberately NARROW: pushing a feature branch,
  * opening a PR, building, and testing all remain yellow so ordinary crew work is unaffected.
  */
-const PUBLISH_SHELL: Array<{ pattern: RegExp; what: string }> = [
-  { pattern: /\bgh\s+pr\s+merge\b/, what: 'merge a pull request' },
-  { pattern: /\bgh\s+workflow\s+run\b[^\n]*\bdeploy\b/, what: 'trigger a deploy workflow' },
-  { pattern: /\bgh\s+release\s+(create|delete)\b/, what: 'publish or delete a release' },
+/**
+ * `pr-merge` is the ONLY publish kind eligible for machine ratification (CI-green ⇒ merge, per the
+ * operator's autonomy envelope). Everything else is `human-only`: a deploy, a migration, or a
+ * package publish has no equivalent machine-checkable precondition, so a person ratifies it.
+ */
+export type PublishKind = 'pr-merge' | 'human-only';
+
+const PUBLISH_SHELL: Array<{ pattern: RegExp; what: string; kind: PublishKind }> = [
+  { pattern: /\bgh\s+pr\s+merge\b/, what: 'merge a pull request', kind: 'pr-merge' },
+  { pattern: /\bgh\s+workflow\s+run\b[^\n]*\bdeploy\b/, what: 'trigger a deploy workflow', kind: 'human-only' },
+  { pattern: /\bgh\s+release\s+(create|delete)\b/, what: 'publish or delete a release', kind: 'human-only' },
   // `git push` ONLY when it targets a protected branch (main/master/production).
-  { pattern: /\bgit\s+push\b[^\n]*\b(main|master|production)\b/, what: 'push directly to a protected branch' },
-  { pattern: /\bterraform\s+(apply|destroy)\b/, what: 'apply infrastructure changes' },
-  { pattern: /\baws\s+ecs\s+update-service\b/, what: 'update a running ECS service' },
-  { pattern: /\bsupabase\s+db\s+push\b/, what: 'apply database migrations' },
-  { pattern: /\bnpm\s+publish\b/, what: 'publish a package' },
+  { pattern: /\bgit\s+push\b[^\n]*\b(main|master|production)\b/, what: 'push directly to a protected branch', kind: 'human-only' },
+  { pattern: /\bterraform\s+(apply|destroy)\b/, what: 'apply infrastructure changes', kind: 'human-only' },
+  { pattern: /\baws\s+ecs\s+update-service\b/, what: 'update a running ECS service', kind: 'human-only' },
+  { pattern: /\bsupabase\s+db\s+push\b/, what: 'apply database migrations', kind: 'human-only' },
+  { pattern: /\bnpm\s+publish\b/, what: 'publish a package', kind: 'human-only' },
 ];
+
+/**
+ * Classify a shell command as a publish/deploy operation, or null if it is ordinary work.
+ * Exported so the ratification path (publish-precondition.ts) shares ONE source of truth with the
+ * gate — a publish op the gate blocks and the ratifier doesn't recognise would be a silent hole.
+ */
+export function classifyPublishShell(command: string): { what: string; kind: PublishKind } | null {
+  const found = PUBLISH_SHELL.find(({ pattern }) => pattern.test(command));
+  return found ? { what: found.what, kind: found.kind } : null;
+}
 
 // Sensitive paths/strings the gate refuses to read or exfiltrate even in green/yellow.
 const SECRET_HINTS = [/\.alexai-secrets/, /\.ssh\//, /id_rsa/, /\.aws\/credentials/, /\.env(\.|$)/, /api-keys\.env/, /\.zshrc/, /\.zshenv/];
