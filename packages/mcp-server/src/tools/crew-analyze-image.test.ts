@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('@story-agent/shared', async (orig) => ({ ...(await (orig() as any)), runVisionAnalysis: vi.fn(async () => ({ analysis: 'EXTRACTED_TEXT_XYZ', model: 'openai/gpt-4o-mini' })) }));
+// The mock must name the function the implementation ACTUALLY calls. It mocked `runVisionAnalysis`
+// while crew-analyze-image.ts calls `runMultimodalAnalysis`, so the real function ran and made a live
+// network request from the unit suite — failing with "vision HTTP 400" and making the suite depend on
+// a provider and an API key. Both names are stubbed now so a future rename fails loudly rather than
+// silently escaping to the network.
+vi.mock('@story-agent/shared', async (orig) => ({
+  ...(await (orig() as any)),
+  runMultimodalAnalysis: vi.fn(async () => ({ analysis: 'EXTRACTED_TEXT_XYZ', model: 'openai/gpt-4o-mini' })),
+  runVisionAnalysis: vi.fn(async () => ({ analysis: 'EXTRACTED_TEXT_XYZ', model: 'openai/gpt-4o-mini' })),
+}));
 let arena: string | undefined;
 vi.mock('../lib/crew-mission-pipeline.js', () => ({ runMissionPipeline: vi.fn(async (a: string) => { arena = a; return { missionPlan: 'CREW_PLAN', efficiency: { totalCostUSD: 0.002 }, topModel: 'deepseek' }; }) }));
 

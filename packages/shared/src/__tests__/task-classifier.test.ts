@@ -8,9 +8,20 @@ import { classifyTask, inferTaskType, type TaskType } from '../task-classifier.j
 describe('Task Classifier', () => {
   describe('classifyTask', () => {
     it('should classify bug fixes as autonomous', () => {
-      const result = classifyTask('Fix authentication bug in login flow', 'bug_fix');
+      // NOTE: the brief must not contain an escalation keyword. The original fixture said
+      // "Fix authentication bug…", which correctly escalates — `authentication` is in
+      // ESCALATION_KEYWORDS — so the test was asserting that an auth-touching change may run
+      // unsupervised. The classifier was right and the assertion was wrong.
+      const result = classifyTask('Fix off-by-one bug in the pagination helper', 'bug_fix');
       expect(result.isAutonomous).toBe(true);
       expect(result.riskLevel).toBe('low');
+    });
+
+    it('escalates a bug fix that touches authentication (keyword beats task type)', () => {
+      const result = classifyTask('Fix authentication bug in login flow', 'bug_fix');
+      expect(result.isAutonomous).toBe(false);
+      expect(result.riskLevel).toBe('high');
+      expect(result.reason).toContain('authentication');
     });
 
     it('should classify tests as autonomous', () => {
@@ -56,12 +67,27 @@ describe('Task Classifier', () => {
     });
 
     it('should handle high complexity refactors with approval', () => {
+      // To exercise the COMPLEXITY threshold (phase 4) the brief must avoid escalation keywords,
+      // which are checked first (phase 2). The original fixture said "authentication", so it
+      // escalated on the keyword and never reached the complexity branch — the reason therefore
+      // said "Found escalation keywords", not "complexity", which is what the assertion wanted.
+      const result = classifyTask(
+        'Refactor complex pagination system across multiple components with nested if else logic branches, conditional flows, and recursive helpers that need consolidation',
+        'refactor'
+      );
+      expect(result.isAutonomous).toBe(false);
+      expect(result.reason).toContain('complexity');
+      expect(result.escalationThreshold).toBe('complexity_threshold');
+    });
+
+    it('escalates on a security keyword BEFORE considering complexity', () => {
       const result = classifyTask(
         'Refactor complex authentication system with multiple if else logic branches and conditional flows',
         'refactor'
       );
       expect(result.isAutonomous).toBe(false);
-      expect(result.reason).toContain('complexity');
+      expect(result.escalationThreshold).toBe('security_or_scope_concern');
+      expect(result.reason).toContain('authentication');
     });
 
     it('should boost confidence with safe keywords', () => {

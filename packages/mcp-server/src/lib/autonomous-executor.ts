@@ -148,6 +148,50 @@ export async function executeAutonomousTask(
 
     const durationMs = Date.now() - executionStartTime;
 
+    // An executor that THREW is a crash, not an ordinary unsuccessful result. Previously it was
+    // folded into `{ success: false }` and fell through to the success-logging path, returning
+    // `escalation: undefined` — so a crashed task reported as a plain failure that nothing surfaced.
+    // That is silent failure: the exact class of defect this system keeps getting bitten by. An
+    // exception now escalates as critical, so a crash is always visible to the caller.
+    if (executionError) {
+      await storeAutonomousTaskAudit({
+        taskId: input.taskId,
+        crewId: input.crewId,
+        brief: input.brief,
+        classification: 'autonomous',
+        reason: `Executor threw: ${executionError}`,
+        status: 'blocked',
+        outcome: executionError,
+        durationSeconds: durationMs / 1000,
+      });
+
+      await storeCrewExecutionOutcome({
+        crewId: input.crewId,
+        attemptId,
+        taskDescription: input.brief,
+        status: 'failed',
+        durationSeconds: durationMs / 1000,
+        confidenceLevel: 'low',
+        error: executionError,
+      });
+
+      return {
+        taskId: input.taskId,
+        executed: false,
+        reason: `Executor threw: ${executionError}`,
+        classification,
+        escalation: {
+          reason: `Executor threw: ${executionError}`,
+          severity: 'critical',
+        },
+        outcome: {
+          success: false,
+          error: executionError,
+          durationSeconds: durationMs / 1000,
+        },
+      };
+    }
+
     // ─── PHASE 4: POST-FLIGHT REVIEW ───────────────────────────────────
 
     // Check for execution concerns
