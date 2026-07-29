@@ -176,7 +176,19 @@ function providerOf(model: string): string {
 const LENS_CORE = new Set(['read_file', 'list_dir', 'search_code', 'crew_deliberate']);
 const ORIENTING_TOOLS = new Set(['read_file', 'list_dir', 'search_code', 'rag_recall', 'crew_deliberate', 'git_status', 'git_diff']);
 // Read-only tools for toolPolicy="read-only"
-const READ_ONLY_TOOLS = new Set(['read_file','list_dir','search_code','git_status','git_diff','rag_recall','crew_deliberate']);
+/**
+ * Tools available in read-only / plan mode — the policy the CHAT lane runs under.
+ *
+ * This set had gone stale: glob_files, task_plan, web_search and web_fetch were all absent, so chat
+ * could not find a file by name, plan its work, or look anything up on the web even though the loop
+ * had gained those capabilities. None of them mutates the workspace, so all four belong here — a
+ * read-only lane should still be able to INVESTIGATE. Anything that writes stays out by construction.
+ */
+export const READ_ONLY_TOOLS = new Set([
+  'read_file', 'list_dir', 'search_code', 'glob_files',
+  'git_status', 'git_diff', 'rag_recall', 'crew_deliberate',
+  'task_plan', 'web_search', 'web_fetch',
+]);
 // Intent → tool affinities (problem topology). The lens reads the request + each tool's 5W1H theory.
 const LENS_INTENTS: Array<{ re: RegExp; tools: string[] }> = [
   { re: /\b(write|create|add|implement|scaffold|generate|new file)\b/, tools: ['write_file', 'edit_file', 'apply_patch'] },
