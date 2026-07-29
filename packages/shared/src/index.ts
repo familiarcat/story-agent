@@ -370,6 +370,13 @@ export interface ObservationDebateEntry {
   evidence: string[];
 }
 
+/**
+ * How a lounge transcript was produced. `template` means it is a canned agenda built by a pure
+ * function with ZERO model calls — it must never be recalled as if it were crew reasoning.
+ * Absent means legacy/unknown provenance (written before this field existed).
+ */
+export type DeliberationProvenance = 'model-deliberation' | 'template';
+
 export interface ObservationDebateResult {
   rounds: Array<{
     title: string;
@@ -379,6 +386,8 @@ export interface ObservationDebateResult {
   unresolvedRisks: string[];
   finalDecision: 'approved' | 'revise' | 'blocked';
   actionItems: string[];
+  /** Provenance of this transcript. Absent on legacy records written before provenance existed. */
+  provenance?: DeliberationProvenance;
 }
 
 export interface ObservationMemoryRecord {

@@ -3,6 +3,7 @@ import { getStory } from '@/lib/agile';
 import { buildCrewMissionPlan, runObservationLoungeDebate } from '@/lib/crew';
 import { getRelevantObservationMemories, storeObservationMemory } from '@/lib/db';
 import type { AgileStory, CrewMissionPlan, ObservationDebateResult, ObservationMemoryRecord } from '@story-agent/shared';
+import { TEMPLATE_TAG } from '@story-agent/shared/lounge-provenance';
 
 export const dynamic = 'force-dynamic';
 
@@ -154,6 +155,9 @@ export async function prepareObservationLoungePayload(input: {
     reviewers,
   });
   const debate = runObservationLoungeDebate(missionPlan);
+  // `debate` is a TEMPLATE (a pure function, zero model calls) — see runObservationLoungeDebate.
+  // Tagged TEMPLATE_TAG so recall can exclude it: a canned agenda must never be recalled as if it
+  // were crew reasoning. For real deliberation, use runMissionPipeline.
   await storeObservationMemory({
     storyId: story.referenceNum,
     clientId,
@@ -161,7 +165,7 @@ export async function prepareObservationLoungePayload(input: {
     transcript: debate,
     missionPlan,
     missionReference: story.referenceNum,
-    tags: ['observation-lounge', executionMode, 'ui-debate', clientId ?? 'global'],
+    tags: ['observation-lounge', TEMPLATE_TAG, executionMode, 'ui-debate', clientId ?? 'global'],
   });
 
   return {

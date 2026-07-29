@@ -8,7 +8,14 @@
  *   green  — pre-authorized, zero-latency (reads, search, git status/diff/log). Proceed.
  *   yellow — mutating but bounded (file writes/edits, safe shell). Auto-remediate args, proceed.
  *   red    — high blast radius (rm -rf, writes/shell outside the workspace, secret access,
- *            force-push, network exfil). Remediate if possible; otherwise escalate.
+ *            force-push, network exfil, PUBLISH/DEPLOY ops). Remediate if possible; otherwise escalate.
+ *
+ * PUBLISH ops (merging to a protected branch, triggering a production deploy, applying
+ * infrastructure) were previously UNCLASSIFIED — they fell through to the generic yellow
+ * "bounded shell execution" branch and ran autonomously. That was a hole, not a feature: shipping to
+ * production has a strictly larger blast radius than the `rm -rf` we already gate, and the only
+ * thing incidentally stopping it was whichever orchestrator happened to be driving. They are now
+ * red/escalate — a human ratifies the publish, exactly as Worf's floor requires.
  *
  * Remediation modifies the operation to a safe form (clamps paths into the workspace, strips
  * dangerous flags) and lets it continue — only genuinely unrecoverable actions escalate.
@@ -39,6 +46,24 @@ const RED_SHELL = [
   /\bmkfs\b/, /\bdd\s+if=/, /:\(\)\s*\{.*\}\s*;/, // fork bomb
   /\b(curl|wget)\b[^|]*\|\s*(sh|bash|zsh)\b/, // pipe-to-shell remote exec
   /\bchmod\s+-R\s+777\s+\//,
+];
+
+/**
+ * PUBLISH/DEPLOY patterns — irreversible from the outside world's point of view. A merge to a
+ * protected branch or a production deploy cannot be undone by restoring a file snapshot, so the
+ * loop's own rollback machinery does not cover them. Deliberately NARROW: pushing a feature branch,
+ * opening a PR, building, and testing all remain yellow so ordinary crew work is unaffected.
+ */
+const PUBLISH_SHELL: Array<{ pattern: RegExp; what: string }> = [
+  { pattern: /\bgh\s+pr\s+merge\b/, what: 'merge a pull request' },
+  { pattern: /\bgh\s+workflow\s+run\b[^\n]*\bdeploy\b/, what: 'trigger a deploy workflow' },
+  { pattern: /\bgh\s+release\s+(create|delete)\b/, what: 'publish or delete a release' },
+  // `git push` ONLY when it targets a protected branch (main/master/production).
+  { pattern: /\bgit\s+push\b[^\n]*\b(main|master|production)\b/, what: 'push directly to a protected branch' },
+  { pattern: /\bterraform\s+(apply|destroy)\b/, what: 'apply infrastructure changes' },
+  { pattern: /\baws\s+ecs\s+update-service\b/, what: 'update a running ECS service' },
+  { pattern: /\bsupabase\s+db\s+push\b/, what: 'apply database migrations' },
+  { pattern: /\bnpm\s+publish\b/, what: 'publish a package' },
 ];
 
 // Sensitive paths/strings the gate refuses to read or exfiltrate even in green/yellow.
@@ -114,7 +139,17 @@ export function gateLocalOp(
       // Irreversible — cannot be safely remediated; escalate.
       return { tier: 'red', args, proceed: false, reasons, remediations };
     }
-    // Strip a force-push flag if it slipped through softer forms, then proceed.
+    // Publish/deploy: cannot be remediated into a safe form (a "gentler merge" is not a thing) and
+    // is not covered by the loop's file-snapshot rollback. Escalate for human ratification.
+    const publish = PUBLISH_SHELL.find(({ pattern }) => pattern.test(cmd));
+    if (publish) {
+      reasons.push(`publish/deploy operation (${publish.what}) requires human ratification — not autonomously executable`);
+      return { tier: 'red', args, proceed: false, reasons, remediations };
+    }
+    // DEAD BRANCH — kept only to document intent. RED_SHELL above already matches
+    // `git push .*--force` (and, because the trailing \b lands on the hyphen, `--force-with-lease`
+    // too), so any force-push returns red before reaching here. Blocking is the safer behaviour, so
+    // this is left as-is rather than relaxed; see worfgate-local.test.ts for the pinned reality.
     if (/\bgit\s+push\b/.test(cmd) && /(--force-with-lease)/.test(cmd) === false && /(--force|-f)\b/.test(cmd)) {
       args.command = cmd.replace(/\s--force\b/g, ' --force-with-lease').replace(/\s-f\b/g, ' --force-with-lease');
       remediations.push('downgraded git push --force → --force-with-lease');
