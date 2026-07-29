@@ -217,6 +217,7 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
         ...(body.maxNudges != null ? { maxNudges: Number(body.maxNudges) } : {}),
         ...(body.tokenBudget != null ? { tokenBudget: Number(body.tokenBudget) } : {}),
         ...(body.maxTokensPerTurn != null ? { maxTokensPerTurn: Number(body.maxTokensPerTurn) } : {}),
+        ...(body.maxCompletionNudges != null ? { maxCompletionNudges: Number(body.maxCompletionNudges) } : {}),
         ...(body.autoEscalate != null ? { autoEscalate: body.autoEscalate === true } : {}),
         ...(body.crewId ? { crewId: String(body.crewId) } : {}),
         ...(body.taskId ? { taskId: String(body.taskId) } : {}),
