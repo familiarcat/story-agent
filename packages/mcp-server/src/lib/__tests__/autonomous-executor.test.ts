@@ -44,11 +44,14 @@ describe('Autonomous Executor', () => {
       expect(result.escalation).toBeDefined();
     });
 
+    // The brief must be free of escalation keywords, or classification escalates first and the
+    // devil's-advocate branch is never reached. The original fixture said "Fix authentication bug",
+    // so this test was really exercising keyword escalation while asserting a challenge reason.
     it('should escalate on devil\'s advocate challenge', async () => {
       const result = await executeAutonomousTask({
         taskId: 'test-3',
         crewId: 'worf',
-        brief: 'Fix authentication bug',
+        brief: 'Fix small rendering bug in the header',
         taskType: 'bug_fix',
         devilsAdvocateChallenge: 'This could expose a security vulnerability if not done carefully',
         executor: async () => ({
@@ -95,21 +98,29 @@ describe('Autonomous Executor', () => {
       expect(result.escalation?.severity).toBe('critical');
     });
 
-    it('should record execution outcomes with confidence levels', async () => {
+    // durationSeconds is MEASURED wall-clock time around the executor, not the `durationMs` the
+    // executor reports about itself — a self-reported duration is exactly the kind of claim this
+    // system should not trust. The old fixture returned durationMs: 500 from a stub that resolved
+    // instantly and asserted 0.5s, so it was asserting the untrustworthy value.
+    it('should record execution outcomes with measured wall-clock duration', async () => {
       const result = await executeAutonomousTask({
         taskId: 'test-6',
         crewId: 'troi',
         brief: 'Update documentation',
         taskType: 'documentation',
-        executor: async () => ({
-          success: true,
-          output: 'Documentation updated',
-          filesChanged: ['README.md'],
-          durationMs: 500,
-        }),
+        executor: async () => {
+          await new Promise((r) => setTimeout(r, 120));
+          return {
+            success: true,
+            output: 'Documentation updated',
+            filesChanged: ['README.md'],
+            durationMs: 999_999, // deliberately absurd: must be ignored in favour of measured time
+          };
+        },
       });
 
-      expect(result.outcome?.durationSeconds).toBeCloseTo(0.5, 1);
+      expect(result.outcome?.durationSeconds).toBeGreaterThan(0.05);
+      expect(result.outcome?.durationSeconds).toBeLessThan(5);
       expect(result.outcome?.filesChanged).toEqual(['README.md']);
     });
   });

@@ -1,0 +1,58 @@
+name: Unit Tests
+
+# Why this exists: before it, NO workflow ran the shared or mcp-server unit suites on a pull request.
+# The only PR-triggered workflows (ui-tests, design-tokens, spec-lint) are all path-filtered to
+# packages/ui, packages/shared or spec files, and audit-check/integration-tests run on push only. So a
+# change touching ONLY packages/mcp-server — the agent-core loop, the WorfGate governor, the crew
+# pipeline — landed with zero test gating, and "CI green == ratified" was vacuous for that package.
+#
+# Deliberately NOT path-filtered: a gate that can be skipped by editing the right files is not a gate.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit Tests (shared + mcp-server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        # Version comes from package.json "packageManager" (single source of truth) — do NOT also pin
+        # "version:" here, or pnpm/action-setup errors "Multiple versions of pnpm specified".
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # shared must build first: mcp-server imports it through subpath exports that resolve to dist/.
+      - name: Build shared
+        run: pnpm --filter @story-agent/shared run build
+
+      - name: Build mcp-server
+        run: pnpm --filter @story-agent/mcp-server run build
+
+      # No secrets are provided on purpose. These suites must not reach the network or need an API
+      # key; a test that does belongs in integration-tests. (One did — crew-analyze-image mocked a
+      # renamed function and silently made a live vision call. It is mocked correctly now.)
+      - name: Unit tests — shared
+        run: pnpm --filter @story-agent/shared run test:unit
+
+      - name: Unit tests — mcp-server
+        run: pnpm --filter @story-agent/mcp-server run test:unit
