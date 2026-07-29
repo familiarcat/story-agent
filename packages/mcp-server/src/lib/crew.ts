@@ -8,6 +8,7 @@ import type {
   ObservationDebateEntry,
   ObservationDebateResult,
 } from '@story-agent/shared';
+import { TEMPLATE_MARKER } from '@story-agent/shared/lounge-provenance';
 
 // Sovereign Factory Crew - from ai-enterprise-os project
 // 11-member crew with Star Trek personas and specific roles
@@ -330,12 +331,21 @@ function debateEntry(
   return { speakerId, position, statement, evidence };
 }
 
+/**
+ * TEMPLATE — this is NOT a deliberation.
+ *
+ * A synchronous, hardcoded agenda with ZERO model calls: every statement below is a string literal,
+ * not a computed position. It exists to give the UI a consistent checklist shape. It returns
+ * `provenance: 'template'` so a stored record can never be mistaken for crew reasoning on recall.
+ *
+ * For ACTUAL deliberation use runMissionPipeline, which calls one OpenRouter model per officer.
+ */
 export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDebateResult {
   const risks = Array.from(new Set(plan.findings.flatMap(f => f.risks)));
 
   const rounds: ObservationDebateResult['rounds'] = [
     {
-      title: 'Round 1 - Mission framing',
+      title: 'Checklist 1 - Mission framing',
       entries: [
         debateEntry(
           'captain',
@@ -352,7 +362,7 @@ export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDe
       ],
     },
     {
-      title: 'Round 2 - Execution challenge',
+      title: 'Checklist 2 - Execution review',
       entries: [
         debateEntry(
           'engineering',
@@ -375,28 +385,29 @@ export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDe
       ],
     },
     {
-      title: 'Round 3 - Consensus and release posture',
+      title: 'Checklist 3 - Release posture',
       entries: [
         debateEntry(
           'counselor',
           'support',
-          'Consensus achieved: proceed with autonomous execution under explicit safeguards.',
+          'Checklist item: confirm consensus with the crew before autonomous execution.',
           ['All crew findings include actionable controls']
         ),
         debateEntry(
           'captain',
           'support',
-          'Final call: approved with mandatory risk review before PR merge.',
-          ['Observation Lounge consensus complete']
+          'Checklist item: captain must approve, with risk review, before PR merge.',
+          ['Template agenda — consensus not yet recorded']
         ),
       ],
     },
   ];
 
   return {
+    provenance: 'template',
     rounds,
     consensusSummary:
-      'Crew consensus supports execution with phased discovery-first delivery, mandatory validation gates, and final captain approval before merge.',
+      `${TEMPLATE_MARKER} (no model deliberation performed): standard discovery-first checklist — phased delivery, validation gates, and captain approval before merge. Not a record of crew reasoning.`,
     unresolvedRisks: risks,
     finalDecision: risks.length > 3 ? 'revise' : 'approved',
     actionItems: [

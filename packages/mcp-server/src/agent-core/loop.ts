@@ -15,6 +15,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { buildUnifiedRunRecord, storeUnifiedRun } from './unified-run.js';
+import { evaluatePublishPrecondition } from './publish-precondition.js';
 import { quarkSelectModel, quarkCheapestAnthropic, MODEL_POOL } from '../lib/crew-team-assembly.js';
 import { resolveWorfGateCredential } from '@story-agent/shared/worfgate-credentials';
 import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
@@ -45,6 +46,12 @@ export interface AgentEvent {
 
 export interface RunAgentOptions {
   storeRun?: boolean;
+  /**
+   * Allow a red-gated `gh pr merge` to proceed WITHOUT human approval when CI is genuinely green.
+   * Off by default — publish stays human-ratified unless the operator opts in (or sets
+   * STORY_AGENT_AUTO_RATIFY_PUBLISH=true). Never applies to deploys, migrations, or releases.
+   */
+  autoRatifyPublish?: boolean;
   workspace?: string;
   clientId?: string | null;
   /** Optional mission ID for rollback and traceability. */
@@ -283,6 +290,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   let nudges = 0; // self-healing: corrective nudges spent when the model stalls (text, 0 tools)
   const tokenBudget = opts.tokenBudget ?? 400_000;
   const autoEscalate = opts.autoEscalate ?? true;
+  const autoRatifyPublish = opts.autoRatifyPublish ?? process.env.STORY_AGENT_AUTO_RATIFY_PUBLISH === 'true';
   const reviewThresholdUSD = opts.reviewThresholdUSD;
   const emit = opts.onEvent ?? (() => {});
 
@@ -565,7 +573,24 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
           denied = decision === 'deny';
         }
 
-        if (!gate.proceed) {
+        // CI-green ratification: the gate blocks publish ops red because it is pure/synchronous and
+        // cannot ask GitHub anything. For a PR merge there IS a machine-checkable precondition — all
+        // checks green — so consult it here and let a genuinely-green merge through. Fails closed on
+        // every uncertainty, and only ever applies to `gh pr merge`. Opt-in.
+        let ratified = false;
+        if (!gate.proceed && name === 'run_shell' && autoRatifyPublish) {
+          const r = await evaluatePublishPrecondition({ command: String(gate.args.command ?? ''), workspace });
+          if (r.ratified) {
+            ratified = true;
+            remediations = [...remediations, `ratified without human approval: ${r.reason}`];
+            emit({ type: 'gate', tool: name, tier, remediations, needsApproval: false });
+            emit({ type: 'verify', ok: true, text: `publish ratified — ${r.reason}` });
+          } else {
+            emit({ type: 'escalation', tool: name, text: `publish NOT ratified — ${r.reason}` });
+          }
+        }
+
+        if (!gate.proceed && !ratified) {
           // Red + not remediable → escalate to the crew rather than silently dropping.
           output = `WorfGate RED — operation withheld pending crew review: ${gate.reasons.join('; ')}`;
           ok = false;

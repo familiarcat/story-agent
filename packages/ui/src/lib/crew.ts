@@ -13,6 +13,7 @@ import type {
   ObservationDebateResult,
   ObservationMemoryRecord,
 } from '@story-agent/shared';
+import { TEMPLATE_MARKER } from '@story-agent/shared/lounge-provenance';
 
 export function buildCrewMissionPlan(input: {
   story: AgileStory;
@@ -261,11 +262,21 @@ export function buildCrewMissionPlan(input: {
   };
 }
 
+/**
+ * TEMPLATE — this is NOT a deliberation.
+ *
+ * A synchronous, hardcoded agenda with ZERO model calls: every statement below is a string literal,
+ * not a computed position (note `finalDecision: 'approved'` is unconditional). It exists to give the
+ * UI a consistent checklist shape. It returns `provenance: 'template'` and its stored record is
+ * tagged `template-transcript` so it can never be recalled as crew reasoning.
+ *
+ * For ACTUAL deliberation use runMissionPipeline, which calls one OpenRouter model per officer.
+ */
 export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDebateResult {
   return {
     rounds: [
       {
-        title: "Round 1 - Captain's Mission Brief",
+        title: "Checklist 1 - Captain's Mission Brief",
         entries: [
           {
             speakerId: 'picard',
@@ -282,7 +293,7 @@ export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDe
         ],
       },
       {
-        title: 'Round 2 - Implementation Challenge & Security Posture',
+        title: 'Checklist 2 - Implementation & Security Posture',
         entries: [
           {
             speakerId: 'riker',
@@ -305,25 +316,26 @@ export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDe
         ],
       },
       {
-        title: 'Round 3 - Consensus & Release Authority',
+        title: 'Checklist 3 - Release Posture',
         entries: [
           {
             speakerId: 'troi',
             position: 'support',
-            statement: 'Stakeholder intent validated. Cross-team alignment confirmed.',
+            statement: 'Checklist item: validate stakeholder intent and confirm cross-team alignment.',
             evidence: ['User goals aligned', 'Communication plan ready'],
           },
           {
             speakerId: 'picard',
             position: 'support',
-            statement: `FINAL DECISION: PROCEED with ${plan.executionMode} execution. Sovereign Factory crew is authorized to execute.`,
+            statement: `Checklist item: captain must authorize ${plan.executionMode} execution before the crew proceeds.`,
             evidence: plan.recommendedExecutionOrder,
           },
         ],
       },
     ],
+    provenance: 'template',
     unresolvedRisks: ['Integration complexity during staged rollout', 'Monitor for service dependency conflicts'],
-    consensusSummary: `Mission ${plan.story.referenceNum} ready for execution. All crew members confirm readiness. Phased deployment strategy recommended.`,
+    consensusSummary: `${TEMPLATE_MARKER} (no model deliberation performed) for mission ${plan.story.referenceNum}: standard readiness checklist with phased deployment. Not a record of crew reasoning.`,
     finalDecision: 'approved',
     actionItems: [
       'Proceed with phased implementation',

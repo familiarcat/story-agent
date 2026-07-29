@@ -33,6 +33,10 @@
       "import": "./dist/src/worfgate-redact.js",
       "types": "./dist/src/worfgate-redact.d.ts"
     },
+    "./lounge-provenance": {
+      "import": "./dist/src/lounge-provenance.js",
+      "types": "./dist/src/lounge-provenance.d.ts"
+    },
     "./worfgate-credential-providers": {
       "import": "./dist/src/worfgate-credential-providers.js",
       "types": "./dist/src/worfgate-credential-providers.d.ts"
