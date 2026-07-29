@@ -37,6 +37,10 @@
       "import": "./dist/src/lounge-provenance.js",
       "types": "./dist/src/lounge-provenance.d.ts"
     },
+    "./lcars-markdown": {
+      "import": "./dist/src/lcars-markdown.js",
+      "types": "./dist/src/lcars-markdown.d.ts"
+    },
     "./worfgate-credential-providers": {
       "import": "./dist/src/worfgate-credential-providers.js",
       "types": "./dist/src/worfgate-credential-providers.d.ts"

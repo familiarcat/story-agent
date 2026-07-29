@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { renderLcarsMarkdown, LCARS_MARKDOWN_CSS } from '@story-agent/shared/lcars-markdown';
 
 const META = '␞ META ␞';
 
@@ -108,30 +109,15 @@ export default function ChatPage() {
 
   const sessionCost = turns.reduce((s, t) => s + (t.meta?.costUSD ?? 0), 0);
 
-  // Lightweight, dependency-free markdown: fenced code blocks + inline code. Keeps a code assistant
-  // readable without pulling in a renderer.
-  function renderText(text: string) {
-    const parts = text.split(/(```[\s\S]*?```)/g);
-    return parts.map((part, i) => {
-      const fence = part.match(/^```(\w*)\n?([\s\S]*?)```$/);
-      if (fence) {
-        return (
-          <pre key={i} style={{ background: 'var(--text)', color: 'var(--border)', padding: '0.75rem', borderRadius: 6, overflowX: 'auto', fontSize: '0.82rem', margin: '0.5rem 0' }}>
-            <code>{fence[2].replace(/\n$/, '')}</code>
-          </pre>
-        );
-      }
-      const inline = part.split(/(`[^`]+`)/g).map((seg, j) =>
-        seg.startsWith('`') && seg.endsWith('`')
-          ? <code key={j} style={{ background: 'var(--surface-2)', padding: '0 4px', borderRadius: 3, fontSize: '0.85em' }}>{seg.slice(1, -1)}</code>
-          : <span key={j}>{seg}</span>
-      );
-      return <span key={i} style={{ whiteSpace: 'pre-wrap' }}>{inline}</span>;
-    });
-  }
+  // Markdown is rendered by the SHARED LCARS renderer (@story-agent/shared/lcars-markdown), the same
+  // module the VS Code chat surface styles against. Previously this page handled only fenced code and
+  // inline code, so headings, lists, tables and bold arrived as literal `##` and `**` characters.
+  // The renderer escapes all input before inserting its own tags and restricts hrefs to http(s), so
+  // dangerouslySetInnerHTML is safe here — see lcars-markdown.test.ts for the XSS cases.
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
+      <style>{LCARS_MARKDOWN_CSS}</style>
       <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Chat' }]} />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🖖 Story Agent — Crew Assistant</h1>
@@ -160,7 +146,9 @@ export default function ChatPage() {
               </>
             )}
           >
-            {t.text ? renderText(t.text) : (busy && i === turns.length - 1 ? '…' : '')}
+            {t.text
+              ? <div className="lcars-md" dangerouslySetInnerHTML={{ __html: renderLcarsMarkdown(t.text) }} />
+              : (busy && i === turns.length - 1 ? '…' : '')}
           </ChatMessage>
         ))}
       </div>

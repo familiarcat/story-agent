@@ -10,6 +10,7 @@
  */
 
 import * as vscode from 'vscode';
+import { LCARS_MARKDOWN_CSS } from '@story-agent/shared/lcars-markdown';
 import { randomBytes } from 'crypto';
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
 import { getChatClient, getChatClientStatus } from '../chat/chat-engine';
@@ -450,23 +451,12 @@ export class ChatPanel {
       font-size: 12px;
     }
 
-    /* Rich markdown (Claude-Code parity) */
-    .md-body h1, .md-body h2, .md-body h3 {
-      margin: 6px 0 4px;
-      line-height: 1.3;
-      color: var(--sa-primary);
-    }
-    .md-body h1 { font-size: 16px; }
-    .md-body h2 { font-size: 14px; }
-    .md-body h3 { font-size: 13px; }
-    .md-body ul, .md-body ol { margin: 4px 0; padding-left: 20px; }
-    .md-body li { margin: 2px 0; }
-    .md-body a { color: var(--sa-primary); text-decoration: underline; }
-    .md-body code {
-      background: var(--vscode-editor-background);
-      padding: 1px 4px;
-      border-radius: 2px;
-    }
+    /* Markdown styling comes from the SHARED stylesheet in @story-agent/shared/lcars-markdown, so
+       this webview and the web chat page cannot drift apart the way they had. The renderer below is
+       kept client-side because this surface streams chunkUpdate events and re-renders as tokens
+       arrive; it emits the same lcars-md-* class vocabulary the shared stylesheet defines. */
+${LCARS_MARKDOWN_CSS}
+
     .code-block {
       background: var(--vscode-editor-background);
       border: 1px solid var(--sa-border);
@@ -571,22 +561,22 @@ export class ChatPanel {
     function renderMarkdown(raw) {
       const blocks = [];
       let text = String(raw).replace(/\`\`\`(\\w*)\\n?([\\s\\S]*?)\`\`\`/g, function (_, lang, code) {
-        blocks.push('<pre class="code-block"><code>' + escapeHtml(code.replace(/\\n$/, '')) + '</code></pre>');
+        blocks.push('<pre class="lcars-md-pre"><code>' + escapeHtml(code.replace(/\\n$/, '')) + '</code></pre>');
         return '@@CB' + (blocks.length - 1) + '@@';
       });
       text = escapeHtml(text);
-      text = text.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
-      text = text.replace(/^### (.*)$/gm, '<h3>$1</h3>')
-                 .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-                 .replace(/^# (.*)$/gm, '<h1>$1</h1>');
+      text = text.replace(/\`([^\`]+)\`/g, '<code class="lcars-md-code">$1</code>');
+      text = text.replace(/^### (.*)$/gm, '<h3 class="lcars-md-h3">$1</h3>')
+                 .replace(/^## (.*)$/gm, '<h2 class="lcars-md-h2">$1</h2>')
+                 .replace(/^# (.*)$/gm, '<h1 class="lcars-md-h1">$1</h1>');
       text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
       text = text.replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
-      text = text.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g, '<a href="$2">$1</a>');
+      text = text.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g, '<a class="lcars-md-link" href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
       text = text.replace(/(?:^[-*] .*(?:\\n|$))+/gm, function (m) {
-        return '<ul>' + m.trim().split('\\n').map(function (l) { return '<li>' + l.replace(/^[-*] /, '') + '</li>'; }).join('') + '</ul>';
+        return '<ul class="lcars-md-ul">' + m.trim().split('\\n').map(function (l) { return '<li>' + l.replace(/^[-*] /, '') + '</li>'; }).join('') + '</ul>';
       });
       text = text.replace(/(?:^\\d+\\. .*(?:\\n|$))+/gm, function (m) {
-        return '<ol>' + m.trim().split('\\n').map(function (l) { return '<li>' + l.replace(/^\\d+\\. /, '') + '</li>'; }).join('') + '</ol>';
+        return '<ol class="lcars-md-ol">' + m.trim().split('\\n').map(function (l) { return '<li>' + l.replace(/^\\d+\\. /, '') + '</li>'; }).join('') + '</ol>';
       });
       text = text.replace(/\\n/g, '<br>');
       text = text.replace(/@@CB(\\d+)@@/g, function (_, i) { return blocks[+i]; });
@@ -605,7 +595,7 @@ export class ChatPanel {
       msgEl.className = \`message \${role}\`;
 
       const body = document.createElement('div');
-      body.className = 'md-body';
+      body.className = 'lcars-md';
       body.innerHTML = role === 'assistant' ? renderMarkdown(content) : escapeHtml(content);
       msgEl.appendChild(body);
 
@@ -700,12 +690,12 @@ export class ChatPanel {
             streamingEl = document.createElement('div');
             streamingEl.className = 'message assistant';
             const b = document.createElement('div');
-            b.className = 'md-body';
+            b.className = 'lcars-md';
             streamingEl.appendChild(b);
             messagesEl.appendChild(streamingEl);
             thinkingEl.style.display = 'none';
           }
-          streamingEl.querySelector('.md-body').innerHTML = renderMarkdown(msg.content);
+          streamingEl.querySelector('.lcars-md').innerHTML = renderMarkdown(msg.content);
           streamingEl.scrollIntoView({ block: 'end' });
           break;
 
