@@ -7,6 +7,7 @@
  * record is the unification: hypothesize → execute → remember becomes one loop over the shared RAG.
  */
 import { storeObservationMemory, getRelevantObservationMemories } from '@story-agent/shared/db';
+import { redactSecrets } from '@story-agent/shared/worfgate-redact';
 import type { ObservationDebateResult } from '@story-agent/shared';
 
 export interface UnifiedRunRecord {
@@ -44,7 +45,8 @@ export function buildUnifiedRunRecord(args: {
   return {
     missionId: args.missionId,
     clientId: args.clientId ?? null,
-    task: args.task,
+    // Worf: this record is DURABLE and shared — never persist credential-shaped material.
+    task: redactSecrets(args.task),
     missionPlan: args.plan?.missionPlan ?? '',
     topModel: args.plan?.topModel ?? '',
     planCostUSD,
@@ -54,7 +56,7 @@ export function buildUnifiedRunRecord(args: {
       escalated: !!args.run?.escalated,
       stalled: !!args.run?.stalled,
       totalCostUSD: runCostUSD,
-      finalText: (args.run?.finalText ?? '').slice(0, 2000),
+      finalText: redactSecrets(args.run?.finalText ?? '').slice(0, 2000),
     },
     totalCostUSD: Number((planCostUSD + runCostUSD).toFixed(6)),
     timestamp: args.timestamp,
