@@ -7,6 +7,7 @@ import { SidebarProvider, SIDEBAR_INIT_SCRIPT } from '../components/SidebarProvi
 import { LoadingStateProvider } from '../components/LoadingStateProvider';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import DevTour from '../components/dev-tour/DevTour';
+import ChromeController, { CHROME_INIT_SCRIPT } from '../components/ChromeController';
 
 export const metadata: Metadata = {
   title: 'Story Agent',
@@ -23,6 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         {/* Pre-paint: apply the persisted sidebar state before hydration (no flash). */}
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
+        {/* Pre-paint: on public presentation routes (e.g. /clients/jonah), hide dev chrome before
+            hydration so the finished product never flashes the sidebar (toggle via ChromeController). */}
+        <script dangerouslySetInnerHTML={{ __html: CHROME_INIT_SCRIPT }} />
       </head>
       <body>
         <ErrorBoundary>
@@ -37,6 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <LoadingStateProvider>{children}</LoadingStateProvider>
                 </main>
               </div>
+              {/* UAT presentation gate: hides dev chrome on public client pages, with an upper-left
+                  icon to toggle the full Story Agent nav back on. */}
+              <ChromeController />
               {/* Developer-only guided tour — hard-gated, never ships to production (see DevTour). */}
               <DevTour />
             </SidebarProvider>

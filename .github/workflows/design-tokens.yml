@@ -36,5 +36,9 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Check tokens ↔ globals.css are in sync (round-trip drift guard)
         run: pnpm tokens:check
+      # The token-contract tests import @story-agent/shared/ui-tokens (resolves to built dist).
+      # Install used --ignore-scripts, so build shared first or the import fails to resolve.
+      - name: Build shared (for @story-agent/shared/ui-tokens resolution)
+        run: pnpm --filter @story-agent/shared run build
       - name: Token-contract unit tests (components bind var(--*), never hex)
         run: pnpm --filter @story-agent/ui exec vitest run src/components/ProjectStatusPanel.test.ts
