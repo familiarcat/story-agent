@@ -13,7 +13,7 @@ const MONO = 'ui-monospace, "Arial Narrow", sans-serif';
 
 export default function NavBar() {
   return (
-    <nav data-dev-tour="nav" style={{
+    <nav className="app-navbar" data-dev-tour="nav" style={{
       background: lcars.black,
       color: lcars.text,
       fontFamily: MONO,

@@ -172,6 +172,23 @@ p { line-height: var(--leading-normal); }
   transition: margin-left 0.3s ease, transform 0.3s ease;
 }
 
+/* UAT presentation mode (ChromeController sets data-chrome="hidden" on public client pages, e.g.
+   /clients/jonah): strip the dev chrome so the page reads as the finished product. The upper-left
+   toggle icon (rendered by ChromeController, not gated here) flips this back to "shown" for devs. */
+:root[data-chrome='hidden'] .app-navbar,
+:root[data-chrome='hidden'] .app-sidenav {
+  display: none !important;
+}
+:root[data-chrome='hidden'] .app-main {
+  margin-left: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+/* Hide the dev breadcrumb trail (…/Dashboard/Clients/…) in the public presentation. */
+:root[data-chrome='hidden'] nav[aria-label='Breadcrumb'] {
+  display: none !important;
+}
+
 .app-loading-viewport {
   position: relative;
   min-height: calc(100vh - var(--nav-height) - var(--space-8));
