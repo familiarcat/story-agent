@@ -129,7 +129,7 @@ export interface AgentRunResult {
    * detector only fires on ZERO tool calls; this catches the far commoner shape — several successful
    * calls, then a confident summary with declared steps still open.
    */
-  completion?: { declared: boolean; total: number; completed: number; remaining: string[]; satisfied: boolean; note: string };
+  completion?: { declared: boolean; total: number; completed: number; remaining: string[]; satisfied: boolean; note: string; unevidenced: string[] };
 }
 
 /** Layer-4 explainable feedback card — a durable, recallable record of one agent run. */
@@ -563,6 +563,9 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       // open, this is a STOP, not a finish — the exact silent-partial shape that reports success. Push
       // the shortfall back (bounded) and let it either continue or abandon explicitly.
       const assessment = taskPlan.assess();
+      if (assessment.unevidenced.length) {
+        emit({ type: 'verify', ok: false, text: `unevidenced completion — ${assessment.note}` });
+      }
       if (!assessment.satisfied && assessment.declared && completionNudges < maxCompletionNudges) {
         completionNudges++;
         emit({ type: 'stall', attempt: completionNudges, text: `incomplete plan: ${assessment.note} (nudge ${completionNudges}/${maxCompletionNudges})` });
@@ -671,6 +674,10 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
           emit({ type: 'escalation', tool: name, text: output });
         } else {
           if (name === 'crew_deliberate') result.escalated = true;
+          // Feed the completion contract its only EVIDENCE: a mutating tool that actually ran. Without
+          // this, "step done" is an unverifiable claim — a crew run once marked "Create <file>" done
+          // having never called write_file.
+          if (name && MUTATING_TOOLS.has(name)) taskPlan.recordMutation();
           // Snapshot originals BEFORE the mutation so a broken multi-file edit can be rolled back.
           if (verifyEdits && MUTATING_TOOLS.has(name)) await editSession.snapshotForTool(name, gate.args as Record<string, unknown>);
           try {

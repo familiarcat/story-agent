@@ -129,8 +129,21 @@ export function assembleAndOptimize(issue: string, maxTier: 1 | 2 | 3 | 4 = 4): 
   const text = issue.toLowerCase();
   const complex = COMPLEX.some(k => text.includes(k)) || issue.length > 400;
 
-  // Riker: select members whose domain keywords match, always include picard.
-  const selected = CREW.filter(c => c.crewId === 'picard' || c.keywords.some(k => text.includes(k)));
+  // Officers EXPLICITLY ADDRESSED in the brief are always seated, regardless of keyword fit.
+  //
+  // Observed failure: a brief that asked "Yar: what is the cheapest check that would have caught
+  // this?" ran WITHOUT Yar, because Picard's distilled goals contained none of her domain keywords
+  // (test/quality/verify/coverage/qa) — so the question was simply never answered and nothing said so.
+  // Directly naming an officer is the clearest possible statement of who is needed; keyword matching
+  // is a fallback for when the operator has NOT said.
+  const namedExplicitly = new Set(
+    CREW.filter(c => new RegExp(`\\b${c.crewId}\\b`, 'i').test(issue)).map(c => c.crewId),
+  );
+
+  // Riker: select members whose domain keywords match, always include picard, plus anyone named.
+  const selected = CREW.filter(c =>
+    c.crewId === 'picard' || namedExplicitly.has(c.crewId) || c.keywords.some(k => text.includes(k)),
+  );
   // Fallback: if only picard matched, add the implementation + architecture core.
   const isFallback = selected.length <= 1;
   if (isFallback) selected.push(...CREW.filter(c => ['data', 'riker'].includes(c.crewId)));
@@ -142,7 +155,9 @@ export function assembleAndOptimize(issue: string, maxTier: 1 | 2 | 3 | 4 = 4): 
     const rikerClause = c.crewId === 'picard'
       ? 'Riker: captain — always arbitrates'
       : matchedKeywords.length > 0
-        ? `Riker: matched [${matchedKeywords.join(', ')}]`
+        ? `Riker: matched [${matchedKeywords.join(', ')}]${namedExplicitly.has(c.crewId) ? ' + named in brief' : ''}`
+      : namedExplicitly.has(c.crewId)
+        ? 'Riker: named explicitly in the brief'
         : isFallback
           ? 'Riker: core fallback (architecture + implementation baseline)'
           : 'Riker: domain fit';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TaskPlan, buildIncompleteNudge } from './task-plan.js';
+import { TaskPlan, buildIncompleteNudge, impliesMutation } from './task-plan.js';
 import { normalizeStepDescription, resolveCompletedIds } from './task-plan-tool.js';
 
 describe('TaskPlan — declaration', () => {
@@ -228,5 +228,94 @@ describe('resolveCompletedIds', () => {
 
   it('returns empty when nothing identifies a step', () => {
     expect(resolveCompletedIds({ result: 'done!' }, planWith())).toEqual([]);
+  });
+});
+
+// ── Evidence: a step marked done is a CLAIM, not an observation ───────────────────────────────────
+// Observed live: a crew run declared "Create lcars-markdown.ts", marked it DONE, and never called
+// write_file. The contract passed it because it only ever asked "did you say you finished?".
+describe('impliesMutation', () => {
+  it('recognises wording that requires a file change', () => {
+    for (const d of ['Create web-tools.ts', 'write the module', 'add a test', 'implement the guard',
+      'edit tools.ts', 'update the export map', 'fix the race', 'register in AGENT_TOOLS',
+      'delete the dead branch', 'remove the shim', 'refactor the loop', 'rename the field',
+      'patch the workflow', 'wire the renderer', 'scaffold the panel']) {
+      expect(impliesMutation(d), d).toBe(true);
+    }
+  });
+
+  it('does NOT flag genuinely read-only steps', () => {
+    for (const d of ['read packages/shared/src/ui-tokens.ts', 'report the number of tools',
+      'count the test files', 'search for callers', 'list the directory', 'summarise the findings']) {
+      expect(impliesMutation(d), d).toBe(false);
+    }
+  });
+
+  it('is null-safe', () => {
+    expect(impliesMutation('')).toBe(false);
+    expect(impliesMutation(undefined as unknown as string)).toBe(false);
+  });
+});
+
+describe('TaskPlan — unevidenced completion', () => {
+  it('flags a mutating step marked done when NOTHING was written', () => {
+    const p = new TaskPlan();
+    p.declare(['Create lcars-markdown.ts', 'Add the exports entry']);
+    p.complete([1, 2]);
+    const a = p.assess();
+    expect(a.satisfied).toBe(false);                 // all done, but unsupported
+    expect(a.unevidenced).toHaveLength(2);
+    expect(a.note).toMatch(/^UNEVIDENCED/);
+    expect(a.note).toContain('NO file was written');
+  });
+
+  it('is satisfied once a mutation is recorded', () => {
+    const p = new TaskPlan();
+    p.declare(['Create lcars-markdown.ts']);
+    p.recordMutation();
+    p.complete([1]);
+    const a = p.assess();
+    expect(a.satisfied).toBe(true);
+    expect(a.unevidenced).toEqual([]);
+    expect(a.note).toMatch(/^Finished/);
+  });
+
+  it('does not flag a read-only plan that legitimately writes nothing', () => {
+    const p = new TaskPlan();
+    p.declare(['read worfgate-local.ts', 'report the PUBLISH_SHELL count']);
+    p.complete([1, 2]);
+    const a = p.assess();
+    expect(a.satisfied).toBe(true);
+    expect(a.unevidenced).toEqual([]);
+  });
+
+  it('flags only the mutating steps in a mixed plan', () => {
+    const p = new TaskPlan();
+    p.declare(['read the file', 'create the module']);
+    p.complete([1, 2]);
+    expect(p.assess().unevidenced).toEqual(['create the module']);
+  });
+
+  it('counts mutations', () => {
+    const p = new TaskPlan();
+    expect(p.mutationCount()).toBe(0);
+    p.recordMutation(); p.recordMutation();
+    expect(p.mutationCount()).toBe(2);
+  });
+
+  it('reports unevidenced steps alongside an outstanding-work stop', () => {
+    const p = new TaskPlan();
+    p.declare(['create a', 'create b', 'create c']);
+    p.complete([1]);
+    const a = p.assess();
+    expect(a.note).toMatch(/STOPPED, not finished/);
+    expect(a.unevidenced).toEqual(['create a']);
+  });
+
+  it('every assess() branch returns an unevidenced array', () => {
+    expect(new TaskPlan().assess().unevidenced).toEqual([]);      // undeclared
+    const p = new TaskPlan();
+    p.declare(['create x']); p.abandon('blocked');
+    expect(p.assess().unevidenced).toEqual([]);                    // abandoned, step not done
   });
 });
