@@ -195,9 +195,14 @@ const glob_files: AgentTool = {
  * zsh needs -i (interactive) to source ~/.zshrc; other shells use -lc. Cross-platform
  * safe: on Linux/Fargate where SHELL is unset or /bin/sh, falls back to bash -lc.
  */
-function shellInvocation(command: string): [string, string[]] {
+export function shellInvocation(command: string): [string, string[]] {
   const sh = process.env.SHELL || '';
-  if (sh.endsWith('zsh')) return [sh, ['-ic', command]];
+  // zsh: source ~/.zshrc NON-interactively so the user's PATH/aliases/env are present, WITHOUT the
+  // interactive (-i) flag. Under `-i` on a non-TTY, ~/.zshrc's `setopt zle` (line editor) fails and
+  // spams "(eval):1: can't change option: zle" on every call. Verified head-to-head: `-c 'source
+  // ~/.zshrc'` preserves PATH (brew/git/node/rg all resolve) with zero noise. Sourcing stderr is
+  // suppressed so an rc warning can't pollute output; the command's own stderr is preserved.
+  if (sh.endsWith('zsh')) return [sh, ['-c', `source ~/.zshrc 2>/dev/null; ${command}`]];
   if (sh.endsWith('bash')) return [sh, ['-lc', command]];
   return ['bash', ['-lc', command]];
 }
