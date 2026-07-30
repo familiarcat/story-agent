@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import type { AgentTool } from './tools.js';
-import type { TaskPlan } from './task-plan.js';
+import { impliesMutation, type TaskPlan } from './task-plan.js';
 
 /**
  * Models do not emit the documented shape. Observed live from a tier-3 model in a single run:
@@ -97,9 +97,16 @@ export const taskPlanTool: AgentTool = {
       if (!ids.length) {
         return `error: could not tell which step you completed. Pass step ids, e.g. {"action":"complete","completed":[1,2]}.\n${plan.render()}`;
       }
+      // Capture which steps imply a file change BEFORE marking them, so the warning can name them.
+      const claiming = plan.snapshot().filter((s) => ids.includes(s.id) && impliesMutation(s.description));
       const { completed, unknown } = plan.complete(ids);
       const warn = unknown.length ? `\nWARNING: no such step id(s): ${unknown.join(', ')}` : '';
-      return `Marked done: ${completed.join(', ') || '(none)'}${warn}\n${plan.render()}`;
+      // Challenge the claim AT THE MOMENT it is made, while the model can still act on it — far more
+      // useful than only reporting it after the run has finished.
+      const evidence = claiming.length && plan.mutationCount() === 0
+        ? `\nWARNING: you marked ${claiming.length} step(s) done that describe changing files, but NO file has been written or edited in this run yet: ${claiming.map((s) => s.description).join('; ')}. If you have not actually made the change, do it now — do not mark it done on intent.`
+        : '';
+      return `Marked done: ${completed.join(', ') || '(none)'}${warn}${evidence}\n${plan.render()}`;
     }
 
     if (action === 'abandon') {

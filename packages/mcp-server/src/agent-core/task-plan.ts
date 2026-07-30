@@ -41,6 +41,21 @@ export interface CompletionAssessment {
   satisfied: boolean;
   /** One-line summary for the operator and the stored record. */
   note: string;
+  /**
+   * Steps marked done whose wording implies a file change, in a run where NO mutating tool ever
+   * succeeded. Advisory, not proof — but a step cannot have been "implemented" if nothing was written.
+   */
+  unevidenced: string[];
+}
+
+/**
+ * Does this step's wording imply a FILE CHANGE? Used to flag a step claimed done in a run where
+ * nothing was ever written. Deliberately conservative: a step like "read X" or "report Y" is
+ * legitimately satisfied with no mutation, so only clearly-mutating verbs count.
+ */
+export function impliesMutation(description: string): boolean {
+  return /\b(creat|writ|add|implement|edit|updat|fix|registr|register|delet|remov|refactor|rename|patch|wire|scaffold)/i
+    .test(String(description ?? ''));
 }
 
 /** Mutable per-run plan state. One instance per agent run; never shared across runs. */
@@ -49,6 +64,8 @@ export class TaskPlan {
   private declaredAt: number | null = null;
   /** Set when the model explicitly abandons the plan, so an honest early exit is not misreported. */
   private abandonedReason: string | null = null;
+  /** Count of mutating tool calls that actually SUCCEEDED during this run (loop reports them). */
+  private mutations = 0;
 
   /**
    * Declare (or REPLACE) the plan. Replacing is allowed because a model legitimately revises its plan
@@ -82,6 +99,18 @@ export class TaskPlan {
     this.abandonedReason = String(reason ?? '').trim() || 'no reason given';
   }
 
+  /**
+   * The loop calls this after each mutating tool call that succeeded. It is the only evidence the plan
+   * has that work actually happened — a model marking a step done is a CLAIM, not an observation.
+   */
+  recordMutation(): void {
+    this.mutations++;
+  }
+
+  mutationCount(): number {
+    return this.mutations;
+  }
+
   hasPlan(): boolean {
     return this.steps.length > 0;
   }
@@ -104,6 +133,12 @@ export class TaskPlan {
     const total = this.steps.length;
     const completed = this.steps.filter((s) => s.status === 'done').length;
     const remaining = this.steps.filter((s) => s.status !== 'done').map((s) => s.description);
+    // A model marking a step done is a CLAIM. If nothing was ever written, a step whose own wording
+    // says "create"/"implement" cannot have happened. Observed live: a crew run marked
+    // "Create lcars-markdown.ts" done having never called write_file.
+    const unevidenced = this.mutations === 0
+      ? this.steps.filter((s) => s.status === 'done' && impliesMutation(s.description)).map((s) => s.description)
+      : [];
 
     if (!total) {
       return {
@@ -113,6 +148,7 @@ export class TaskPlan {
         remaining: [],
         satisfied: true,
         note: 'No plan was declared — completion could not be verified against stated intent.',
+        unevidenced: [],
       };
     }
     if (this.abandonedReason) {
@@ -125,6 +161,7 @@ export class TaskPlan {
         // NOT a success either. `satisfied` stays false so callers see work was left undone.
         satisfied: false,
         note: `Plan explicitly ABANDONED after ${completed}/${total} step(s): ${this.abandonedReason}`,
+        unevidenced,
       };
     }
     if (remaining.length) {
@@ -135,6 +172,16 @@ export class TaskPlan {
         remaining,
         satisfied: false,
         note: `STOPPED, not finished: ${completed}/${total} declared step(s) done; ${remaining.length} outstanding.`,
+        unevidenced,
+      };
+    }
+    if (unevidenced.length) {
+      return {
+        declared: true, total, completed, remaining: [], unevidenced,
+        // NOT satisfied: every step is claimed done, but nothing was ever written, so the steps that
+        // say "create"/"implement" are unsupported by any observation.
+        satisfied: false,
+        note: `UNEVIDENCED: all ${total} step(s) marked done but NO file was written this run; ${unevidenced.length} step(s) claim work that leaves no trace: ${unevidenced.join('; ')}`,
       };
     }
     return {
@@ -143,6 +190,7 @@ export class TaskPlan {
       completed,
       remaining: [],
       satisfied: true,
+      unevidenced: [],
       note: `Finished: all ${total} declared step(s) completed.`,
     };
   }
