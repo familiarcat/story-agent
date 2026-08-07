@@ -27,7 +27,9 @@ exports.summarizeOverridesForLounge = summarizeOverridesForLounge;
 exports.WORFGATE_OFFICER = 'worf';
 /** Crew members permitted to broker credentials (the full bridge crew operate under Worf's governance). */
 const AUTHORIZED_CREW = new Set([
-    'worf', 'picard', 'riker', 'data', 'geordi', 'obrien', 'yar', 'troi', 'crusher', 'uhura', 'quark', 'agent'
+  'worf', 'picard', 'riker', 'data', 'geordi', 'obrien', 'yar', 'troi', 'crusher',
+  'uhura', 'quark',
+  'guinan', 'agent'
 ]);
 /** Allowlisted credentials the crew may broker — keyed by env var name. */
 exports.CREW_CREDENTIAL_REGISTRY = {

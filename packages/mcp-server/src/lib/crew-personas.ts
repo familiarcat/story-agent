@@ -23,7 +23,8 @@ export type CrewId =
   | 'troi'
   | 'crusher'
   | 'uhura'
-  | 'quark';
+  | 'quark'
+  | 'guinan';
 
 export type CrewDomain =
   | 'executive'

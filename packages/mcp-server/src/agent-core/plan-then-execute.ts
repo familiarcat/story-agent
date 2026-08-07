@@ -11,6 +11,7 @@ import { runMissionPipeline, type MissionPipelineResult } from '../lib/crew-miss
 import { runAgentLoop, type AgentRunResult } from './loop.js';
 import { buildUnifiedRunRecord, storeUnifiedRun, recallUnifiedRuns, type UnifiedRunRecord } from './unified-run.js';
 import { RunRegistry } from './run-registry.js';
+import { buildBridges } from './bridges.js';
 
 
 
@@ -61,6 +62,13 @@ export async function planThenExecute(
     clientId: opts.clientId ?? null,
     tier: opts.tier ?? 3,
     maxIterations: opts.maxIterations ?? 20,
+    // ROOT-CAUSE FIX: this call site previously omitted the bridges that http-server.ts already
+    // spreads into its own runAgentLoop call. Without them ctx.ragRecall / ctx.crewDeliberate are
+    // undefined, so rag_recall and crew_deliberate returned their "(… unavailable in this context)"
+    // placeholder strings as SUCCESSFUL tool results — which is the literal text users saw in the
+    // sidebar. recordFeedback was also absent, so stall cards from this lane were never written to
+    // RAG, which is why the same stall recurred across sessions without ever being recalled.
+    ...buildBridges(opts.clientId ?? null),
   });
 
   // Step 4 — STORE the linked {plan → execution → outcome} record to shared RAG (the unification).

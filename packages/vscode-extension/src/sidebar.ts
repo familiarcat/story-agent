@@ -123,7 +123,14 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
             .slice(-8);
           try {
             const enrichedMessage = this._buildMultimodalPrompt(message, attachments);
-            const result = await chatWithCrew(enrichedMessage, { history, attachments });
+            // The sidebar panel previously omitted clientId while the chat participant
+            // (runChatTurn) passed it — so the same prompt resolved different crew memory scopes
+            // and could fail isActivationAllowedForClient() depending on which surface you used.
+            const clientId =
+              process.env.STORY_AGENT_CLIENT_ID ||
+              vscode.workspace.getConfiguration('storyAgent').get<string>('chat.clientId') ||
+              null;
+            const result = await chatWithCrew(enrichedMessage, { clientId, history, attachments });
             if (this._view) {
               this._view.webview.postMessage({
                 command: 'panelChatResult',

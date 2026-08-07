@@ -37,7 +37,7 @@ export interface ToolContext {
   crewDeliberate?: (brief: string) => Promise<string>;
 }
 
-const MAX_READ = 200_000; // chars
+const MAX_READ = 40_000; // chars
 const MAX_OUT = 30_000;
 const clip = (s: string, n = MAX_OUT) => (s.length > n ? s.slice(0, n) + `\n…[truncated ${s.length - n} chars]` : s);
 
@@ -255,7 +255,14 @@ const rag_recall: AgentTool = {
     limit: z.number().optional().default(5).describe('Max memories to return.'),
   }),
   handler: async (a, ctx) => {
-    if (!ctx.ragRecall) return '(RAG recall unavailable in this context)';
+    // Throw rather than return: the loop records a returned string as ok:true, so an unwired
+    // bridge looked like a successful recall that happened to find nothing. Throwing sets ok:false,
+    // trips turnFailed, and surfaces in the run's toolCalls audit.
+    if (!ctx.ragRecall) {
+      throw new Error(
+        'E_BRIDGE_UNWIRED: ctx.ragRecall is not bound. The calling surface did not spread buildBridges(clientId) into runAgentLoop.',
+      );
+    }
     return clip(await ctx.ragRecall(String(a.query), Number(a.limit ?? 5)));
   },
 };
@@ -267,7 +274,11 @@ const crew_deliberate: AgentTool = {
     brief: z.string().describe('The task/decision to deliberate on.'),
   }),
   handler: async (a, ctx) => {
-    if (!ctx.crewDeliberate) return '(crew escalation unavailable in this context)';
+    if (!ctx.crewDeliberate) {
+      throw new Error(
+        'E_BRIDGE_UNWIRED: ctx.crewDeliberate is not bound. The calling surface did not spread buildBridges(clientId) into runAgentLoop.',
+      );
+    }
     return clip(await ctx.crewDeliberate(String(a.brief)));
   },
 };

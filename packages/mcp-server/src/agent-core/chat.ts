@@ -81,6 +81,12 @@ export interface CanonicalChatResponse {
   worfGate: WorfGatePromptSecurityMeta;
   costAnalysis: PromptCostAnalysis;
   executionActivation?: ExecutionActivationMeta;
+  /**
+   * Subsystems that failed during this turn but did not abort it, as "subsystem: reason" strings.
+   * A turn that answered with RAG or crew preflight down is NOT the same as a healthy turn, and the
+   * caller has to be able to tell. Empty/absent means every optional subsystem was reached.
+   */
+  degraded?: string[];
   // Crew variance resolution (Rule of Three alternatives)
   crewVariance?: {
     exists: boolean;
@@ -1079,7 +1085,15 @@ export async function runCanonicalChatTurn(
   }
 
   let context = '';
-  try { context = (await buildBridges(clientId).ragRecall?.(dispatchMessage, 4)) ?? ''; } catch { /* RAG optional */ }
+  const degraded: string[] = [];
+  try {
+    context = (await buildBridges(clientId).ragRecall?.(dispatchMessage, 4)) ?? '';
+  } catch (err) {
+    // Was: catch { /* RAG optional */ }. Optional is fine; INVISIBLE is not. A swallowed failure
+    // here is indistinguishable from "no memories found", so the model narrates a confident answer
+    // over an empty context and nobody upstream can tell the difference.
+    degraded.push(`rag_recall: ${err instanceof Error ? err.message : String(err)}`);
+  }
   const hasCtx = context && context !== '(no relevant crew memories)';
 
   // CREW-ALWAYS: Always call crew self-organization (no conditional)
@@ -1093,7 +1107,9 @@ export async function runCanonicalChatTurn(
       worfGate: controls.worfGate,
       complexity, // NEW: pass complexity as input for team assembly
     });
-  } catch { /* crew preflight optional */ }
+  } catch (err) {
+    degraded.push(`crew_preflight: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   const costGovernanceConfig = getCostGovernanceConfig();
   const requestId = randomUUID();
@@ -1191,6 +1207,7 @@ export async function runCanonicalChatTurn(
     ],
     promptOptimization: optimizedPrompt.meta,
     crewSelfOrganization: crewContext?.meta,
+    ...(degraded.length ? { degraded } : {}),
     responsiveActions: controls.responsiveActions,
     worfGate: controls.worfGate,
     costAnalysis: {
