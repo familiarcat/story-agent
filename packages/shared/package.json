@@ -81,6 +81,10 @@
       "import": "./dist/src/design-theme-layers.js",
       "types": "./dist/src/design-theme-layers.d.ts"
     },
+    "./client-brand-themes": {
+      "import": "./dist/src/client-brand-themes.js",
+      "types": "./dist/src/client-brand-themes.d.ts"
+    },
     "./workflow-status": {
       "import": "./dist/src/workflow-status.js",
       "types": "./dist/src/workflow-status.d.ts"

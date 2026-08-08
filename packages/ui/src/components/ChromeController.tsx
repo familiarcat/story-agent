@@ -15,16 +15,34 @@
  */
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { CLIENT_BRAND_THEMES } from '@story-agent/shared/client-brand-themes';
 
-/** Routes served as public product presentations (chrome hidden by default). Prefix-matched. */
-export const PRESENTATION_ROUTES = ['/clients/jonah'];
+/**
+ * Routes served as public product presentations (chrome hidden by default). Prefix-matched.
+ * Derived from CLIENT_BRAND_THEMES rather than hardcoded: every client with a bespoke design system
+ * (see packages/shared/src/client-brand-themes.ts) automatically gets its /clients/<id> presentation
+ * route here. Onboarding a second bespoke-brand client after jonah needs zero edits to this file.
+ */
+export const PRESENTATION_ROUTES = Object.keys(CLIENT_BRAND_THEMES).map((id) => `/clients/${id}`);
+/**
+ * Sub-segments under a presentation route that are internal crew tooling, not public presentation,
+ * even though they nest under a branded client path — e.g. /clients/jonah/dashboard (the client-scoped
+ * project dashboard) is for the crew, not a public visitor, so it keeps the full Story Agent chrome.
+ */
+const INTERNAL_SUBROUTES = ['dashboard'];
 const STORAGE_KEY = 'sa-dev-chrome';
 
 /** Runs in <head> before paint (no flash), mirrors the theme/sidebar init scripts. */
 export const CHROME_INIT_SCRIPT = `(function(){try{
   var routes=${JSON.stringify(PRESENTATION_ROUTES)};
+  var internal=${JSON.stringify(INTERNAL_SUBROUTES)};
   var p=location.pathname;
-  var pres=routes.some(function(r){return p===r||p.indexOf(r+'/')===0;});
+  var pres=routes.some(function(r){
+    if(p===r) return true;
+    if(p.indexOf(r+'/')!==0) return false;
+    var rest=p.slice(r.length+1).split('/')[0];
+    return internal.indexOf(rest)===-1;
+  });
   var stored=null; try{stored=localStorage.getItem('${STORAGE_KEY}');}catch(e){}
   var show=pres?(stored==='true'):true;
   var d=document.documentElement;
@@ -34,7 +52,12 @@ export const CHROME_INIT_SCRIPT = `(function(){try{
 
 function isPresentation(pathname: string | null): boolean {
   if (!pathname) return false;
-  return PRESENTATION_ROUTES.some((r) => pathname === r || pathname.startsWith(r + '/'));
+  return PRESENTATION_ROUTES.some((r) => {
+    if (pathname === r) return true;
+    if (!pathname.startsWith(r + '/')) return false;
+    const rest = pathname.slice(r.length + 1).split('/')[0];
+    return !INTERNAL_SUBROUTES.includes(rest);
+  });
 }
 
 export default function ChromeController() {

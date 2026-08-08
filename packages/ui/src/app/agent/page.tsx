@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { color, tier as TIER_COLOR, font } from '@/lib/tokens';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { renderLcarsMarkdown, LCARS_MARKDOWN_CSS } from '@story-agent/shared/lcars-markdown';
 import { parseSSEFrame, cumulativeCost, sanitizeError, isDiff, safeJson } from './transcript';
 
 /**
@@ -147,6 +148,11 @@ export default function AgentPage() {
 
   return (
     <main style={{ maxWidth: 880, margin: '0 auto', padding: '1.5rem', fontFamily: font.sans }}>
+      {/* Markdown rendered via the SHARED LCARS renderer (@story-agent/shared/lcars-markdown) — the
+          same module the /chat page and the VS Code webviews style against, so an assistant reply
+          with headings/lists/tables/code doesn't arrive here as literal `##`/`**` characters the way
+          it previously did with plain pre-wrap text. XSS-safe by construction — see chat/page.tsx. */}
+      <style>{LCARS_MARKDOWN_CSS}</style>
       <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Agent' }]} />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.4rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🛠️ Story Agent — Agent Workspace</h1>
@@ -191,13 +197,13 @@ function EventRow({ e, decided, onApprove, onRetry, busy }: { e: Ev; decided: Re
   const mono: React.CSSProperties = { fontFamily: font.mono, fontSize: '0.8rem' };
   switch (e.kind) {
     case 'user':
-      return <ChatMessage role="user"><div style={{ whiteSpace: 'pre-wrap' }}>{e.text}</div></ChatMessage>;
+      return <ChatMessage role="user"><div className="lcars-md" dangerouslySetInnerHTML={{ __html: renderLcarsMarkdown(e.text) }} /></ChatMessage>;
     case 'model':
       return <div style={{ ...mono, color: 'var(--text-dim)', margin: '0.4rem 0' }}>🤖 model selected: {e.model}</div>;
     case 'lens':
       return <div style={{ ...mono, color: 'var(--text-dim)', margin: '0.2rem 0' }}>🔭 {e.text}</div>;
     case 'text':
-      return <ChatMessage role="assistant" sender="Agent"><div style={{ whiteSpace: 'pre-wrap' }}>{e.text}</div></ChatMessage>;
+      return <ChatMessage role="assistant" sender="Agent"><div className="lcars-md" dangerouslySetInnerHTML={{ __html: renderLcarsMarkdown(e.text) }} /></ChatMessage>;
     case 'tool_call':
       return (
         <div style={{ margin: '0.4rem 0', padding: '0.5rem 0.7rem', background: 'var(--surface-2)', borderRadius: 6, borderLeft: '3px solid var(--accent3)' }}>

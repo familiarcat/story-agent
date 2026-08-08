@@ -3,9 +3,17 @@
  * No React — just fetch + heuristics.
  */
 
+import { clientBrandTheme } from '@story-agent/shared/client-brand-themes';
+
 export type AhaProjectLite = { id: string; name: string; referencePrefix: string | null };
 
-export type ClientNode = { id: string; name: string; projects: AhaProjectLite[] };
+/**
+ * brandTheme: the [data-theme] id if this client has a bespoke design system (e.g. 'jonah'), else
+ * null. Surfaced here so the Observation Lounge hierarchy picker — and any crew deliberation that
+ * reads the selection — knows up front that a client's projects carry real graphic-design stakes
+ * alongside the usual delivery/sprint ones, not just after someone happens to click into /clients/jonah.
+ */
+export type ClientNode = { id: string; name: string; projects: AhaProjectLite[]; brandTheme: string | null };
 
 type ClientRow = { id: string; name: string };
 type AhaProjectRaw = { id: string; name: string; referencePrefix?: string | null };
@@ -37,6 +45,7 @@ export async function buildClientProjectMap(): Promise<{ clients: ClientNode[] }
     id: c.id,
     name: c.name,
     projects: [],
+    brandTheme: clientBrandTheme(c.id),
   }));
 
   const matchesClient = (client: ClientNode, project: AhaProjectLite): boolean => {
@@ -56,8 +65,9 @@ export async function buildClientProjectMap(): Promise<{ clients: ClientNode[] }
   const firm: ClientNode =
     firmIdx >= 0
       ? nodes.splice(firmIdx, 1)[0]
-      : { id: FIRM_ID, name: 'familiarcat', projects: [] };
+      : { id: FIRM_ID, name: 'familiarcat', projects: [], brandTheme: null };
   firm.name = firm.name.includes('(firm)') ? firm.name : `${firm.name} (firm)`;
+  firm.brandTheme = firm.brandTheme ?? clientBrandTheme(FIRM_ID);
   firm.projects.push(...unmatched);
   nodes.push(firm);
 

@@ -63,9 +63,11 @@ export default function HierarchyPicker({
   const handleClientChange = (clientId: string) => {
     setSprints([]);
     setStories([]);
+    const brandTheme = clientId ? (map?.clients.find((c) => c.id === clientId)?.brandTheme ?? null) : null;
     applySelection({
       ...EMPTY_SELECTION,
       clientId: clientId || null,
+      clientBrandTheme: brandTheme,
     });
   };
 
@@ -75,6 +77,7 @@ export default function HierarchyPicker({
     const next: HierarchySelection = {
       ...EMPTY_SELECTION,
       clientId: selection.clientId,
+      clientBrandTheme: selection.clientBrandTheme,
       projectId: projectId || null,
     };
     applySelection(next);
@@ -101,6 +104,7 @@ export default function HierarchyPicker({
     const next: HierarchySelection = {
       ...EMPTY_SELECTION,
       clientId: selection.clientId,
+      clientBrandTheme: selection.clientBrandTheme,
       projectId: selection.projectId,
       sprintId: sprintId || null,
     };
@@ -160,10 +164,17 @@ export default function HierarchyPicker({
           <option value="">Select a client…</option>
           {map.clients.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {c.brandTheme ? `${c.name} 🎨` : c.name}
             </option>
           ))}
         </select>
+        {selection.clientBrandTheme && (
+          <p className="meta" style={{ marginTop: 'var(--space-1)', color: 'var(--accent3)' }}>
+            🎨 {selectedClient?.name ?? selection.clientId} has a bespoke design system
+            (<code>{selection.clientBrandTheme}</code>) — weigh brand/visual-design considerations
+            alongside delivery and sprint ones when the crew deliberates on this client&rsquo;s work.
+          </p>
+        )}
       </div>
 
       {selection.clientId && (

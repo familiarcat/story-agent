@@ -10,6 +10,14 @@ export type HierarchySelection = {
   sprintId: string | null;
   storyId: string | null;
   storyReferenceNum: string | null;
+  /**
+   * Non-null when the selected client has a bespoke design system (see
+   * @story-agent/shared/client-brand-themes). Threaded through here so any crew deliberation built
+   * from this selection can see, before a single message is sent, that this client's work carries
+   * real graphic-design stakes alongside the usual delivery/sprint ones — not just discover it if
+   * someone happens to mention the brand mid-conversation.
+   */
+  clientBrandTheme: string | null;
 };
 
 export const EMPTY_SELECTION: HierarchySelection = {
@@ -18,6 +26,7 @@ export const EMPTY_SELECTION: HierarchySelection = {
   sprintId: null,
   storyId: null,
   storyReferenceNum: null,
+  clientBrandTheme: null,
 };
 
 /** Worf's write contract: every mutation flows through this action shape (dry-run then confirm). */

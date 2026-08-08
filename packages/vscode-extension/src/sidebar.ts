@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { randomBytes } from 'crypto';
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
+import { LCARS_MARKDOWN_CSS, LCARS_MARKDOWN_CLIENT_JS } from '@story-agent/shared/lcars-markdown';
 import { withDashboardTheme } from './lib/dashboardThemeLink';
 import { chatWithCrew } from './agentClient';
 import {
@@ -344,6 +345,14 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
       max-width: 96%;
     }
 
+    /* Assistant replies are rendered as markdown (see renderMarkdown() below), so the bubble's own
+       pre-wrap must step aside for the child .lcars-md content — the renderer already emits <br>. */
+    .chat-bubble.assistant .lcars-md { white-space: normal; }
+
+    /* Shared LCARS markdown vocabulary — same stylesheet the ChatPanel webview and the web /chat page
+       use, so a crew reply looks the same everywhere it can render. */
+    ${LCARS_MARKDOWN_CSS}
+
     .chat-meta {
       color: var(--sa-muted);
       font-size: 10px;
@@ -559,11 +568,23 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
       while (log.firstChild) log.removeChild(log.firstChild);
     }
 
+    // Canonical XSS-safe markdown renderer, shared with the ChatPanel webview and the web /chat page —
+    // see @story-agent/shared/lcars-markdown (LCARS_MARKDOWN_CLIENT_JS). Do not hand-write a local
+    // copy here; that's the exact drift this shared constant exists to prevent.
+    ${LCARS_MARKDOWN_CLIENT_JS}
+
     function renderBubble(role, text, meta) {
       const log = document.getElementById('chatLog');
       const bubble = document.createElement('div');
       bubble.className = 'chat-bubble ' + role;
-      bubble.textContent = text;
+      const body = document.createElement('div');
+      body.className = 'lcars-md';
+      if (role === 'assistant') {
+        body.innerHTML = renderMarkdown(text);
+      } else {
+        body.textContent = text;
+      }
+      bubble.appendChild(body);
       if (meta) {
         const m = document.createElement('div');
         m.className = 'chat-meta';
@@ -577,12 +598,11 @@ export class StorySidebarProvider implements vscode.WebviewViewProvider {
 
     function streamAssistantBubble(text, meta) {
       const bubble = renderBubble('assistant', '', meta);
+      const body = bubble.querySelector('.lcars-md');
       let i = 0;
       const step = () => {
         i = Math.min(text.length, i + 5);
-        bubble.firstChild && bubble.firstChild.nodeType === Node.TEXT_NODE
-          ? bubble.firstChild.textContent = text.slice(0, i)
-          : bubble.textContent = text.slice(0, i);
+        body.innerHTML = renderMarkdown(text.slice(0, i));
         if (meta) {
           const m = document.createElement('div');
           m.className = 'chat-meta';

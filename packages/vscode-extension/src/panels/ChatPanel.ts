@@ -10,7 +10,7 @@
  */
 
 import * as vscode from 'vscode';
-import { LCARS_MARKDOWN_CSS } from '@story-agent/shared/lcars-markdown';
+import { LCARS_MARKDOWN_CSS, LCARS_MARKDOWN_CLIENT_JS } from '@story-agent/shared/lcars-markdown';
 import { randomBytes } from 'crypto';
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
 import { getChatClient, getChatClientStatus } from '../chat/chat-engine';
@@ -548,40 +548,10 @@ ${LCARS_MARKDOWN_CSS}
     let isSending = false;
     let streamingEl = null; // in-progress assistant bubble while chunks arrive
 
-    function escapeHtml(s) {
-      return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    // XSS-safe markdown: escape first, then render a Claude-Code-like subset.
-    function renderMarkdown(raw) {
-      const blocks = [];
-      let text = String(raw).replace(/\`\`\`(\\w*)\\n?([\\s\\S]*?)\`\`\`/g, function (_, lang, code) {
-        blocks.push('<pre class="lcars-md-pre"><code>' + escapeHtml(code.replace(/\\n$/, '')) + '</code></pre>');
-        return '@@CB' + (blocks.length - 1) + '@@';
-      });
-      text = escapeHtml(text);
-      text = text.replace(/\`([^\`]+)\`/g, '<code class="lcars-md-code">$1</code>');
-      text = text.replace(/^### (.*)$/gm, '<h3 class="lcars-md-h3">$1</h3>')
-                 .replace(/^## (.*)$/gm, '<h2 class="lcars-md-h2">$1</h2>')
-                 .replace(/^# (.*)$/gm, '<h1 class="lcars-md-h1">$1</h1>');
-      text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
-      text = text.replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
-      text = text.replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^\\s)]+)\\)/g, '<a class="lcars-md-link" href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-      text = text.replace(/(?:^[-*] .*(?:\\n|$))+/gm, function (m) {
-        return '<ul class="lcars-md-ul">' + m.trim().split('\\n').map(function (l) { return '<li>' + l.replace(/^[-*] /, '') + '</li>'; }).join('') + '</ul>';
-      });
-      text = text.replace(/(?:^\\d+\\. .*(?:\\n|$))+/gm, function (m) {
-        return '<ol class="lcars-md-ol">' + m.trim().split('\\n').map(function (l) { return '<li>' + l.replace(/^\\d+\\. /, '') + '</li>'; }).join('') + '</ol>';
-      });
-      text = text.replace(/\\n/g, '<br>');
-      text = text.replace(/@@CB(\\d+)@@/g, function (_, i) { return blocks[+i]; });
-      return text;
-    }
+    // Canonical XSS-safe markdown renderer, shared with the sidebar webview and the web /chat page —
+    // see @story-agent/shared/lcars-markdown (LCARS_MARKDOWN_CLIENT_JS). Do not hand-write a local
+    // copy here; that's the exact drift this shared constant exists to prevent.
+    ${LCARS_MARKDOWN_CLIENT_JS}
 
     function laneBadge(metadata) {
       const ea = metadata.executionActivation;

@@ -35,7 +35,7 @@ export default async function ClientPresence({ params }: { params: Promise<{ cli
         presence has not been built for this client yet.
       </p>
       <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-        <Link href="/dashboard" className="btn btn-primary" style={{ textDecoration: 'none' }}>Delivery dashboard →</Link>
+        <Link href={`/clients/${clientId}/dashboard`} className="btn btn-primary" style={{ textDecoration: 'none' }}>Project dashboard →</Link>
         <Link href="/clients" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Back to clients</Link>
       </div>
     </div>
