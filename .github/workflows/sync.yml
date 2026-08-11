@@ -1,0 +1,16 @@
+name: Enforce Sync
+on: [push, pull_request]
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          echo "Checking sync status"
+          git fetch origin
+          if [ $(git rev-parse HEAD) != $(git rev-parse origin/main) ]; then
+            echo "❌ Out of sync"
+            exit 1
+          else
+            echo "✅ In sync"
+          fi
