@@ -11,7 +11,7 @@
  * Anthropic is used only where Quark's tiering selects it (top-tier intake/plan, frontier members);
  * everything else runs on cheaper providers. Reuses assembleAndOptimize (Riker+Quark).
  */
-import { assembleAndOptimize, quarkSelectModel, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
+import { assembleAndOptimize, degradeTeamForStress, quarkSelectModel, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
 import {
   quarkSelectAvailableModel,
   markModelTemporarilyUnavailable,
@@ -25,6 +25,7 @@ import {
   resolveReflectionRounds,
   type ReflectionSummary,
 } from './reflection-rounds.js';
+import { buildStructuredPrompt, scoreFramingTips, FRAMING_TIP_REMINDER, type FramingScore } from './prompt-standards.js';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
@@ -111,9 +112,21 @@ export interface MissionPipelineResult {
   reflections?: Array<Array<{ crewId: string; model: string; text: string; costUSD: number }>>;
   /** Did anyone actually move? Carries the anti-theater warning. */
   reflection?: ReflectionSummary;
+  /** Interview-deck framing tips (scenario/tradeoff/eval/security≠prompt), scored per opening
+   *  position — advisory coaching signal, keyed by crewId. See prompt-standards.ts. */
+  framingScores?: Record<string, FramingScore>;
 }
 
-export async function runMissionPipeline(nlInput: string, clientId?: string | null, complexity?: number, reflectionRounds?: number): Promise<MissionPipelineResult> {
+export async function runMissionPipeline(
+  nlInput: string,
+  clientId?: string | null,
+  complexity?: number,
+  reflectionRounds?: number,
+  /** Decision 3 (2026-08-10): when the caller has evidence this task type is under stress (e.g. a
+   *  prior run on it stalled or blew its budget), trim the crew and escalate survivors' model tier
+   *  instead of running the same full-size team into the same wall again. */
+  opts?: { stress?: boolean },
+): Promise<MissionPipelineResult> {
   if (!OR_KEY) throw new Error('CREW_LLM_APPROVED_KEY not set');
   const ledger: CallResult[] = [];
 
@@ -125,30 +138,54 @@ export async function runMissionPipeline(nlInput: string, clientId?: string | nu
     Date.now());
 
   try {
-    // 1. PICARD intake (top-tier) — distill goals, retain intent.
+    // 1. PICARD intake (top-tier) — distill goals, retain intent. Structured per Prompt Eng Q2
+    // (Role→Context→Task→Constraints→Output Format) so the instruction removes ambiguity instead
+    // of relying on prose the model has to parse apart itself.
     const complexityLabel = !complexity ? 'unspecified' : complexity < 0.33 ? 'low' : complexity < 0.66 ? 'moderate' : 'high';
-    const intake = await call(TOP_MODEL,
-      'You are Captain Picard. Read the request and distill it into the crew\'s working brief. Output exactly:\nGOALS: <2-4 crisp goals, retaining the user\'s intended outcome>\nCONCEPTS: <key concepts/constraints>\nKeep it tight.',
-      `${nlInput}\n\n[COMPLEXITY CONTEXT: Task complexity is ${complexityLabel}${complexity ? ` (score: ${complexity.toFixed(2)} on 0-1 scale)` : ''}. Adjust team scope accordingly.]`, 240);
+    const intakeSystem = buildStructuredPrompt({
+      role: 'You are Captain Picard, distilling an operator request into the crew\'s working brief.',
+      task: 'Read the request and distill it into GOALS and CONCEPTS.',
+      constraints: [
+        'Retain the user\'s intended outcome — do not narrow or reinterpret scope.',
+        `Task complexity is ${complexityLabel}${complexity ? ` (score: ${complexity.toFixed(2)} on 0-1 scale)` : ''} — adjust team scope accordingly.`,
+        'Keep it tight — this is a working brief, not a report.',
+      ],
+      outputFormat: 'Output exactly:\nGOALS: <2-4 crisp goals, retaining the user\'s intended outcome>\nCONCEPTS: <key concepts/constraints>',
+    });
+    const intake = await call(TOP_MODEL, intakeSystem, nlInput, 240);
     ledger.push(intake);
     const goals = intake.text;
     heartbeatAsync(asyncDir, asyncId, { progress: 20 }, Date.now());
 
     // 2 + 3. RIKER assembles + QUARK optimizes models (deterministic engine). FRUGAL caps officer
     // deliberation at tier-3 (deepseek) — no frontier escalation, the prior run's cost+latency driver.
-    const plan = assembleAndOptimize(goals + '\n' + nlInput, FRUGAL ? 3 : 4);
+    let plan = assembleAndOptimize(goals + '\n' + nlInput, FRUGAL ? 3 : 4);
+    if (opts?.stress) {
+      const degraded = degradeTeamForStress(plan.team, goals + '\n' + nlInput);
+      plan = { ...plan, team: degraded.team };
+      ledger.push({ text: degraded.note, model: 'system', tokensIn: 0, tokensOut: 0, costUSD: 0 });
+    }
 
     // 4. CREW deliberates — round 1 is the BLIND opening position (each officer independent), then
     // N reflection rounds where each officer reads the others and must declare REVISED / HELD /
     // CONCEDED. Blind-only deliberation cannot catch a confabulation that another officer already
     // contradicted, which is why rounds exist. See reflection-rounds.ts for the anti-theater rule.
+    const contributionSystem = (crewId: string, domain: string) => buildStructuredPrompt({
+      role: `You are ${crewId} (${domain}) of the Story Agent crew, in the Observation Lounge.`,
+      task: 'Contribute YOUR domain\'s part toward the goals: a concrete position + one concern/resolution.',
+      constraints: ['2-3 sentences.', FRAMING_TIP_REMINDER],
+    });
     let contributions = await Promise.all(plan.team.map(async (m) => {
-      const r = await call(m.model,
-        `You are ${m.crewId} (${m.domain}) of the Story Agent crew, in the Observation Lounge. Contribute YOUR domain's part toward the goals: a concrete position + one concern/resolution. 2-3 sentences.`,
-        `GOALS:\n${goals}`, 160);
+      const r = await call(m.model, contributionSystem(m.crewId, m.domain), `GOALS:\n${goals}`, 160);
       ledger.push(r);
       return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
     }));
+
+    // Score the opening positions against the deck's four framing badges (advisory only — see
+    // prompt-standards.ts; nothing here blocks or reruns a contribution, it's a coaching signal
+    // carried through to the efficiency report and RAG so recurring gaps become visible over time).
+    const framingScores: Record<string, FramingScore> = {};
+    for (const c of contributions) framingScores[c.crewId] = scoreFramingTips(c.text);
 
     const openingPositions = contributions;
     const reflectionRoundCount = resolveReflectionRounds(reflectionRounds);
@@ -161,7 +198,7 @@ export async function runMissionPipeline(nlInput: string, clientId?: string | nu
         // Nothing to react to (solo team) → skip rather than have them argue with themselves.
         if (!digest) return { crewId: m.crewId, model: m.model, text: previous.find(p => p.crewId === m.crewId)?.text ?? '', costUSD: 0 };
         const r = await call(m.model,
-          buildReflectionSystemPrompt(m.crewId, m.domain, round - 1, reflectionRoundCount),
+          `${buildReflectionSystemPrompt(m.crewId, m.domain, round - 1, reflectionRoundCount)}\n${FRAMING_TIP_REMINDER}`,
           `GOALS:\n${goals}\n\nYOUR PREVIOUS POSITION:\n${previous.find(p => p.crewId === m.crewId)?.text ?? '(none)'}\n\nOTHER OFFICERS:\n${digest}`, 180);
         ledger.push(r);
         return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
@@ -200,7 +237,11 @@ For each plan, provide:
 2. A one-line reasoning
 3. Risk level (low/medium/high)
 
-When a step searches or counts files, make it RECURSIVE unless explicitly scoped. Format:
+When a step searches or counts files, make it RECURSIVE unless explicitly scoped.
+
+Output ONLY the structure below — begin your reply with "===== CONSERVATIVE =====", no preamble,
+no summary before it, no markdown fences around the whole thing (Prompt Eng Q4: a downstream
+parser reads this by marker, not by asking a model to describe its own output). Format:
 
 ===== CONSERVATIVE =====
 [steps]
@@ -268,7 +309,7 @@ Flag any disagreement between the three approaches (e.g., "teams diverged on whe
       efficiency: { perMember, perProvider, totalCostUSD: finalTotalUSD, totalTokens },
       missionPlan: balancedPlan, topModel: TOP_MODEL,
       alternatives, variance,
-      openingPositions, reflections, reflection,
+      openingPositions, reflections, reflection, framingScores,
     };
   } catch (err) {
     endAsync(asyncDir, asyncId, 'failed', Date.now());

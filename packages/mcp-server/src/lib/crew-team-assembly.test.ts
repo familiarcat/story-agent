@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escalatedTierForBusinessTier, effectiveCapabilityTier, quarkSelectModelForRequester, crewBaseTier, quarkSelectModel, MODEL_POOL } from './crew-team-assembly.js';
+import { escalatedTierForBusinessTier, effectiveCapabilityTier, quarkSelectModelForRequester, crewBaseTier, quarkSelectModel, MODEL_POOL, assembleAndOptimize, degradeTeamForStress } from './crew-team-assembly.js';
 
 describe('tier-aware LLM escalation (business tier → OpenRouter model tier)', () => {
   it('enterprise → frontier tier 4; commercial → cost tier 3; none → 0 (no escalation)', () => {
@@ -34,5 +34,33 @@ describe('tier-aware LLM escalation (business tier → OpenRouter model tier)', 
     expect(quarkSelectModel(2).id).toBe('meta-llama/llama-3.3-70b-instruct');
     // Guard: the visionOnly slug is still present in the pool (available to the vision path).
     expect(MODEL_POOL.some(m => m.id === 'google/gemini-flash-1.5' && m.visionOnly)).toBe(true);
+  });
+});
+
+describe('degradeTeamForStress (Decision 3, 2026-08-10: fewer agents, escalated tier for survivors)', () => {
+  // Needs to seat MORE than the default keepMembers(3) so the trim path (not the no-op path) runs —
+  // pull in test/qa, stakeholder, and communications keywords on top of architect/security/migration.
+  const issue = 'architect a security migration across services with data model refactor, verify test coverage, notify stakeholders and report to users';
+
+  it('is a no-op when the team is already at/below the keep threshold', () => {
+    const plan = assembleAndOptimize('fix a typo', 3); // small, non-complex → minimal team
+    const { team: original } = plan;
+    const { team: degraded, note } = degradeTeamForStress(original, 'fix a typo', { keepMembers: 10 });
+    expect(degraded).toEqual(original);
+    expect(note).toMatch(/skipped/);
+  });
+
+  it('trims a large team down to keepMembers and always keeps picard', () => {
+    const plan = assembleAndOptimize(issue, 4); // complex → seats many officers
+    expect(plan.team.length).toBeGreaterThan(3);
+    const { team: degraded } = degradeTeamForStress(plan.team, issue, { keepMembers: 3 });
+    expect(degraded.length).toBe(3);
+    expect(degraded.some(m => m.crewId === 'picard')).toBe(true);
+  });
+
+  it('escalates every survivor to the target tier, never leaving one behind', () => {
+    const plan = assembleAndOptimize(issue, 3); // FRUGAL-capped team, tier 3 or below
+    const { team: degraded } = degradeTeamForStress(plan.team, issue, { keepMembers: 3, escalateToTier: 4 });
+    for (const m of degraded) expect(m.capabilityTier).toBe(4);
   });
 });

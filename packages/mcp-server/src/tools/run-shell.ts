@@ -73,11 +73,16 @@ export function registerPlanThenExecuteTool(server: McpServer): void {
     'Autonomous loop: the crew deliberates a plan (runMissionPipeline), then the agent-core loop EXECUTES it (file edits + run_shell), WorfGate-governed. Returns the plan + the AgentRunResult. Long-running (bounded by maxIterations). Use for multi-step coding tasks stated in natural language.',
     {
       task: z.string().describe('The natural-language task to plan + execute.'),
-      maxIterations: z.number().optional().describe('Agent-loop iteration cap (default 12).'),
+      maxIterations: z.number().optional().describe('Agent-loop iteration cap. Omit to let the crew\'s own consensus (team size × reflection rounds) set the budget — this is the recommended default; only pass a fixed value to force a hard cap.'),
       clientId: z.string().optional(),
     },
     async ({ task, maxIterations, clientId }) => {
-      const r = await planThenExecute(task, { maxIterations: maxIterations ?? 12, clientId: clientId ?? null });
+      // DECISION (2026-08-10): stopped defaulting to a flat 12. This is the tool Claude.ai calls
+      // directly against the deployed MCP server — the same fixed-budget bug that was hardcoded in
+      // chat.ts was ALSO hardcoded here, so every Claude.ai-driven run hit it too. `maxIterations`
+      // is now passed through only when the caller explicitly sets it; planThenExecute derives a
+      // crew-informed default otherwise.
+      const r = await planThenExecute(task, { ...(maxIterations != null ? { maxIterations } : {}), clientId: clientId ?? null });
       return {
         content: [{ type: 'text' as const, text: JSON.stringify({
           task: r.task,

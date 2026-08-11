@@ -982,7 +982,10 @@ export async function runCanonicalChatTurn(
 
     const execution = await planThenExecute(activationTask, {
       clientId,
-      maxIterations: 12,
+      // DECISION (2026-08-10): no longer hardcoded. planThenExecute now derives the budget from the
+      // crew's own consensus (team size × reflection rounds) — this fixed value was the literal
+      // root cause of "reached max iterations without a final summary": every activation, from a
+      // single-officer fix to an 8-officer multi-round architecture task, got the same 12 turns.
       tier: 3,
       // Run against the CALLER's workspace so edits land where the user can see them. Falls back to
       // the server cwd only when the client omits it (legacy callers) — see CanonicalChatRequest.workspace.

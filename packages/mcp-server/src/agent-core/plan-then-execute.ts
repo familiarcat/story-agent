@@ -12,6 +12,7 @@ import { runAgentLoop, type AgentRunResult } from './loop.js';
 import { buildUnifiedRunRecord, storeUnifiedRun, recallUnifiedRuns, type UnifiedRunRecord } from './unified-run.js';
 import { RunRegistry } from './run-registry.js';
 import { buildBridges } from './bridges.js';
+import { computeMaxIterations } from '../lib/iteration-budget.js';
 
 
 
@@ -42,8 +43,13 @@ export async function planThenExecute(
     ? `PRIOR RELATED RUNS (from crew RAG — build on these, avoid repeating):\n${priorRuns.map(p => `- ${p}`).join('\n')}\n\n`
     : '';
 
+  // Stress signal for Decision 3 (graceful degradation): if a prior related run on this task/client
+  // already stalled or blew its budget, don't send the same full-size crew into the same wall —
+  // recallUnifiedRuns' summaries embed `stalled=true` / `escalated=true` when that happened.
+  const stress = priorRuns.some((p) => /stalled=true/.test(p));
+
   // Step 1 — crew deliberates a plan (frugal by default), informed by prior runs.
-  const mission = await runMissionPipeline(`${priorContext}TASK: ${task}`, opts.clientId ?? null);
+  const mission = await runMissionPipeline(`${priorContext}TASK: ${task}`, opts.clientId ?? null, undefined, undefined, { stress });
 
   // Step 2 — inject the plan as context by prepending it to the agent input.
   const input = [
@@ -57,11 +63,21 @@ export async function planThenExecute(
   ].join('\n');
 
   // Step 3 — the agent-core loop executes the plan (WorfGate-governed, self-healing, verify+rollback).
+  //
+  // DECISION (2026-08-10): maxIterations is derived from what the crew actually decided — team size
+  // × reflection rounds argued — instead of a flat constant. Callers (chat.ts et al.) can still force
+  // an explicit value via opts.maxIterations; that override always wins. Otherwise this is the fix for
+  // "reached max iterations without a final summary": a 2-officer blind-consensus task and an
+  // 8-officer multi-round-reflection task were both being given the same 12-turn budget.
+  const derivedMaxIterations = computeMaxIterations({
+    team: mission.team,
+    reflectionRounds: mission.reflections?.length ?? 0,
+  });
   const run = await runAgentLoop(input, {
     workspace: opts.workspace,
     clientId: opts.clientId ?? null,
     tier: opts.tier ?? 3,
-    maxIterations: opts.maxIterations ?? 20,
+    maxIterations: opts.maxIterations ?? derivedMaxIterations,
     // ROOT-CAUSE FIX: this call site previously omitted the bridges that http-server.ts already
     // spreads into its own runAgentLoop call. Without them ctx.ragRecall / ctx.crewDeliberate are
     // undefined, so rag_recall and crew_deliberate returned their "(… unavailable in this context)"

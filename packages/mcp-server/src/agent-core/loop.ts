@@ -146,6 +146,17 @@ export interface AgentFeedbackCard {
   stalled: boolean;
   outcome: string;
   clientId: string | null;
+  /** Decision 2 (2026-08-10), advisory file-verification: count of tool calls that both targeted a
+   *  mutating tool AND succeeded (ground truth on disk, not the model's narration). Lets RAG recall
+   *  distinguish "claimed work, wrote nothing" from a genuine no-op task — advisory only, never
+   *  blocks a run; it's a signal the crew can learn from over time (see bridges.ts recordFeedback). */
+  mutationsOk: number;
+  /** Safety fix (2026-08-11): count of mutating tool calls refused because this was a hosted
+   *  deployment with no client-supplied workspace (see mutatingWithoutBoundWorkspace above) — the
+   *  "writes succeed against the container's own throwaway copy, not the user's repo" failure mode.
+   *  Tagged in RAG (bridges.ts) so a recurrence of this exact pattern is recallable, same as
+   *  zero-mutation-claim above. */
+  hostedWorkspaceBlocks: number;
   orderAudit?: {
     token: string;
     preconditionSatisfied: boolean;
@@ -296,6 +307,22 @@ export async function callWithRetry<T>(fn: () => Promise<T>, attempts: number, e
   throw lastErr;
 }
 
+/**
+ * Safety fix (2026-08-11): decide whether this run has a workspace anyone actually bound, or is
+ * about to fall through to a hosted default that would silently write into the wrong filesystem.
+ * Pulled out as a pure function (rather than inlined in runAgentLoop) so the decision is unit
+ * testable without mocking the whole agent loop — see loop.test.ts.
+ */
+export function resolveWorkspaceBinding(
+  opts: { workspace?: string },
+  env: { STORY_AGENT_WORKSPACE?: string; NODE_ENV?: string } = process.env as any,
+): { workspace: string; workspaceExplicit: boolean; hostedWithoutWorkspace: boolean } {
+  const workspace = opts.workspace || env.STORY_AGENT_WORKSPACE || process.cwd();
+  const workspaceExplicit = !!opts.workspace || !!env.STORY_AGENT_WORKSPACE;
+  const hostedWithoutWorkspace = env.NODE_ENV === 'production' && !workspaceExplicit;
+  return { workspace, workspaceExplicit, hostedWithoutWorkspace };
+}
+
 /** Run the autonomous agent loop on a single user request. */
 export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}): Promise<AgentRunResult> {
   // Resolve credentials through WorfGate (authorized, audited, credential provider chain)
@@ -313,7 +340,18 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   });
   const OR_URL = (urlResult.available && urlResult.value ? urlResult.value : 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 
-  const workspace = opts.workspace || process.env.STORY_AGENT_WORKSPACE || process.cwd();
+  // SAFETY (2026-08-11): the browser/dashboard chat surface has no filesystem and no per-request
+  // workspace to send — every activation from it falls through to this same process.cwd() default.
+  // In production (the deployed Fargate container: docker/Dockerfile.mcp bakes the WHOLE repo into
+  // /app at build time, no git binary, no volume) that default silently resolves to the container's
+  // own throwaway copy. Writes there genuinely succeed — hence "Files changed (2)" — but land
+  // somewhere the operator can never see and that vanishes on the next deploy. Refuse mutating tools
+  // outright in that specific case (hosted + no workspace anyone actually specified) so the EXISTING
+  // "No files were modified" warning below fires honestly, instead of a misleading success footer.
+  // Deliberately narrow: local dev (`pnpm mcp` run from the repo root, NODE_ENV unset) is untouched —
+  // process.cwd() is a legitimate binding there, this only guards the case nobody bound anything.
+  const { workspace, hostedWithoutWorkspace } = resolveWorkspaceBinding(opts);
+  let hostedWorkspaceBlocks = 0;
   const preRunGitRef: string | null = (() => { try { return execSync('git rev-parse HEAD', { cwd: workspace, encoding: 'utf8', stdio: ['ignore','pipe','ignore'] }).trim() || null; } catch { return null; } })();
   const tools = opts.tools || AGENT_TOOLS;
   const maxIterations = opts.maxIterations ?? 25;
@@ -443,6 +481,8 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
           toolsUsed: result.toolCalls.map(t => t.tool), posture,
           costUSD: result.totalCostUSD, tokens: result.totalTokens, iterations: result.iterations,
           escalated: result.escalated, stalled: result.stalled, outcome: result.finalText.slice(0, 500), clientId: opts.clientId ?? null,
+          mutationsOk: result.toolCalls.filter(tc => tc.ok && MUTATING_TOOLS.has(tc.tool)).length,
+          hostedWorkspaceBlocks,
           orderAudit: {
             token: orderToken,
             preconditionSatisfied: sawOrientationStep,
@@ -606,6 +646,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       let tier: WorfTier = 'yellow';
       let remediations: string[] = [];
       const mutatingBeforeRead = !!(name && MUTATING_TOOLS.has(name) && !sawOrientationStep);
+      const mutatingWithoutBoundWorkspace = !!(name && MUTATING_TOOLS.has(name) && hostedWithoutWorkspace);
 
       if (!repaired.ok) {
         // Feed the error back as the tool result so the model retries. When the turn was TRUNCATED the
@@ -618,6 +659,19 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
       } else if (!tool) {
         output = `error: unknown tool ${name}`;
         ok = false;
+      } else if (mutatingWithoutBoundWorkspace) {
+        // Refuse BEFORE gateLocalOp/tool.handler ever run — nothing gets written, not even to the
+        // container's own throwaway copy. This is categorical (no operator can approve their way
+        // past a workspace that was never specified), unlike WorfGate's yellow/red tiers below.
+        hostedWorkspaceBlocks++;
+        output = `Refused '${name}': this surface is running hosted with no client-supplied workspace, so a write here would land in the server's own container filesystem — not your repository — and be lost on the next deploy. Use the VS Code Story Agent chat panel (sends your real workspace automatically) or Claude Code via the stdio MCP bridge for local file edits instead.`;
+        ok = false;
+        tier = 'red';
+        remediations = [
+          'Switch to a surface that binds a real workspace (VS Code Story Agent panel, or Claude Code via mcp-crew-stdio.sh).',
+          'If this deployment SHOULD write locally (e.g. a mounted volume), set STORY_AGENT_WORKSPACE explicitly rather than relying on the container default.',
+        ];
+        emit({ type: 'escalation', tool: name, text: output });
       } else if (mutatingBeforeRead) {
         blockedMutations++;
         output = `Order-of-operations gate blocked '${name}' (${stepToken}): call at least one orienting tool first (read_file, list_dir, search_code, rag_recall, git_status, git_diff).`;
@@ -723,6 +777,70 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
     }
   }
 
-  result.finalText = result.finalText || '(reached max iterations without a final summary)';
+  // DECISION (2026-08-10), option B of the max-iterations post-mortem: a completion is guaranteed by
+  // a SEPARATE summary-agent call made OUTSIDE the main loop, not by hoping the loop's last turn
+  // happens to be a summary. Written as a standalone exported function (see runSummaryAgent below) so
+  // a future caller can invoke it detached/async — e.g. fire it the moment the loop is judged
+  // unlikely to finish, in parallel with a final verify pass, instead of strictly after exhaustion.
+  if (!result.finalText) {
+    emit({ type: 'verify', ok: false, text: `exhausted ${maxIterations} iterations without a model-produced summary — invoking a dedicated summary agent` });
+    result.finalText = await runSummaryAgent({ client, messages, toolCalls: result.toolCalls, model, maxRetries, emit });
+    result.stalled = true;
+  }
   return await finalize();
+}
+
+/**
+ * Dedicated summary agent (Decision 1B). Runs OUTSIDE the main iteration budget on its own single
+ * call, so it can never itself be starved by maxIterations. Given the full transcript and the
+ * ground-truth tool-call ledger (not the model's own narration), it produces an honest account of
+ * what was and was not accomplished — completeness over speed, per the human-in-the-loop decision.
+ *
+ * Deliberately a plain exported function (not inlined) so a caller can invoke it independently of
+ * runAgentLoop — e.g. to run it concurrently with other cleanup work, or retry it alone without
+ * re-running the whole loop.
+ */
+export async function runSummaryAgent(args: {
+  client: OpenAI;
+  messages: any[];
+  toolCalls: Array<{ tool: string; tier: WorfTier; remediations: string[]; ok: boolean }>;
+  model: string;
+  maxRetries: number;
+  emit: (e: AgentEvent) => void;
+}): Promise<string> {
+  const { client, messages, toolCalls, model, maxRetries, emit } = args;
+  const succeeded = toolCalls.filter(t => t.ok);
+  const failed = toolCalls.filter(t => !t.ok);
+  const ledger = [
+    `TOOL CALL LEDGER (ground truth — ${toolCalls.length} total, ${succeeded.length} ok, ${failed.length} failed):`,
+    ...toolCalls.map((t, i) => `${i + 1}. ${t.tool} — ${t.ok ? 'ok' : 'FAILED'}${t.remediations.length ? ` (${t.remediations.join('; ')})` : ''}`),
+  ].join('\n');
+  const summaryMessages = [
+    ...messages,
+    {
+      role: 'user',
+      content: [
+        'You have run out of iterations before producing a final summary. Do NOT continue the task or call any tools.',
+        'Write a concise, HONEST summary of the run for the operator: what was actually completed (cite specific',
+        'tool calls), what was attempted but failed, and what remains undone. Do not claim anything the ledger',
+        'below does not support.',
+        '',
+        ledger,
+      ].join('\n'),
+    },
+  ];
+  try {
+    const resp: any = await callWithRetry(
+      () => client.chat.completions.create({ model, messages: summaryMessages, max_tokens: 600 }),
+      maxRetries,
+      emit,
+    );
+    const text = resp.choices?.[0]?.message?.content?.trim();
+    if (text) return text;
+  } catch (err: any) {
+    emit({ type: 'error', text: `summary agent call failed: ${err?.message || err}` });
+  }
+  // Last-resort fallback: even if the summary agent's own call fails, never return an opaque string —
+  // hand back the ground-truth ledger itself so the operator still learns what actually happened.
+  return `⚠️ Reached max iterations and the summary agent could not be reached. Ground truth from the tool-call ledger:\n\n${ledger}`;
 }

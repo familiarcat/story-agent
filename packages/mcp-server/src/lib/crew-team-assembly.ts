@@ -188,3 +188,51 @@ export function assembleAndOptimize(issue: string, maxTier: 1 | 2 | 3 | 4 = 4): 
     estCostNote: `Quark cost-optimized ${team.length} members across ${Object.keys(providerMix).length} providers; Anthropic used for ${providerMix['Anthropic'] ?? 0}/${team.length} (advanced/frontier only).`,
   };
 }
+
+/**
+ * Graceful degradation under stress (Decision 3, human-in-the-loop 2026-08-10): "reduce crew size
+ * dynamically (fewer agents, cheaper models)" was the starting proposal, but the decision on
+ * review was the opposite trade for the SURVIVING members — when the crew shrinks, give the
+ * officers who remain seated the headroom to run at a frontier tier if cost/efficiency allow,
+ * rather than also cheapening their model. Fewer, stronger officers > many degraded ones.
+ *
+ * Keeps Picard (always arbitrates) plus the top `keepMembers` by domain-match strength (matched
+ * keyword count, ties broken by base tier), so the trim favors officers who are actually relevant
+ * to the issue rather than an arbitrary prefix of the array.
+ */
+export function degradeTeamForStress(
+  team: TeamMember[],
+  issue: string,
+  opts: { keepMembers?: number; escalateToTier?: 1 | 2 | 3 | 4 } = {},
+): { team: TeamMember[]; note: string } {
+  const keepMembers = opts.keepMembers ?? 3;
+  const escalateToTier = opts.escalateToTier ?? 4;
+  if (team.length <= keepMembers) {
+    return { team, note: `stress degradation skipped — team already at/below ${keepMembers} members` };
+  }
+  const text = issue.toLowerCase();
+  const scored = team
+    .map((m) => {
+      const spec = CREW.find((c) => c.crewId === m.crewId);
+      const matchStrength = spec ? spec.keywords.filter((k) => text.includes(k)).length : 0;
+      return { member: m, score: m.crewId === 'picard' ? 1000 : matchStrength * 10 + m.capabilityTier };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const survivors = scored.slice(0, keepMembers).map(({ member }) => {
+    const escalatedModel = quarkSelectModel(escalateToTier);
+    return {
+      ...member,
+      capabilityTier: escalateToTier,
+      model: escalatedModel.id,
+      provider: escalatedModel.provider,
+      reason: `${member.reason} [stress-degraded: crew trimmed ${team.length}→${keepMembers}, survivor escalated to tier ${escalateToTier} (${escalatedModel.provider})]`,
+    };
+  });
+
+  const dropped = scored.slice(keepMembers).map(({ member }) => member.crewId);
+  return {
+    team: survivors,
+    note: `stress degradation: kept [${survivors.map((m) => m.crewId).join(', ')}] at tier ${escalateToTier}, dropped [${dropped.join(', ')}]`,
+  };
+}

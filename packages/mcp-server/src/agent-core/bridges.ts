@@ -54,6 +54,15 @@ export function buildBridges(
     // rag_recall can surface "we did a similar task before, here's how it went" on future runs.
     recordFeedback: async (card) => {
       const postureLine = `WorfGate 🟢${card.posture.green}/🟡${card.posture.yellow}/🔴${card.posture.red}`;
+      // Decision 2 (2026-08-10), advisory file-verification: a run that used mutating-shaped tools
+      // (write_file/edit_file/apply_patch/delete_file) in toolsUsed but landed ZERO successful ones
+      // is the "claimed work, wrote nothing" pattern from the chat groundTruth footer. Tag it
+      // distinctly (not blocking anything here — purely so future rag_recall calls can surface
+      // "this exact task shape has claimed-but-not-written before" and the crew can either propose a
+      // fix or learn to flag it for human review before it recurs).
+      const MUTATING_SHAPED = new Set(['write_file', 'edit_file', 'apply_patch', 'delete_file']);
+      const attemptedMutation = card.toolsUsed.some((t) => MUTATING_SHAPED.has(t));
+      const zeroMutationClaim = attemptedMutation && card.mutationsOk === 0;
       const orderLine = card.orderAudit
         ? `OrderGate token ${card.orderAudit.token} — precondition:${card.orderAudit.preconditionSatisfied ? 'met' : 'missing'}, blockedMutations:${card.orderAudit.blockedMutations}`
         : 'OrderGate token unavailable';
@@ -68,7 +77,7 @@ export function buildBridges(
             title: card.stalled ? 'Agent run (STALL detected + self-nudged)' : 'Agent run',
             entries: [{ speakerId: 'agent-core', position: 'support', statement: card.input, evidence: [`model:${card.model}`, `lens:${card.lens}`, `tools:${card.toolsUsed.join(',')}`, `stalled:${card.stalled}`, orderLine, ...(card.orderAudit?.steps?.slice(-5) ?? []).map((s) => `step:${s}`)] }],
           }],
-          consensusSummary: `${card.outcome} — ${postureLine}, ${orderLine}, ${card.iterations} turns, ${card.toolsUsed.length} tools, ~$${card.costUSD.toFixed(5)}${card.escalated ? ', escalated' : ''}${card.stalled ? ', STALLED→nudged' : ''}.`,
+          consensusSummary: `${card.outcome} — ${postureLine}, ${orderLine}, ${card.iterations} turns, ${card.toolsUsed.length} tools, ~$${card.costUSD.toFixed(5)}${card.escalated ? ', escalated' : ''}${card.stalled ? ', STALLED→nudged' : ''}${card.hostedWorkspaceBlocks > 0 ? `, ${card.hostedWorkspaceBlocks} hosted-workspace write(s) refused` : ''}.`,
           unresolvedRisks: card.stalled ? ['finish/iterate stall: model produced text with 0 tool calls on an actionable task'] : [],
           finalDecision: card.orderAudit && !card.orderAudit.preconditionSatisfied && card.orderAudit.blockedMutations > 0 ? 'revise' : 'approved',
           actionItems: [
@@ -85,6 +94,8 @@ export function buildBridges(
           card.model,
           clientId ?? 'global',
           ...(card.stalled ? ['stall'] : []),
+          ...(zeroMutationClaim ? ['zero-mutation-claim'] : []),
+          ...(card.hostedWorkspaceBlocks > 0 ? ['hosted-workspace-blocked'] : []),
           ...(card.orderAudit && card.orderAudit.blockedMutations > 0 ? ['order-gate-blocked'] : ['order-gate-pass']),
         ],
       });
