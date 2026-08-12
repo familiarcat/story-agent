@@ -1,5 +1,0 @@
-{
-  "slug": "oauth21-claude-connector",
-  "title": "feat: OAuth 2.1 authorization endpoint so Claude.ai can connect as an MCP client",
-  "tags": ["milestone", "oauth", "security", "mcp", "claude-connector", "rag-self-learning"]
-}
