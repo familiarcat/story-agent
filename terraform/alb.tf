@@ -187,7 +187,7 @@ resource "aws_lb_listener_rule" "mcp_http" {
     }
   }
   condition {
-    path_pattern { values = ["/mcp", "/mcp/*", "/rag/*", "/.well-known/mcp.json"] }
+    path_pattern { values = ["/mcp", "/mcp/*", "/rag/*", "/.well-known/mcp.json", "/.well-known/oauth-authorization-server", "/.well-known/oauth-protected-resource", "/authorize", "/authorize/*", "/token", "/register", "/revoke"] }
   }
 }
 

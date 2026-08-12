@@ -22,6 +22,8 @@
     "@story-agent/shared": "workspace:*",
     "@supabase/supabase-js": "^2.47.10",
     "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "jose": "^6.1.3",
     "node-fetch": "^3.3.2",
     "openai": "^4.67.1",
     "pino": "^8.17.2",
@@ -32,6 +34,7 @@
   "devDependencies": {
     "@types/node": "^22.19.19",
     "typescript": "^5.7.2",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "@types/express": "^5.0.0"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "slug": "generalize-claude-chat-apply-workflow",
-  "title": "chore: generalize apply-story-agent-fixes.sh for any future Claude chat session",
-  "tags": ["milestone", "ci-cd", "tooling", "claude-web-chat", "rag-self-learning"]
+  "slug": "oauth21-claude-connector",
+  "title": "feat: OAuth 2.1 authorization endpoint so Claude.ai can connect as an MCP client",
+  "tags": ["milestone", "oauth", "security", "mcp", "claude-connector", "rag-self-learning"]
 }
