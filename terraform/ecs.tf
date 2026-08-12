@@ -11,6 +11,11 @@ locals {
     { name = "CREW_LLM_APPROVED_KEY", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:CREW_LLM_APPROVED_KEY::" },
     { name = "SUPABASE_CLOUD_URL", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:SUPABASE_CLOUD_URL::" },
     { name = "SUPABASE_CLOUD_KEY", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:SUPABASE_CLOUD_KEY::" },
+    # OAuth 2.1 authorization endpoint (2026-08-12) — see packages/mcp-server/src/agent-core/oauth-provider.ts.
+    # Populated via scripts/setup-oauth-secrets.sh, which writes both into the SAME story-agent/runtime
+    # secret these other keys live in (merged, not a separate secret) — one runtime credential blob.
+    { name = "STORY_AGENT_OAUTH_SIGNING_KEY", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:STORY_AGENT_OAUTH_SIGNING_KEY::" },
+    { name = "STORY_AGENT_OAUTH_OWNER_PASSPHRASE", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:STORY_AGENT_OAUTH_OWNER_PASSPHRASE::" },
   ]
 }
 
