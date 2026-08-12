@@ -119,6 +119,9 @@ async function main() {
 
   const flush = await flushObservationMemoryQueue();
   console.log(`stored observation memory id=${obs.id} and crew notes for ${allCrew.length} members; flushed synced=${flush.synced} remaining=${flush.remaining}`);
+  // Force exit — see identical note in store-max-iterations-fix-memory.ts (db.ts's optional Redis
+  // client keeps the process alive after all work here is already done).
+  process.exit(0);
 }
 
 main().catch((err) => {

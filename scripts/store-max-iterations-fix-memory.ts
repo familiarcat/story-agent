@@ -123,6 +123,11 @@ async function main() {
 
   const flush = await flushObservationMemoryQueue();
   console.log(`stored observation memory id=${obs.id} and crew notes for ${allCrew.length} members; flushed synced=${flush.synced} remaining=${flush.remaining}`);
+  // Force exit — db.ts optionally opens a Redis client (when REDIS_URL is set) whose connection
+  // stays open after this script's own work is done, so Node's event loop never drains naturally
+  // and the process hangs indefinitely even though everything succeeded. All writes above are
+  // already awaited/complete by this point, so exiting here is safe.
+  process.exit(0);
 }
 
 main().catch((err) => {
