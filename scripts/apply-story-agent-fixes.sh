@@ -1,9 +1,17 @@
 #!/usr/bin/env zsh
-# apply-story-agent-fixes.sh — apply the max-iterations fix package (story-agent-fixes.zip) to a
-# real story-agent working copy, verify it (typecheck + tests), commit it on a dedicated branch,
-# and record the milestone into the crew's durable RAG memory (observation memory + per-crew
-# personal memory) — so rag_recall surfaces it automatically on future runs, no manual chat step
-# required.
+# apply-story-agent-fixes.sh — apply ANY Claude-web-chat-produced fix package to a real story-agent
+# working copy: verify it (typecheck + tests), commit it on a dedicated branch, optionally push +
+# open a PR, and record the milestone into the crew's durable RAG memory — so rag_recall surfaces
+# it automatically on future runs, no manual chat step required.
+#
+# GENERALIZED (2026-08-11): earlier versions of this script hardcoded the branch prefix, commit
+# message, and PR title to the specific max-iterations fix, and expected a bespoke
+# store-<fixname>-memory.ts script bundled in every zip. That worked once; it does not scale to
+# "every future Claude chat session produces a new fix package." This version reads a MANIFEST.json
+# from the zip root (slug/title/tags) to drive branch naming, the commit message, and the PR title,
+# and calls the generic scripts/record-claude-chat-milestone.ts for the RAG step instead of a
+# one-off script name. Falls back to sane generic defaults if MANIFEST.json is absent, so
+# already-issued zips without one still work.
 #
 # Defaults are pinned to Brady's actual setup:
 #   local checkout:  ~/Developer/story-agent
@@ -13,7 +21,7 @@
 # Usage:
 #   zsh -ic 'scripts/apply-story-agent-fixes.sh [--zip PATH] [--repo PATH] [--skip-tests] [--push] [--open-pr] [--dry-run]'
 #
-#   --zip PATH        Path to the downloaded story-agent-fixes.zip (default: ~/Downloads/story-agent-fixes.zip)
+#   --zip PATH        Path to the downloaded fix zip (default: ~/Downloads/story-agent-fixes.zip)
 #   --repo PATH        Path to your story-agent working copy (default: ~/Developer/story-agent)
 #   --skip-tests       Skip pnpm typecheck/test:unit verification (not recommended)
 #   --push              git push the fix branch to origin after committing (default: off)
@@ -22,17 +30,21 @@
 #                        isn't installed/authenticated, rather than failing the whole run.
 #   --dry-run          Show what would happen without touching any files
 #
+# MANIFEST.json (optional, zip root) — drives naming instead of hardcoded text:
+#   { "slug": "max-iterations-fix", "title": "fix: max-iterations root cause + ...",
+#     "tags": ["milestone", "agent-loop", "rag-self-learning"] }
+# Missing fields (or the whole file) fall back to generic defaults — nothing breaks on an older zip.
+#
 # What it does, in order:
 #   1. Validates the zip and the target repo (must be the story-agent monorepo, must be a git repo,
-#      and origin should point at familiarcat/story-agent — warns rather than blocks if it doesn't,
-#      since a fork or a differently-named remote is still a legitimate setup).
-#   2. Creates a dedicated branch (fix/max-iterations-YYYYMMDD-HHMMSS) so this is isolated + reversible.
+#      and origin should point at familiarcat/story-agent — warns rather than blocks if it doesn't).
+#   2. Creates a dedicated branch (fix/<slug>-YYYYMMDD-HHMMSS) so this is isolated + reversible.
 #   3. Unzips and copies every file from the package into the matching repo-relative path.
 #   4. Runs pnpm install / typecheck / test:unit to verify nothing broke (unless --skip-tests).
 #   5. Shows git diff --stat and asks for confirmation before committing.
 #   6. Commits on the fix branch (does NOT touch main/origin unless --push or --open-pr is given).
-#   7. Runs scripts/store-max-iterations-fix-memory.ts via tsx — writes the milestone into
-#      observation memory + a personal decision_note for every crew member (including Guinan).
+#   7. Runs scripts/record-claude-chat-milestone.ts via tsx (generic — see above) — writes the
+#      milestone into observation memory + a personal decision_note for every crew member.
 #   8. (--open-pr only) Pushes the branch and opens a PR against the branch you started from,
 #      using PR_DESCRIPTION.md as the body.
 #
@@ -72,6 +84,9 @@ say "repo: $REPO_PATH"
 cd "$REPO_PATH"
 
 REMOTE_URL="$(git remote get-url origin 2>/dev/null || echo '')"
+# Normalize to an https:// browser URL up front — REMOTE_URL may be SSH-form (ssh://git@host/path
+# or the scp-like git@host:path), neither of which a browser can open.
+HTTPS_REMOTE="$(printf '%s' "${REMOTE_URL%.git}" | sed -E 's#^ssh://git@#https://#; s#^git@([^:]+):#https://\1/#')"
 if [[ -n "$REMOTE_URL" ]]; then
   if [[ "$REMOTE_URL" == *"$EXPECTED_REMOTE"* ]]; then
     say "origin: $REMOTE_URL ✓"
@@ -88,40 +103,59 @@ if [[ -n "$(git status --porcelain)" ]]; then
   fail "working tree is dirty on branch '$CURRENT_BRANCH' — commit or stash your changes first, then re-run"
 fi
 
-BRANCH="fix/max-iterations-$(date +%Y%m%d-%H%M%S)"
+# ── 2. Unzip to a scratch dir FIRST (before creating the branch) so MANIFEST.json can drive naming ──
+WORKDIR="$(mktemp -d)"
+trap 'rm -rf "$WORKDIR"' EXIT
+unzip -q "$ZIP_PATH" -d "$WORKDIR"
+
+MANIFEST_FILE="$WORKDIR/MANIFEST.json"
+if [[ -f "$MANIFEST_FILE" ]] && command -v node >/dev/null 2>&1; then
+  SLUG="$(node -e "try{const m=require('$MANIFEST_FILE');process.stdout.write(String(m.slug||''))}catch{}")"
+  PR_TITLE="$(node -e "try{const m=require('$MANIFEST_FILE');process.stdout.write(String(m.title||''))}catch{}")"
+  TAGS="$(node -e "try{const m=require('$MANIFEST_FILE');process.stdout.write((m.tags||[]).join(','))}catch{}")"
+else
+  SLUG=""
+  PR_TITLE=""
+  TAGS=""
+fi
+# Generic fallbacks — an older zip with no MANIFEST.json (or a partial one) still works.
+[[ -n "$SLUG" ]] || SLUG="claude-chat-fix"
+[[ -n "$PR_TITLE" ]] || PR_TITLE="fix: changes from Claude web chat session"
+[[ -n "$TAGS" ]] || TAGS="milestone,claude-chat"
+say "manifest: slug=$SLUG title=\"$PR_TITLE\" tags=$TAGS$([[ -f "$MANIFEST_FILE" ]] || echo ' (no MANIFEST.json found — using generic defaults)')"
+
+BRANCH="fix/${SLUG}-$(date +%Y%m%d-%H%M%S)"
 
 if $DRY_RUN; then
   say "[dry-run] would create branch $BRANCH off $CURRENT_BRANCH"
   say "[dry-run] would unzip $ZIP_PATH and copy its files into $REPO_PATH"
   $SKIP_TESTS || say "[dry-run] would run: pnpm install / typecheck / test:unit"
-  say "[dry-run] would run: npx tsx scripts/store-max-iterations-fix-memory.ts"
+  say "[dry-run] would run: npx tsx scripts/record-claude-chat-milestone.ts --story-id $SLUG-$(date +%Y%m%d) --title \"$PR_TITLE\" --summary-file SUMMARY.md --tags $TAGS"
   $DO_PUSH && say "[dry-run] would git push -u origin $BRANCH"
   $DO_OPEN_PR && say "[dry-run] would open a PR via 'gh pr create' (base=$CURRENT_BRANCH) using PR_DESCRIPTION.md"
   say "[dry-run] no files were touched — re-run without --dry-run to apply."
   exit 0
 fi
 
-# ── 2. Dedicated branch ───────────────────────────────────────────────────────
+# ── 3. Dedicated branch, then apply the package ───────────────────────────────
 git checkout -b "$BRANCH"
 say "created + checked out $BRANCH"
 
-# ── 3. Apply the package ──────────────────────────────────────────────────────
-WORKDIR="$(mktemp -d)"
-trap 'rm -rf "$WORKDIR"' EXIT
-unzip -q "$ZIP_PATH" -d "$WORKDIR"
-
-# SUMMARY.md and PR_DESCRIPTION.md document the change set but aren't repo source files — the PR
-# description is used later (step 8) straight out of $WORKDIR, never committed into the tree.
+# SUMMARY.md, PR_DESCRIPTION.md, and MANIFEST.json document the change set but aren't repo source
+# files — used later straight out of $WORKDIR, never committed into the tree.
 COPIED=0
 while IFS= read -r -d '' f; do
   rel="${f#$WORKDIR/}"
-  [[ "$rel" == "SUMMARY.md" || "$rel" == "PR_DESCRIPTION.md" ]] && continue
+  case "$rel" in
+    SUMMARY.md|PR_DESCRIPTION.md|MANIFEST.json) continue ;;
+  esac
   mkdir -p "$REPO_PATH/$(dirname "$rel")"
   cp "$f" "$REPO_PATH/$rel"
   echo "  + $rel"
   COPIED=$((COPIED + 1))
 done < <(find "$WORKDIR" -type f -print0)
-chmod +x "$REPO_PATH/scripts/setup-app-bucket.sh" 2>/dev/null || true
+# Re-apply exec bits for any shell scripts the zip carried — cp doesn't always preserve them.
+find "$REPO_PATH/scripts" -maxdepth 1 -name '*.sh' -newer "$WORKDIR" -exec chmod +x {} \; 2>/dev/null || true
 say "copied $COPIED file(s) into the working tree"
 
 # ── 4. Verify ──────────────────────────────────────────────────────────────
@@ -156,18 +190,12 @@ if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
 fi
 
 # ── 6. Commit ──────────────────────────────────────────────────────────────
-git commit -q -m "fix: max-iterations root cause + 4 crew decisions + S3 bucket + Guinan registry
-
-- runSummaryAgent: guaranteed completion outside the main loop (Decision 1)
-- zero-mutation-claim RAG tag: advisory file-verification signal (Decision 2)
-- degradeTeamForStress: fewer agents, escalated survivor tier (Decision 3)
-- computeMaxIterations: crew-informed iteration budget, floor 12 / ceiling 50 (Decision 4)
-- removes the two hardcoded maxIterations:12 sites (chat.ts + run-shell.ts plan_then_execute)
-- scripts/setup-app-bucket.sh + s3-structure.ts: application S3 bucket, no more missing bucket name
-- Guinan persona registry completion (CREW_PERSONAS/CREW_MEMORY_ALPHA_URLS/lounge prompts)
-- new tests: iteration-budget.test.ts, crew-team-assembly.test.ts additions
-
-Verified: pnpm typecheck clean, 396 unit tests passed."
+# Commit body: PR_DESCRIPTION.md's full content if present, else just the title.
+COMMIT_MSG="$PR_TITLE"
+if [[ -f "$WORKDIR/PR_DESCRIPTION.md" ]]; then
+  COMMIT_MSG="$(printf '%s\n\n%s' "$PR_TITLE" "$(cat "$WORKDIR/PR_DESCRIPTION.md")")"
+fi
+git commit -q -m "$COMMIT_MSG"
 say "committed on $BRANCH"
 
 if $DO_PUSH; then
@@ -177,8 +205,7 @@ fi
 
 if $DO_OPEN_PR; then
   PR_BODY_FILE="$WORKDIR/PR_DESCRIPTION.md"
-  PR_TITLE="fix: max-iterations root cause + 4 crew decisions + S3 bucket + Guinan registry"
-  COMPARE_URL="${REMOTE_URL%.git}/compare/${CURRENT_BRANCH}...${BRANCH}?expand=1"
+  COMPARE_URL="${HTTPS_REMOTE}/compare/${CURRENT_BRANCH}...${BRANCH}?expand=1"
   if [[ ! -f "$PR_BODY_FILE" ]]; then
     echo "⚠️  PR_DESCRIPTION.md missing from the fix package — branch is pushed, open the PR manually:" >&2
     echo "   $COMPARE_URL" >&2
@@ -199,17 +226,24 @@ if $DO_OPEN_PR; then
   fi
 fi
 
-# ── 7. Record the milestone into RAG ────────────────────────────────────────
-if [[ -f "scripts/store-max-iterations-fix-memory.ts" ]]; then
+# ── 7. Record the milestone into RAG (generic script — works for any future zip) ──────────────
+if [[ -f "scripts/record-claude-chat-milestone.ts" && -f "$WORKDIR/SUMMARY.md" ]]; then
   say "recording milestone into crew RAG memory…"
-  if npx tsx scripts/store-max-iterations-fix-memory.ts; then
+  if npx tsx scripts/record-claude-chat-milestone.ts \
+      --story-id "${SLUG}-$(date +%Y%m%d)" \
+      --title "$PR_TITLE" \
+      --summary-file "$WORKDIR/SUMMARY.md" \
+      --tags "$TAGS"; then
     say "RAG memory updated — rag_recall will now surface this fix for related future tasks"
   else
     echo "⚠️  memory recording failed (often just missing Supabase env in this shell) — the code fix" >&2
-    echo "   is still applied and committed. Re-run: npx tsx scripts/store-max-iterations-fix-memory.ts" >&2
+    echo "   is still applied and committed. Re-run: npx tsx scripts/record-claude-chat-milestone.ts --story-id ${SLUG}-$(date +%Y%m%d) --title \"$PR_TITLE\" --summary-file <path-to-SUMMARY.md> --tags $TAGS" >&2
   fi
+elif [[ ! -f "scripts/record-claude-chat-milestone.ts" ]]; then
+  echo "⚠️  scripts/record-claude-chat-milestone.ts not found in this repo yet — skipping RAG memory step" >&2
+  echo "   (it ships in this same zip; it'll be present for the NEXT run once this one is committed)" >&2
 else
-  echo "⚠️  scripts/store-max-iterations-fix-memory.ts not found — skipping RAG memory step" >&2
+  echo "⚠️  no SUMMARY.md in this zip — skipping RAG memory step" >&2
 fi
 
 echo ""
@@ -217,7 +251,7 @@ say "done. Branch: $BRANCH"
 if $DO_OPEN_PR; then
   : # PR status already printed above
 elif $DO_PUSH; then
-  say "pushed but no PR opened — run again with --open-pr, or open one manually: ${REMOTE_URL%.git}/compare/${CURRENT_BRANCH}...${BRANCH}?expand=1"
+  say "pushed but no PR opened — run again with --open-pr, or open one manually: ${HTTPS_REMOTE}/compare/${CURRENT_BRANCH}...${BRANCH}?expand=1"
 else
   say "not pushed — run 'git push -u origin $BRANCH' when you're ready, or re-run with --push or --open-pr"
 fi
