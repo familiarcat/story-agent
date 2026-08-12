@@ -222,7 +222,7 @@ async function probeSupabaseCandidate(candidate: SupabaseCandidate): Promise<{
   }
 }
 
-async function db(): Promise<SupabaseClient> {
+export async function db(): Promise<SupabaseClient> {
   if (_client) return _client;
   if (_clientPromise) return _clientPromise;
 

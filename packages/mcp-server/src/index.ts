@@ -28,6 +28,7 @@ import { guardListen } from './lib/port-guard.js';
 import { registerAhaTools } from './tools/aha-tools.js';
 import { registerCrewMissionTools } from './tools/crew-mission-tools.js';
 import { registerInnovationLoungeTools } from './tools/innovation-lounge-tools.js';
+import { buildOAuthApp, OAUTH_PATH_PREFIXES } from './agent-core/oauth-router.js';
 import { registerEntitlementTools } from './tools/entitlement-tools.js';
 import { wireLiveEntitlementResolver } from '@story-agent/shared/iam-identity-center';
 import { registerClientTools } from './tools/client-tools.js';
@@ -110,12 +111,28 @@ async function main() {
   if (process.env.STORY_AGENT_HTTP_PORT) {
     const httpPort = parseInt(process.env.STORY_AGENT_HTTP_PORT, 10) || 3101;
     const authMiddleware = createHttpAuthMiddleware();
+    // Built once at startup (not per-request) — same lifetime as the raw http server itself.
+    // OAuth 2.1 authorization surface (2026-08-12, Path B) — see oauth-provider.ts for the trust
+    // model. STORY_AGENT_OAUTH_SIGNING_KEY / STORY_AGENT_OAUTH_OWNER_PASSPHRASE gate this; if
+    // unset, buildOAuthApp still mounts (metadata/discovery is harmless to expose), but every
+    // token-issuing path fails closed with a clear error rather than silently working insecurely.
+    const oauthApp = buildOAuthApp();
 
     const httpServer = createHTTPServer(async (req, res) => {
       // Mount the agent-core endpoint (/agent SSE, /symphony) on the SAME port as MCP so the deployed
       // crew is reachable via the existing target group — no extra container port / ECS service
       // replacement (crew deploy-optimization finding). Falls through to /mcp if not an agent route.
       if (await handleAgentRequest(req, res)) return;
+
+      // OAuth 2.1 authorization surface — dispatched to the Express sub-app BEFORE the "only /mcp
+      // is exposed" gate below, since these paths are how a client gets the bearer token that gate
+      // requires in the first place. Matches terraform/alb.tf's mcp_http rule path allowlist —
+      // update both together if this list changes.
+      const urlPath = (req.url || '/').split('?')[0];
+      if (OAUTH_PATH_PREFIXES.some((p) => urlPath === p || urlPath.startsWith(`${p}/`))) {
+        oauthApp(req, res);
+        return;
+      }
 
       // Discovery manifest (public, no secrets) — any MCP client / VS Code extension self-configures
       // to reach the crew + Commodore from this one well-known endpoint (Commodore fabric, phase 2).
@@ -133,7 +150,12 @@ async function main() {
       }
 
       // Validate auth before handing off to MCP transport
-      authMiddleware(
+      // Now async (2026-08-12: standard-tier cryptographic verify) — awaited so a rejected
+      // verification actually reaches the 401 response path instead of the request hanging until
+      // the client times out (an unawaited async middleware's error would otherwise only surface
+      // via the global unhandledRejection resilience handler at the top of this file, which logs
+      // and keeps the process alive but never writes a response for the stalled request).
+      await authMiddleware(
         req as Parameters<typeof authMiddleware>[0],
         res as Parameters<typeof authMiddleware>[1],
         async () => {

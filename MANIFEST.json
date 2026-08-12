@@ -1,5 +1,0 @@
-{
-  "slug": "generalize-claude-chat-apply-workflow",
-  "title": "chore: generalize apply-story-agent-fixes.sh for any future Claude chat session",
-  "tags": ["milestone", "ci-cd", "tooling", "claude-web-chat", "rag-self-learning"]
-}

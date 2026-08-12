@@ -313,11 +313,11 @@ export function validateHttpRequest(ctx: HttpRequestContext): AuthValidationResu
  *   app.all('/mcp', mcpExpressHandler);
  */
 export function createHttpAuthMiddleware() {
-  return function httpAuthMiddleware(
+  return async function httpAuthMiddleware(
     req: { headers: Record<string, string | string[] | undefined>; method: string; socket: { remoteAddress?: string } },
     res: { writeHead: (code: number, headers: Record<string, string>) => void; end: (body: string) => void },
     next: () => void,
-  ): void {
+  ): Promise<void> {
     const authHeader = Array.isArray(req.headers['authorization'])
       ? req.headers['authorization'][0] ?? null
       : req.headers['authorization'] ?? null;
@@ -345,6 +345,38 @@ export function createHttpAuthMiddleware() {
       });
       res.end(JSON.stringify({ error: 'unauthorized', reason: result.reason }));
       return;
+    }
+
+    // Additive cryptographic upgrade (2026-08-12): 'standard' tier previously only shape-checked
+    // the bearer token (see validateStandardToken above — no signature verify, by the module's own
+    // long-standing comment). Now that the OAuth 2.1 authorization endpoint (oauth-provider.ts)
+    // actually issues signed tokens for this tier, verify them for real before granting access.
+    // Deliberately scoped to 'standard' only — 'regulated'/'enterprise' keep their existing Entra/
+    // OIDC JWKS paths untouched, since those are a different, already-designed trust chain.
+    if (result.tier === 'standard') {
+      const rawToken = extractBearer(authHeader);
+      if (rawToken) {
+        try {
+          const { storyAgentOAuthProvider } = await import('../agent-core/oauth-provider.js');
+          await storyAgentOAuthProvider.verifyAccessToken(rawToken);
+        } catch (err) {
+          const reason = `standard_token_cryptographic_verify_failed: ${err instanceof Error ? err.message : String(err)}`;
+          recordAudit({
+            timestamp: new Date().toISOString(),
+            operation: `${req.method} /mcp`,
+            clientId: clientId ?? null,
+            sessionId: sessionId ?? null,
+            tokenHash: result.tokenHash,
+            tier: 'standard',
+            allowed: false,
+            reason,
+            remoteAddr: req.socket?.remoteAddress ?? null,
+          });
+          res.writeHead(401, { 'Content-Type': 'application/json', 'X-Auth-Failure-Reason': reason });
+          res.end(JSON.stringify({ error: 'unauthorized', reason }));
+          return;
+        }
+      }
     }
 
     next();
