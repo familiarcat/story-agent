@@ -11,9 +11,19 @@ locals {
     { name = "CREW_LLM_APPROVED_KEY", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:CREW_LLM_APPROVED_KEY::" },
     { name = "SUPABASE_CLOUD_URL", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:SUPABASE_CLOUD_URL::" },
     { name = "SUPABASE_CLOUD_KEY", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:SUPABASE_CLOUD_KEY::" },
-    # OAuth 2.1 authorization endpoint (2026-08-12) — see packages/mcp-server/src/agent-core/oauth-provider.ts.
-    # Populated via scripts/setup-oauth-secrets.sh, which writes both into the SAME story-agent/runtime
-    # secret these other keys live in (merged, not a separate secret) — one runtime credential blob.
+  ]
+  # OAuth 2.1 authorization endpoint (2026-08-12) — see packages/mcp-server/src/agent-core/oauth-provider.ts.
+  # Populated via scripts/setup-oauth-secrets.sh, which writes both into the SAME story-agent/runtime
+  # secret runtime_secrets already reads (merged, not a separate secret) — one runtime credential blob.
+  #
+  # SECURITY FIX (found while reviewing the plan output before applying): these were originally added
+  # directly to runtime_secrets above, which every task definition in this file reads — including the
+  # UI/dashboard service, which runs no OAuth code at all (that's entirely in packages/mcp-server).
+  # That gave an unrelated service read access to the credential that can forge valid tokens for the
+  # whole auth system — a real least-privilege violation, not a style preference. Split out as its own
+  # local, concatenated ONLY into the mcp/mcp_canary secrets blocks below — the exact same pattern this
+  # file already uses for REDIS_URL, which is likewise never added to ui's secrets.
+  oauth_secrets = [
     { name = "STORY_AGENT_OAUTH_SIGNING_KEY", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:STORY_AGENT_OAUTH_SIGNING_KEY::" },
     { name = "STORY_AGENT_OAUTH_OWNER_PASSPHRASE", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:STORY_AGENT_OAUTH_OWNER_PASSPHRASE::" },
   ]
@@ -57,7 +67,7 @@ resource "aws_ecs_task_definition" "mcp" {
       { name = "STORY_AGENT_RAG_PORT", value = "3102" },
       { name = "STORY_AGENT_WS_PORT", value = "8000" },
     ]
-    secrets = concat(local.runtime_secrets, [
+    secrets = concat(local.runtime_secrets, local.oauth_secrets, [
       { name = "REDIS_URL", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:REDIS_URL::" },
     ])
     healthCheck = {
@@ -157,7 +167,7 @@ resource "aws_ecs_task_definition" "mcp_canary" {
       { name = "STORY_AGENT_WS_PORT", value = "8000" },
       { name = "CANARY_VARIANT", value = "true" },
     ]
-    secrets = concat(local.runtime_secrets, [
+    secrets = concat(local.runtime_secrets, local.oauth_secrets, [
       { name = "REDIS_URL", valueFrom = "${data.aws_secretsmanager_secret.runtime.arn}:REDIS_URL::" },
     ])
     healthCheck = {
