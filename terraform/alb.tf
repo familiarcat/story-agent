@@ -187,7 +187,80 @@ resource "aws_lb_listener_rule" "mcp_http" {
     }
   }
   condition {
-    path_pattern { values = ["/mcp", "/mcp/*", "/rag/*", "/.well-known/mcp.json", "/.well-known/oauth-authorization-server", "/.well-known/oauth-protected-resource", "/authorize", "/authorize/*", "/token", "/register", "/revoke"] }
+    path_pattern { values = ["/mcp", "/mcp/*", "/rag/*", "/.well-known/mcp.json", "/.well-known/oauth-authorization-server"] }
+  }
+}
+
+# SPLIT FIX (2026-08-13): AWS ALB hard-limits a single rule condition to 5 values —
+# "ValidationError: A rule can only have '5' condition values and regex values" — the exact error
+# a real `terraform apply` hit when this rule tried to carry all 11 OAuth+MCP paths at once (the
+# first time `terraform apply` had ever actually run this whole session; CI only plans by default,
+# see deploy.yml's workflow_dispatch-gated apply step). Split into two more rules, same target
+# group and same canary-weighted forward action as mcp_http above, rather than broadening any path
+# into a wildcard (e.g. "/.well-known/*") that would silently match more than originally intended.
+resource "aws_lb_listener_rule" "mcp_oauth_authorize" {
+  listener_arn = aws_lb_listener.main.arn
+  priority     = 11
+  action {
+    type = var.enable_canary_deployment ? "forward" : "forward"
+    dynamic "forward" {
+      for_each = var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 95
+        }
+        target_group {
+          arn    = aws_lb_target_group.mcp_http_canary[0].arn
+          weight = 5
+        }
+      }
+    }
+    dynamic "forward" {
+      for_each = !var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 100
+        }
+      }
+    }
+  }
+  condition {
+    path_pattern { values = ["/.well-known/oauth-protected-resource", "/authorize", "/authorize/*", "/register", "/revoke"] }
+  }
+}
+
+resource "aws_lb_listener_rule" "mcp_oauth_token" {
+  listener_arn = aws_lb_listener.main.arn
+  priority     = 12
+  action {
+    type = var.enable_canary_deployment ? "forward" : "forward"
+    dynamic "forward" {
+      for_each = var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 95
+        }
+        target_group {
+          arn    = aws_lb_target_group.mcp_http_canary[0].arn
+          weight = 5
+        }
+      }
+    }
+    dynamic "forward" {
+      for_each = !var.enable_canary_deployment ? [1] : []
+      content {
+        target_group {
+          arn    = aws_lb_target_group.mcp_http.arn
+          weight = 100
+        }
+      }
+    }
+  }
+  condition {
+    path_pattern { values = ["/token"] }
   }
 }
 
