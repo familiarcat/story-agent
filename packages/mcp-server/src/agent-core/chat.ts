@@ -922,6 +922,14 @@ export async function runCanonicalChatTurn(
   body: CanonicalChatRequest,
   opts: { onDelta?: (partialAnswer: string) => void } = {},
 ): Promise<CanonicalChatResponse> {
+  // DIAGNOSTIC (2026-08-13): temporary, targeted logging to find exactly where /chat hangs with zero
+  // output — normal request handling here has almost no logging until deep inside crew deliberation,
+  // so a hang anywhere before that point produces total silence, indistinguishable from every
+  // infrastructure theory tried first (NAT/public-IP, Redis security groups — both checked and ruled
+  // out with real evidence). This brackets the one call most likely to be the actual cause:
+  // quarkSelectAvailableModel makes a real outbound call to OpenRouter's /models endpoint with no
+  // visible timeout. Remove once the actual cause is confirmed — this is instrumentation, not a fix.
+  console.log('[CHAT-DIAG] runCanonicalChatTurn: entry', { messageLength: String(body?.message ?? '').length, ts: Date.now() });
   // Resolve credentials through WorfGate (authorized, audited, credential provider chain)
   const keyResult = resolveWorfGateCredential('CREW_LLM_APPROVED_KEY', {
     operation: 'llm:call',
@@ -930,6 +938,7 @@ export async function runCanonicalChatTurn(
   if (!keyResult.authorized) throw new Error(`worfgate_denied: ${keyResult.reason}`);
   if (!keyResult.available || !keyResult.value) throw new Error('openrouter_not_configured');
   const OR_KEY = keyResult.value;
+  console.log('[CHAT-DIAG] runCanonicalChatTurn: credentials resolved', { ts: Date.now() });
 
   const urlResult = resolveWorfGateCredential('CREW_LLM_APPROVED_URL', {
     operation: 'llm:call',
@@ -960,10 +969,12 @@ export async function runCanonicalChatTurn(
 
   const tier = classifyTier(dispatchMessage);
   const requiresVision = attachments.some((attachment) => attachment.kind === 'image' && Boolean(attachment.dataUrl));
+  console.log('[CHAT-DIAG] runCanonicalChatTurn: about to call quarkSelectAvailableModel', { tier, requiresVision, ts: Date.now() });
   let picked = await quarkSelectAvailableModel(tier, {
     requireVision: requiresVision,
     preferredModelId: requiresVision ? 'openai/gpt-4o-mini' : undefined,
   });
+  console.log('[CHAT-DIAG] runCanonicalChatTurn: quarkSelectAvailableModel resolved', { modelId: picked?.id, ts: Date.now() });
   // CREW-ALWAYS: Force crew self-organization on all prompts (no complexity threshold)
   const crewPreflightEnabled = true;
   const activationPhrase = controls.activationPhrase;
@@ -1331,6 +1342,7 @@ export async function handleOpenAICompatibleChatRequest(req: IncomingMessage, re
 export async function handleChatRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   const url = (req.url || '').split('?')[0];
   if (!(req.method === 'POST' && url === '/chat')) return false;
+  console.log('[CHAT-DIAG] handleChatRequest: matched /chat POST', { ts: Date.now() });
 
   const json = (code: number, obj: unknown) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
 
