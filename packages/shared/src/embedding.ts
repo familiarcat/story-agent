@@ -66,18 +66,35 @@ export async function embed(text: string, dimension = EMBEDDING_DIMENSION): Prom
   if (!p) return toEmbedding(text, dimension);
   const url = p.url.replace(/\/$/, '');
   try {
-    const resp = await fetch(`${url}/embeddings`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${p.key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: p.model, input: text.slice(0, 8000), dimensions: dimension }),
-    });
+    // TIMEOUT FIX (2026-08-14): this function's own contract says "a write/recall never breaks" —
+    // true for a fetch that REJECTS (network error, non-2xx), false for one that just never
+    // resolves. Found via a real production hang: /chat succeeded once, then hung on every
+    // subsequent call, always right after "[WORFGATE] REDACT memory transcript prior to
+    // persistence" logged and nothing after it — isolated by adding request-scoped diagnostic
+    // logging and tracing the exact next line of code, which was this fetch with no bound on it at
+    // all. AbortController turns "hangs forever" into "rejects after 8s", which the existing catch
+    // below already handles correctly — the fallback logic was always right, it just needed
+    // something to actually trigger it.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    let resp: Response;
+    try {
+      resp = await fetch(`${url}/embeddings`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${p.key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: p.model, input: text.slice(0, 8000), dimensions: dimension }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!resp.ok) throw new Error(`embeddings ${resp.status}`);
     const d: any = await resp.json();
     const v = d?.data?.[0]?.embedding;
     if (Array.isArray(v) && v.length) return v.length > dimension ? v.slice(0, dimension) : v;
     throw new Error('empty embedding');
   } catch {
-    return toEmbedding(text, dimension); // graceful — never fail a write on embeddings
+    return toEmbedding(text, dimension); // graceful — never fail a write on embeddings (now genuinely true for hangs too)
   }
 }
 
