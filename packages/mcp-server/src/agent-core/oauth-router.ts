@@ -14,6 +14,15 @@ const ISSUER = process.env.STORY_AGENT_OAUTH_ISSUER || 'https://storyagent.pbrad
 
 export function buildOAuthApp(): express.Express {
   const app = express();
+  // FIX (found 2026-08-16, via a real production failure — Claude.ai's connector authorization
+  // kept failing with no visible error until this was found in live server logs):
+  // ERR_ERL_UNEXPECTED_X_FORWARDED_FOR — the SDK's built-in rate limiter (used by the /token
+  // handler) correctly refuses to trust the ALB's X-Forwarded-For header when Express's own
+  // 'trust proxy' setting is unconfigured (defaults to false) — that refusal is a real, deliberate
+  // guard against IP-spoofing, not a bug in the rate limiter. The actual topology here is exactly
+  // one reverse-proxy hop (client -> ALB -> this ECS task), so `1` is the correct, precise value —
+  // trusts exactly that one hop's X-Forwarded-For entry as the real client IP, not "trust anything."
+  app.set('trust proxy', 1);
   app.use(express.urlencoded({ extended: false }));
 
   // Standard MCP-spec endpoints (metadata, /authorize GET, /token, /register, /revoke) — the SDK
