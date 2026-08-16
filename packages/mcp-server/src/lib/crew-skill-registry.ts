@@ -181,6 +181,22 @@ export function buildCrewInventory(): CrewInventory {
       maxParallelTasks: 3,
       taskSuccessRates: { cost: 0.89, optimize: 0.84, roi: 0.87 },
     },
+    // ADDED (2026-08-16): Guinan was missing from this inventory entirely — this is the actual
+    // pipeline behind ordinary (non-all-hands-directive) roster questions in plain chat, so her
+    // absence here (not ALL_HANDS_CREW) was the real cause of roster hallucinations/omissions.
+    {
+      crewId: 'guinan',
+      domain: 'evaluation',
+      skills: [
+        { name: 'evaluat', proficiency: 3 },
+        { name: 'decision', proficiency: 3 },
+        { name: 'review', proficiency: 2 },
+        { name: 'risk', proficiency: 2 },
+      ],
+      costPerTask: 90,
+      maxParallelTasks: 2,
+      taskSuccessRates: { evaluat: 0.92, decision: 0.90, review: 0.88 },
+    },
   ];
 
   for (const def of crewDefinitions) {

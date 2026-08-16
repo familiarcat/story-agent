@@ -793,7 +793,15 @@ async function buildCrewSelfOrganizationContext(
       'CREW SELF-ORGANIZATION PRELUDE:',
       mission.goals,
       '',
-      'PARALLEL TEAMS:',
+      // ADDED (2026-08-16): teamBlock below only lists whichever crew got skill-matched to THIS
+      // message — never a substitute for "the full roster." A roster/enumeration question (e.g.
+      // "who's on the crew?") is a different question from "who's assigned to this task," and the
+      // earlier bug (missing/invented crew members) came from the model having only the latter to
+      // answer the former with. This block is unconditional, exhaustive, and identical every turn.
+      'FULL CANONICAL CREW ROSTER (exhaustive — the crew consists of exactly these members, nothing else):',
+      CREW_MISSION_ORDER.map((id) => `- ${CREW_PERSONAS[id].fullName} (${id}) — ${CREW_PERSONAS[id].shipRole}`).join('\n'),
+      '',
+      'PARALLEL TEAMS (crew matched to THIS specific request — a SUBSET of the full roster above, not the whole crew):',
       teamBlock,
       '',
       'CREW PERSONAL MEMORY SNAPSHOT:',
