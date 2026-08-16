@@ -12,6 +12,7 @@ import { searchCrewPersonalMemories, storeObservationMemory } from '@story-agent
 import type { ObservationMemoryRecord, ObservationDebateResult } from '@story-agent/shared';
 import { resolveWorfGateCredential } from '@story-agent/shared/worfgate-credentials';
 import type { TeamMember } from '../lib/crew-team-assembly.js';
+import { CREW_MISSION_ORDER, CREW_PERSONAS } from '../lib/crew-personas.js';
 import {
   quarkSelectAvailableModel,
   markModelTemporarilyUnavailable,
@@ -189,19 +190,20 @@ const ACTIVATION_PHRASES: Array<{ phrase: 'make-it-so' | 'next-steps'; patterns:
   { phrase: 'next-steps', patterns: [/^next steps[.!?]*$/i, /^do the next steps[.!?]*$/i, /^execute (the )?next steps[.!?]*$/i] },
 ];
 
-const ALL_HANDS_CREW: Array<{ crewId: string; domain: string }> = [
-  { crewId: 'picard', domain: 'command' },
-  { crewId: 'data', domain: 'architecture' },
-  { crewId: 'worf', domain: 'security' },
-  { crewId: 'riker', domain: 'implementation' },
-  { crewId: 'geordi', domain: 'infrastructure' },
-  { crewId: 'obrien', domain: 'devops' },
-  { crewId: 'yar', domain: 'quality' },
-  { crewId: 'troi', domain: 'stakeholder' },
-  { crewId: 'crusher', domain: 'health' },
-  { crewId: 'uhura', domain: 'communications' },
-  { crewId: 'quark', domain: 'finance' },
-];
+// SINGLE SOURCE OF TRUTH FIX (2026-08-16): this used to be a second, independently hardcoded
+// roster that silently drifted from crew-personas.ts's CREW_MISSION_ORDER (it never got Guinan
+// added when she was integrated) — root cause of the crew inventing/dropping members when asked
+// to list the roster in plain chat. Now derived from crew-personas.ts on every load, so there is
+// exactly one place a crew member is defined anywhere in this codebase.
+const ENGINEERING_ROLE_TO_CHAT_DOMAIN: Partial<Record<string, string>> = {
+  // chat.ts/TEAM_DEFS historically used 'command' for Picard; crew-personas.ts uses 'executive'.
+  executive: 'command',
+};
+const ALL_HANDS_CREW: Array<{ crewId: string; domain: string }> = CREW_MISSION_ORDER.map((crewId) => {
+  const persona = CREW_PERSONAS[crewId];
+  const domain = ENGINEERING_ROLE_TO_CHAT_DOMAIN[persona.engineeringRole] ?? persona.engineeringRole;
+  return { crewId, domain };
+});
 
 const DIRECTIVE_ALIASES: Record<string, string> = {
   engage: 'make-it-so',
@@ -1144,7 +1146,7 @@ export async function runCanonicalChatTurn(
   }
 
   const messages: Array<Record<string, unknown>> = [
-    { role: 'system', content: 'You are the Story Agent crew assistant (OpenRouter, Quark cost-optimized). Be concise and token-efficient: answer directly, prefer short code over prose. Use CONTEXT when relevant. If required context is missing, say exactly what is missing before assuming details. Do not invent files, APIs, outputs, or test results. Unless execution actually ran, do not claim to have performed file/build/deploy actions.' },
+    { role: 'system', content: 'You are the Story Agent crew assistant (OpenRouter, Quark cost-optimized). Be concise and token-efficient: answer directly, prefer short code over prose. Use CONTEXT when relevant. If required context is missing, say exactly what is missing before assuming details. Do not invent files, APIs, outputs, or test results. Unless execution actually ran, do not claim to have performed file/build/deploy actions. The crew roster is exactly the members listed in the CREW SELF-ORGANIZATION / CONTEXT blocks below — never name, invent, count, or imply a crew member (by name or role) that is not explicitly listed there, and never draw on general Star Trek knowledge to fill in a roster answer.' },
     ...(hasCtx ? [{ role: 'system', content: `CONTEXT (crew RAG memory):\n${context}` }] : []),
     ...(crewContext ? [{ role: 'system', content: crewContext.prelude }] : []),
     ...history,

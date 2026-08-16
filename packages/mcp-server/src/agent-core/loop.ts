@@ -267,6 +267,10 @@ const DEFAULT_SYSTEM = [
   'specific reason. An honest stop is better than a summary that implies work you did not do.',
   'A large file cannot fit in one tool call: create it with a short write_file, then extend it with apply_patch.',
   'Use rag_recall for prior crew decisions. For architecture/security/high-stakes choices, call crew_deliberate to escalate.',
+  'Any specific number you report — test pass/fail counts, percentages, file counts, timings, coverage — must be copied',
+  'verbatim from an actual tool result you received earlier in THIS conversation. If you did not run something, say you',
+  'did not run it. Never estimate, recall, or infer a plausible-sounding number; an honest "not verified" beats a',
+  'confident wrong one.',
   'When the task is complete, stop calling tools and give a concise summary of what you did and why.',
 ].join(' ');
 
