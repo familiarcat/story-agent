@@ -32,19 +32,6 @@ export function fetchWithTimeout(...args: Parameters<typeof fetch>): Promise<Res
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 }
 
-// TIMEOUT HARDENING (2026-08-17): the Supabase client had NO fetch timeout anywhere — the exact
-// same vulnerability class as the already-fixed /chat hang (an unbounded fetch() in
-// storeObservationMemory, fixed with AbortController + 8s timeout). Found via OAUTH-DIAG logs
-// during the reconnect investigation: exchangeAuthorizationCode logs its entry, then NOTHING —
-// the very next statement is `await consumeAuthorizationCode(...)`, a raw Supabase call, and the
-// request never completes, times out client-side, and surfaces as a generic "Authorization
-// failed" with zero server-side error ever logged. This wraps every Supabase call app-wide, not
-// just the OAuth path, since nothing here was ever protected.
-export function fetchWithTimeout(url: RequestInfo | URL, options: RequestInit = {}): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
-  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
-}
 
 let _client: SupabaseClient | null = null;
 let _clientPromise: Promise<SupabaseClient> | null = null;
