@@ -5,6 +5,10 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { toEmbedding, parseVector, cosineSimilarity } from './embedding.js';
+// TIMEOUT HARDENING (2026-08-17): see the matching note in db.ts — this file has its own,
+// independently-implemented Supabase client factory (same drift pattern already found and fixed
+// three other times this session), which means it needed this fix applied separately too.
+import { fetchWithTimeout } from './db.js';
 
 export interface DocKnowledgeChunk {
   id: string;
@@ -87,7 +91,7 @@ async function db(): Promise<SupabaseClient> {
 
     for (const candidate of candidates) {
       if (await isReachable(candidate)) {
-        _client = createClient(candidate.url, candidate.key);
+        _client = createClient(candidate.url, candidate.key, { global: { fetch: fetchWithTimeout } });
         return _client;
       }
     }
