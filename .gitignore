@@ -56,3 +56,4 @@ docs/pitch/presentations/
 terraform/tfplan
 **/*.tfplan
 node_modules/.pnpm/@aws-sdk+nested-clients@3.997.22/node_modules/@aws-sdk/nested-clients/dist-types/submodules/sts/commands/AssumeRoleCommand.d.ts
+*.bak-*
