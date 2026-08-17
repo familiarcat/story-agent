@@ -1,0 +1,846 @@
+/**
+ * Agent-core — the unified agentic tool-calling loop.
+ *
+ * One loop powers every surface (CLI, API, VS Code). Per the unification ruling:
+ *  - Each turn runs a SINGLE fast Quark-selected model (cheap, low-latency).
+ *  - The model calls tools; we execute them through the WorfGate local governor (green/yellow/red,
+ *    autonomous remediation), feed results back, and iterate until the model stops calling tools.
+ *  - Hard/ambiguous tasks escalate to the full crew pipeline via the `crew_deliberate` tool.
+ *  - A cost ledger tracks token spend with a soft budget (Quark's dynamic spend cap → review, not hard stop).
+ *
+ * LLM transport: OpenRouter chat/completions with function calling. Anthropic is a pool member.
+ */
+import OpenAI from 'openai';
+import { randomUUID } from 'node:crypto';
+import os from 'node:os';
+import { execSync } from 'node:child_process';
+import { buildUnifiedRunRecord, storeUnifiedRun } from './unified-run.js';
+import { evaluatePublishPrecondition } from './publish-precondition.js';
+import { quarkSelectModel, quarkCheapestAnthropic, MODEL_POOL } from '../lib/crew-team-assembly.js';
+import { resolveWorfGateCredential } from '@story-agent/shared/worfgate-credentials';
+import { AGENT_TOOLS, TOOLS_BY_NAME, toOpenAITools, type AgentTool, type ToolContext } from './tools.js';
+import { gateLocalOp, type WorfTier } from './worfgate-local.js';
+import { EditSession, MUTATING_TOOLS, verifyTouched } from './edit-session.js';
+import { getSkillTheory } from '@story-agent/shared/skill-theory';
+import '../lib/skill-theories.js'; // register tool theories so the lens can read them
+import { repairToolCallArgs } from './tool-call-repair.js';
+import { TaskPlan, buildIncompleteNudge } from './task-plan.js';
+import { nextEscalationTier } from './escalation-policy.js';
+import { logCrewProgress } from '@story-agent/shared';
+
+export interface AgentEvent {
+  type: 'model' | 'tool_call' | 'tool_result' | 'gate' | 'text' | 'done' | 'error' | 'escalation' | 'retry' | 'cost' | 'lens' | 'stall' | 'verify';
+  /** verify events carry ok (did the scoped typecheck pass). */
+  ok?: boolean;
+  text?: string;
+  attempt?: number;
+  tool?: string;
+  args?: unknown;
+  tier?: WorfTier;
+  remediations?: string[];
+  model?: string;
+  costUSD?: number;
+  /** Interactive approval (opt-in): set on a gate event when the loop is awaiting an operator decision. */
+  needsApproval?: boolean;
+  approvalId?: string;
+}
+
+export interface RunAgentOptions {
+  storeRun?: boolean;
+  /**
+   * Allow a red-gated `gh pr merge` to proceed WITHOUT human approval when CI is genuinely green.
+   * Off by default — publish stays human-ratified unless the operator opts in (or sets
+   * STORY_AGENT_AUTO_RATIFY_PUBLISH=true). Never applies to deploys, migrations, or releases.
+   */
+  autoRatifyPublish?: boolean;
+  /**
+   * Max tokens per model turn. Must be large enough to hold a whole file body inside a write_file
+   * tool call, or file creation truncates mid-JSON. Default 4096 (was hard-coded 1500).
+   */
+  maxTokensPerTurn?: number;
+  /** Max corrective nudges when the run tries to finish with declared plan steps still open. Default 2. */
+  maxCompletionNudges?: number;
+  workspace?: string;
+  clientId?: string | null;
+  /** Optional mission ID for rollback and traceability. */
+  missionId?: string;
+  /** Optional parent mission ID for rollback and traceability. */
+  parentMissionId?: string | null;
+  /** Optional crew ID for real-time stream logging (e.g., 'riker', 'geordi', 'worf'). */
+  crewId?: string;
+  /** Optional task ID for real-time stream logging (e.g., 'team_a_e2e', 'team_b_audit'). */
+  taskId?: string;
+  /** Capability tier for Quark's per-turn model pick (default 3 = advanced, cheap multi-provider). */
+  tier?: number;
+  maxIterations?: number;
+  /** Self-healing: max corrective nudges when the model stalls (text, 0 tools) on an actionable task. Default 2. */
+  maxNudges?: number;
+  /** Attempts per LLM call before surfacing the error (exponential backoff). Default 3. */
+  maxRetries?: number;
+  /** Soft token budget; when exceeded the loop finalizes instead of continuing (Quark spend cap). */
+  tokenBudget?: number;
+  /** PROD-15: auto-escalate architecture/security/ambiguous tasks to the crew before looping (default true). */
+  autoEscalate?: boolean;
+  /** PROD-13: soft USD spend threshold — emits a 'cost' WorfGate-review event when crossed (does NOT hard-stop). */
+  reviewThresholdUSD?: number;
+  /** Layer-3: compose a focused tool lens for the task instead of exposing all tools (default true). */
+  composeLens?: boolean;
+  /** Layer-4 self-learning: persist an explainable feedback card for this run (RAG). */
+  recordFeedback?: (card: AgentFeedbackCard) => Promise<void> | void;
+  systemPrompt?: string;
+  ragRecall?: ToolContext['ragRecall'];
+  crewDeliberate?: ToolContext['crewDeliberate'];
+  /** Stream events (model picks, tool calls, gate decisions, text) to the surface. */
+  onEvent?: (e: AgentEvent) => void;
+  tools?: AgentTool[];
+  /** Wave-2 interactive approvals (opt-in): pause yellow/red ops for an explicit operator decision. */
+  requireApproval?: boolean;
+  /** Resolver the surface wires to a back-channel; returns 'approve' | 'deny' for a pending gate. */
+  requestApproval?: (info: { approvalId: string; tool: string; tier: WorfTier; remediations: string[]; args: unknown }) => Promise<'approve' | 'deny'>;
+  /** Tool policy: "full" (default) or "read-only" (limits tools to read-only operations). */
+  toolPolicy?: "full" | "read-only";
+  /** Multi-file reliability: snapshot touched files + scoped typecheck before finishing (default true). */
+  verifyEdits?: boolean;
+  /** Max self-correction rounds when the post-edit typecheck fails before rolling back. Default 2. */
+  maxVerifyRetries?: number;
+}
+
+export interface AgentRunResult {
+  finalText: string;
+  iterations: number;
+  toolCalls: Array<{ tool: string; tier: WorfTier; remediations: string[]; ok: boolean }>;
+  model: string;
+  totalCostUSD: number;
+  totalTokens: number;
+  escalated: boolean;
+  budgetExceeded: boolean;
+  /** Self-healing: the loop detected a finish/iterate stall (0 tool calls on an actionable task) and nudged. */
+  stalled: boolean;
+  /** Multi-file reliability: a post-edit scoped typecheck failed at least once (the loop self-corrected). */
+  verifyFailed?: boolean;
+  /** Multi-file reliability: edits were rolled back because the typecheck stayed broken after retries. */
+  rolledBack?: boolean;
+  /** PROD-13 cost observatory — per-provider spend, burn rate, and whether the review threshold tripped. */
+  observatory: { perProvider: Record<string, number>; burnRatePerTurnUSD: number; reviewTriggered: boolean };
+  /** Governance substrate: rollback pointer for autonomous operation */
+  rollback?: { preRunGitRef: string | null; touchedFiles: string[] };
+  /**
+   * Completion contract: did the run FINISH its declared plan, or merely STOP? The pre-existing stall
+   * detector only fires on ZERO tool calls; this catches the far commoner shape — several successful
+   * calls, then a confident summary with declared steps still open.
+   */
+  completion?: { declared: boolean; total: number; completed: number; remaining: string[]; satisfied: boolean; note: string; unevidenced: string[] };
+}
+
+/** Layer-4 explainable feedback card — a durable, recallable record of one agent run. */
+export interface AgentFeedbackCard {
+  input: string;
+  model: string;
+  lens: string;
+  toolsUsed: string[];
+  posture: { green: number; yellow: number; red: number };
+  costUSD: number;
+  tokens: number;
+  iterations: number;
+  escalated: boolean;
+  stalled: boolean;
+  outcome: string;
+  clientId: string | null;
+  /** Decision 2 (2026-08-10), advisory file-verification: count of tool calls that both targeted a
+   *  mutating tool AND succeeded (ground truth on disk, not the model's narration). Lets RAG recall
+   *  distinguish "claimed work, wrote nothing" from a genuine no-op task — advisory only, never
+   *  blocks a run; it's a signal the crew can learn from over time (see bridges.ts recordFeedback). */
+  mutationsOk: number;
+  /** Safety fix (2026-08-11): count of mutating tool calls refused because this was a hosted
+   *  deployment with no client-supplied workspace (see mutatingWithoutBoundWorkspace above) — the
+   *  "writes succeed against the container's own throwaway copy, not the user's repo" failure mode.
+   *  Tagged in RAG (bridges.ts) so a recurrence of this exact pattern is recallable, same as
+   *  zero-mutation-claim above. */
+  hostedWorkspaceBlocks: number;
+  orderAudit?: {
+    token: string;
+    preconditionSatisfied: boolean;
+    blockedMutations: number;
+    steps: string[];
+  };
+}
+
+const ESCALATION_SIGNALS = ['architect', 'security', 'migration', 'refactor', 'privilege', 'multi-client', 'concurrency', 'rls', 'auth', 'schema design', 'breaking change', 'rollback'];
+
+/** PROD-15: should this request escalate to the full crew before the loop runs? */
+export function shouldEscalate(input: string): boolean {
+  const t = input.toLowerCase();
+  return ESCALATION_SIGNALS.some(k => t.includes(k)) || input.length > 1200;
+}
+
+const ACTION_VERBS = /\b(edit|create|write|add|implement|fix|replace|update|run|build|refactor|rename|delete|remove|convert|map|reskin|apply|scaffold|generate|install|commit|patch)\b/;
+/** Self-healing: does this task imply tool use? Used to detect a "described a plan but called 0 tools" stall. */
+export function looksActionable(input: string): boolean {
+  return ACTION_VERBS.test(input.toLowerCase());
+}
+
+function providerOf(model: string): string {
+  return MODEL_POOL.find(m => m.id === model)?.provider ?? (model.split('/')[0] || 'unknown');
+}
+
+// Always-available tools: orient (read/search/list) + escalate. The lens focuses everything else.
+const LENS_CORE = new Set(['read_file', 'list_dir', 'search_code', 'crew_deliberate']);
+const ORIENTING_TOOLS = new Set(['read_file', 'list_dir', 'search_code', 'rag_recall', 'crew_deliberate', 'git_status', 'git_diff']);
+// Read-only tools for toolPolicy="read-only"
+/**
+ * Tools available in read-only / plan mode — the policy the CHAT lane runs under.
+ *
+ * This set had gone stale: glob_files, task_plan, web_search and web_fetch were all absent, so chat
+ * could not find a file by name, plan its work, or look anything up on the web even though the loop
+ * had gained those capabilities. None of them mutates the workspace, so all four belong here — a
+ * read-only lane should still be able to INVESTIGATE. Anything that writes stays out by construction.
+ */
+export const READ_ONLY_TOOLS = new Set([
+  'read_file', 'list_dir', 'search_code', 'glob_files',
+  'git_status', 'git_diff', 'rag_recall', 'crew_deliberate',
+  'task_plan', 'web_search', 'web_fetch',
+]);
+// Intent → tool affinities (problem topology). The lens reads the request + each tool's 5W1H theory.
+const LENS_INTENTS: Array<{ re: RegExp; tools: string[] }> = [
+  { re: /\b(write|create|add|implement|scaffold|generate|new file)\b/, tools: ['write_file', 'edit_file', 'apply_patch'] },
+  { re: /\b(edit|change|modify|fix|refactor|update|rename|replace)\b/, tools: ['edit_file', 'apply_patch', 'read_file', 'write_file'] },
+  { re: /\b(multi[- ]?file|across files|several files|whole|codebase)\b/, tools: ['apply_patch', 'search_code'] },
+  { re: /\b(test|run|build|lint|install|exec|compile|npm|pnpm|python)\b/, tools: ['run_shell'] },
+  { re: /\b(commit|diff|branch|staged|git|status|push)\b/, tools: ['git_status', 'git_diff', 'run_shell'] },
+  { re: /\b(recall|remember|prior|previously|decided|before|history|precedent)\b/, tools: ['rag_recall'] },
+];
+
+export interface ComposedLens { lens: AgentTool[]; reason: string }
+
+/**
+ * PROD-15 / Symphonic-MCP Layer-3: compose a focused tool "lens" for the task from the 5W1H mesh,
+ * instead of exposing every tool every turn. Scores each tool by (a) overlap of request terms with
+ * its SkillTheory (capabilities/use-when/scope) + description, and (b) intent affinities. Core
+ * orient/escalate tools are always present; if too few match, fall back to the full mesh (never
+ * starve the agent). Returns the subset + a human-readable reason for the Symphony card.
+ */
+export function composeLens(input: string, tools: AgentTool[]): ComposedLens {
+  const t = input.toLowerCase();
+  const terms = Array.from(new Set(t.split(/[^a-z0-9]+/).filter(w => w.length > 3)));
+  const intentTools = new Set<string>();
+  for (const { re, tools: ts } of LENS_INTENTS) if (re.test(t)) ts.forEach(x => intentTools.add(x));
+
+  const scored = tools.map(tool => {
+    if (LENS_CORE.has(tool.name)) return { tool, score: 1000 };
+    const theory = getSkillTheory(tool.name);
+    const hay = [tool.description, theory?.what.summary, ...(theory?.what.capabilities ?? []), ...(theory?.when.useWhen ?? []), ...(theory?.where.scope ?? [])]
+      .filter(Boolean).join(' ').toLowerCase();
+    let score = terms.reduce((s, term) => s + (hay.includes(term) ? 1 : 0), 0);
+    if (intentTools.has(tool.name)) score += 3;
+    return { tool, score };
+  });
+
+  const selected = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+  if (selected.length < 4) return { lens: tools, reason: `broad task → full tool mesh (${tools.length})` };
+  const lens = selected.map(s => s.tool);
+  return { lens, reason: `composed ${lens.length}/${tools.length} tools: ${lens.map(t => t.name).join(', ')}` };
+}
+
+function buildEnvContext(workspace: string): string {
+  let gitBranch = 'unknown';
+  try {
+    gitBranch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: workspace }).toString().trim();
+  } catch {}
+  return [
+    'ENVIRONMENT:',
+    `Platform: ${process.platform} ${os.release()}`,
+    `Shell: ${process.env.SHELL || 'unknown'}`,
+    `Node: ${process.version}`,
+    `Workspace: ${workspace}`,
+    `Git branch: ${gitBranch}`,
+  ].join('\n');
+}
+
+const DEFAULT_SYSTEM = [
+  'You are the Story Agent — an autonomous coding assistant powered by the OpenRouter crew.',
+  'You operate in the user\'s workspace with real tools: read/write/edit files, search code, run shell, git,',
+  'find files by name (glob_files), and research the web (web_search, web_fetch).',
+  'Work in small, verifiable steps. Read before you edit. After changes, run the relevant tests/build to verify.',
+  'For ANY task with more than one step: FIRST call task_plan action "declare" with your intended steps,',
+  'then call task_plan action "complete" as you finish each one. You will not be allowed to finish while',
+  'declared steps remain open — if a step truly cannot be done, call task_plan action "abandon" with a',
+  'specific reason. An honest stop is better than a summary that implies work you did not do.',
+  'A large file cannot fit in one tool call: create it with a short write_file, then extend it with apply_patch.',
+  'Use rag_recall for prior crew decisions. For architecture/security/high-stakes choices, call crew_deliberate to escalate.',
+  'When the task is complete, stop calling tools and give a concise summary of what you did and why.',
+].join(' ');
+
+function estCost(model: string, tin: number, tout: number): number {
+  const m = MODEL_POOL.find(x => x.id === model);
+  const ci = m?.costIn ?? 1.0, co = m?.costOut ?? 5.0;
+  return (tin / 1e6) * ci + (tout / 1e6) * co;
+}
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+/** Is this LLM-call error worth retrying? (rate limits, 5xx, transient network). */
+export function isRetryable(err: any): boolean {
+  const status = err?.status ?? err?.response?.status;
+  if (status === 429 || (typeof status === 'number' && status >= 500)) return true;
+  const code = err?.code || err?.cause?.code || '';
+  return ['ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'EPIPE', 'ENOTFOUND', 'UND_ERR_SOCKET'].includes(code);
+}
+
+/**
+ * Run an OpenRouter completion with exponential backoff (PROD-11). Retries transient failures
+ * (429 / 5xx / network) up to `attempts`; re-throws non-retryable or exhausted errors so the
+ * loop surfaces them as an explicit error event rather than aborting silently.
+ */
+export async function callWithRetry<T>(fn: () => Promise<T>, attempts: number, emit: (e: AgentEvent) => void): Promise<T> {
+  let lastErr: any;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastErr = err;
+      if (attempt >= attempts || !isRetryable(err)) break;
+      const backoff = Math.min(8000, 400 * 2 ** (attempt - 1));
+      emit({ type: 'retry', attempt, text: `LLM call failed (${err?.status ?? err?.code ?? 'error'}); retry ${attempt}/${attempts - 1} in ${backoff}ms` });
+      await sleep(backoff);
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Safety fix (2026-08-11): decide whether this run has a workspace anyone actually bound, or is
+ * about to fall through to a hosted default that would silently write into the wrong filesystem.
+ * Pulled out as a pure function (rather than inlined in runAgentLoop) so the decision is unit
+ * testable without mocking the whole agent loop — see loop.test.ts.
+ */
+export function resolveWorkspaceBinding(
+  opts: { workspace?: string },
+  env: { STORY_AGENT_WORKSPACE?: string; NODE_ENV?: string } = process.env as any,
+): { workspace: string; workspaceExplicit: boolean; hostedWithoutWorkspace: boolean } {
+  const workspace = opts.workspace || env.STORY_AGENT_WORKSPACE || process.cwd();
+  const workspaceExplicit = !!opts.workspace || !!env.STORY_AGENT_WORKSPACE;
+  const hostedWithoutWorkspace = env.NODE_ENV === 'production' && !workspaceExplicit;
+  return { workspace, workspaceExplicit, hostedWithoutWorkspace };
+}
+
+/** Run the autonomous agent loop on a single user request. */
+export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}): Promise<AgentRunResult> {
+  // Resolve credentials through WorfGate (authorized, audited, credential provider chain)
+  const keyResult = resolveWorfGateCredential('CREW_LLM_APPROVED_KEY', {
+    operation: 'llm:call',
+    crewId: opts.crewId || 'quark',
+  });
+  if (!keyResult.authorized) throw new Error(`worfgate_denied: ${keyResult.reason}`);
+  if (!keyResult.available || !keyResult.value) throw new Error('CREW_LLM_APPROVED_KEY not set — cannot reach OpenRouter.');
+  const OR_KEY = keyResult.value;
+
+  const urlResult = resolveWorfGateCredential('CREW_LLM_APPROVED_URL', {
+    operation: 'llm:call',
+    crewId: opts.crewId || 'quark',
+  });
+  const OR_URL = (urlResult.available && urlResult.value ? urlResult.value : 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+
+  // SAFETY (2026-08-11): the browser/dashboard chat surface has no filesystem and no per-request
+  // workspace to send — every activation from it falls through to this same process.cwd() default.
+  // In production (the deployed Fargate container: docker/Dockerfile.mcp bakes the WHOLE repo into
+  // /app at build time, no git binary, no volume) that default silently resolves to the container's
+  // own throwaway copy. Writes there genuinely succeed — hence "Files changed (2)" — but land
+  // somewhere the operator can never see and that vanishes on the next deploy. Refuse mutating tools
+  // outright in that specific case (hosted + no workspace anyone actually specified) so the EXISTING
+  // "No files were modified" warning below fires honestly, instead of a misleading success footer.
+  // Deliberately narrow: local dev (`pnpm mcp` run from the repo root, NODE_ENV unset) is untouched —
+  // process.cwd() is a legitimate binding there, this only guards the case nobody bound anything.
+  const { workspace, hostedWithoutWorkspace } = resolveWorkspaceBinding(opts);
+  let hostedWorkspaceBlocks = 0;
+  const preRunGitRef: string | null = (() => { try { return execSync('git rev-parse HEAD', { cwd: workspace, encoding: 'utf8', stdio: ['ignore','pipe','ignore'] }).trim() || null; } catch { return null; } })();
+  const tools = opts.tools || AGENT_TOOLS;
+  const maxIterations = opts.maxIterations ?? 25;
+  const maxRetries = opts.maxRetries ?? 3;
+  const maxNudges = opts.maxNudges ?? 2;
+  let nudges = 0; // self-healing: corrective nudges spent when the model stalls (text, 0 tools)
+  const tokenBudget = opts.tokenBudget ?? 400_000;
+  const autoEscalate = opts.autoEscalate ?? true;
+  const autoRatifyPublish = opts.autoRatifyPublish ?? process.env.STORY_AGENT_AUTO_RATIFY_PUBLISH === 'true';
+  const maxTokensPerTurn = Math.max(512, Math.min(16_000, opts.maxTokensPerTurn ?? 4096));
+  const reviewThresholdUSD = opts.reviewThresholdUSD;
+  const emit = opts.onEvent ?? (() => {});
+
+  // Real-time crew stream logging (for warp-speed visibility)
+  const crewId = opts.crewId || 'agent';
+  const taskId = opts.taskId || 'task_' + randomUUID().slice(0, 8);
+  let iteration = 0;
+
+  // Log task start
+  if (opts.crewId && opts.taskId) {
+    await logCrewProgress({
+      crew_id: crewId,
+      task_id: taskId,
+      iteration: 0,
+      status: 'start',
+      action_description: `Starting task: ${userInput.substring(0, 100)}${userInput.length > 100 ? '...' : ''}`,
+    }, workspace).catch(err => console.error('[CrewStream] Failed to log task start:', err));
+  }
+
+  // Multi-file reliability: snapshot touched files + scoped typecheck before finishing.
+  const verifyEdits = opts.verifyEdits !== false;
+  const maxVerifyRetries = opts.maxVerifyRetries ?? 2;
+  const editSession = new EditSession(workspace);
+  let verifyAttempts = 0;
+  const orderToken = randomUUID().slice(0, 8);
+  let sawOrientationStep = false;
+  let blockedMutations = 0;
+  const orderedSteps: string[] = [];
+
+  // Cost-optimal escalation: start on the cheapest adequate tier; only bump to a pricier model
+  // after repeated failed turns (nextEscalationTier three-strike). Most work stays cheap.
+  let currentTier = opts.tier ?? 3;
+  let model = quarkSelectModel(currentTier).id;
+  let consecutiveFailures = 0;
+  emit({ type: 'model', model });
+
+  const taskPlan = new TaskPlan();
+  let completionNudges = 0;
+  const maxCompletionNudges = opts.maxCompletionNudges ?? 2;
+
+  const ctx: ToolContext = {
+    workspace, clientId: opts.clientId ?? null,
+    ragRecall: opts.ragRecall, crewDeliberate: opts.crewDeliberate,
+    taskPlan,
+  };
+
+  const client = new OpenAI({ apiKey: OR_KEY, baseURL: OR_URL });
+  // Layer-3 dynamic lens: focus the tool set on the task (self-composed from the 5W1H mesh).
+  const composed = (opts.composeLens ?? true) ? composeLens(userInput, tools) : { lens: tools, reason: `full mesh (${tools.length})` };
+  emit({ type: 'lens', text: composed.reason });
+  let lensTools = composed.lens;
+  if (opts.toolPolicy === 'read-only') {
+    lensTools = composed.lens.filter(t => READ_ONLY_TOOLS.has(t.name));
+    emit({ type: 'lens', text: 'read-only (plan) mode: ' + lensTools.map(t=>t.name).join(', ') });
+  }
+  const openaiTools = toOpenAITools(lensTools);
+
+  const perProvider: Record<string, number> = {};
+  const accrue = (tin: number, tout: number) => {
+    const c = estCost(model, tin, tout);
+    result.totalCostUSD += c;
+    result.totalTokens += tin + tout;
+    perProvider[providerOf(model)] = Number(((perProvider[providerOf(model)] ?? 0) + c).toFixed(6));
+  };
+
+  const messages: any[] = [
+    { role: 'system', content: (opts.systemPrompt || DEFAULT_SYSTEM) + '\n\n' + buildEnvContext(workspace) },
+    { role: 'user', content: userInput },
+  ];
+
+  const result: AgentRunResult = {
+    finalText: '', iterations: 0, toolCalls: [], model,
+    totalCostUSD: 0, totalTokens: 0, escalated: false, budgetExceeded: false, stalled: false,
+    observatory: { perProvider, burnRatePerTurnUSD: 0, reviewTriggered: false },
+    rollback: { preRunGitRef, touchedFiles: [] },
+  };
+
+  // Single completion path: persist the Layer-4 explainable feedback card (best-effort), emit done.
+  const finalize = async (): Promise<AgentRunResult> => {
+    // Log task completion (fire-and-forget)
+    if (opts.crewId && opts.taskId) {
+      await logCrewProgress({
+        crew_id: crewId,
+        task_id: taskId,
+        iteration,
+        status: 'complete',
+        action_description: `Task completed in ${iteration} iteration(s)`,
+        result: result.finalText.substring(0, 200),
+        metrics: {
+          cost_usd: result.totalCostUSD,
+          tokens: result.totalTokens,
+          iterations: result.iterations,
+        },
+      }, workspace).catch(err => console.error('[CrewStream] Failed to log completion:', err));
+    }
+
+    result.rollback = { preRunGitRef, touchedFiles: editSession.touched() };
+    if (opts.storeRun) {
+      try {
+        await storeUnifiedRun(buildUnifiedRunRecord({
+          missionId: opts.missionId || taskId,
+          clientId: opts.clientId ?? null,
+          task: userInput.slice(0, 240),
+          plan: { missionPlan: '', topModel: model, costUSD: 0 },
+          run: { iterations: result.iterations, toolCalls: result.toolCalls, escalated: result.escalated, stalled: result.stalled, totalCostUSD: result.totalCostUSD, finalText: result.finalText },
+          timestamp: new Date().toISOString(),
+          rollback: { preRunGitRef, touchedFiles: editSession.touched(), parentMissionId: opts.parentMissionId ?? null },
+        }));
+      } catch { /* governance telemetry is best-effort — never fail the run */ }
+    }
+    if (opts.recordFeedback) {
+      const posture = { green: 0, yellow: 0, red: 0 };
+      for (const tc of result.toolCalls) if (tc.tier in posture) posture[tc.tier as keyof typeof posture]++;
+      try {
+        await opts.recordFeedback({
+          input: userInput.slice(0, 240), model, lens: composed.reason,
+          toolsUsed: result.toolCalls.map(t => t.tool), posture,
+          costUSD: result.totalCostUSD, tokens: result.totalTokens, iterations: result.iterations,
+          escalated: result.escalated, stalled: result.stalled, outcome: result.finalText.slice(0, 500), clientId: opts.clientId ?? null,
+          mutationsOk: result.toolCalls.filter(tc => tc.ok && MUTATING_TOOLS.has(tc.tool)).length,
+          hostedWorkspaceBlocks,
+          orderAudit: {
+            token: orderToken,
+            preconditionSatisfied: sawOrientationStep,
+            blockedMutations,
+            steps: orderedSteps.slice(-20),
+          },
+        });
+      } catch { /* self-learning is best-effort — never fail the run on a memory write */ }
+    }
+    emit({ type: 'done', model, costUSD: result.totalCostUSD });
+    return result;
+  };
+
+  // PROD-15 auto-escalation: hard/ambiguous tasks consult the full crew BEFORE the loop, and the
+  // synthesized mission plan is injected as context so the fast loop executes a vetted plan.
+  if (autoEscalate && ctx.crewDeliberate && shouldEscalate(userInput)) {
+    emit({ type: 'escalation', text: 'complex/high-stakes task — escalating to the crew before execution' });
+    try {
+      const plan = await ctx.crewDeliberate(userInput);
+      result.escalated = true;
+      messages.push({ role: 'user', content: `The crew deliberated this task. Execute against their mission plan:\n\n${plan}` });
+    } catch { /* escalation is best-effort; proceed with the fast loop */ }
+  }
+
+  for (let i = 0; i < maxIterations; i++) {
+    result.iterations = i + 1;
+    iteration = i + 1;
+
+    // Log iteration start (fire-and-forget, never blocks)
+    if (opts.crewId && opts.taskId) {
+      logCrewProgress({
+        crew_id: crewId,
+        task_id: taskId,
+        iteration,
+        status: 'progress',
+        action_description: `Iteration ${iteration}/${maxIterations}: processing task`,
+      }, workspace).catch(err => console.error('[CrewStream] Failed to log iteration:', err));
+    }
+
+    // 1500 was a hard ceiling on how large a FILE the loop could ever create: a write_file call must
+    // carry the whole file body inside the tool-call arguments, so a ~5KB source file simply could not
+    // fit in the completion. It was cut off mid-JSON and surfaced as "arguments must be valid JSON",
+    // which pointed at the wrong problem entirely. Raised, and configurable per dispatch.
+    const body: any = { model, messages, tools: openaiTools, tool_choice: 'auto', max_tokens: maxTokensPerTurn };
+
+    let resp: any;
+    try {
+      resp = await callWithRetry(() => client.chat.completions.create(body as any), maxRetries, emit);
+    } catch (err: any) {
+      // Exhausted retries / non-retryable → surface explicitly and finalize (never a silent abort).
+      result.finalText = `⚠️ Model call failed after ${maxRetries} attempt(s): ${err?.message || err}`;
+      emit({ type: 'error', text: result.finalText });
+      return await finalize();
+    }
+    const usage = resp.usage || {};
+    accrue(usage.prompt_tokens || 0, usage.completion_tokens || 0);
+    result.observatory.burnRatePerTurnUSD = Number((result.totalCostUSD / result.iterations).toFixed(6));
+
+    // PROD-13 cost observatory: soft spend cap → emit a WorfGate-review signal (does NOT hard-stop).
+    if (reviewThresholdUSD && result.totalCostUSD >= reviewThresholdUSD && !result.observatory.reviewTriggered) {
+      result.observatory.reviewTriggered = true;
+      emit({ type: 'cost', costUSD: result.totalCostUSD, text: `⚠️ spend $${result.totalCostUSD.toFixed(4)} crossed review threshold $${reviewThresholdUSD} — WorfGate review (continuing)` });
+    }
+
+    const choice = resp.choices?.[0];
+    // A completion cut off at the token limit yields half-written tool-call JSON. Detect it here so
+    // the model is told the truth ("you were truncated, split the work") instead of receiving a
+    // misleading parse error about its own syntax.
+    const truncated = choice?.finish_reason === 'length';
+    if (truncated) {
+      emit({ type: 'retry', text: `completion hit the ${maxTokensPerTurn}-token turn limit — output was truncated` });
+    }
+    const msg = choice?.message;
+    if (!msg) {
+      // Empty completion — treat as a transient hiccup and retry the turn rather than aborting.
+      emit({ type: 'retry', text: 'empty completion; retrying turn' });
+      messages.push({ role: 'user', content: 'Your last response was empty. Continue the task or summarize if complete.' });
+      continue;
+    }
+
+    messages.push(msg);
+
+    const toolCalls = msg.tool_calls || [];
+    if (!toolCalls.length) {
+      // Self-healing stall detection: the observed failure is the model replying with TEXT and calling
+      // 0 tools on an ACTIONABLE task (often right after auto-escalation injected a plan) — so the loop
+      // would finalize having done nothing. Detect that, record it, and nudge it to actually execute,
+      // bounded by maxNudges. A genuine answer/complete task (not actionable, or "DONE") still finalizes.
+      const saidDone = /\bDONE\b/.test(msg.content || '');
+      const stalling = looksActionable(userInput) && result.toolCalls.length === 0 && !saidDone && nudges < maxNudges;
+      if (stalling) {
+        nudges++;
+        result.stalled = true;
+        emit({ type: 'stall', attempt: nudges, text: `stall: described a plan but called 0 tools (nudge ${nudges}/${maxNudges}) — directing execution` });
+        messages.push({ role: 'user', content: 'You replied with text but called NO tools. Do not just describe the plan — perform it NOW by calling the appropriate tools (read_file/edit_file/write_file/apply_patch/run_shell/etc.). If the task is genuinely already complete, reply with the single word DONE.' });
+        continue;
+      }
+      // Multi-file reliability: never FINISH on a broken build. Scoped-typecheck the touched packages;
+      // on failure feed the errors back for bounded self-correction, then roll back if still broken.
+      if (verifyEdits && editSession.hasChanges()) {
+        const v = await verifyTouched(workspace, editSession.touched());
+        if (!v.ok && verifyAttempts < maxVerifyRetries) {
+          verifyAttempts++;
+          result.verifyFailed = true;
+          emit({ type: 'verify', ok: false, attempt: verifyAttempts, text: `post-edit typecheck failed (round ${verifyAttempts}/${maxVerifyRetries}) — self-correcting` });
+          messages.push({ role: 'user', content: `Your edits do not pass typecheck. Fix ALL of these errors, then continue:\n\n${v.output}` });
+          continue;
+        }
+        if (!v.ok) {
+          const restored = await editSession.rollback();
+          result.rolledBack = true;
+          emit({ type: 'verify', ok: false, text: `edits still broken after ${maxVerifyRetries} self-correction round(s) — rolled back ${restored} file(s)` });
+        } else {
+          emit({ type: 'verify', ok: true, text: 'edits pass scoped typecheck' });
+        }
+      }
+      // COMPLETION CONTRACT. The model is about to finish. If it declared a plan and steps remain
+      // open, this is a STOP, not a finish — the exact silent-partial shape that reports success. Push
+      // the shortfall back (bounded) and let it either continue or abandon explicitly.
+      const assessment = taskPlan.assess();
+      if (assessment.unevidenced.length) {
+        emit({ type: 'verify', ok: false, text: `unevidenced completion — ${assessment.note}` });
+      }
+      if (!assessment.satisfied && assessment.declared && completionNudges < maxCompletionNudges) {
+        completionNudges++;
+        emit({ type: 'stall', attempt: completionNudges, text: `incomplete plan: ${assessment.note} (nudge ${completionNudges}/${maxCompletionNudges})` });
+        messages.push({ role: 'user', content: buildIncompleteNudge(assessment, taskPlan.render()) });
+        continue;
+      }
+      result.completion = assessment;
+      if (!assessment.satisfied) {
+        // Exhausted the nudges: record it loudly rather than letting the summary stand unchallenged.
+        result.stalled = true;
+        emit({ type: 'verify', ok: false, text: `run STOPPED with work outstanding — ${assessment.note}` });
+      }
+      result.finalText = msg.content || '';
+      emit({ type: 'text', text: result.finalText });
+      return await finalize();
+    }
+
+    if (msg.content) emit({ type: 'text', text: msg.content });
+
+    // Execute each requested tool through the WorfGate governor.
+    let turnFailed = false;
+    for (const tc of toolCalls) {
+      const name = tc.function?.name;
+      const stepToken = `${orderToken}:${result.iterations}.${result.toolCalls.length + 1}`;
+      if (name) orderedSteps.push(`${stepToken}:${name}`);
+      let parsed: Record<string, unknown> = {};
+      try { parsed = JSON.parse(tc.function?.arguments || '{}'); } catch { /* leave empty */ }
+      // Repair the common cheap-model tool-call malformations (stringified JSON, flat apply_patch
+      // instead of {edits:[…]}, missing fields) BEFORE execution — so tier-3 self-corrects via the
+      // returned error instead of stalling. This is the edit-reliability lever for self-orchestration.
+      const repaired = repairToolCallArgs(name || '', tc.function?.arguments || parsed);
+      if (repaired.ok) parsed = repaired.args;
+      emit({ type: 'tool_call', tool: name, args: parsed });
+
+      const tool = TOOLS_BY_NAME[name] || tools.find(t => t.name === name);
+      let output: string;
+      let ok = true;
+      let tier: WorfTier = 'yellow';
+      let remediations: string[] = [];
+      const mutatingBeforeRead = !!(name && MUTATING_TOOLS.has(name) && !sawOrientationStep);
+      const mutatingWithoutBoundWorkspace = !!(name && MUTATING_TOOLS.has(name) && hostedWithoutWorkspace);
+
+      if (!repaired.ok) {
+        // Feed the error back as the tool result so the model retries. When the turn was TRUNCATED the
+        // arguments were never complete, so blaming its JSON syntax sends it into a repair loop it
+        // cannot win — name the real cause and tell it how to get under the limit.
+        output = truncated
+          ? `error: your previous tool call was TRUNCATED at the ${maxTokensPerTurn}-token turn limit, so its arguments were cut off mid-JSON. Your syntax was not the problem — the content was too large for one call. Write the file in SMALLER PIECES: create it with a short write_file, then append each remaining section with apply_patch.`
+          : `error: ${repaired.error}`;
+        ok = false;
+      } else if (!tool) {
+        output = `error: unknown tool ${name}`;
+        ok = false;
+      } else if (mutatingWithoutBoundWorkspace) {
+        // Refuse BEFORE gateLocalOp/tool.handler ever run — nothing gets written, not even to the
+        // container's own throwaway copy. This is categorical (no operator can approve their way
+        // past a workspace that was never specified), unlike WorfGate's yellow/red tiers below.
+        hostedWorkspaceBlocks++;
+        output = `Refused '${name}': this surface is running hosted with no client-supplied workspace, so a write here would land in the server's own container filesystem — not your repository — and be lost on the next deploy. Use the VS Code Story Agent chat panel (sends your real workspace automatically) or Claude Code via the stdio MCP bridge for local file edits instead.`;
+        ok = false;
+        tier = 'red';
+        remediations = [
+          'Switch to a surface that binds a real workspace (VS Code Story Agent panel, or Claude Code via mcp-crew-stdio.sh).',
+          'If this deployment SHOULD write locally (e.g. a mounted volume), set STORY_AGENT_WORKSPACE explicitly rather than relying on the container default.',
+        ];
+        emit({ type: 'escalation', tool: name, text: output });
+      } else if (mutatingBeforeRead) {
+        blockedMutations++;
+        output = `Order-of-operations gate blocked '${name}' (${stepToken}): call at least one orienting tool first (read_file, list_dir, search_code, rag_recall, git_status, git_diff).`;
+        ok = false;
+        tier = 'yellow';
+        remediations = [
+          'Run an orienting tool before mutating operations to establish current state.',
+          `Order token: ${stepToken}`,
+        ];
+        emit({ type: 'escalation', tool: name, text: output });
+      } else {
+        const gate = gateLocalOp(name, parsed, workspace);
+        tier = gate.tier;
+        remediations = gate.remediations;
+
+        // Wave-2 interactive approval (opt-in): pause a proceed-able yellow/red op for an explicit
+        // operator decision via the surface's back-channel. Default-off ⇒ existing behavior unchanged.
+        const needsApproval = !!(opts.requireApproval && opts.requestApproval && gate.proceed && (tier === 'yellow' || tier === 'red'));
+        const approvalId = needsApproval ? randomUUID() : undefined;
+        emit({ type: 'gate', tool: name, tier, remediations, needsApproval, approvalId });
+
+        let denied = false;
+        if (needsApproval && approvalId) {
+          const decision = await opts.requestApproval!({ approvalId, tool: name, tier, remediations, args: gate.args });
+          denied = decision === 'deny';
+        }
+
+        // CI-green ratification: the gate blocks publish ops red because it is pure/synchronous and
+        // cannot ask GitHub anything. For a PR merge there IS a machine-checkable precondition — all
+        // checks green — so consult it here and let a genuinely-green merge through. Fails closed on
+        // every uncertainty, and only ever applies to `gh pr merge`. Opt-in.
+        let ratified = false;
+        if (!gate.proceed && name === 'run_shell' && autoRatifyPublish) {
+          const r = await evaluatePublishPrecondition({ command: String(gate.args.command ?? ''), workspace });
+          if (r.ratified) {
+            ratified = true;
+            remediations = [...remediations, `ratified without human approval: ${r.reason}`];
+            emit({ type: 'gate', tool: name, tier, remediations, needsApproval: false });
+            emit({ type: 'verify', ok: true, text: `publish ratified — ${r.reason}` });
+          } else {
+            emit({ type: 'escalation', tool: name, text: `publish NOT ratified — ${r.reason}` });
+          }
+        }
+
+        if (!gate.proceed && !ratified) {
+          // Red + not remediable → escalate to the crew rather than silently dropping.
+          output = `WorfGate RED — operation withheld pending crew review: ${gate.reasons.join('; ')}`;
+          ok = false;
+          result.escalated = true;
+          emit({ type: 'escalation', tool: name, text: output });
+        } else if (denied) {
+          output = `WorfGate — operation denied by operator: ${name}`;
+          ok = false;
+          emit({ type: 'escalation', tool: name, text: output });
+        } else {
+          if (name === 'crew_deliberate') result.escalated = true;
+          // Feed the completion contract its only EVIDENCE: a mutating tool that actually ran. Without
+          // this, "step done" is an unverifiable claim — a crew run once marked "Create <file>" done
+          // having never called write_file.
+          if (name && MUTATING_TOOLS.has(name)) taskPlan.recordMutation();
+          // Snapshot originals BEFORE the mutation so a broken multi-file edit can be rolled back.
+          if (verifyEdits && MUTATING_TOOLS.has(name)) await editSession.snapshotForTool(name, gate.args as Record<string, unknown>);
+          try {
+            output = await tool.handler(gate.args, ctx);
+          } catch (e: any) {
+            output = `error: ${e?.message || String(e)}`;
+            ok = false;
+          }
+        }
+      }
+
+      if (ok && name && ORIENTING_TOOLS.has(name)) sawOrientationStep = true;
+
+      result.toolCalls.push({ tool: name, tier, remediations, ok });
+      if (!ok) turnFailed = true;
+      emit({ type: 'tool_result', tool: name, text: output, tier });
+      messages.push({ role: 'tool', tool_call_id: tc.id, content: output });
+    }
+
+    // Cost-optimal model escalation (three-strike): bump to a pricier tier only after repeated
+    // failed turns, then reset. A clean turn resets the counter — so premium models stay rare.
+    if (turnFailed) consecutiveFailures++; else consecutiveFailures = 0;
+    const escTier = nextEscalationTier(currentTier, consecutiveFailures);
+    if (escTier !== null) {
+      currentTier = escTier;
+      model = quarkCheapestAnthropic().id;
+      consecutiveFailures = 0;
+      emit({ type: 'escalation', text: `repeated failures — escalating to cheapest Anthropic (${model})` });
+    }
+
+    if (result.totalTokens >= tokenBudget) {
+      result.budgetExceeded = true;
+      emit({ type: 'text', text: `⚠️ Quark spend cap reached (${result.totalTokens} tokens) — finalizing.` });
+      messages.push({ role: 'user', content: 'Token budget reached. Summarize what you have done and any remaining steps. Do not call more tools.' });
+      try {
+        const fin: any = await callWithRetry(() => client.chat.completions.create({ model, messages, max_tokens: 800 }), maxRetries, emit);
+        result.finalText = fin.choices?.[0]?.message?.content || '';
+      } catch (err: any) {
+        result.finalText = `⚠️ Budget-cap summary failed: ${err?.message || err}`;
+        emit({ type: 'error', text: result.finalText });
+      }
+      return await finalize();
+    }
+  }
+
+  // DECISION (2026-08-10), option B of the max-iterations post-mortem: a completion is guaranteed by
+  // a SEPARATE summary-agent call made OUTSIDE the main loop, not by hoping the loop's last turn
+  // happens to be a summary. Written as a standalone exported function (see runSummaryAgent below) so
+  // a future caller can invoke it detached/async — e.g. fire it the moment the loop is judged
+  // unlikely to finish, in parallel with a final verify pass, instead of strictly after exhaustion.
+  if (!result.finalText) {
+    emit({ type: 'verify', ok: false, text: `exhausted ${maxIterations} iterations without a model-produced summary — invoking a dedicated summary agent` });
+    result.finalText = await runSummaryAgent({ client, messages, toolCalls: result.toolCalls, model, maxRetries, emit });
+    result.stalled = true;
+  }
+  return await finalize();
+}
+
+/**
+ * Dedicated summary agent (Decision 1B). Runs OUTSIDE the main iteration budget on its own single
+ * call, so it can never itself be starved by maxIterations. Given the full transcript and the
+ * ground-truth tool-call ledger (not the model's own narration), it produces an honest account of
+ * what was and was not accomplished — completeness over speed, per the human-in-the-loop decision.
+ *
+ * Deliberately a plain exported function (not inlined) so a caller can invoke it independently of
+ * runAgentLoop — e.g. to run it concurrently with other cleanup work, or retry it alone without
+ * re-running the whole loop.
+ */
+export async function runSummaryAgent(args: {
+  client: OpenAI;
+  messages: any[];
+  toolCalls: Array<{ tool: string; tier: WorfTier; remediations: string[]; ok: boolean }>;
+  model: string;
+  maxRetries: number;
+  emit: (e: AgentEvent) => void;
+}): Promise<string> {
+  const { client, messages, toolCalls, model, maxRetries, emit } = args;
+  const succeeded = toolCalls.filter(t => t.ok);
+  const failed = toolCalls.filter(t => !t.ok);
+  const ledger = [
+    `TOOL CALL LEDGER (ground truth — ${toolCalls.length} total, ${succeeded.length} ok, ${failed.length} failed):`,
+    ...toolCalls.map((t, i) => `${i + 1}. ${t.tool} — ${t.ok ? 'ok' : 'FAILED'}${t.remediations.length ? ` (${t.remediations.join('; ')})` : ''}`),
+  ].join('\n');
+  const summaryMessages = [
+    ...messages,
+    {
+      role: 'user',
+      content: [
+        'You have run out of iterations before producing a final summary. Do NOT continue the task or call any tools.',
+        'Write a concise, HONEST summary of the run for the operator: what was actually completed (cite specific',
+        'tool calls), what was attempted but failed, and what remains undone. Do not claim anything the ledger',
+        'below does not support.',
+        '',
+        ledger,
+      ].join('\n'),
+    },
+  ];
+  try {
+    const resp: any = await callWithRetry(
+      () => client.chat.completions.create({ model, messages: summaryMessages, max_tokens: 600 }),
+      maxRetries,
+      emit,
+    );
+    const text = resp.choices?.[0]?.message?.content?.trim();
+    if (text) return text;
+  } catch (err: any) {
+    emit({ type: 'error', text: `summary agent call failed: ${err?.message || err}` });
+  }
+  // Last-resort fallback: even if the summary agent's own call fails, never return an opaque string —
+  // hand back the ground-truth ledger itself so the operator still learns what actually happened.
+  return `⚠️ Reached max iterations and the summary agent could not be reached. Ground truth from the tool-call ledger:\n\n${ledger}`;
+}
