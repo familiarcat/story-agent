@@ -43,12 +43,15 @@ export function buildOAuthApp(): express.Express {
     let claim;
     try {
       claim = await verifyPendingAuthorization(pending);
-    } catch {
+    } catch (err) {
+      console.log('[OAUTH-DIAG] /authorize/confirm: pending token rejected', { errName: err instanceof Error ? err.constructor.name : typeof err, errMessage: err instanceof Error ? err.message : String(err), pendingPrefix: pending.slice(0, 16), ts: Date.now() });
       res.status(400).type('html').send('<p>Authorization request expired or invalid — go back and try connecting again.</p>');
       return;
     }
+    console.log('[OAUTH-DIAG] /authorize/confirm: pending token verified', { clientId: claim.clientId, redirectUri: claim.redirectUri, ts: Date.now() });
 
     if (!checkOwnerPassphrase(passphrase)) {
+      console.log('[OAUTH-DIAG] /authorize/confirm: passphrase check failed', { clientId: claim.clientId });
       // Deliberately generic — don't leak whether the passphrase was close, don't leak whether
       // STORY_AGENT_OAUTH_OWNER_PASSPHRASE is even configured.
       res.status(401).type('html').send('<p>Incorrect passphrase.</p>');
@@ -63,6 +66,7 @@ export function buildOAuthApp(): express.Express {
       resource: claim.resource || null,
       scopes: claim.scope.split(' ').filter(Boolean),
     });
+    console.log('[OAUTH-DIAG] /authorize/confirm: code issued, redirecting', { clientId: claim.clientId, codePrefix: code.slice(0, 8) });
 
     const redirect = new URL(claim.redirectUri);
     redirect.searchParams.set('code', code);

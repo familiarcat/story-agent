@@ -96,6 +96,7 @@ const clientsStore: OAuthRegisteredClientsStore = {
     };
   },
   async registerClient(client) {
+    console.log('[OAUTH-DIAG] registerClient: entry', { clientName: client.client_name, redirectUris: client.redirect_uris, ts: Date.now() });
     const record = await registerOAuthClient({
       clientName: client.client_name ?? null,
       redirectUris: client.redirect_uris,
@@ -124,6 +125,7 @@ export const storyAgentOAuthProvider: OAuthServerProvider = {
    * on the authorization CODE itself (oauth-db.ts's consumeAuthorizationCode), not on this step.
    */
   async authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response): Promise<void> {
+    console.log('[OAUTH-DIAG] authorize: rendering consent page', { clientId: client.client_id, redirectUri: params.redirectUri, resource: params.resource?.toString(), ts: Date.now() });
     const pending = await new SignJWT({
       client_id: client.client_id,
       redirect_uri: params.redirectUri,
@@ -172,11 +174,19 @@ h1{font-size:18px;color:#9d7bea}</style></head>
     _redirectUri?: string,
     _resource?: URL,
   ): Promise<OAuthTokens> {
+    console.log('[OAUTH-DIAG] exchangeAuthorizationCode: entry', { clientId: client.client_id, codePrefix: authorizationCode.slice(0, 8), ts: Date.now() });
     // Consuming (not peeking) here is the actual single-use guarantee — see consumeAuthorizationCode's
     // own comment for why this must be a conditional UPDATE, not a read-then-write.
     const consumed = await consumeAuthorizationCode(authorizationCode);
-    if (!consumed) throw new Error('authorization code already used, expired, or unknown');
-    if (consumed.client_id !== client.client_id) throw new Error('authorization code was not issued to this client');
+    if (!consumed) {
+      console.log('[OAUTH-DIAG] exchangeAuthorizationCode: code already used, expired, or unknown', { clientId: client.client_id, codePrefix: authorizationCode.slice(0, 8) });
+      throw new Error('authorization code already used, expired, or unknown');
+    }
+    if (consumed.client_id !== client.client_id) {
+      console.log('[OAUTH-DIAG] exchangeAuthorizationCode: client_id mismatch', { presentedClientId: client.client_id, codeIssuedToClientId: consumed.client_id });
+      throw new Error('authorization code was not issued to this client');
+    }
+    console.log('[OAUTH-DIAG] exchangeAuthorizationCode: code consumed ok, issuing tokens', { clientId: client.client_id });
 
     const scope = consumed.scopes.join(' ') || DEFAULT_SCOPES.join(' ');
     const access = await signToken({ sub: 'story-agent-owner', client_id: client.client_id, scope, token_type: 'access', resource: consumed.resource ?? undefined }, ACCESS_TOKEN_TTL_SECONDS);
@@ -197,8 +207,12 @@ h1{font-size:18px;color:#9d7bea}</style></head>
     scopes?: string[],
     resource?: URL,
   ): Promise<OAuthTokens> {
+    console.log('[OAUTH-DIAG] exchangeRefreshToken: entry', { clientId: client.client_id, ts: Date.now() });
     const payload = await verifyToken(refreshToken, 'refresh');
-    if (payload.client_id !== client.client_id) throw new Error('refresh token was not issued to this client');
+    if (payload.client_id !== client.client_id) {
+      console.log('[OAUTH-DIAG] exchangeRefreshToken: client_id mismatch', { presentedClientId: client.client_id, tokenIssuedToClientId: payload.client_id });
+      throw new Error('refresh token was not issued to this client');
+    }
     const scope = scopes?.length ? scopes.join(' ') : (typeof payload.scope === 'string' ? payload.scope : DEFAULT_SCOPES.join(' '));
 
     const access = await signToken({ sub: 'story-agent-owner', client_id: client.client_id, scope, token_type: 'access', resource: resource?.toString() }, ACCESS_TOKEN_TTL_SECONDS);
@@ -222,6 +236,7 @@ h1{font-size:18px;color:#9d7bea}</style></head>
     try {
       payload = await verifyToken(token, 'access');
     } catch (err) {
+      console.log('[OAUTH-DIAG] verifyAccessToken: rejected', { errName: err instanceof Error ? err.constructor.name : typeof err, errMessage: err instanceof Error ? err.message : String(err), tokenPrefix: token.slice(0, 12) });
       if (err instanceof joseErrors.JWTExpired) throw new Error('access token expired');
       throw new Error(`invalid access token: ${err instanceof Error ? err.message : String(err)}`);
     }

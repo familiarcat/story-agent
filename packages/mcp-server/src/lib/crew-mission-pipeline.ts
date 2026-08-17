@@ -239,6 +239,13 @@ For each plan, provide:
 
 When a step searches or counts files, make it RECURSIVE unless explicitly scoped.
 
+GROUNDING (do not skip): only reference systems, files, databases, or tools that were actually named
+in GOALS or FINAL CREW POSITIONS above. Do not invent a specific file path, database name, or system
+(e.g. a fictional "Roster.txt" or "HRIS-7") to make a step sound concrete — if a step's real
+implementation is unknown to you, describe it at the level you actually know (e.g. "consult the crew
+registry") rather than fabricating a plausible-sounding specific. An abstract but honest step beats a
+concrete but invented one.
+
 Output ONLY the structure below — begin your reply with "===== CONSERVATIVE =====", no preamble,
 no summary before it, no markdown fences around the whole thing (Prompt Eng Q4: a downstream
 parser reads this by marker, not by asking a model to describe its own output). Format:
