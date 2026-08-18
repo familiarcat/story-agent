@@ -207,8 +207,14 @@ h1{font-size:18px;color:#9d7bea}</style></head>
     scopes?: string[],
     resource?: URL,
   ): Promise<OAuthTokens> {
-    console.log('[OAUTH-DIAG] exchangeRefreshToken: entry', { clientId: client.client_id, ts: Date.now() });
-    const payload = await verifyToken(refreshToken, 'refresh');
+    console.log('[OAUTH-DIAG] exchangeRefreshToken: entry', { clientId: client.client_id, tokenPrefix: refreshToken.slice(0, 12), ts: Date.now() });
+    let payload;
+    try {
+      payload = await verifyToken(refreshToken, 'refresh');
+    } catch (err) {
+      console.log('[OAUTH-DIAG] exchangeRefreshToken: verifyToken rejected', { clientId: client.client_id, tokenPrefix: refreshToken.slice(0, 12), errName: err instanceof Error ? err.constructor.name : typeof err, errMessage: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
     if (payload.client_id !== client.client_id) {
       console.log('[OAUTH-DIAG] exchangeRefreshToken: client_id mismatch', { presentedClientId: client.client_id, tokenIssuedToClientId: payload.client_id });
       throw new Error('refresh token was not issued to this client');
@@ -221,6 +227,7 @@ h1{font-size:18px;color:#9d7bea}</style></head>
     if (typeof payload.jti === 'string') {
       await revokeTokenJti(payload.jti, new Date((payload.exp ?? Math.floor(Date.now() / 1000)) * 1000));
     }
+    console.log('[OAUTH-DIAG] exchangeRefreshToken: success, rotated', { clientId: client.client_id, revokedJti: typeof payload.jti === 'string' ? payload.jti.slice(0, 12) : null, newRefreshPrefix: newRefresh.token.slice(0, 12) });
 
     return {
       access_token: access.token,
