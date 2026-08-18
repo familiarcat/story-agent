@@ -221,6 +221,12 @@ export function registerParticipant(context: vscode.ExtensionContext): void {
         // the in-editor token-optimizing assistant if the brain is unreachable.
         const chat = await runChatTurn(msg, stream, token, history);
         if (chat.ok) return { metadata: { [META_CMD]: 'ask', model: chat.model } };
+        // Visible, not silent — this fallback previously had zero indication to the user that
+        // the session dropped from the full crew brain (which sends workspace, can write files)
+        // to this secondary local assistant. Confirmed live: a real session hit this path with
+        // no workspace forwarded and produced a full transcript of hallucinated file/git
+        // operations with no warning any of this had happened.
+        stream.markdown('_⚠️ Full crew brain unreachable — falling back to the local assistant (reduced capability, may not reflect the same file-write permissions)._\n\n');
         const result = await runAssistantTurn(msg, stream, token, context.globalState);
         return { metadata: { [META_CMD]: 'ask', tier: result.tier, cached: result.cached } };
       }

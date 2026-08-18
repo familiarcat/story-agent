@@ -378,14 +378,27 @@ async function crewMcpStream(
   const mcpUrl = cfg.mcpUrl.replace(/\/$/, '');
   const ctrl = new AbortController();
   const cancelSub = cancel.onCancellationRequested(() => ctrl.abort());
+  // BUG FIX (2026-08-18): this function is a second, independently-implemented /chat caller
+  // (agentClient.ts's runChatTurn is the primary one) that never included `workspace` in its
+  // request body — meaning any session that silently fell back here (runChatTurn failing/not-ok)
+  // could never write files, with zero warning that the downgrade happened. Confirmed via a real
+  // transcript: chat.ts's own fallback text `'(server default — set the client workspace...)'`
+  // only ever renders when `body.workspace` is nullish — proof this exact gap was hit live.
+  const workspaceDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
   try {
+    if (!workspaceDir) {
+      // Visible, not silent — this is the exact gap that let a real session's mutating tool
+      // calls (write_file/edit_file/etc.) get refused server-side without any client-side signal.
+      stream.markdown('_⚠️ No VS Code workspace folder is open — this session cannot write, edit, or delete files even if it says it did. Open a folder to enable file writes._\n\n');
+    }
     const resp = await fetch(`${mcpUrl}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: user,
         clientId: cfg.clientId ?? null,
+        workspace: workspaceDir ?? null,
         // MCP crew handles RAG + team assembly independently
         crewSelfOrganize: true, // Force crew preflight for cost-optimized routing
       }),
