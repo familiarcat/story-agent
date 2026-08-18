@@ -36,6 +36,8 @@ import {
   consumeAuthorizationCode,
   revokeTokenJti,
   isTokenRevoked,
+  cacheClientPolicy,
+  DEFAULT_STANDARD_POLICY,
 } from '@story-agent/shared';
 
 const ISSUER = process.env.STORY_AGENT_OAUTH_ISSUER || 'https://storyagent.pbradygeorgen.com';
@@ -101,6 +103,19 @@ const clientsStore: OAuthRegisteredClientsStore = {
       clientName: client.client_name ?? null,
       redirectUris: client.redirect_uris,
     });
+
+    // BRIDGE FIX (2026-08-18): see the patch header above — OAuth-registered clients were never
+    // linked to the security-policy system, so they always fell through to
+    // DEFAULT_ENTERPRISE_POLICY (OIDC/JWKS-only), which this provider's own tokens can never
+    // satisfy. This registers every newly OAuth-registered client as 'standard' tier immediately.
+    cacheClientPolicy({
+      ...DEFAULT_STANDARD_POLICY,
+      clientId: record.client_id,
+      clientName: record.client_name ?? client.client_name ?? 'OAuth Client',
+      tierRationale: 'Auto-provisioned standard tier for an OAuth 2.1 dynamically-registered client.',
+    });
+    console.log('[OAUTH-DIAG] registerClient: cached standard-tier policy', { clientId: record.client_id });
+
     return {
       client_id: record.client_id,
       client_name: record.client_name ?? undefined,
