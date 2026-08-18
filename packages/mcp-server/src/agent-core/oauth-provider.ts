@@ -99,10 +99,17 @@ const clientsStore: OAuthRegisteredClientsStore = {
   },
   async registerClient(client) {
     console.log('[OAUTH-DIAG] registerClient: entry', { clientName: client.client_name, redirectUris: client.redirect_uris, ts: Date.now() });
-    const record = await registerOAuthClient({
-      clientName: client.client_name ?? null,
-      redirectUris: client.redirect_uris,
-    });
+    let record;
+    try {
+      record = await registerOAuthClient({
+        clientName: client.client_name ?? null,
+        redirectUris: client.redirect_uris,
+      });
+    } catch (err) {
+      console.log('[OAUTH-DIAG] registerClient: registerOAuthClient rejected', { clientName: client.client_name, errName: err instanceof Error ? err.constructor.name : typeof err, errMessage: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
+    console.log('[OAUTH-DIAG] registerClient: registerOAuthClient ok', { clientId: record.client_id });
 
     // BRIDGE FIX (2026-08-18): see the patch header above — OAuth-registered clients were never
     // linked to the security-policy system, so they always fell through to
