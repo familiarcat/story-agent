@@ -53,7 +53,10 @@ docs/pitch/presentations/
 .claude/scheduled_tasks.lock
 
 # Terraform build artifacts
+docker-compose.override.yml
+docker-compose.dev.yml
 terraform/tfplan
 **/*.tfplan
 node_modules/.pnpm/@aws-sdk+nested-clients@3.997.22/node_modules/@aws-sdk/nested-clients/dist-types/submodules/sts/commands/AssumeRoleCommand.d.ts
 *.bak-*
+docker-compose.override.yml

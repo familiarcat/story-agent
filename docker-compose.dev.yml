@@ -5,10 +5,7 @@ services:
   rag:
     image: node:22-alpine
     working_dir: /app
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.turbo
+    
     environment:
       NODE_ENV: development
       SUPABASE_MODE: auto
@@ -30,10 +27,7 @@ services:
   mcp:
     image: node:22-alpine
     working_dir: /app
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.turbo
+  
     environment:
       NODE_ENV: development
       SUPABASE_MODE: auto
@@ -60,10 +54,7 @@ services:
   chat-proxy:
     image: node:22-alpine
     working_dir: /app
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.turbo
+    
     environment:
       NODE_ENV: development
       SUPABASE_MODE: auto
@@ -90,10 +81,7 @@ services:
   ui:
     image: node:22-alpine
     working_dir: /app
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.turbo
+    
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_MCP_URL: 'http://localhost:3103'
