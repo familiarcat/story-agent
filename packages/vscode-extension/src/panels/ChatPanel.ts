@@ -10,14 +10,20 @@
  */
 
 import * as vscode from 'vscode';
+import { TextDecoder } from 'util';
 import { LCARS_MARKDOWN_CSS, LCARS_MARKDOWN_CLIENT_JS } from '@story-agent/shared/lcars-markdown';
-import { randomBytes } from 'crypto';
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
-import { getChatClient, getChatClientStatus } from '../chat/chat-engine';
+import { getChatClient } from '../chat/chat-engine';
 import { updateControlLane, type ControlLane } from '../controlLaneStatusBar';
 
 function getNonce(): string {
-  return randomBytes(16).toString('base64');
+  const bytes = new Uint8Array(16);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 interface ChatMessage {
@@ -727,3 +733,7 @@ ${LCARS_MARKDOWN_CSS}
     ChatPanel.instance = null;
   }
 }
+function setTimeout(arg0: () => void, arg1: number) {
+  throw new Error('Function not implemented.');
+}
+

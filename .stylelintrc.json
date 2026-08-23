@@ -1,0 +1,6 @@
+{
+  "rules": {
+    "selector-class-pattern": "^chat-message$",
+    "custom-property-pattern": "^chat-"
+  }
+}
