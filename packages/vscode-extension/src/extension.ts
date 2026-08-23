@@ -86,16 +86,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   // ── Cross-surface Aha sync: poll /aha/events, debounce bursts into one tree refresh ──
+  let ahaRefreshTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
+
   const ahaSyncPoller = new AhaSyncPoller();
-  let ahaRefreshTimer: ReturnType<typeof setTimeout> | undefined;
   ahaSyncPoller.onEvent((event) => {
     if (!['story', 'release', 'epic', 'project'].includes(event.resourceType)) return;
-    if (ahaRefreshTimer) clearTimeout(ahaRefreshTimer);
-    ahaRefreshTimer = setTimeout(() => projectStructureProvider.refresh(), 4500);
+    if (ahaRefreshTimer) globalThis.clearTimeout(ahaRefreshTimer);
+    ahaRefreshTimer = globalThis.setTimeout(() => projectStructureProvider.refresh(), 4500);
   });
   ahaSyncPoller.start();
   context.subscriptions.push(ahaSyncPoller, {
-    dispose: () => { if (ahaRefreshTimer) clearTimeout(ahaRefreshTimer); },
+    dispose: () => { if (ahaRefreshTimer) globalThis.clearTimeout(ahaRefreshTimer); },
   });
 
   // ── Live crew stream relay: emit autonomous progress to VS Code Output ──

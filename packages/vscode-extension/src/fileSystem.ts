@@ -1,5 +1,4 @@
 // src/fileSystem.ts
-import { TextDecoder, TextEncoder } from 'util';
 import * as vscode from 'vscode';
 
 declare const process: {
@@ -48,9 +47,8 @@ export async function writeWorkspaceFile(relativePath: string, content: string) 
   }
 
   const targetUri = resolveSafeWorkspaceUri(relativePath);
-  const encoder = new TextEncoder();
 
-  await vscode.workspace.fs.writeFile(targetUri, encoder.encode(content));
+  await vscode.workspace.fs.writeFile(targetUri, Buffer.from(content, 'utf8'));
   return { success: true, path: targetUri.fsPath };
 }
 
@@ -60,5 +58,5 @@ export async function writeWorkspaceFile(relativePath: string, content: string) 
 export async function readWorkspaceFile(relativePath: string): Promise<string> {
   const targetUri = resolveSafeWorkspaceUri(relativePath);
   const fileData = await vscode.workspace.fs.readFile(targetUri);
-  return new TextDecoder().decode(fileData);
+  return Buffer.from(fileData).toString('utf8');
 }
