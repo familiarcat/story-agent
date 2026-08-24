@@ -418,6 +418,68 @@ for (const [tool, kind, title] of [
   });
 }
 
+// ── canonical crew personal context / relationship queries ─────────────────────
+
+defineSkillTheory({
+  tool: 'crew_personal_context',
+  who: { owner: 'data' },
+  what: { summary: 'Query a crew member personal context — answers biographical, relational, or emotional questions from canonical perspective.', capabilities: ['personal background lookup', 'relationship context', 'trauma/strength inquiry', 'decision pattern reference'] },
+  when: { useWhen: ['Crew member needs canonical context about themselves', 'Looking up relationships with other crew members', 'Understanding personal trauma or decision patterns'], avoidWhen: ['Simple factual queries (use canonical_quotes)', 'Technical expertise (use decision_patterns)'] },
+  where: { scope: ['crew'], surfaces: ['api', 'mcp'], sideEffects: 'none' },
+  why: { rationale: 'Authentic crew personas need deep canonical knowledge; personal-context queries ground responses in Memory Alpha canon and character arcs.', goalsServed: ['authenticity', 'character consistency', 'relationship depth'] },
+  how: { invocation: 'crew_personal_context({ asCrewMember, question })', annotations: { title: 'Crew Personal Context', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Context response with sources cited.' },
+});
+
+defineSkillTheory({
+  tool: 'crew_personal_context_batch',
+  who: { owner: 'data' },
+  what: { summary: 'Process multiple personal context queries at once — batch biographical and relational lookups.', capabilities: ['multi-question query', 'relationship matrix lookup', 'bulk context retrieval'] },
+  when: { useWhen: ['Multiple crew members need context simultaneously', 'Populating relationship context for group deliberations'], avoidWhen: ['Single query (use crew_personal_context)'] },
+  where: { scope: ['crew'], surfaces: ['api', 'mcp'], sideEffects: 'none' },
+  why: { rationale: 'Group deliberations need full relationship context; batch queries are efficient.', goalsServed: ['efficiency', 'group dynamics'] },
+  how: { invocation: 'crew_personal_context_batch({ queries: [{ asCrewMember, question }] })', annotations: { title: 'Crew Personal Context Batch', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Array of context responses.' },
+});
+
+defineSkillTheory({
+  tool: 'crew_profile_summary',
+  who: { owner: 'data' },
+  what: { summary: 'Get complete canonical profile for a crew member — biography, expertise, trauma, relationships.', capabilities: ['full profile retrieval', 'comprehensive background', 'relationship mappings', 'expertise domains'] },
+  when: { useWhen: ['Onboarding to a crew member\' background', 'Building relationship model', 'Understanding expertise scope'] },
+  where: { scope: ['crew'], surfaces: ['api', 'mcp'], sideEffects: 'none' },
+  why: { rationale: 'Complete profiles ground crew member behavior; profiles are the source of truth for character consistency.', goalsServed: ['authenticity', 'consistency'] },
+  how: { invocation: 'crew_profile_summary({ crewMember })', annotations: { title: 'Crew Profile Summary', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Complete crew profile object (biography, expertise, trauma, relationships, patterns).' },
+});
+
+defineSkillTheory({
+  tool: 'crew_decision_patterns',
+  who: { owner: 'data' },
+  what: { summary: 'Get how a crew member typically approaches decisions based on canonical character patterns.', capabilities: ['decision-making framework', 'principle-priority reference', 'autonomy model'] },
+  when: { useWhen: ['Making decisions as this crew member', 'Understanding their operational philosophy', 'Predicting their stance on tactical decisions'] },
+  where: { scope: ['crew'], surfaces: ['api', 'mcp'], sideEffects: 'none' },
+  why: { rationale: 'Decision consistency requires understanding each crew member\' canonical philosophy (e.g., Picard = principle-first; Worf = honor-first).', goalsServed: ['authenticity', 'decision coherence'] },
+  how: { invocation: 'crew_decision_patterns({ crewMember })', annotations: { title: 'Crew Decision Patterns', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Decision framework string describing their typical approach.' },
+});
+
+defineSkillTheory({
+  tool: 'crew_canonical_quotes',
+  who: { owner: 'data' },
+  what: { summary: 'Get authentic canon dialogue samples for a crew member for voice consistency.', capabilities: ['authentic voice reference', 'speech pattern samples', 'dialogue authenticity'] },
+  when: { useWhen: ['Responding as a crew member (ensure voice consistency)', 'Understanding their communication style', 'Grounding dialogue in canon'] },
+  where: { scope: ['crew'], surfaces: ['api', 'mcp'], sideEffects: 'none' },
+  why: { rationale: 'Each crew member has a distinctive voice; authentic quotes ensure responses sound like them, not generic AI.', goalsServed: ['authenticity', 'voice consistency'] },
+  how: { invocation: 'crew_canonical_quotes({ crewMember })', annotations: { title: 'Crew Canonical Quotes', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Array of authentic canon dialogue samples for voice reference.' },
+});
+
+defineSkillTheory({
+  tool: 'crew_relationship_matrix',
+  who: { owner: 'data' },
+  what: { summary: 'Get complete relationship contexts between all crew members — how each sees others.', capabilities: ['relationship mapping', 'dyadic perspective', 'interpersonal understanding', 'group dynamics intelligence'] },
+  when: { useWhen: ['Setting up group deliberations', 'Understanding crew dynamics', 'Modeling how one crew member views another'], avoidWhen: ['Single relationship (use crew_personal_context or ask "Tell me about X")'] },
+  where: { scope: ['crew'], surfaces: ['api', 'mcp'], sideEffects: 'none' },
+  why: { rationale: 'Crew dynamics emerge from relationship contexts; full matrix enables realistic group interactions.', goalsServed: ['group dynamics', 'authenticity', 'relationship depth'] },
+  how: { invocation: 'crew_relationship_matrix({})', annotations: { title: 'Crew Relationship Matrix', readOnlyHint: true, idempotentHint: true, openWorldHint: false }, output: 'Complete relationship map: each crew member → perspectives on all other members.' },
+});
+
 /** Tool names that carry a registered theory (for coverage reporting). */
 export const THEORIZED_TOOLS = [
   'read_file', 'write_file', 'edit_file', 'apply_patch', 'list_dir', 'search_code', 'run_shell', 'git_status', 'git_diff',
@@ -426,6 +488,7 @@ export const THEORIZED_TOOLS = [
   'crew_link_story_pr', 'crew_complete_story', 'worfgate_override_monitor',
   'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes', 'analyze_image',
   'run_shell', 'plan_then_execute', 'crew_analyze_image',
+  'crew_personal_context', 'crew_personal_context_batch', 'crew_profile_summary', 'crew_decision_patterns', 'crew_canonical_quotes', 'crew_relationship_matrix',
   'aha:create-release', 'aha:create-epic', 'aha:create-requirement',
   'aha:update-release', 'aha:update-epic', 'aha:update-requirement',
   'aha:delete-feature', 'aha:delete-epic', 'aha:delete-release', 'aha:delete-requirement',

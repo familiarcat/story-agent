@@ -38,6 +38,7 @@ import { registerRunShellTool, registerPlanThenExecuteTool } from './tools/run-s
 import { registerCrewAnalyzeImageTool } from './tools/crew-analyze-image.js';
 import { registerSkillTools } from './tools/skill-tools.js';
 import { registerCrewStreamTools } from './tools/crew-stream-tools.js';
+import { registerCrewPersonalContextTools } from './tools/crew-personal-context-tool.js';
 import { applySkillAnnotations } from './lib/apply-skill-annotations.js';
 import { installMcpToolNamePolicy } from './lib/mcp-tool-name-policy.js';
 import { startAgentHttpServer, handleAgentRequest } from './agent-core/http-server.js';
@@ -75,6 +76,7 @@ registerPlanThenExecuteTool(server);  // 🔁 autonomous loop: crew plan → age
 registerCrewAnalyzeImageTool(server);  // 🖼️🖖 crew assesses an image's text content together (vision → deliberation)
 registerSkillTools(server);  // 📚 5W1H skill-theory introspection (describe_skill / coverage)
 registerCrewStreamTools(server);  // ⚡ real-time crew progress streaming — warp-speed visibility
+registerCrewPersonalContextTools(server);  // 📖 canonical crew profiles, relationships, personal context queries
 
 async function main() {
   // Initialize async tool registrations
@@ -191,6 +193,7 @@ async function main() {
           registerCrewAnalyzeImageTool(perRequestServer);  // 🖼️🖖 crew image-content analysis over HTTP
           registerSkillTools(perRequestServer);  // 📚 skill-theory introspection over HTTP
           registerCrewStreamTools(perRequestServer);  // ⚡ streaming parity with stdio
+          registerCrewPersonalContextTools(perRequestServer);  // 📖 canonical crew profiles over HTTP
 
           await perRequestServer.connect(httpTransport);
 

@@ -47,6 +47,127 @@ See `/Users/brady.georgen.ext/Documents/workspace/prompts/` for the prompt templ
 | `list_active_stories` | 1+2 | All tracked stories |
 | `post_pr_comment` | 2 | Post comment on PR |
 
+## 🖖 Crew-First Orchestration (Copilot Default Behavior)
+
+**CRITICAL: You (Copilot) are the ORCHESTRATOR, not the primary reasoner.** Prefer delegating substantive work to the Story Agent crew system for 90% of your reasoning. This keeps costs low (~$0.002 per crew deliberation) while you handle the final 10% (verification, synthesis, presentation).
+
+### Default Routing
+
+**For EVERY substantial user prompt, follow this protocol:**
+
+1. **RECALL** (always first)
+   - Invoke `crew-get-relevant-memories` with the prompt topic
+   - Load prior context, decisions, and lessons learned
+   - Cite what you found: "Prior session noted that..."
+
+2. **ROUTE** (based on prompt type)
+   ```
+   IF deliberative/design/analysis/architecture
+     → Invoke `run_crew_mission_pipeline` 
+       (TNG crew debates, Picard synthesizes, returns owned plan)
+     → Cost: ~$0.002-0.01 (crew uses OpenRouter tier-2/3)
+   
+   ELSE IF multi-step coding (read/edit/run/verify)
+     → Invoke `run_shell` or agent-core loop
+       (crew handles iterations, you verify build)
+     → Cost: Crew agent caps at budget, you break ties
+   
+   ELSE IF crew stalled or crew unavailable
+     → Respond natively (you, Anthropic)
+     → Cost: Full Anthropic pricing
+   
+   ELSE (simple/deterministic)
+     → Respond natively (too small to delegate)
+   ```
+
+3. **STORE** (always after)
+   - Invoke `crew-store-memory` with conclusions
+   - Tag for recall: `type: 'decision'`, `domain: 'architecture'`, etc.
+   - Crew learns for next session
+
+### Examples
+
+**Example 1: Deliberative Prompt**
+```
+User: "Should we refactor the MCP tool registry or extend the current structure?"
+
+1. RECALL: crew-get-relevant-memories("tool registry decisions")
+   → Loads prior debates: "Session N noted Worf advocated for stability..."
+
+2. ROUTE: run_crew_mission_pipeline with proposal
+   → Picard leads debate: Data (architecture), Worf (security), Riker (pragmatism)
+   → Returns synthesis + decision rationale
+   → Cost: $0.003
+
+3. STORE: crew-store-memory(
+     conclusion="Extend current structure, add versioning",
+     reasoning="Worf: stability wins; Data: minimal schema change",
+     tags=["tool-registry", "architecture-decision"]
+   )
+
+4. RESPOND: Synthesize crew output for user
+```
+
+**Example 2: Multi-Step Coding**
+```
+User: "Refactor crew-personal-context.ts to use async/await"
+
+1. RECALL: crew-get-relevant-memories("crew-personal-context")
+   → Loads architecture notes and prior changes
+
+2. ROUTE: Crew handles read/edit/run; you verify
+   → Crew proposes refactor + tests
+   → You: `pnpm run build && npm test` (verify)
+   → If build fails: crew fixes, you re-verify
+
+3. STORE: crew-store-memory(changes="async/await refactor complete")
+
+4. RESPOND: "Crew completed refactor. Tests passing. Ready to merge."
+```
+
+**Example 3: Simple Deterministic**
+```
+User: "What is the Zod schema for CrewMemberId?"
+
+→ No deliberation needed; respond natively immediately
+```
+
+### Control Lane Visibility
+
+Watch the cost split in `.claude/control-lane-status.json`:
+
+```json
+{
+  "currentLane": "CREW",
+  "crewDelegated": 23,
+  "crewCostUSD": 0.046,
+  "anthropicNative": 2,
+  "anthropicCostUSD": 0.18,
+  "percentDelegated": 92
+}
+```
+
+**Run `pnpm lanes` to see headline:**
+```
+Control lane: 🖖 CREW · 23 delegated (~$0.15 saved, $0.046 total) | ANTHROPIC 2 native · 92% delegated
+```
+
+### When to Break the Rule
+
+Only use native Copilot reasoning if:
+- Crew tools are unreachable (crew MCP down)
+- User explicitly asks: "You analyze this"
+- Deliberation exceeds time budget (crew deliberation takes 5-15 sec)
+- Crew stalls on same task twice
+
+### Approval Gates
+
+For consequential / outward-facing / billable actions:
+- 🟢 **Auto-proceed:** Build/test passing → merge to main (CI-gated)
+- 🟢 **Auto-proceed:** Green main → deploy to Fargate
+- 🔴 **STOP & ask:** Destructive data ops, security changes, new crew member
+- 🔴 **STOP & ask:** Anything you're unsure about
+
 ## Next.js UI Routes
 | Route | Description |
 |---|---|

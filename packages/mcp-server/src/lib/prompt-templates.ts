@@ -5,6 +5,11 @@
  * All LLM calls use these templates to ensure consistency and proper engineering.
  */
 
+import {
+  getEnhancedSystemPrompt,
+  buildContextualizedSystemPrompt,
+} from './crew-enhanced-prompts.js';
+
 export interface PromptTemplate {
   /** Unique identifier for the prompt */
   id: string;
@@ -891,4 +896,57 @@ export function getPromptsByCategory(category: PromptTemplate['category']): Prom
  */
 export function getAllPromptTemplates(): PromptTemplate[] {
   return SYSTEM_PROMPT_REGISTRY;
+}
+
+/**
+ * Map between registry crew IDs and enhanced prompt crew IDs
+ */
+function mapRegistryToEnhancedCrewId(registryCrewId: string): string {
+  const mapping: Record<string, string> = {
+    picard: 'picard',
+    data: 'data',
+    riker: 'riker',
+    geordi: 'geordi',
+    obrien: 'obrien',
+    worf: 'worf',
+    yar: 'tasha',
+    troi: 'deanna',
+    crusher: 'beverly',
+    uhura: 'uhura',
+    quark: 'quark',
+  };
+
+  return mapping[registryCrewId] || registryCrewId;
+}
+
+/**
+ * Get enhanced system prompt for a crew member
+ * Falls back to registry prompt if enhanced version not available
+ */
+export function getEnhancedSystemPromptContent(crewId: string): string | undefined {
+  const enhancedCrewId = mapRegistryToEnhancedCrewId(crewId);
+  const enhancedPrompt = getEnhancedSystemPrompt(enhancedCrewId);
+
+  // If enhanced prompt exists and is different from default "no prompt" message, use it
+  if (enhancedPrompt && !enhancedPrompt.includes('No enhanced prompt available')) {
+    return enhancedPrompt;
+  }
+
+  // Fall back to registry prompt
+  const template = getPromptTemplate(crewId);
+  return template?.systemPrompt;
+}
+
+/**
+ * Build a contextual system prompt for group deliberations
+ */
+export function getContextualizedEnhancedPrompt(
+  crewId: string,
+  contextualRelationship?: {
+    towardsCrew: string;
+    situation: string;
+  }
+): string {
+  const enhancedCrewId = mapRegistryToEnhancedCrewId(crewId);
+  return buildContextualizedSystemPrompt(enhancedCrewId, contextualRelationship);
 }
