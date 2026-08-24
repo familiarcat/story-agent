@@ -114,24 +114,45 @@ export default function ChatPage() {
 
   // Render markdown for assistant messages asynchronously
   useEffect(() => {
+    console.log('[RENDER_EFFECT] turns:', turns.length, 'busy:', busy);
+    if (!turns.length) return;
+    
     const lastTurn = turns[turns.length - 1];
+    console.log('[RENDER_EFFECT] lastTurn:', {
+      role: lastTurn?.role,
+      hasText: !!lastTurn?.text,
+      hasRenderedHtml: !!lastTurn?.renderedHtml,
+      textPreview: lastTurn?.text?.substring(0, 30),
+      busy,
+    });
+    
     if (lastTurn && lastTurn.role === 'assistant' && lastTurn.text && !lastTurn.renderedHtml && !busy) {
+      console.log('[RENDER_EFFECT] ✅ Conditions met, rendering markdown...');
       try {
-        // Use simple markdown converter for now
+        // Use simple markdown converter
         const html = simpleMarkdownToHtml(lastTurn.text);
+        console.log('[MARKDOWN] Converted successfully', html.substring(0, 100));
+        
         setTurns(t => {
           const c = [...t];
           const lastIdx = c.length - 1;
           if (c[lastIdx] && c[lastIdx].role === 'assistant' && !c[lastIdx].renderedHtml) {
-            // Wrap in a styled container
             c[lastIdx].renderedHtml = `<div class="markdown-content">${html}</div>`;
+            console.log('[MARKDOWN] State updated, renderedHtml set');
           }
           return c;
         });
       } catch (err) {
-        console.error('Markdown rendering error:', err);
-        // Keep plain text fallback
+        console.error('[RENDER_EFFECT] Error:', err);
       }
+    } else {
+      console.log('[RENDER_EFFECT] ❌ Skipped:', {
+        'has lastTurn': !!lastTurn,
+        'is assistant': lastTurn?.role === 'assistant',
+        'has text': !!lastTurn?.text,
+        'already rendered': !!lastTurn?.renderedHtml,
+        'busy': busy,
+      });
     }
   }, [turns, busy]);
 
