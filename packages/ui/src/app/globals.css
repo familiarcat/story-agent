@@ -680,12 +680,15 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   overflow-wrap: break-word;
   line-height: var(--leading-normal);
   color: var(--text);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .markdown-content > * {
   line-height: var(--leading-normal);
   color: var(--text);
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .markdown-content h1, .markdown-content h2, .markdown-content h3, 
