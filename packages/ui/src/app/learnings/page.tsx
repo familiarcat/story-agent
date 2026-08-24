@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ViewHeader, ViewPresentationProvider } from '@/components/ViewPresentation';
+import { ResponsePane } from '@/components/ResponsePane';
 
 interface Card {
   timestamp: string;
@@ -49,7 +50,7 @@ export default function LearningsPage() {
                 <span className="view-meta">{c.timestamp ? new Date(c.timestamp).toLocaleString() : ''}</span>
               </div>
               <div style={{ fontSize: '0.96rem', fontWeight: 650, margin: '0.45rem 0 0.35rem', letterSpacing: '0.005em' }}>{c.input || '(no input recorded)'}</div>
-              <div style={{ fontSize: '0.84rem', color: 'var(--text)', lineHeight: 1.48 }}>{c.outcome}</div>
+              <ResponsePane content={c.outcome} maxHeight="300px" minHeight="auto" />
               {c.tools && <div style={{ marginTop: 7, fontSize: '0.73rem', color: 'var(--text-dim)', fontFamily: 'ui-monospace, monospace' }}>🔧 {c.tools}</div>}
             </div>
           ))}
