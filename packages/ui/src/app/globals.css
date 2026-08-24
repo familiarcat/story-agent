@@ -673,10 +673,19 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
 .badge-blocked      { background: color-mix(in srgb, var(--danger) 22%, var(--surface)); color: var(--danger); }
 
 /* ── Markdown content styling (Uhura communications format rendering) ── */
-.markdown-content,
+.markdown-content {
+  max-width: 100%;
+  width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: var(--leading-normal);
+  color: var(--text);
+}
+
 .markdown-content > * {
   line-height: var(--leading-normal);
   color: var(--text);
+  max-width: 100%;
 }
 
 .markdown-content h1, .markdown-content h2, .markdown-content h3, 
@@ -709,10 +718,13 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
 .markdown-content ul, .markdown-content ol {
   margin-left: var(--space-6);
   margin-bottom: var(--space-3);
+  max-width: 100%;
 }
 
 .markdown-content li {
   margin-bottom: var(--space-1);
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .markdown-content code {
@@ -722,6 +734,10 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   border-radius: 4px;
   font-size: 0.9em;
   font-family: ui-monospace, monospace;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  display: inline-block;
+  max-width: 100%;
 }
 
 .markdown-content pre {
@@ -730,10 +746,13 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   padding: var(--space-3);
   border-radius: var(--radius);
   overflow-x: auto;
+  overflow-y: visible;
   margin-bottom: var(--space-3);
   font-family: ui-monospace, monospace;
   font-size: 0.85rem;
   line-height: var(--leading-normal);
+  max-width: 100%;
+  word-break: break-word;
 }
 
 .markdown-content pre code {
@@ -750,11 +769,18 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   margin-bottom: var(--space-3);
   color: var(--text-dim);
   font-style: italic;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .markdown-content a {
   color: var(--accent4);
   text-decoration: underline;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  display: inline-block;
+  max-width: 100%;
 }
 
 .markdown-content a:hover {
@@ -765,12 +791,17 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   border-collapse: collapse;
   margin-bottom: var(--space-3);
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
 }
 
 .markdown-content th, .markdown-content td {
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   text-align: left;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .markdown-content th {

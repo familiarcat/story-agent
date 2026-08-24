@@ -49,7 +49,7 @@ export function ChatMessage({ role, sender, meta, children }: ChatMessageProps) 
       >
         {sender ?? s.label}
       </div>
-      <div style={{ marginLeft: indent, marginTop: space(1), fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text)' }}>
+      <div style={{ marginLeft: indent, marginTop: space(1), fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--text)', minWidth: 0, maxWidth: '100%', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
         {children}
       </div>
       {meta && (
