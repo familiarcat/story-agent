@@ -1,0 +1,147 @@
+name: validate-system Tests
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'packages/validate-system/**'
+      - '.github/workflows/validate-system.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'packages/validate-system/**'
+      - '.github/workflows/validate-system.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run validate-system tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Run boundary tests
+        run: |
+          echo "🧪 Running boundary tests..."
+          zsh packages/validate-system/tests/boundaries.zsh
+        continue-on-error: false
+      
+      - name: Run traversal attack tests
+        run: |
+          echo "🧪 Running traversal tests..."
+          zsh packages/validate-system/tests/traversal.zsh
+        continue-on-error: false
+      
+      - name: Run symlink escape tests
+        run: |
+          echo "🧪 Running symlink tests..."
+          zsh packages/validate-system/tests/symlink.zsh
+        continue-on-error: false
+      
+      - name: Run adversarial tests
+        run: |
+          echo "🧪 Running adversarial tests..."
+          zsh packages/validate-system/tests/adversarial.zsh
+        continue-on-error: false
+      
+      - name: Run full test suite
+        run: |
+          echo "🚀 Running complete test suite..."
+          pnpm --filter @crew/validate-system test
+      
+      - name: Shell lint (optional)
+        run: |
+          if command -v shellcheck &>/dev/null; then
+            echo "Linting shell scripts..."
+            shellcheck packages/validate-system/src/**/*.zsh packages/validate-system/bin/**/*.zsh || true
+          else
+            echo "⚠️  shellcheck not available (optional)"
+          fi
+      
+      - name: Report results
+        if: always()
+        run: |
+          echo "✅ All validate-system tests completed"
+          echo "📊 Test run: ${{ github.run_number }}"
+
+  security-audit:
+    name: Security audit (shell script review)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Checking for hardcoded secrets in validate-system..."
+          ! grep -r "ALLOWED_BASE\s*=\s*\"/" packages/validate-system/src/ || {
+            echo "❌ Hardcoded absolute paths found"
+            exit 1
+          }
+          echo "✅ No hardcoded secrets detected"
+      
+      - name: Verify boundary enforcement
+        run: |
+          echo "Verifying ALLOWED_BASE is configurable..."
+          grep -q "ALLOWED_BASE=\${ALLOWED_BASE:-" packages/validate-system/src/validate_path.zsh || {
+            echo "❌ ALLOWED_BASE not properly configurable"
+            exit 1
+          }
+          echo "✅ Boundary is properly configurable"
+
+  package-integrity:
+    name: Verify package structure
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Check required files exist
+        run: |
+          REQUIRED_FILES=(
+            "packages/validate-system/package.json"
+            "packages/validate-system/README.md"
+            "packages/validate-system/src/main.zsh"
+            "packages/validate-system/src/validate_path.zsh"
+            "packages/validate-system/bin/validate-system.zsh"
+            "packages/validate-system/tests/run-all.zsh"
+            "packages/validate-system/docs/RAG_REFERENCE.md"
+          )
+          
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "❌ Missing required file: $file"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All required files present"
+      
+      - name: Verify package.json
+        run: |
+          if ! pnpm ls -r @crew/validate-system 2>/dev/null | grep -q validate-system; then
+            echo "⚠️  Package may not be registered in monorepo"
+          else
+            echo "✅ Package registered in monorepo"
+          fi

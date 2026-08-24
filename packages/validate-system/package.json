@@ -1,0 +1,33 @@
+{
+  "name": "@crew/validate-system",
+  "version": "1.0.0",
+  "description": "MCP and crew security subsystem: filesystem boundary validation and path traversal prevention",
+  "private": true,
+  "type": "module",
+  "main": "src/main.zsh",
+  "bin": {
+    "validate-system": "./bin/validate-system.zsh"
+  },
+  "scripts": {
+    "test": "zsh tests/run-all.zsh",
+    "test:traversal": "zsh tests/traversal.zsh",
+    "test:symlink": "zsh tests/symlink.zsh",
+    "test:boundaries": "zsh tests/boundaries.zsh",
+    "test:adversarial": "zsh tests/adversarial.zsh",
+    "build": "echo 'Zsh package: no build step'",
+    "lint": "shellcheck src/**/*.zsh bin/**/*.zsh 2>/dev/null || true"
+  },
+  "keywords": [
+    "security",
+    "path-validation",
+    "mcp",
+    "crew",
+    "filesystem",
+    "boundary-enforcement"
+  ],
+  "author": "Story Agent crew",
+  "license": "MIT",
+  "devDependencies": {
+    "@crew/test-harness": "workspace:*"
+  }
+}

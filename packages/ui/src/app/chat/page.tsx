@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
-import { renderLcarsMarkdown, LCARS_MARKDOWN_CSS } from '@story-agent/shared/lcars-markdown';
+import { MarkdownRenderer } from '@story-agent/markdown-renderer';
+import { useTheme } from '@/components/ThemeProvider';
 
 const META = '␞ META ␞';
 
@@ -117,7 +118,7 @@ export default function ChatPage() {
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
-      <style>{LCARS_MARKDOWN_CSS}</style>
+
       <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Chat' }]} />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🖖 Story Agent — Crew Assistant</h1>
@@ -146,8 +147,9 @@ export default function ChatPage() {
               </>
             )}
           >
+            const theme = useTheme();
             {t.text
-              ? <div className="lcars-md" dangerouslySetInnerHTML={{ __html: renderLcarsMarkdown(t.text) }} />
+              ? <MarkdownRenderer markdown={t.text} theme={theme} />
               : (busy && i === turns.length - 1 ? '…' : '')}
           </ChatMessage>
         ))}
