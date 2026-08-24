@@ -137,9 +137,76 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'message (string) required' }, { status: 400 });
   }
 
-  // Canonical path: route to the Story Agent crew brain (/chat), whose model is chosen by QUARK
-  // (quarkSelectModel) — the single optimized selection. Falls back to local routing if unreachable.
+  // Priority routing: Simple tasks get fast cheap answer; complex tasks route through crew brain for deliberation
+  const tier = classify(message);
   const AGENT_CHAT = (process.env.STORY_AGENT_AGENT_URL || 'http://localhost:3103').replace(/\/$/, '') + '/chat';
+  
+  // SIMPLE TASKS: Skip crew brain, use cheap local routing for immediate response
+  if (tier === 'simple') {
+    let model = await selectAvailableModel('simple');
+    const ctx = await ragContext(message);
+    const userContent = (ctx.text ? `CONTEXT:\n${ctx.text}\n\n---\n\n` : '') + `QUESTION:\n${message}`;
+
+    let orResp: Response | null = null;
+    let errStatus = 0;
+    let errText = '';
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      orResp = await fetch(`${OR_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${OR_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model, temperature: 0.3, stream: true,
+          stream_options: { include_usage: true },
+          messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userContent }],
+        }),
+      });
+      if (orResp.ok && orResp.body) break;
+      errStatus = orResp.status;
+      errText = (await orResp.text()).slice(0, 200);
+      if (attempt === 0 && isLikelyModelAvailabilityError(errStatus, errText)) {
+        await getAvailableModelIds(true);
+        model = await selectAvailableModel('simple', [model]);
+        continue;
+      }
+      break;
+    }
+    if (!orResp || !orResp.ok || !orResp.body) {
+      return Response.json({ error: `OpenRouter ${errStatus}: ${errText}` }, { status: 502 });
+    }
+    // Stream the simple response
+    const stream = new ReadableStream({
+      async start(controller) {
+        const enc = new TextEncoder();
+        const reader = (orResp.body as ReadableStream<Uint8Array>).getReader();
+        const dec = new TextDecoder();
+        let buffer = '', usageIn = 0, usageOut = 0, answerLen = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += dec.decode(value, { stream: true });
+          const events = buffer.split('\n\n'); buffer = events.pop() ?? '';
+          for (const event of events) {
+            if (!event.startsWith('data: ')) continue;
+            const json = event.slice(6).trim();
+            if (!json || json === '[DONE]') continue;
+            try {
+              const d = JSON.parse(json) as { usage?: { prompt_tokens: number; completion_tokens: number }; choices?: Array<{ delta?: { content?: string } }> };
+              if (d.usage) { usageIn = d.usage.prompt_tokens; usageOut = d.usage.completion_tokens; }
+              const chunk = d.choices?.[0]?.delta?.content;
+              if (chunk) { controller.enqueue(enc.encode(chunk)); answerLen += chunk.length; }
+            } catch { /* ignore */ }
+          }
+        }
+        const cost = costUSD(model, usageIn, usageOut);
+        const meta = { model, tier: 'simple', provider: 'openrouter', tokensIn: usageIn, tokensOut: usageOut, costUSD: cost, sources: ctx.sources };
+        controller.enqueue(enc.encode(`${META}${JSON.stringify(meta)}`));
+        controller.close();
+      },
+    });
+    return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+
+  // COMPLEX TASKS: Route through crew brain for full deliberation
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 60000);
@@ -155,8 +222,8 @@ export async function POST(req: NextRequest) {
     }
   } catch { /* agent brain unreachable — fall back to local cost-optimized routing below */ }
 
-  const tier = classify(message);
-  let model = await selectAvailableModel(tier);
+  // Fallback: Complex task but crew brain unreachable
+  let model = await selectAvailableModel('complex');
   const ctx = await ragContext(message);
   const userContent = (ctx.text ? `CONTEXT:\n${ctx.text}\n\n---\n\n` : '') + `QUESTION:\n${message}`;
 
