@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { color, tier as TIER_COLOR, font } from '@/lib/tokens';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ResponsePane } from '@/components/ResponsePane';
 import { renderLcarsMarkdown, LCARS_MARKDOWN_CSS } from '@story-agent/shared/lcars-markdown';
 import { parseSSEFrame, cumulativeCost, sanitizeError, isDiff, safeJson } from './transcript';
 
@@ -203,7 +204,7 @@ function EventRow({ e, decided, onApprove, onRetry, busy }: { e: Ev; decided: Re
     case 'lens':
       return <div style={{ ...mono, color: 'var(--text-dim)', margin: '0.2rem 0' }}>🔭 {e.text}</div>;
     case 'text':
-      return <ChatMessage role="assistant" sender="Agent"><div className="lcars-md" dangerouslySetInnerHTML={{ __html: renderLcarsMarkdown(e.text) }} /></ChatMessage>;
+      return <ChatMessage role="assistant" sender="Agent"><ResponsePane content={e.text} maxHeight="none" minHeight="auto" /></ChatMessage>;
     case 'tool_call':
       return (
         <div style={{ margin: '0.4rem 0', padding: '0.5rem 0.7rem', background: 'var(--surface-2)', borderRadius: 6, borderLeft: '3px solid var(--accent3)' }}>
@@ -250,8 +251,8 @@ function EventRow({ e, decided, onApprove, onRetry, busy }: { e: Ev; decided: Re
     case 'done':
       return (
         <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border)' }}>
-          {e.text && <div style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{e.text}</div>}
-          <div style={{ ...mono, color: 'var(--ok)', marginTop: 4 }}>✅ done{e.model ? ` · ${e.model}` : ''}{typeof e.costUSD === 'number' ? ` · $${e.costUSD.toFixed(4)}` : ''}</div>
+          {e.text && <ResponsePane content={e.text} maxHeight="none" minHeight="auto" metadata={`✅ ${e.model || 'done'} · $${(e.costUSD ?? 0).toFixed(4)}`} />}
+          {!e.text && <div style={{ ...mono, color: 'var(--ok)', marginTop: 4 }}>✅ done{e.model ? ` · ${e.model}` : ''}{typeof e.costUSD === 'number' ? ` · $${e.costUSD.toFixed(4)}` : ''}</div>}
         </div>
       );
     case 'error':
