@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
-import { MarkdownRenderer } from '@story-agent/markdown-renderer';
 
 const META = '␞ META ␞';
 
@@ -54,33 +53,84 @@ export default function ChatPage() {
     };
   }, []);
 
+  // Simple markdown to HTML converter
+  function simpleMarkdownToHtml(markdown: string): string {
+    let html = markdown;
+
+    // Escape HTML special characters first
+    html = html
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    // Restore escaped markdown syntax
+    html = html.replace(/&lt;([^&]*?)&gt;/g, '<$1>'); // Restore HTML tags for links/code
+
+    // Code blocks (```...```)
+    html = html.replace(/```([a-z]*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      const safeCode = code.trim();
+      return `<pre><code class="language-${lang}">${safeCode}</code></pre>`;
+    });
+
+    // Inline code (`...`)
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Headers (# Heading)
+    html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
+
+    // Bold (**text** or __text__)
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+    // Italic (*text* or _text_)
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+    // Links [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+    // Blockquotes (> text)
+    html = html.replace(/^&gt; (.*?)$/gm, '<blockquote>$1</blockquote>');
+
+    // Line breaks
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = html.replace(/\n/g, '<br>');
+
+    // Wrap in paragraphs
+    if (!html.includes('<p>')) {
+      html = `<p>${html}</p>`;
+    }
+
+    // Fix nested tags
+    html = html.replace(/<p>(<h[1-6]>|<pre>|<blockquote>)/g, '$1');
+    html = html.replace(/(<\/h[1-6]>|<\/pre>|<\/blockquote>)<\/p>/g, '$1');
+
+    return html;
+  }
+
   // Render markdown for assistant messages asynchronously
   useEffect(() => {
     const lastTurn = turns[turns.length - 1];
     if (lastTurn && lastTurn.role === 'assistant' && lastTurn.text && !lastTurn.renderedHtml && !busy) {
       try {
-        // Render markdown asynchronously
-        const renderer = new MarkdownRenderer({ theme: 'light' });
-        const renderPromise = renderer.render(lastTurn.text);
-        
-        Promise.resolve(renderPromise).then(result => {
-          if (result && result.html) {
-            setTurns(t => {
-              const c = [...t];
-              const lastIdx = c.length - 1;
-              if (c[lastIdx] && c[lastIdx].role === 'assistant' && !c[lastIdx].renderedHtml) {
-                // Wrap in a styled container
-                c[lastIdx].renderedHtml = `<div class="markdown-content" style="line-height: 1.6; font-size: 0.95rem;">${result.html}</div>`;
-              }
-              return c;
-            });
+        // Use simple markdown converter for now
+        const html = simpleMarkdownToHtml(lastTurn.text);
+        setTurns(t => {
+          const c = [...t];
+          const lastIdx = c.length - 1;
+          if (c[lastIdx] && c[lastIdx].role === 'assistant' && !c[lastIdx].renderedHtml) {
+            // Wrap in a styled container
+            c[lastIdx].renderedHtml = `<div class="markdown-content">${html}</div>`;
           }
-        }).catch(err => {
-          console.error('Markdown render error:', err);
-          // Keep plain text fallback
+          return c;
         });
       } catch (err) {
-        console.error('Markdown setup error:', err);
+        console.error('Markdown rendering error:', err);
+        // Keep plain text fallback
       }
     }
   }, [turns, busy]);
