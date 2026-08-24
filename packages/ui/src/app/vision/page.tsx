@@ -120,13 +120,13 @@ export default function VisionPage() {
 
       {err && <div style={{ ...card, borderColor: 'var(--danger)', color: 'var(--danger)', marginTop: '1rem' }}>⚠️ {err}</div>}
       {result && renderedResult && (
-        <div style={{ ...card, marginTop: '1rem', maxHeight: '60vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'ui-monospace, monospace', marginBottom: '0.5rem', flexShrink: 0 }}>
+        <div style={{ ...card, marginTop: '1rem', minHeight: '200px', maxHeight: '70vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'ui-monospace, monospace', flexShrink: 0, position: 'sticky', top: 0, background: 'var(--surface)', paddingBottom: '0.5rem', zIndex: 10 }}>
             ◇ {result.model} · Format: {renderedResult.format} (confidence: {(renderedResult.detectionConfidence * 100).toFixed(0)}%)
           </div>
           <div
             dangerouslySetInnerHTML={{ __html: renderedResult.html }}
-            style={{ lineHeight: 1.55, color: 'var(--text)', fontSize: '0.9rem', minWidth: 0, overflow: 'hidden' }}
+            style={{ lineHeight: 1.6, color: 'var(--text)', fontSize: '0.95rem', minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}
           />
         </div>
       )}
