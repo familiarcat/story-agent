@@ -126,7 +126,7 @@ export default function VisionPage() {
           </div>
           <div
             dangerouslySetInnerHTML={{ __html: renderedResult.html }}
-            style={{ lineHeight: 1.6, color: 'var(--text)', fontSize: '0.95rem', minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word' }}
+            style={{ lineHeight: 1.6, color: 'var(--text)', fontSize: '0.95rem', width: '100%', maxWidth: '100%', minWidth: 0, wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal', boxSizing: 'border-box' }}
           />
         </div>
       )}
