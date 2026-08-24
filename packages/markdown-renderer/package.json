@@ -1,0 +1,20 @@
+{
+  "name": "markdown-renderer",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "unified": "^11.0.4",
+    "remark": "^15.0.1",
+    "rehype": "^13.0.1",
+    "unified-themer": "^3.0.0",
+    "dompurify": "^3.0.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.2"
+  }
+}
