@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { MarkdownRenderer } from '@story-agent/markdown-renderer';
 
 const META = '␞ META ␞';
 
@@ -19,6 +20,8 @@ interface Meta {
 interface Turn {
   role: 'user' | 'assistant';
   text: string;
+  renderedHtml?: string; // Cached rendered markdown HTML
+  detectedFormat?: string; // Format detected by Uhura: 'markdown', 'json', 'code', etc.
   meta?: Meta;
 }
 
@@ -50,6 +53,27 @@ export default function ChatPage() {
       channelRef.current = null;
     };
   }, []);
+
+  // Render markdown for assistant messages asynchronously
+  useEffect(() => {
+    const lastTurn = turns[turns.length - 1];
+    if (lastTurn && lastTurn.role === 'assistant' && lastTurn.text && !lastTurn.renderedHtml && !busy) {
+      // Render markdown asynchronously
+      const renderer = new MarkdownRenderer({ theme: 'light' });
+      renderer.render(lastTurn.text).then(result => {
+        setTurns(t => {
+          const c = [...t];
+          if (c[c.length - 1] && c[c.length - 1].role === 'assistant') {
+            c[c.length - 1].renderedHtml = result.html;
+          }
+          return c;
+        });
+      }).catch(err => {
+        console.error('Markdown render error:', err);
+        // Fallback to plain text (already displayed)
+      });
+    }
+  }, [turns, busy]);
 
   async function send() {
     const message = input.trim();
@@ -98,6 +122,27 @@ export default function ChatPage() {
         scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
       }
       emitChatPulse({ type: 'turn_completed', model: lastMeta?.model, costUSD: lastMeta?.costUSD, stage: 'completed' });
+
+      // Uhura (communications officer) analyzes format asynchronously (non-blocking)
+      // She identifies the message format and updates the metadata
+      const lastTurnIndex = turns.length - 1;
+      fetch('/api/chat/uhura-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: acc.split(META)[0] }), // Send the text portion only
+      }).then(res => res.json())
+        .then(data => {
+          if (data.format) {
+            setTurns(t => {
+              const c = [...t];
+              if (c[lastTurnIndex]) {
+                c[lastTurnIndex].detectedFormat = data.format;
+              }
+              return c;
+            });
+          }
+        })
+        .catch(err => console.error('Uhura format analysis failed:', err));
     } catch (e) {
       emitChatPulse({ type: 'turn_error', stage: 'exception' });
       setTurns(t => { const c = [...t]; c[c.length - 1] = { role: 'assistant', text: `⚠️ ${e instanceof Error ? e.message : String(e)}` }; return c; });
@@ -108,7 +153,8 @@ export default function ChatPage() {
 
   const sessionCost = turns.reduce((s, t) => s + (t.meta?.costUSD ?? 0), 0);
 
-  // Chat messages rendered as-is; TextRenderer available for future enhancements
+  // Markdown rendering: assistant messages are rendered via MarkdownRenderer for proper formatting.
+  // Uhura (crew communications specialist) analyzes format in background (non-blocking).
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
@@ -138,10 +184,15 @@ export default function ChatPage() {
               <>
                 🤖 {t.meta.model} · {t.meta.provider} · {t.meta.tier} route · ↑{t.meta.tokensIn} ↓{t.meta.tokensOut} tok · ~${t.meta.costUSD.toFixed(4)}
                 {t.meta.sources?.length ? <><br />📎 {t.meta.sources.join(', ')}</> : null}
+                {t.detectedFormat && <><br />📋 {t.detectedFormat}</> }
               </>
             )}
           >
-            {t.text || (busy && i === turns.length - 1 ? '…' : '')}
+            {t.role === 'assistant' && t.renderedHtml ? (
+              <div dangerouslySetInnerHTML={{ __html: t.renderedHtml }} />
+            ) : (
+              t.text || (busy && i === turns.length - 1 ? '…' : '')
+            )}
           </ChatMessage>
         ))}
       </div>

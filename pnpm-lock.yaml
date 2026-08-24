@@ -172,6 +172,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@story-agent/markdown-renderer':
+        specifier: workspace:*
+        version: link:../markdown-renderer
       '@story-agent/shared':
         specifier: workspace:*
         version: link:../shared
