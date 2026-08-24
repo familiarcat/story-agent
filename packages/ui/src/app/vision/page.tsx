@@ -38,13 +38,13 @@ export default function VisionPage() {
       setRenderedResult(null);
       return;
     }
-    const renderer = new TextRenderer({ theme });
+    const renderer = new TextRenderer({ theme: theme.theme === 'lcars' ? 'light' : theme.theme });
     renderer.render(result.analysis).then(setRenderedResult).catch(err => {
       console.error('TextRenderer error:', err);
       // Fallback: render as plaintext
       setRenderedResult({
         html: `<pre>${result.analysis.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))}</pre>`,
-        theme,
+        theme: theme.theme === 'lcars' ? 'light' : theme.theme,
         format: 'plaintext',
         detectionConfidence: 0.5,
       });

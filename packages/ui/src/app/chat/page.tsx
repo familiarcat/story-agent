@@ -103,7 +103,7 @@ export default function ChatPage() {
       emitChatPulse({ type: 'turn_completed', model: lastMeta?.model, costUSD: lastMeta?.costUSD, stage: 'completed' });
       
       // Render final assistant message via TextRenderer (auto-detect format)
-      const renderer = new TextRenderer({ theme });
+      const renderer = new TextRenderer({ theme: theme.theme === 'lcars' ? 'light' : theme.theme });
       setTurns(t => {
         const c = [...t];
         const lastTurn = c[c.length - 1];
