@@ -5,6 +5,7 @@ import type { AhaSprint, AhaStory, CrewMissionPlan, ObservationDebateResult, Obs
 import { buildResumePayload, streamFrames } from '@/lib/stream-transport';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { ViewHeader, ViewPresentationProvider } from '@/components/ViewPresentation';
+import { ResponsePane } from '@/components/ResponsePane';
 import HierarchyPicker from './components/HierarchyPicker';
 import StoryReferenceInput from './components/StoryReferenceInput';
 import { StoryDetailForm } from './components/StoryDetailForm';
@@ -542,15 +543,18 @@ export default function ObservationLoungePage() {
               <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.45rem' }}>
                 Observation Lounge Consensus
               </div>
-              <div style={{ padding: '0.7rem', border: '1px solid var(--surface-2)', background: 'var(--surface-2)', borderRadius: 6, fontSize: '0.82rem', color: 'var(--accent4)' }}>
-                {w.debate.consensusSummary}
-              </div>
+              <ResponsePane content={w.debate.consensusSummary} maxHeight="300px" minHeight="auto" metadata="🖖 Crew consensus" />
               {w.debate.rounds.map((round, idx) => (
                 <div key={idx} style={{ marginTop: '0.65rem', border: '1px solid var(--border)', borderRadius: 6, padding: '0.55rem 0.65rem' }}>
                   <div style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: '0.35rem' }}>{round.title}</div>
                   {round.entries.map((entry, entryIdx) => (
-                    <div key={entryIdx} style={{ fontSize: '0.79rem', color: 'var(--text)', marginBottom: '0.35rem' }}>
-                      <strong>{entry.speakerId}</strong> ({entry.position}): {entry.statement}
+                    <div key={entryIdx} style={{ marginBottom: '0.45rem', paddingBottom: '0.35rem', borderBottom: entryIdx < round.entries.length - 1 ? '1px solid var(--surface-2)' : 'none' }}>
+                      <div style={{ fontSize: '0.79rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                        <strong>{entry.speakerId}</strong> <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>({entry.position})</span>
+                      </div>
+                      <div style={{ marginBottom: 0 }}>
+                        <ResponsePane content={entry.statement} maxHeight="200px" minHeight="auto" />
+                      </div>
                     </div>
                   ))}
                 </div>
