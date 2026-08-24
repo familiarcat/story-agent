@@ -58,20 +58,30 @@ export default function ChatPage() {
   useEffect(() => {
     const lastTurn = turns[turns.length - 1];
     if (lastTurn && lastTurn.role === 'assistant' && lastTurn.text && !lastTurn.renderedHtml && !busy) {
-      // Render markdown asynchronously
-      const renderer = new MarkdownRenderer({ theme: 'light' });
-      renderer.render(lastTurn.text).then(result => {
-        setTurns(t => {
-          const c = [...t];
-          if (c[c.length - 1] && c[c.length - 1].role === 'assistant') {
-            c[c.length - 1].renderedHtml = result.html;
+      try {
+        // Render markdown asynchronously
+        const renderer = new MarkdownRenderer({ theme: 'light' });
+        const renderPromise = renderer.render(lastTurn.text);
+        
+        Promise.resolve(renderPromise).then(result => {
+          if (result && result.html) {
+            setTurns(t => {
+              const c = [...t];
+              const lastIdx = c.length - 1;
+              if (c[lastIdx] && c[lastIdx].role === 'assistant' && !c[lastIdx].renderedHtml) {
+                // Wrap in a styled container
+                c[lastIdx].renderedHtml = `<div class="markdown-content" style="line-height: 1.6; font-size: 0.95rem;">${result.html}</div>`;
+              }
+              return c;
+            });
           }
-          return c;
+        }).catch(err => {
+          console.error('Markdown render error:', err);
+          // Keep plain text fallback
         });
-      }).catch(err => {
-        console.error('Markdown render error:', err);
-        // Fallback to plain text (already displayed)
-      });
+      } catch (err) {
+        console.error('Markdown setup error:', err);
+      }
     }
   }, [turns, busy]);
 
@@ -189,7 +199,13 @@ export default function ChatPage() {
             )}
           >
             {t.role === 'assistant' && t.renderedHtml ? (
-              <div dangerouslySetInnerHTML={{ __html: t.renderedHtml }} />
+              <div
+                dangerouslySetInnerHTML={{ __html: t.renderedHtml }}
+                style={{
+                  lineHeight: 1.6,
+                  fontSize: '0.95rem',
+                }}
+              />
             ) : (
               t.text || (busy && i === turns.length - 1 ? '…' : '')
             )}
