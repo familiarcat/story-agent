@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
-import { MarkdownRenderer } from '@story-agent/markdown-renderer';
+import { TextRenderer, type RenderResult } from '@story-agent/text-renderer-core';
 import { useTheme } from '@/components/ThemeProvider';
 
 const META = '␞ META ␞';
@@ -21,6 +21,7 @@ interface Meta {
 interface Turn {
   role: 'user' | 'assistant';
   text: string;
+  rendered?: RenderResult; // Cached rendered result (markdown/JSON/code/plaintext)
   meta?: Meta;
 }
 
@@ -100,6 +101,29 @@ export default function ChatPage() {
         scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
       }
       emitChatPulse({ type: 'turn_completed', model: lastMeta?.model, costUSD: lastMeta?.costUSD, stage: 'completed' });
+      
+      // Render final assistant message via TextRenderer (auto-detect format)
+      const renderer = new TextRenderer({ theme: theme.theme === 'lcars' ? 'light' : theme.theme });
+      setTurns(t => {
+        const c = [...t];
+        const lastTurn = c[c.length - 1];
+        if (lastTurn && lastTurn.role === 'assistant' && lastTurn.text) {
+          renderer.render(lastTurn.text).then(rendered => {
+            setTurns(t2 => {
+              const c2 = [...t2];
+              const lastTurn2 = c2[c2.length - 1];
+              if (lastTurn2 && lastTurn2.role === 'assistant') {
+                lastTurn2.rendered = rendered;
+              }
+              return c2;
+            });
+          }).catch(err => {
+            console.error('TextRenderer error:', err);
+            // If rendering fails, leave text un-rendered
+          });
+        }
+        return c;
+      });
     } catch (e) {
       emitChatPulse({ type: 'turn_error', stage: 'exception' });
       setTurns(t => { const c = [...t]; c[c.length - 1] = { role: 'assistant', text: `⚠️ ${e instanceof Error ? e.message : String(e)}` }; return c; });
@@ -109,12 +133,10 @@ export default function ChatPage() {
   }
 
   const sessionCost = turns.reduce((s, t) => s + (t.meta?.costUSD ?? 0), 0);
+  const theme = useTheme();
 
-  // Markdown is rendered by the SHARED LCARS renderer (@story-agent/shared/lcars-markdown), the same
-  // module the VS Code chat surface styles against. Previously this page handled only fenced code and
-  // inline code, so headings, lists, tables and bold arrived as literal `##` and `**` characters.
-  // The renderer escapes all input before inserting its own tags and restricts hrefs to http(s), so
-  // dangerouslySetInnerHTML is safe here — see lcars-markdown.test.ts for the XSS cases.
+  // Render chat messages: TextRenderer auto-detects format (markdown, JSON, code, plaintext)
+  // and renders with appropriate handler. Results cached in Turn.rendered to avoid re-renders.
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '1.5rem', fontFamily: 'system-ui, sans-serif' }}>
@@ -136,23 +158,31 @@ export default function ChatPage() {
         {turns.length === 0 && (
           <p style={{ color: 'var(--text-dim)' }}>Ask anything.</p>
         )}
-        {turns.map((t, i) => (
-          <ChatMessage
-            key={i}
-            role={t.role}
-            meta={t.meta && (
-              <>
-                🤖 {t.meta.model} · {t.meta.provider} · {t.meta.tier} route · ↑{t.meta.tokensIn} ↓{t.meta.tokensOut} tok · ~${t.meta.costUSD.toFixed(4)}
-                {t.meta.sources?.length ? <><br />📎 {t.meta.sources.join(', ')}</> : null}
-              </>
-            )}
-          >
-            const theme = useTheme();
-            {t.text
-              ? <MarkdownRenderer markdown={t.text} theme={theme} />
-              : (busy && i === turns.length - 1 ? '…' : '')}
-          </ChatMessage>
-        ))}
+        {turns.map((t, i) => {
+          const isComplete = !busy || i !== turns.length - 1;
+          return (
+            <ChatMessage
+              key={i}
+              role={t.role}
+              meta={t.meta && (
+                <>
+                  🤖 {t.meta.model} · {t.meta.provider} · {t.meta.tier} route · ↑{t.meta.tokensIn} ↓{t.meta.tokensOut} tok · ~${t.meta.costUSD.toFixed(4)}
+                  {t.meta.sources?.length ? <><br />📎 {t.meta.sources.join(', ')}</> : null}
+                  {t.rendered && <><br />📋 Format: <code style={{fontSize: '0.75rem'}}>{t.rendered.format}</code></>}
+                </>
+              )}
+            >
+              {isComplete && t.text && t.rendered ? (
+                <div
+                  dangerouslySetInnerHTML={{ __html: t.rendered.html }}
+                  style={{ lineHeight: 1.55, fontSize: '0.9rem' }}
+                />
+              ) : (
+                t.text || (busy && i === turns.length - 1 ? '…' : '')
+              )}
+            </ChatMessage>
+          );
+        })}
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: '0.75rem' }}>

@@ -1,0 +1,63 @@
+name: Text Renderer Core CI/CD
+
+on:
+  push:
+    branches:
+      - feature/markdown-normalization
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Install dependencies
+        run: pnpm install
+      - name: Build
+        run: pnpm --filter @story-agent/text-renderer-core run build
+  
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run unit tests
+        run: pnpm --filter @story-agent/text-renderer-core run test
+      - name: Run security tests
+        run: pnpm --filter @story-agent/text-renderer-core run test:security
+  
+  visual:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run visual regression tests
+        run: pnpm --filter @story-agent/text-renderer-core run test:visual
+  
+  performance:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run performance benchmarks
+        run: pnpm --filter @story-agent/text-renderer-core run benchmark:check

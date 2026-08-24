@@ -1,0 +1,22 @@
+{
+  "name": "@story-agent/text-renderer-core",
+  "version": "1.0.0",
+  "description": "Core text rendering system with auto-detection for Markdown, JSON, Code, and Plaintext formats",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:security": "jest --testPathPattern=security",
+    "benchmark": "jest --testPathPattern=benchmark"
+  },
+  "dependencies": {
+    "@story-agent/markdown-renderer": "workspace:*",
+    "rehype-highlight": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "jest": "^29.0.0",
+    "typescript": "^5.0.4"
+  }
+}

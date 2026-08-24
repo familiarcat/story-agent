@@ -5,8 +5,10 @@
  * Quark-selected OpenRouter vision model (same runVisionAnalysis as the MCP analyze_image tool).
  * SECURITY: images egress to a 3rd-party vision provider — use non-controlled UI only.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { TextRenderer, type RenderResult } from '@story-agent/text-renderer-core';
+import { useTheme } from '@/components/ThemeProvider';
 
 type Img = { type: 'base64'; data: string; mimeType: string };
 const INTENTS = [
@@ -26,7 +28,28 @@ export default function VisionPage() {
   const [customPrompt, setCustomPrompt] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ analysis: string; model: string } | null>(null);
+  const [renderedResult, setRenderedResult] = useState<RenderResult | null>(null);
   const [err, setErr] = useState('');
+  const theme = useTheme();
+
+  // When result changes, render it via TextRenderer for format auto-detection
+  useEffect(() => {
+    if (!result) {
+      setRenderedResult(null);
+      return;
+    }
+    const renderer = new TextRenderer({ theme: theme.theme === 'lcars' ? 'light' : theme.theme });
+    renderer.render(result.analysis).then(setRenderedResult).catch(err => {
+      console.error('TextRenderer error:', err);
+      // Fallback: render as plaintext
+      setRenderedResult({
+        html: `<pre>${result.analysis.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))}</pre>`,
+        theme: theme.theme === 'lcars' ? 'light' : theme.theme,
+        format: 'plaintext',
+        detectionConfidence: 0.5,
+      });
+    });
+  }, [result, theme]);
 
   const load = useCallback((file: File) => {
     setErr(''); setResult(null);
@@ -96,10 +119,15 @@ export default function VisionPage() {
       </div>
 
       {err && <div style={{ ...card, borderColor: 'var(--danger)', color: 'var(--danger)', marginTop: '1rem' }}>⚠️ {err}</div>}
-      {result && (
+      {result && renderedResult && (
         <div style={{ ...card, marginTop: '1rem' }}>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'ui-monospace, monospace', marginBottom: '0.5rem' }}>◇ {result.model}</div>
-          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55, color: 'var(--text)' }}>{result.analysis}</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontFamily: 'ui-monospace, monospace', marginBottom: '0.5rem' }}>
+            ◇ {result.model} · Format: {renderedResult.format} (confidence: {(renderedResult.detectionConfidence * 100).toFixed(0)}%)
+          </div>
+          <div
+            dangerouslySetInnerHTML={{ __html: renderedResult.html }}
+            style={{ lineHeight: 1.55, color: 'var(--text)', fontSize: '0.9rem' }}
+          />
         </div>
       )}
     </main>

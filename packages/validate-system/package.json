@@ -27,7 +27,5 @@
   ],
   "author": "Story Agent crew",
   "license": "MIT",
-  "devDependencies": {
-    "@crew/test-harness": "workspace:*"
-  }
+  "devDependencies": {}
 }

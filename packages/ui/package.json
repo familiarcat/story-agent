@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@story-agent/shared": "workspace:*",
+    "@story-agent/text-renderer-core": "workspace:*",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
     "next": "^15.1.3",
