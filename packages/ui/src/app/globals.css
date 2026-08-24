@@ -682,6 +682,7 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   color: var(--text);
   overflow-y: auto;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .markdown-content > * {
@@ -689,6 +690,7 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   color: var(--text);
   max-width: 100%;
   box-sizing: border-box;
+  width: 100%;
 }
 
 .markdown-content h1, .markdown-content h2, .markdown-content h3, 
@@ -761,6 +763,7 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   font-size: 0.85rem;
   line-height: var(--leading-normal);
   max-width: 100%;
+  box-sizing: border-box;
   word-break: break-word;
 }
 
