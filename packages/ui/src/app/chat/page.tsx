@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChatMessage } from '@/components/ChatMessage';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { ResponsePane } from '@/components/ResponsePane';
 
 const META = '␞ META ␞';
 
@@ -19,8 +20,6 @@ interface Meta {
 interface Turn {
   role: 'user' | 'assistant';
   text: string;
-  renderedHtml?: string; // Cached rendered markdown HTML
-  detectedFormat?: string; // Format detected by Uhura: 'markdown', 'json', 'code', etc.
   meta?: Meta;
 }
 
@@ -53,108 +52,7 @@ export default function ChatPage() {
     };
   }, []);
 
-  // Simple markdown to HTML converter
-  function simpleMarkdownToHtml(markdown: string): string {
-    let html = markdown;
 
-    // Escape HTML special characters first
-    html = html
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-
-    // Restore escaped markdown syntax
-    html = html.replace(/&lt;([^&]*?)&gt;/g, '<$1>'); // Restore HTML tags for links/code
-
-    // Code blocks (```...```)
-    html = html.replace(/```([a-z]*)\n([\s\S]*?)```/g, (_, lang, code) => {
-      const safeCode = code.trim();
-      return `<pre><code class="language-${lang}">${safeCode}</code></pre>`;
-    });
-
-    // Inline code (`...`)
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    // Headers (# Heading)
-    html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
-    html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
-    html = html.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
-
-    // Bold (**text** or __text__)
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-
-    // Italic (*text* or _text_)
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
-
-    // Links [text](url)
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-
-    // Blockquotes (> text)
-    html = html.replace(/^&gt; (.*?)$/gm, '<blockquote>$1</blockquote>');
-
-    // Line breaks
-    html = html.replace(/\n\n/g, '</p><p>');
-    html = html.replace(/\n/g, '<br>');
-
-    // Wrap in paragraphs
-    if (!html.includes('<p>')) {
-      html = `<p>${html}</p>`;
-    }
-
-    // Fix nested tags
-    html = html.replace(/<p>(<h[1-6]>|<pre>|<blockquote>)/g, '$1');
-    html = html.replace(/(<\/h[1-6]>|<\/pre>|<\/blockquote>)<\/p>/g, '$1');
-
-    return html;
-  }
-
-  // Render markdown for assistant messages asynchronously
-  useEffect(() => {
-    console.log('[RENDER_EFFECT] turns:', turns.length, 'busy:', busy);
-    if (!turns.length) return;
-    
-    const lastTurn = turns[turns.length - 1];
-    console.log('[RENDER_EFFECT] lastTurn:', {
-      role: lastTurn?.role,
-      hasText: !!lastTurn?.text,
-      hasRenderedHtml: !!lastTurn?.renderedHtml,
-      textPreview: lastTurn?.text?.substring(0, 30),
-      busy,
-    });
-    
-    if (lastTurn && lastTurn.role === 'assistant' && lastTurn.text && !lastTurn.renderedHtml && !busy) {
-      console.log('[RENDER_EFFECT] ✅ Conditions met, rendering markdown...');
-      try {
-        // Use simple markdown converter
-        const html = simpleMarkdownToHtml(lastTurn.text);
-        console.log('[MARKDOWN] Converted successfully', html.substring(0, 100));
-        
-        setTurns(t => {
-          const c = [...t];
-          const lastIdx = c.length - 1;
-          if (c[lastIdx] && c[lastIdx].role === 'assistant' && !c[lastIdx].renderedHtml) {
-            c[lastIdx].renderedHtml = `<div class="markdown-content">${html}</div>`;
-            console.log('[MARKDOWN] State updated, renderedHtml set');
-          }
-          return c;
-        });
-      } catch (err) {
-        console.error('[RENDER_EFFECT] Error:', err);
-      }
-    } else {
-      console.log('[RENDER_EFFECT] ❌ Skipped:', {
-        'has lastTurn': !!lastTurn,
-        'is assistant': lastTurn?.role === 'assistant',
-        'has text': !!lastTurn?.text,
-        'already rendered': !!lastTurn?.renderedHtml,
-        'busy': busy,
-      });
-    }
-  }, [turns, busy]);
 
   async function send() {
     const message = input.trim();
@@ -204,26 +102,7 @@ export default function ChatPage() {
       }
       emitChatPulse({ type: 'turn_completed', model: lastMeta?.model, costUSD: lastMeta?.costUSD, stage: 'completed' });
 
-      // Uhura (communications officer) analyzes format asynchronously (non-blocking)
-      // She identifies the message format and updates the metadata
-      const lastTurnIndex = turns.length - 1;
-      fetch('/api/chat/uhura-analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: acc.split(META)[0] }), // Send the text portion only
-      }).then(res => res.json())
-        .then(data => {
-          if (data.format) {
-            setTurns(t => {
-              const c = [...t];
-              if (c[lastTurnIndex]) {
-                c[lastTurnIndex].detectedFormat = data.format;
-              }
-              return c;
-            });
-          }
-        })
-        .catch(err => console.error('Uhura format analysis failed:', err));
+
     } catch (e) {
       emitChatPulse({ type: 'turn_error', stage: 'exception' });
       setTurns(t => { const c = [...t]; c[c.length - 1] = { role: 'assistant', text: `⚠️ ${e instanceof Error ? e.message : String(e)}` }; return c; });
@@ -265,20 +144,17 @@ export default function ChatPage() {
               <>
                 🤖 {t.meta.model} · {t.meta.provider} · {t.meta.tier} route · ↑{t.meta.tokensIn} ↓{t.meta.tokensOut} tok · ~${t.meta.costUSD.toFixed(4)}
                 {t.meta.sources?.length ? <><br />📎 {t.meta.sources.join(', ')}</> : null}
-                {t.detectedFormat && <><br />📋 {t.detectedFormat}</> }
               </>
             )}
           >
-            {t.role === 'assistant' && t.renderedHtml ? (
-              <div
-                dangerouslySetInnerHTML={{ __html: t.renderedHtml }}
-                style={{
-                  lineHeight: 1.6,
-                  fontSize: '0.95rem',
-                }}
+            {t.role === 'assistant' ? (
+              <ResponsePane
+                content={t.text || (busy && i === turns.length - 1 ? '…' : '')}
+                maxHeight="none"
+                minHeight="auto"
               />
             ) : (
-              t.text || (busy && i === turns.length - 1 ? '…' : '')
+              t.text
             )}
           </ChatMessage>
         ))}
