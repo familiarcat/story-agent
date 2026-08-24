@@ -827,3 +827,260 @@ th { background: var(--surface-2); color: var(--text-dim); font-weight: 600; fon
   border-top: 1px solid var(--border);
   margin: var(--space-4) 0;
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * RESPONSE PANE — Universal response renderer for all LLM responses
+ * Handles: plaintext, markdown, JSON, JavaScript, HTML
+ * Single component used across chat, vision, observation-lounge, learnings, etc.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+.response-pane {
+  font-family: system-ui, sans-serif;
+}
+
+/* Markdown responses — inherit .markdown-content styling */
+.response-pane .response-markdown {
+  line-height: var(--leading-normal);
+  color: var(--text);
+  width: 100%;
+  max-width: 100%;
+}
+
+.response-markdown h1, .response-markdown h2, .response-markdown h3,
+.response-markdown h4, .response-markdown h5, .response-markdown h6 {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+  font-weight: 700;
+  color: var(--accent1);
+}
+
+.response-markdown h1 { font-size: var(--text-2xl); }
+.response-markdown h2 { font-size: var(--text-xl); }
+.response-markdown h3 { font-size: var(--text-lg); }
+.response-markdown h4, .response-markdown h5, .response-markdown h6 { font-size: var(--text-base); }
+
+.response-markdown strong, .response-markdown b {
+  font-weight: 700;
+  color: var(--accent2);
+}
+
+.response-markdown em, .response-markdown i {
+  font-style: italic;
+  color: var(--accent3);
+}
+
+.response-markdown p {
+  margin-bottom: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.response-markdown ul, .response-markdown ol {
+  margin-left: var(--space-6);
+  margin-bottom: var(--space-3);
+  max-width: 100%;
+}
+
+.response-markdown li {
+  margin-bottom: var(--space-1);
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.response-markdown code {
+  background: var(--surface-2);
+  color: var(--accent4);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: ui-monospace, monospace;
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.response-markdown pre {
+  background: var(--surface-2);
+  color: var(--accent4);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  overflow-y: visible;
+  margin: var(--space-3) 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  line-height: var(--leading-normal);
+  max-width: 100%;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.response-markdown pre code {
+  background: transparent;
+  color: var(--accent4);
+  padding: 0;
+  border-radius: 0;
+  display: block;
+  width: 100%;
+  overflow-wrap: normal;
+}
+
+.response-markdown blockquote {
+  border-left: 3px solid var(--accent1);
+  padding-left: var(--space-4);
+  margin-left: 0;
+  margin-bottom: var(--space-3);
+  color: var(--text-dim);
+  font-style: italic;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.response-markdown a {
+  color: var(--accent4);
+  text-decoration: underline;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.response-markdown a:hover {
+  color: var(--accent2);
+}
+
+.response-markdown table {
+  border-collapse: collapse;
+  margin-bottom: var(--space-3);
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+
+.response-markdown th, .response-markdown td {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  text-align: left;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.response-markdown th {
+  background: var(--surface-2);
+  font-weight: 700;
+  color: var(--accent1);
+}
+
+/* JSON responses — syntax-highlighted code block */
+.response-pane .response-json {
+  background: var(--surface-2);
+  color: var(--accent4);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  overflow-y: visible;
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  line-height: var(--leading-normal);
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.response-json code {
+  display: block;
+  width: 100%;
+  color: var(--accent4);
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* JavaScript responses — code highlighting */
+.response-pane .response-javascript {
+  background: var(--surface-2);
+  color: var(--accent4);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  overflow-y: visible;
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  line-height: var(--leading-normal);
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.response-javascript code {
+  display: block;
+  width: 100%;
+  color: var(--accent4);
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Plaintext responses — preformatted, monospace */
+.response-pane .response-plaintext {
+  background: var(--surface-2);
+  color: var(--text);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  overflow-y: visible;
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9rem;
+  line-height: var(--leading-normal);
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.response-plaintext code {
+  display: block;
+  width: 100%;
+  color: var(--text);
+  overflow-wrap: break-word;
+}
+
+/* HTML responses — rendered directly from OpenRouter */
+.response-pane .response-html {
+  width: 100%;
+  max-width: 100%;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.response-html img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin: var(--space-2) 0;
+}
+
+.response-html a {
+  color: var(--accent4);
+  text-decoration: underline;
+}
+
+.response-html a:hover {
+  color: var(--accent2);
+}
+
+/* Content styling for all response types */
+.response-content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+}
