@@ -1,16 +1,9 @@
-# AWS Lambda + EventBridge Infrastructure for 2-Week Stress Testing Cadence
-# Crew consensus: 90% utilization cap, 512MB memory, 5/10 concurrency limits
-# Cost target: <$0.90/run with <5% variance
-# Schedule: Every 14 days at 02:00 UTC (off-peak)
-
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
+/**
+ * AWS Lambda + EventBridge Infrastructure for 2-Week Stress Testing Cadence
+ * Crew consensus: 90% utilization cap, 512MB memory, 5/10 concurrency limits
+ * Cost target: <$0.90/run with <5% variance
+ * Schedule: Every 14 days at 02:00 UTC (off-peak)
+ */
 
 # IAM Role for Lambda execution
 resource "aws_iam_role" "stress_test_lambda_role" {
@@ -178,7 +171,7 @@ resource "aws_lambda_function" "stress_test_orchestrator" {
   role          = aws_iam_role.stress_test_lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
-  timeout       = 1800  # 30 minutes
+  timeout       = 900   # 15 minutes (AWS Lambda max timeout)
   memory_size   = 512   # Worf's security boundary + cost control
 
   environment {
@@ -213,12 +206,6 @@ resource "aws_lambda_function" "stress_test_orchestrator" {
     CreatedBy = "stress-test-bot"
   }
 
-  vpc_config {
-    # Optional: Add VPC configuration if needed for Supabase/GitHub access
-    # security_group_ids = [...]
-    # subnet_ids = [...]
-  }
-
   depends_on = [
     aws_iam_role_policy.stress_test_lambda_logs,
     aws_iam_role_policy.stress_test_supabase_access,
@@ -229,11 +216,12 @@ resource "aws_lambda_function" "stress_test_orchestrator" {
   ]
 }
 
-# EventBridge Rule: Trigger every 14 days at 02:00 UTC
+# EventBridge Rule: Trigger every 14 days (cron-based bi-weekly)
+# Note: EventBridge cron doesn't support "every N weeks", so we use rate instead
 resource "aws_cloudwatch_event_rule" "stress_test_schedule" {
   name                = "story-agent-stress-test-14d"
   description         = "Trigger stress test suite every 14 days at 02:00 UTC (off-peak)"
-  schedule_expression = "cron(0 2 ? * MON)"  # Every 2 weeks on Monday @ 02:00 UTC
+  schedule_expression = "rate(14 days)"  # Every 14 days
 
   tags = {
     Name      = "story-agent-stress-test-schedule"

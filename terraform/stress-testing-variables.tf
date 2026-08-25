@@ -41,9 +41,9 @@ variable "stress_test_schedule_expression" {
 }
 
 variable "lambda_timeout_seconds" {
-  description = "Lambda function timeout in seconds"
+  description = "Lambda function timeout in seconds (max 900)"
   type        = number
-  default     = 1800  # 30 minutes
+  default     = 900  # 15 minutes (AWS Lambda maximum)
 }
 
 variable "lambda_memory_mb" {
@@ -77,17 +77,7 @@ variable "lambda_concurrency_limit" {
 }
 
 variable "alerting_email" {
-  description = "Email address for SNS alerts"
+  description = "Email address for SNS alerts (optional)"
   type        = string
-  optional    = true
-}
-
-variable "tags" {
-  description = "Common tags to apply to all resources"
-  type        = map(string)
-  default = {
-    Project   = "story-agent"
-    Component = "stress-testing"
-    CreatedBy = "terraform"
-  }
+  default     = ""
 }
