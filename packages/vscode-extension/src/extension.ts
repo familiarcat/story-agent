@@ -15,6 +15,7 @@ import { AhaSyncPoller } from './ahaSyncPoller';
 import { registerUpdateAhaStatus, resolveDashboardBase } from './commands/updateAhaStatus';
 import { registerAhaCrudCommands } from './commands/ahaCrud';
 import { registerShowAhaWorkflowCommand } from './commands/showAhaWorkflow';
+import { registerShowTransparencyShowcaseCommand } from './commands/showTransparencyShowcase';
 import { CrewStreamRelay } from './crewStreamRelay';
 import { withDashboardTheme } from './lib/dashboardThemeLink';
 import { initializeChatClient, disposeChatClient } from './chat/chat-engine';
@@ -112,6 +113,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // ── Inline chat (Ctrl+I) over the canonical Quark /chat ──────────────────
   registerInlineChat(context);
+
+  // ── 🖖 Transparency Showcase: 17 unified UI/UX components (production deployed) ──
+  registerShowTransparencyShowcaseCommand(context, dashboardBase());
 
   // ── Sidebar webview ──────────────────────────────────────────────────────
   const sidebarProvider = new StorySidebarProvider(context);

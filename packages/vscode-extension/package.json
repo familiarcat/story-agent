@@ -170,6 +170,12 @@
         "command": "story-agent.openChat",
         "title": "Story Agent: Open Chat (at bottom)",
         "icon": "$(comment)"
+      },
+      {
+        "command": "storyAgent.showTransparencyShowcase",
+        "title": "🖖 Show UI/UX Transparency Dashboard",
+        "category": "Story Agent",
+        "icon": "$(dashboard)"
       }
     ],
     "viewsContainers": {
@@ -288,6 +294,12 @@
         "key": "ctrl+shift+k",
         "mac": "cmd+shift+k",
         "when": "!terminalFocus"
+      },
+      {
+        "command": "storyAgent.showTransparencyShowcase",
+        "key": "cmd+shift+;",
+        "mac": "cmd+shift+;",
+        "title": "Show UI/UX Transparency Dashboard"
       }
     ],
     "configuration": {
