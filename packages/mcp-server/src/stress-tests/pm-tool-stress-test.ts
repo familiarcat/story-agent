@@ -1,4 +1,4 @@
-import { JiraAdapter, MondayAdapter, AzureDevOpsAdapter } from '@story-agent/shared/dist/pm-adapters';
+import { JiraAdapter, MondayAdapter, AzureDevOpsAdapter } from '@story-agent/shared';
 import { PmCostTracker } from '../tools/pm-tools/pm-cost-tracker';
 
 export async function runStressTests() {
