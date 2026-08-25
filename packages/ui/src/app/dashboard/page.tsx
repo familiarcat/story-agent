@@ -7,6 +7,11 @@ import { ProjectStatusPanel, type ProjectStatusRow } from '@/components/ProjectS
 import { RealtimeOpsPanel } from '@/components/RealtimeOpsPanel';
 import { LcarsHierarchyText } from '@/components/Lcars';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { HierarchyBreadcrumb, type HierarchyContext } from '@/components/HierarchyBreadcrumb';
+import { HealthStatusPanel, type HealthMetrics } from '@/components/HealthStatusPanel';
+import { CostBreakdownPanel } from '@/components/CostBreakdownPanel';
+import { PerformanceMetricsPanel } from '@/components/PerformanceMetricsPanel';
+import { ROIIndicator } from '@/components/ROIIndicator';
 
 export const dynamic = 'force-dynamic';
 

@@ -2,6 +2,13 @@ import { getStory, getCommentsForStory, getRevisionCycles } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
+import { HierarchyBreadcrumb, type HierarchyContext } from '@/components/HierarchyBreadcrumb';
+import { StatusBadge } from '@/components/StatusBadge';
+import { IntegrityIndicator } from '@/components/IntegrityIndicator';
+import { PermissionContext } from '@/components/PermissionContext';
+import { QualityGateBadges } from '@/components/QualityGateBadges';
+import { DeploymentStatusBadge } from '@/components/DeploymentStatusBadge';
+import { AuditTrailSidebar, type AuditTrailEntry } from '@/components/AuditTrailSidebar';
 import {
   buildClientAccessContext,
   evaluateControlledDataAccess,
