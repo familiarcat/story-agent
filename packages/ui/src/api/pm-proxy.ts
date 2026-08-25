@@ -1,4 +1,4 @@
-import { callMcpTool } from '@story-agent/mcp-server/src/client';
+import { callMcpTool } from '@story-agent/mcp-server/dist/client';
 
 export async function listProjects(clientId: string) {
   return callMcpTool('pm-list-projects', { clientId });
