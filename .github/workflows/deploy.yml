@@ -167,9 +167,19 @@ jobs:
           TF_VAR_github_token: ${{ secrets.GITHUB_TOKEN }}
         run: |
           terraform init -input=false
-          terraform plan -input=false -out=tfplan \
+          terraform plan -input=false -out=tfplan -refresh=false \
             -var "mcp_image=${{ steps.img.outputs.mcp }}" \
-            -var "ui_image=${{ steps.img.outputs.ui }}"
+            -var "ui_image=${{ steps.img.outputs.ui }}" || \
+          (echo "::notice::Terraform plan failed (likely stale state). Attempting state cleanup..." && \
+           terraform state rm aws_lambda_function.stress_test 2>/dev/null || true && \
+           terraform state rm aws_cloudwatch_event_rule.stress_test_schedule 2>/dev/null || true && \
+           terraform state rm aws_cloudwatch_metric_alarm.lambda_errors 2>/dev/null || true && \
+           terraform state rm aws_cloudwatch_event_target.stress_test_lambda 2>/dev/null || true && \
+           terraform state rm aws_lambda_permission.allow_eventbridge 2>/dev/null || true && \
+           echo "State cleaned. Retrying plan..." && \
+           terraform plan -input=false -out=tfplan -refresh=false \
+             -var "mcp_image=${{ steps.img.outputs.mcp }}" \
+             -var "ui_image=${{ steps.img.outputs.ui }}")
 
       - name: Terraform apply
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true' }}
