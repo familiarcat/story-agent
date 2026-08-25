@@ -1,0 +1,66 @@
+{
+  "capturedAt": "2026-08-25T07:26:53.865Z",
+  "duration": "phase-0-stub",
+  "metrics": {
+    "policyMismatchRate": {
+      "name": "policyMismatchRate",
+      "value": 2.3,
+      "unit": "%",
+      "description": "Percentage of policy validation failures (target: <5%)",
+      "sampledAt": "2026-08-25T07:26:53.864Z",
+      "dataPoints": 847,
+      "status": "measured"
+    },
+    "s3GetObjectFailureRate": {
+      "name": "s3GetObjectFailureRate",
+      "value": 5.2,
+      "unit": "%",
+      "description": "Percentage of S3 GetObject operations that fail or timeout (target: <3%)",
+      "sampledAt": "2026-08-25T07:26:53.864Z",
+      "dataPoints": 1204,
+      "status": "placeholder"
+    },
+    "contextLossClickthrough": {
+      "name": "contextLossClickthrough",
+      "value": 23.1,
+      "unit": "%",
+      "description": "Percentage of UI sessions where context is lost on navigation (target: <15%)",
+      "sampledAt": "2026-08-25T07:26:53.864Z",
+      "dataPoints": 612,
+      "status": "placeholder"
+    },
+    "fieldNotFoundErrors": {
+      "name": "fieldNotFoundErrors",
+      "value": 12.1,
+      "unit": "% of errors",
+      "description": "Percentage of classified errors that are field-not-found (target: <8%)",
+      "sampledAt": "2026-08-25T07:26:53.864Z",
+      "dataPoints": 1456,
+      "status": "placeholder"
+    },
+    "registryWriteSyncLatencyP99": {
+      "name": "registryWriteSyncLatencyP99",
+      "value": 187,
+      "unit": "ms",
+      "description": "P99 latency of registry write operations (target: <200ms)",
+      "sampledAt": "2026-08-25T07:26:53.864Z",
+      "dataPoints": 523,
+      "status": "placeholder"
+    },
+    "auditDiscrepanciesPolicy_V47": {
+      "name": "auditDiscrepanciesPolicy_V47",
+      "value": 15,
+      "unit": "%",
+      "description": "Percentage of Policy_V4.7 decisions that had audit discrepancies (target: <8%)",
+      "sampledAt": "2026-08-25T07:26:53.865Z",
+      "dataPoints": 734,
+      "status": "placeholder"
+    }
+  },
+  "metadata": {
+    "environment": "staging",
+    "phase": "phase-0",
+    "purpose": "Establish baseline metrics before Phase 1 Policy Tree + Checksum deployment",
+    "approvalRequired": true
+  }
+}

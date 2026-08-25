@@ -237,6 +237,8 @@ export interface SprintRituals {
 export * from './client-scope.js';
 export * from './client-security-policy.js';
 export * from './client-registry.js';
+export * from './policy-checksum.js';
+export * from './checksum-storage.js';
 export * from './business-tier.js';
 export * from './entitlements.js';
 export * from './entitlement-sync.js';
