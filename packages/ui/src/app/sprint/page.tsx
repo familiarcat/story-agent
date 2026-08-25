@@ -83,12 +83,19 @@ export default function SprintPage() {
   useEffect(() => {
     setLoadingProjects(true);
     fetch('/api/aha/projects')
-      .then((res) => res.json())
-      .then((data: AhaProject[]) => {
-        setProjects(data);
-        if (data.length > 0) setSelectedProjectId(data[0].id);
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
       })
-      .catch(() => setError('Failed to load projects'))
+      .then((data) => {
+        const projects = Array.isArray(data) ? data : data?.projects || [];
+        setProjects(projects);
+        if (projects.length > 0) setSelectedProjectId(projects[0].id);
+      })
+      .catch((err) => {
+        setError(`Failed to load projects: ${err.message}`);
+        setProjects([]);
+      })
       .finally(() => {
         setLoadingProjects(false);
       });
@@ -99,11 +106,14 @@ export default function SprintPage() {
     setError(null);
     try {
       const res = await fetch(`/api/aha/sprints?projectId=${encodeURIComponent(projectId)}`);
-      const data = await res.json() as AhaSprint[];
-      setSprints(data);
-      if (data.length > 0) setSelectedSprintId(data[0].id);
-    } catch {
-      setError('Failed to load sprints');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const sprints = Array.isArray(data) ? data : data?.sprints || [];
+      setSprints(sprints);
+      if (sprints.length > 0) setSelectedSprintId(sprints[0].id);
+    } catch (err) {
+      setError(`Failed to load sprints: ${err instanceof Error ? err.message : 'unknown error'}`);
+      setSprints([]);
     } finally {
       setLoadingSprints(false);
     }
@@ -114,10 +124,13 @@ export default function SprintPage() {
     setError(null);
     try {
       const res = await fetch(`/api/aha/sprint-stories?releaseId=${encodeURIComponent(releaseId)}`);
-      const data = await res.json() as { stories: AhaSprintStory[]; totalPoints: number };
-      setSprintView({ sprint, stories: data.stories });
-    } catch {
-      setError('Failed to load sprint stories');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const stories = Array.isArray(data) ? data : data?.stories || [];
+      setSprintView({ sprint, stories });
+    } catch (err) {
+      setError(`Failed to load sprint stories: ${err instanceof Error ? err.message : 'unknown error'}`);
+      setSprintView(null);
     } finally {
       setLoadingStories(false);
     }
