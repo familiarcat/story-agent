@@ -1,5 +1,5 @@
 import { JiraAdapter, MondayAdapter, AzureDevOpsAdapter } from '@story-agent/shared';
-import { PmCostTracker } from '../tools/pm-tools/pm-cost-tracker';
+import { PmCostTracker } from '../tools/pm-tools/pm-cost-tracker.js';
 
 export async function runStressTests() {
   const costTracker = new PmCostTracker();
