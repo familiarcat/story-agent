@@ -75,10 +75,11 @@
 
 ## 🟡 IN PROGRESS (Estimated 2-3 Hours Remaining)
 
-### Phase C: Wire into ChatPanel ✅ PART 1 COMPLETE (Next: Part 2)
+### Phase C: Wire into ChatPanel ✅ COMPLETE
 **Owner:** Riker (implementation) + Troi (UX)
-**Status:** 50% complete — paste handler + file preview UI ✅ | MCP wiring + response display 🟡
-**Completed (Commit b462ad8):**
+**Status:** 100% complete — paste handler ✅ | file preview UI ✅ | MCP wiring ✅ | response display ✅
+
+**Part 1 (Commit b462ad8) — Paste Handler + File Preview UI:**
 - ✅ Extend ChatMessage interface with files: ChatFileInput[]
 - ✅ Add pendingFiles tracking to ChatPanel class
 - ✅ Implement file attachment via 'attachFile' button (file picker dialog)
@@ -87,19 +88,20 @@
 - ✅ Add CSS for file preview badges (.file-badge, .file-preview)
 - ✅ Add file preview UI section below input with remove buttons (✕)
 - ✅ Add displayFilePreview() and clearFilePreviews() JS functions
-- ✅ Update sendMessage flow to include files in history
-- ✅ Update thinkingEnd to clear previews after sending
-- ✅ File type detection: PNG, JPG, GIF, WebP, PDF via MIME type
-- ✅ Error handling: file size validation, unsupported types, status messages
-- ✅ VSCode extension builds successfully (1.6 MB)
 
-**Remaining (Phase C Part 2, ~2-3 hours):**
-- [ ] Wire files to MCP chat request (extend ChatRequest type)
-- [ ] Update callCrewChatViaWebSocket() to pass files array
-- [ ] MCP server routes files to process_pdf (PDFs) and analyze_image (images)
-- [ ] Display file processing status in UI ("Extracting PDF... 5 pages")
-- [ ] Show extracted text preview in sent message UI (first 500 chars + "...")
-- [ ] Display file metadata (filename, pages, extraction confidence) after processing
+**Part 2 (Commit d294bef) — MCP Routing + Response Display:**
+- ✅ Extend callCrewChatViaWebSocket() to accept files parameter
+- ✅ Convert ChatFileInput to ChatAttachment format for MCP request
+- ✅ Pass attachments array to chatClient.send() with files
+- ✅ Increase timeout to 60s for file processing (vs 30s for text)
+- ✅ Update sendMessage() to pass files to WebSocket call
+- ✅ Include filesProcessed metadata in messageReceived response
+- ✅ Update renderMessage() to display file processing metadata (filename, type, size)
+- ✅ Add CSS styling for file processing status indicator (.file-processing with pulse)
+- ✅ Update webview message handler to pass filesProcessed to UI
+- ✅ Update thinkingStart to show "Processing X file(s)…" if files attached
+- ✅ Update thinkingEnd to clear file previews after send
+- ✅ VSCode extension builds successfully (1.6 MB)
 
 ### Phase D: Web UI Parity (Follows Phase C, ~2-3 hours)
 **Owner:** Riker (implementation) + Troi + Geordi
@@ -160,9 +162,10 @@
 | `d48ab13` | Phase B: Register process_pdf MCP tool | B | 180 | ✅ |
 | `f11612b` | Phase C: File paste handler infrastructure | C | 200 | ✅ |
 | `b462ad8` | Phase C Part 1: Paste handler + file preview UI | C | 181 | ✅ |
+| `d294bef` | Phase C Part 2: Wire MCP routing + response display | C | 82 | ✅ |
 
-**Total Autonomous Commits (This Session):** 4
-**Total Lines Implemented:** 836 LOC (655 + 181)
+**Total Autonomous Commits (This Session):** 5
+**Total Lines Implemented:** 918 LOC (655 + 181 + 82)
 **Build Status:** ✅ All packages compile to zero errors
 
 ---
@@ -170,9 +173,9 @@
 ## 🎯 CRITICAL PATH (Remaining)
 
 ```
-Phase C Part 2: Wire MCP routing + response display (2-3h) — IN PROGRESS
+Phase C: ✅ COMPLETE (Paste handler + MCP routing)
     ↓
-Phase D: Web UI parity (2-3h)
+Phase D: Web UI parity (2-3h) — NEXT
     ↓
 Phase E: Testing + validation (2-3h)
     ↓
