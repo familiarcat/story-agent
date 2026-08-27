@@ -133,13 +133,14 @@ Cost Optimization:          ✅ TRENDING DOWN
    - Status: READY FOR MARKETPLACE
 ```
 
-### Tier 3: Web UI (Nice-to-Have)
+### Tier 3: Web UI (AWS-Only Deployment)
 ```bash
-🔧 Deploy to: Cloud Run / Vercel
+🔧 Deploy to: AWS Cloud Run (same Fargate cluster)
    - Status: Type checking issue needs resolution
-   - Alternative: API endpoints functional (crew doesn't require web UI)
+   - Platform: AWS-first architecture (no Vercel)
    - Fallback: VSCode extension provides full UI
    - Timeline: Resolve within 1-2 hours
+   - Note: See FUTURE_INTEGRATIONS.md for Vercel archival
 ```
 
 ---
@@ -175,7 +176,7 @@ Phase 4: VSCode Extension Build
 Phase 5: Deployment
 ├─ MCP Server → Cloud Run ✅ READY
 ├─ VSCode Extension → Marketplace ✅ READY
-└─ Web UI → Vercel 🔧 (needs type fix)
+└─ Web UI → Cloud Run (AWS-only) 🔧 Type fix needed
 ```
 
 ---
@@ -204,11 +205,11 @@ vsce package --out ./story-agent.vsix
 vsce publish patch  # or manually upload
 ```
 
-### Deploy Web UI (Blocked, workaround available)
+### Deploy Web UI (AWS Cloud Run)
 ```bash
 # Current status: Type error in Next.js type checker
-# Workaround: Use VSCode extension for UI instead
-# OR: Deploy API-only (no web UI) - crew doesn't need it
+# Deployment: AWS Cloud Run (same Fargate stack as MCP server)
+# Note: See FUTURE_INTEGRATIONS.md if reconsidering other platforms
 
 # Once type issue is resolved:
 pnpm --filter @story-agent/ui run build  # 🔧 BLOCKED
@@ -289,7 +290,7 @@ Monitor real-time dashboards
 | UI/UX Authorization | ✅ APPROVED | Admiral | Aug 27 |
 | MCP Server Deploy | ✅ READY | Pending | Deploy now |
 | VSCode Extension Deploy | ✅ READY | Pending | Deploy now |
-| Web UI Deploy | 🔧 BLOCKED | Pending type fix | 1-2 hours |
+| Web UI Deploy (AWS) | 🔧 BLOCKED | Pending type fix | 1-2 hours |
 
 ---
 
