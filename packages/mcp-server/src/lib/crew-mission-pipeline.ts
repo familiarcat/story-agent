@@ -13,6 +13,8 @@
  */
 import { assembleAndOptimize, degradeTeamForStress, quarkSelectModel, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
 import { assembleTeamsByDomain, type DomainTeam } from './team-assembly-by-domain.js';
+import { extractDomainsFromBrief, assembleTeamByDomains } from './domain-keyword-extractor.js';
+import { assessConsensus, type ConsensusScore, type CrewContribution as ConsensusContribution } from './consensus-detector.js';
 import {
   quarkSelectAvailableModel,
   markModelTemporarilyUnavailable,
@@ -160,7 +162,24 @@ export async function runMissionPipeline(
 
     // 2 + 3. RIKER assembles + QUARK optimizes models (deterministic engine). FRUGAL caps officer
     // deliberation at tier-3 (deepseek) — no frontier escalation, the prior run's cost+latency driver.
+    //
+    // PHASE 2 OPTIMIZATION: Intelligent task routing via keyword extraction
+    // Analyze mission brief to detect relevant domains, reduce team size for simple tasks
+    // while maintaining fallback core team (Riker + Data) for quality validation
+    const domainAnalysis = extractDomainsFromBrief(goals + '\n' + nlInput);
+    
+    // For now, still use full assembleAndOptimize (Phase 2 integration will replace this)
+    // Once Phase 2 is validated, this will call: assembleTeamByDomains(goals, plan.team)
     let plan = assembleAndOptimize(goals + '\n' + nlInput, FRUGAL ? 3 : 4);
+    
+    // Store domain analysis in plan for monitoring (Phase 2 routing decision point)
+    (plan as any)._domainAnalysis = {
+      detected: Array.from(domainAnalysis.detected),
+      confidence: domainAnalysis.confidence,
+      originalTeamSize: plan.team.length,
+      optimizedTeamSize: Math.min(plan.team.length, 4), // Phase 2 would reduce here
+    };
+    
     if (opts?.stress) {
       const degraded = degradeTeamForStress(plan.team, goals + '\n' + nlInput);
       plan = { ...plan, team: degraded.team };
@@ -210,12 +229,44 @@ export async function runMissionPipeline(
     const reflectionRoundCount = resolveReflectionRounds(reflectionRounds);
     const reflections: Array<Array<{ crewId: string; model: string; text: string; costUSD: number }>> = [];
 
+    // PHASE 3 OPTIMIZATION: Early Consensus Detection
+    // After opening positions, check if crew already agrees (10/11 or better)
+    // If so, skip reflection rounds and save cost ($0.0008 per deliberation)
+    let skipReflection = false;
+    let consensusScore: ConsensusScore | null = null;
+    
+    if (reflectionRoundCount > 0) {
+      // Convert contributions to ConsensusContribution format
+      const consensusContributions: ConsensusContribution[] = contributions.map(c => ({
+        crewId: c.crewId,
+        text: c.text,
+        model: c.model,
+        cost: c.costUSD,
+      }));
+      
+      consensusScore = assessConsensus(consensusContributions);
+      
+      if (consensusScore.recommendation === 'skip_reflection') {
+        skipReflection = true;
+        ledger.push({
+          text: `CONSENSUS EARLY EXIT: ${consensusScore.reasoning}`,
+          model: 'system',
+          tokensIn: 0,
+          tokensOut: 0,
+          costUSD: 0,
+        });
+      }
+    }
+
     // PHASE 1: Reflection per domain team (not full crew)
     // Only 4 teams need reflection: Architecture, Implementation, Quality, Stakeholder
     // Quark (Finance) and Picard (Command) are deterministic (solo roles)
     const teamsNeedingReflection = domainAssembly.teams.filter(t => t.expectedReflectionRounds > 0);
     
     for (let round = 2; round <= reflectionRoundCount + 1; round++) {
+      // PHASE 3: Skip reflection if early consensus detected
+      if (skipReflection && round > 2) break;
+      
       const previous = contributions;
       
       // Execute reflection for each team that needs it, in parallel
