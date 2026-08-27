@@ -64,6 +64,11 @@ function toFibByCurvature(curvature: number): number {
   return FIBONACCI_POINTS[FIBONACCI_POINTS.length - 1];
 }
 
+/**
+ * AI-aware estimation: Crew executes at machine speed, not human sprint velocity
+ * Old model: 8-point story = 1-2 days (human sprint assumption)
+ * New model: 8-point story = 15-20 minutes (11-member crew operating 24/7)
+ */
 export function estimateStoryGravity(input: StoryGravityInput): StoryGravityEstimate {
   const text = `${input.name || ''}\n${input.description || ''}\n${input.acceptanceCriteria || ''}`.trim();
   const tokenEstimate = Math.max(1, Math.ceil(text.length / 4));
@@ -98,10 +103,18 @@ export function estimateStoryGravity(input: StoryGravityInput): StoryGravityEsti
   const storyPoints = toFibByCurvature(curvature);
   const effectiveVelocityLoad = Number((storyPoints * gravityWeight).toFixed(2));
 
+  // AI crew execution time (replaces human sprint-based estimation)
+  // Complexity 0.2 (simple) → 2+0.2*50=12 min
+  // Complexity 0.5 (medium) → 2+0.5*50=27 min
+  // Complexity 0.8 (complex) → 2+0.8*50=42 min
+  // Complexity 1.0 (critical) → 2+1.0*50=52 min
+  const crewExecutionMinutes = Math.round(2 + curvature * 50);
+
   const rationale = [
     `mass=${mass} from scope/signals (${tokenEstimate} tokens, complexity=${complexityHits}, dependencies=${deps}, integrations=${integrations})`,
     `gravity=${gravityWeight.toFixed(2)} from risk/coupling (riskTerms=${riskHits}, unknowns=${unknownHits}, uncertainty=${uncertainty.toFixed(2)})`,
     `curvature=${curvature} mapped to Fibonacci story points=${storyPoints}`,
+    `[AI CREW] Execution time: ~${crewExecutionMinutes} min (crew speed, not human sprints)`,
   ];
 
   return {
