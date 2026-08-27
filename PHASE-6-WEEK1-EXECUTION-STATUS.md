@@ -73,25 +73,33 @@
 
 ---
 
-## 🟡 IN PROGRESS (Estimated 3-4 Hours Remaining)
+## 🟡 IN PROGRESS (Estimated 2-3 Hours Remaining)
 
-### Phase C: Wire into ChatPanel (Next Step)
+### Phase C: Wire into ChatPanel ✅ PART 1 COMPLETE (Next: Part 2)
 **Owner:** Riker (implementation) + Troi (UX)
-**Estimated Time:** 3-4 hours
-**Deliverables:**
-- [ ] Update ChatRequest interface to include optional `files: ChatFileInput[]`
-- [ ] Add paste event listener to webview input (Ctrl+V/Cmd+V detection)
-- [ ] Add file preview UI badges below chat input
-- [ ] Update sendMessage() to include attached files
-- [ ] Wire file attachment from attachFile() button
-- [ ] Show "Processing PDF (5 pages)..." status during extraction
-- [ ] Display file metadata in sent message UI
-- **Integration Points:**
-  - WebviewPanel.setupWebviewHandlers() adds paste listener
-  - sendMessage passes files to MCP server via ChatRequest.files
-  - MCP server receives files and dispatches:
-    - Images → analyze_image tool (Quark-selected vision model)
-    - PDFs → process_pdf tool (pdfjs + OCR extraction)
+**Status:** 50% complete — paste handler + file preview UI ✅ | MCP wiring + response display 🟡
+**Completed (Commit b462ad8):**
+- ✅ Extend ChatMessage interface with files: ChatFileInput[]
+- ✅ Add pendingFiles tracking to ChatPanel class
+- ✅ Implement file attachment via 'attachFile' button (file picker dialog)
+- ✅ Implement 'pasteFile' handler for Ctrl+V / Cmd+V paste events
+- ✅ Add onpaste event listener to messageInput with file type detection
+- ✅ Add CSS for file preview badges (.file-badge, .file-preview)
+- ✅ Add file preview UI section below input with remove buttons (✕)
+- ✅ Add displayFilePreview() and clearFilePreviews() JS functions
+- ✅ Update sendMessage flow to include files in history
+- ✅ Update thinkingEnd to clear previews after sending
+- ✅ File type detection: PNG, JPG, GIF, WebP, PDF via MIME type
+- ✅ Error handling: file size validation, unsupported types, status messages
+- ✅ VSCode extension builds successfully (1.6 MB)
+
+**Remaining (Phase C Part 2, ~2-3 hours):**
+- [ ] Wire files to MCP chat request (extend ChatRequest type)
+- [ ] Update callCrewChatViaWebSocket() to pass files array
+- [ ] MCP server routes files to process_pdf (PDFs) and analyze_image (images)
+- [ ] Display file processing status in UI ("Extracting PDF... 5 pages")
+- [ ] Show extracted text preview in sent message UI (first 500 chars + "...")
+- [ ] Display file metadata (filename, pages, extraction confidence) after processing
 
 ### Phase D: Web UI Parity (Follows Phase C, ~2-3 hours)
 **Owner:** Riker (implementation) + Troi + Geordi
@@ -151,9 +159,10 @@
 | `91ee493` | Phase A+B: PDF extraction + dependencies | A-B | 275 | ✅ |
 | `d48ab13` | Phase B: Register process_pdf MCP tool | B | 180 | ✅ |
 | `f11612b` | Phase C: File paste handler infrastructure | C | 200 | ✅ |
+| `b462ad8` | Phase C Part 1: Paste handler + file preview UI | C | 181 | ✅ |
 
-**Total Autonomous Commits (This Session):** 3
-**Total Lines Implemented:** 655 LOC
+**Total Autonomous Commits (This Session):** 4
+**Total Lines Implemented:** 836 LOC (655 + 181)
 **Build Status:** ✅ All packages compile to zero errors
 
 ---
@@ -161,7 +170,7 @@
 ## 🎯 CRITICAL PATH (Remaining)
 
 ```
-Phase C: Wire paste to ChatPanel (3-4h)
+Phase C Part 2: Wire MCP routing + response display (2-3h) — IN PROGRESS
     ↓
 Phase D: Web UI parity (2-3h)
     ↓
@@ -172,7 +181,7 @@ Sept 6 Go/No-Go: All 6 success criteria pass
 Production Deployment (MCP → Cloud Run, extension publish)
 ```
 
-**Timeline to Go/No-Go:** Aug 27 → Sept 1 (5-6 days autonomously)
+**Timeline to Go/No-Go:** Aug 27 → Sept 1 (4-5 days remaining autonomously)
 **Target Completion:** Sept 1 2026 18:00 UTC (1 day ahead of Sept 6 Go/No-Go review)
 
 ---
@@ -205,7 +214,8 @@ Crew proceeds autonomously with Phase C implementation:
 
 ---
 
-**Status as of 2026-08-27 12:30 UTC**
+**Status as of 2026-08-27 13:15 UTC**
 **Prepared by:** Story Agent (autonomous execution)
 **Session:** Phase 6 Week 1 Image/PDF Chat Integration
+**Progress:** Phases A-C Part 1 complete (836 LOC, 4 commits) | Phase C Part 2 in progress
 **Approval:** Admiral (pending Go/No-Go Sept 6)
