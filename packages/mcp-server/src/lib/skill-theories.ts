@@ -344,6 +344,16 @@ defineSkillTheory({
 });
 
 defineSkillTheory({
+  tool: 'process_pdf',
+  who: { owner: 'geordi' },
+  what: { summary: 'Extract text from PDFs using pdfjs-dist (embedded text) + tesseract.js (OCR fallback).', capabilities: ['embedded text extraction (fast)', 'OCR fallback for scanned/image-only pages', 'SHA-256 caching', 'optional store-to-RAG'] },
+  when: { useWhen: ['Extracting text from a digital PDF with embedded text', 'Processing scanned PDFs that need OCR', 'Building a document indexing pipeline'], avoidWhen: ['The PDF contains sa_*/client/secret data — PDFs are processed on-device but never logged', 'PDFs >50 MB (size-capped for memory safety)'] },
+  where: { scope: ['local-fs', 'llm', 'rag'], surfaces: ['mcp', 'api', 'vscode'], sideEffects: 'local' },
+  why: { rationale: 'Enables the crew + chat UI to process documents end-to-end; OCR fallback handles scanned PDFs gracefully without 3rd-party calls.', goalsServed: ['document processing', 'chat document parity', 'on-device processing'] },
+  how: { invocation: 'process_pdf({ pdf, enableOcr?, ocrLanguages?, storeToRag?, ragTags? })', annotations: { title: 'Process PDF', readOnlyHint: true, idempotentHint: false, openWorldHint: false }, output: '{ pageCount, textLength, hasEmbeddedText, ocrPagesCount, processingTimeMs, ragStored } + full extracted text.' },
+});
+
+defineSkillTheory({
   tool: 'aha:create-release',
   who: { owner: 'picard' },
   what: { summary: 'Create a release (sprint) in an Aha product — the container features/epics need.', capabilities: ['gated release create (sprint)', 'optional start/release dates', 'unblocks the full Firm→Client→Project→Epic→Story→Task hierarchy'] },
@@ -486,7 +496,7 @@ export const THEORIZED_TOOLS = [
   'rag_recall', 'crew_deliberate', 'onboard_client', 'worfgate_credential_status', 'run_crew_mission_pipeline',
   'discover_mcp_tools', 'recall_taught_tools', 'crew_research_stalls', 'crew_sync_to_aha', 'aha_branch_for_story', 'crew_start_story',
   'crew_link_story_pr', 'crew_complete_story', 'worfgate_override_monitor',
-  'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes', 'analyze_image',
+  'worfgate_request_change', 'worfgate_apply_change', 'worfgate_pending_changes', 'analyze_image', 'process_pdf',
   'run_shell', 'plan_then_execute', 'crew_analyze_image',
   'crew_personal_context', 'crew_personal_context_batch', 'crew_profile_summary', 'crew_decision_patterns', 'crew_canonical_quotes', 'crew_relationship_matrix',
   'aha:create-release', 'aha:create-epic', 'aha:create-requirement',
