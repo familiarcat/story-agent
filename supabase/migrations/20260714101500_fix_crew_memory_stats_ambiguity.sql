@@ -5,10 +5,13 @@
 --   which can yield Postgres error 42702 in PL/pgSQL contexts.
 --
 -- Resolution:
---   1) Rename parameter to p_crew_id.
---   2) Fully-qualify table columns via alias m.
+--   1) Drop existing function (if it exists with old signature)
+--   2) Create with renamed parameter p_crew_id
+--   3) Fully-qualify table columns via alias m.
 
-CREATE OR REPLACE FUNCTION get_crew_memory_stats(p_crew_id TEXT)
+DROP FUNCTION IF EXISTS get_crew_memory_stats(TEXT);
+
+CREATE FUNCTION get_crew_memory_stats(p_crew_id TEXT)
 RETURNS TABLE (
   total_memories INT,
   memory_by_type TEXT,

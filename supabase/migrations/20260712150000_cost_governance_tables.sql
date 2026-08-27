@@ -46,9 +46,15 @@ CREATE TABLE IF NOT EXISTS cost_escalation (
   decided_at TIMESTAMPTZ
 );
 
--- Add cost_mode column to existing cost_ledger table (if it doesn't exist)
-ALTER TABLE IF EXISTS cost_ledger
-ADD COLUMN IF NOT EXISTS cost_mode TEXT CHECK (cost_mode IN ('dev', 'prod')) DEFAULT 'prod';
+-- cost_ledger: Cost tracking ledger (create if missing, for backwards compatibility)
+CREATE TABLE IF NOT EXISTS cost_ledger (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT,
+  client_id TEXT,
+  cost_usd DECIMAL(12, 6),
+  cost_mode TEXT CHECK (cost_mode IN ('dev', 'prod')) DEFAULT 'prod',
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- Index for efficient budget queries
 CREATE INDEX IF NOT EXISTS idx_cost_ledger_cost_mode_timestamp
