@@ -2,13 +2,16 @@
   "name": "story-agent-vscode",
   "displayName": "Story Agent",
   "description": "Agentic story delivery — Aha integration, observation lounge wizard, and story lifecycle management inside VS Code",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "publisher": "story-agent",
   "private": true,
   "engines": {
     "vscode": "^1.99.0"
   },
-  "categories": ["AI", "Other"],
+  "categories": [
+    "AI",
+    "Other"
+  ],
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
@@ -328,7 +331,12 @@
         "storyAgent.uiTheme": {
           "type": "string",
           "default": "lcars",
-          "enum": ["lcars", "dark", "light", "vscode"],
+          "enum": [
+            "lcars",
+            "dark",
+            "light",
+            "vscode"
+          ],
           "enumDescriptions": [
             "LCARS (default) — matches dashboard LCARS theme tokens",
             "Dark — matches dashboard dark theme tokens",
@@ -340,7 +348,13 @@
         "storyAgent.agileProvider": {
           "type": "string",
           "default": "aha",
-          "enum": ["aha", "jira", "linear", "github-projects", "azure-devops"],
+          "enum": [
+            "aha",
+            "jira",
+            "linear",
+            "github-projects",
+            "azure-devops"
+          ],
           "enumDescriptions": [
             "Aha! — requires AHA_DOMAIN and AHA_API_KEY",
             "Jira Cloud — requires JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN",
@@ -353,7 +367,11 @@
         "storyAgent.chat.provider": {
           "type": "string",
           "default": "auto",
-          "enum": ["auto", "openrouter", "copilot"],
+          "enum": [
+            "auto",
+            "openrouter",
+            "copilot"
+          ],
           "enumDescriptions": [
             "OpenRouter (cost-optimized crew routing) first, Copilot only as fallback — recommended",
             "Force OpenRouter (errors if no key configured)",
@@ -374,7 +392,10 @@
         "storyAgent.chat.costProfile": {
           "type": "string",
           "default": "cost_optimized",
-          "enum": ["cost_optimized", "quality_first"],
+          "enum": [
+            "cost_optimized",
+            "quality_first"
+          ],
           "description": "Routing profile. 'cost_optimized' (default) tiers cheap vs quality by task complexity; 'quality_first' always uses the quality model. Falls back to the CREW_LLM_MODEL_PROFILE env var if set."
         },
         "storyAgent.chat.openRouterApiKey": {
@@ -479,15 +500,36 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "type": "string" },
-              "name": { "type": "string" },
-              "clientId": { "type": "string" },
-              "clientSecret": { "type": "string" },
-              "discoveryUrl": { "type": "string" },
-              "authorizationEndpoint": { "type": "string" },
-              "tokenEndpoint": { "type": "string" },
-              "resource": { "type": "string" },
-              "scopes": { "type": "array", "items": { "type": "string" } }
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "clientId": {
+                "type": "string"
+              },
+              "clientSecret": {
+                "type": "string"
+              },
+              "discoveryUrl": {
+                "type": "string"
+              },
+              "authorizationEndpoint": {
+                "type": "string"
+              },
+              "tokenEndpoint": {
+                "type": "string"
+              },
+              "resource": {
+                "type": "string"
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           }
         }
