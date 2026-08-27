@@ -69,6 +69,9 @@ export * from './velocity-cache';
 // Data & Processing
 export * from './selection-contract';
 export * from './image-input';
+export * from './pdf-input';
+export * from './file-input';
+export * from './pdf-processor';
 export * from './vision';
 export * from './checksum-storage';
 export * from './embedding';
