@@ -77,6 +77,7 @@ export async function planThenExecute(
     workspace: opts.workspace,
     clientId: opts.clientId ?? null,
     tier: opts.tier ?? 3,
+    autonomyMode: true,  // Plan-then-execute is always autonomous (no interactive blocks)
     maxIterations: opts.maxIterations ?? derivedMaxIterations,
     // ROOT-CAUSE FIX: this call site previously omitted the bridges that http-server.ts already
     // spreads into its own runAgentLoop call. Without them ctx.ragRecall / ctx.crewDeliberate are

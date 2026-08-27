@@ -93,6 +93,12 @@ export interface RunAgentOptions {
   /** Stream events (model picks, tool calls, gate decisions, text) to the surface. */
   onEvent?: (e: AgentEvent) => void;
   tools?: AgentTool[];
+  /**
+   * Autonomous execution mode: never block for interactive approvals.
+   * Yellow gates auto-remediate and continue; red gates escalate to crew.
+   * When enabled, prevents VS Code "Continue to iterate?" dialog from blocking hands-off crew runs.
+   */
+  autonomyMode?: boolean;
   /** Wave-2 interactive approvals (opt-in): pause yellow/red ops for an explicit operator decision. */
   requireApproval?: boolean;
   /** Resolver the surface wires to a back-channel; returns 'approve' | 'deny' for a pending gate. */
@@ -365,6 +371,7 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
   const tokenBudget = opts.tokenBudget ?? 400_000;
   const autoEscalate = opts.autoEscalate ?? true;
   const autoRatifyPublish = opts.autoRatifyPublish ?? process.env.STORY_AGENT_AUTO_RATIFY_PUBLISH === 'true';
+  const autonomyMode = opts.autonomyMode ?? process.env.STORY_AGENT_AUTONOMY_MODE === 'true';
   const maxTokensPerTurn = Math.max(512, Math.min(16_000, opts.maxTokensPerTurn ?? 4096));
   const reviewThresholdUSD = opts.reviewThresholdUSD;
   const emit = opts.onEvent ?? (() => {});
@@ -693,7 +700,14 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
 
         // Wave-2 interactive approval (opt-in): pause a proceed-able yellow/red op for an explicit
         // operator decision via the surface's back-channel. Default-off ⇒ existing behavior unchanged.
-        const needsApproval = !!(opts.requireApproval && opts.requestApproval && gate.proceed && (tier === 'yellow' || tier === 'red'));
+        // In autonomyMode, never block for interactive approval — auto-approve remediation.
+        const needsApproval = !!(
+          !autonomyMode  // Skip interactive approval when running autonomously
+          && opts.requireApproval 
+          && opts.requestApproval 
+          && gate.proceed 
+          && (tier === 'yellow' || tier === 'red')
+        );
         const approvalId = needsApproval ? randomUUID() : undefined;
         emit({ type: 'gate', tool: name, tier, remediations, needsApproval, approvalId });
 
@@ -701,6 +715,10 @@ export async function runAgentLoop(userInput: string, opts: RunAgentOptions = {}
         if (needsApproval && approvalId) {
           const decision = await opts.requestApproval!({ approvalId, tool: name, tier, remediations, args: gate.args });
           denied = decision === 'deny';
+        } else if (autonomyMode && gate.proceed && (tier === 'yellow' || tier === 'red')) {
+          // In autonomy mode, auto-approve yellow/red gates that have a remediation path
+          denied = false;
+          emit({ type: 'gate', tool: name, tier, remediations, needsApproval: false, text: 'auto-approved (autonomy mode)' });
         }
 
         // CI-green ratification: the gate blocks publish ops red because it is pure/synchronous and

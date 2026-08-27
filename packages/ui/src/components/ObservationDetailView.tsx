@@ -65,43 +65,45 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
 
   const generateSummary = (): string => {
     if (!observation) return '';
+    const transcript = (((observation as any)?.transcript ?? {}) as any) ?? {};
     const parts: string[] = [];
 
-    if (observation.transcript.consensusSummary) {
-      parts.push(`Consensus: ${observation.transcript.consensusSummary.substring(0, 60)}${observation.transcript.consensusSummary.length > 60 ? '...' : ''}`);
+    if (transcript.consensusSummary) {
+      parts.push(`Consensus: ${transcript.consensusSummary.substring(0, 60)}${transcript.consensusSummary.length > 60 ? '...' : ''}`);
     }
-    if (observation.transcript.actionItems?.length) {
-      parts.push(`${observation.transcript.actionItems.length} action item${observation.transcript.actionItems.length !== 1 ? 's' : ''}`);
+    if ((transcript.actionItems ?? []).length) {
+      parts.push(`${(transcript.actionItems ?? []).length} action item${((transcript.actionItems ?? []).length !== 1 ? 's' : '')}`);
     }
-    if (observation.transcript.unresolvedRisks?.length) {
-      parts.push(`${observation.transcript.unresolvedRisks.length} risk${observation.transcript.unresolvedRisks.length !== 1 ? 's' : ''}`);
+    if ((transcript.unresolvedRisks ?? []).length) {
+      parts.push(`${(transcript.unresolvedRisks ?? []).length} risk${((transcript.unresolvedRisks ?? []).length !== 1 ? 's' : '')}`);
     }
-    if (observation.transcript.rounds?.length) {
-      parts.push(`${observation.transcript.rounds.length} round${observation.transcript.rounds.length !== 1 ? 's' : ''}`);
+    if ((transcript.rounds ?? []).length) {
+      parts.push(`${(transcript.rounds ?? []).length} round${((transcript.rounds ?? []).length !== 1 ? 's' : '')}`);
     }
     return parts.join(' • ') || 'Crew deliberation completed';
   };
 
   const renderNaturalLanguageDeliberation = (): React.ReactNode => {
     if (!observation) return null;
+    const transcript = (((observation as any)?.transcript ?? {}) as any) ?? {};
     return (
       <div style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: MONO }}>
-        {observation.transcript.rounds && observation.transcript.rounds.length > 0 ? (
+        {(transcript.rounds ?? []).length > 0 ? (
           <>
-            {observation.transcript.rounds.map((round, roundIdx) => (
+            {(transcript.rounds ?? []).map((round: any, roundIdx: number) => (
               <div key={roundIdx} style={{ marginBottom: 12 }}>
                 <div style={{ fontWeight: 700, color: lcars.paleCanary, marginBottom: 6 }}>{'═'.repeat(40)}</div>
                 <div style={{ fontWeight: 700, color: lcars.paleCanary, marginBottom: 6 }}>Round {roundIdx + 1}: {round.title}</div>
                 <div style={{ fontWeight: 700, color: lcars.paleCanary, marginBottom: 6 }}>{'═'.repeat(40)}</div>
-                {round.entries.map((entry, entryIdx) => (
+                {(round.entries ?? []).map((entry: any, entryIdx: number) => (
                   <div key={entryIdx} style={{ marginBottom: 8 }}>
                     <div style={{ fontWeight: 700, color: lcars.neonCarrot }}>
                       {entry.speakerId} [{entry.position.toUpperCase()}]
                     </div>
                     <div style={{ marginTop: 2, marginLeft: 12, color: lcars.text }}>{entry.statement}</div>
-                    {entry.evidence.length > 0 && (
+                    {((entry.evidence ?? []) as any[]).length > 0 && (
                       <div style={{ marginTop: 4, marginLeft: 12, fontSize: '0.7rem', color: lcars.textDim }}>
-                        {entry.evidence.map((ev, i) => (
+                        {(entry.evidence ?? []).map((ev: any, i: number) => (
                           <div key={i}>📎 {ev}</div>
                         ))}
                       </div>
@@ -114,10 +116,10 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
         ) : (
           <div style={{ color: lcars.textDim }}>No debate rounds recorded</div>
         )}
-        {observation.transcript.consensusSummary && (
+        {((observation as any)?.transcript ?? {}).consensusSummary && (
           <div style={{ marginTop: 12, borderTop: `1px solid ${lcars.border}`, paddingTop: 8 }}>
             <div style={{ fontWeight: 700, color: lcars.paleCanary, marginBottom: 6 }}>CONSENSUS</div>
-            <div style={{ color: lcars.text }}>{observation.transcript.consensusSummary}</div>
+            <div style={{ color: lcars.text }}>{((observation as any)?.transcript ?? {}).consensusSummary}</div>
           </div>
         )}
       </div>
@@ -127,10 +129,10 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
   const renderRawJsonDeliberation = (): React.ReactNode => {
     if (!observation) return null;
     const jsonData = {
-      rounds: observation.transcript.rounds,
-      consensus: observation.transcript.consensusSummary,
-      actionItems: observation.transcript.actionItems,
-      unresolvedRisks: observation.transcript.unresolvedRisks,
+      rounds: ((observation as any)?.transcript ?? {}).rounds,
+      consensus: ((observation as any)?.transcript ?? {}).consensusSummary,
+      actionItems: ((observation as any)?.transcript ?? {}).actionItems,
+      unresolvedRisks: ((observation as any)?.transcript ?? {}).unresolvedRisks,
     };
     return (
       <div
@@ -306,7 +308,7 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
 
             {/* Natural Language View - Collapsible Sections */}
             {/* Consensus Section */}
-            {observation.transcript.consensusSummary && (
+            {((observation as any)?.transcript ?? {}).consensusSummary && (
               <div style={{ marginBottom: 6 }}>
                 <button
                   onClick={() => toggleSection('consensus')}
@@ -328,14 +330,14 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
                 </button>
                 {expandedSections.consensus && (
                   <div style={{ background: lcars.space, borderLeft: `3px solid ${lcars.paleCanary}`, borderRadius: 6, padding: 8 }}>
-                    <div style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.4 }}>{observation.transcript.consensusSummary}</div>
+                    <div style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.4 }}>{((observation as any)?.transcript ?? {}).consensusSummary}</div>
                   </div>
                 )}
               </div>
             )}
 
             {/* Unresolved Risks Section */}
-            {observation.transcript.unresolvedRisks && observation.transcript.unresolvedRisks.length > 0 && (
+            {((observation as any)?.transcript ?? {}).unresolvedRisks && ((observation as any)?.transcript ?? {}).unresolvedRisks.length > 0 && (
               <div style={{ marginBottom: 6 }}>
                 <button
                   onClick={() => toggleSection('risks')}
@@ -358,7 +360,7 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
                 {expandedSections.risks && (
                   <div style={{ background: lcars.space, borderLeft: `3px solid ${lcars.neonCarrot}`, borderRadius: 6, padding: 8 }}>
                     <ul style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.4, margin: 0, paddingLeft: 16 }}>
-                      {observation.transcript.unresolvedRisks.map((risk, i) => (
+                      {(((observation as any)?.transcript ?? {}).unresolvedRisks ?? []).map((risk: any, i: number) => (
                         <li key={i}>• {risk}</li>
                       ))}
                     </ul>
@@ -368,7 +370,7 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
             )}
 
             {/* Action Items Section */}
-            {observation.transcript.actionItems && observation.transcript.actionItems.length > 0 && (
+            {((observation as any)?.transcript ?? {}).actionItems && ((observation as any)?.transcript ?? {}).actionItems.length > 0 && (
               <div style={{ marginBottom: 6 }}>
                 <button
                   onClick={() => toggleSection('actions')}
@@ -391,7 +393,7 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
                 {expandedSections.actions && (
                   <div style={{ background: lcars.space, borderLeft: `3px solid ${lcars.paleCanary}`, borderRadius: 6, padding: 8 }}>
                     <ul style={{ fontSize: '0.75rem', color: lcars.text, lineHeight: 1.4, margin: 0, paddingLeft: 16 }}>
-                      {observation.transcript.actionItems.map((item, i) => (
+                      {((((observation as any)?.transcript ?? {}).actionItems ?? []) as any[]).map((item: any, i: number) => (
                         <li key={i}>• {item}</li>
                       ))}
                     </ul>
@@ -401,7 +403,7 @@ export function ObservationDetailView({ observationId }: ObservationDetailViewPr
             )}
 
             {/* Debate Rounds Section */}
-            {observation.transcript.rounds && observation.transcript.rounds.length > 0 && (
+            {((observation as any)?.transcript ?? {}).rounds && ((observation as any)?.transcript ?? {}).rounds.length > 0 && (
               <div>
                 <button
                   onClick={() => toggleSection('rounds')}

@@ -121,12 +121,12 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
       try {
         const mems = await getRecentObservationMemories(20, 'agent-run');
         cards = mems.map((m) => {
-          const ev = (m.transcript?.rounds?.[0]?.entries?.[0]?.evidence ?? []) as string[];
+          const ev = ((m.transcript as any)?.rounds?.[0]?.entries?.[0]?.evidence ?? []) as string[];
           const pick = (p: string) => ev.find((e) => e.startsWith(p))?.slice(p.length) ?? '';
           return {
             timestamp: m.createdAt,
-            input: m.transcript?.rounds?.[0]?.entries?.[0]?.statement?.slice(0, 200) ?? '',
-            outcome: m.transcript?.consensusSummary ?? '',
+            input: ((m.transcript as any)?.rounds?.[0]?.entries?.[0]?.statement?.slice(0, 200) ?? ''),
+            outcome: (m.transcript as any)?.consensusSummary ?? '',
             model: pick('model:'),
             tools: pick('tools:'),
             clientId: m.clientId ?? null,
@@ -219,6 +219,7 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
         ...(body.maxTokensPerTurn != null ? { maxTokensPerTurn: Number(body.maxTokensPerTurn) } : {}),
         ...(body.maxCompletionNudges != null ? { maxCompletionNudges: Number(body.maxCompletionNudges) } : {}),
         ...(body.autoEscalate != null ? { autoEscalate: body.autoEscalate === true } : {}),
+        ...(body.autonomyMode != null ? { autonomyMode: body.autonomyMode === true } : { autonomyMode: true }),  // Default to autonomy mode for HTTP server
         ...(body.crewId ? { crewId: String(body.crewId) } : {}),
         ...(body.taskId ? { taskId: String(body.taskId) } : {}),
         ...(body.missionId ? { missionId: String(body.missionId) } : {}),

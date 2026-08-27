@@ -930,9 +930,9 @@ export async function storeObservationMemory(input: {
     transcript_hash: transcriptHash,
     transcript_text: transcriptText,
     transcript: worfGate.transcript,
-    mission_ref: input.missionReference ?? input.missionPlan?.story.referenceNum ?? null,
+    mission_ref: input.missionReference ?? (input.missionPlan?.story && typeof input.missionPlan.story === 'object' ? input.missionPlan.story.referenceNum : null) ?? null,
     tags: worfGate.tags,
-    memory_embedding: toPgVector(embedding),
+    memory_embedding: toPgVector(embedding ?? []),
     created_at: new Date().toISOString(),
   };
 
@@ -1088,9 +1088,10 @@ export async function getRelevantObservationMemories(input: {
   const queryEmbedding = await embed(queryText);
 
   return candidates
+    .filter(memory => memory.embedding && memory.embedding.length > 0)
     .map(memory => ({
       ...memory,
-      similarity: cosineSimilarity(queryEmbedding, memory.embedding),
+      similarity: cosineSimilarity(queryEmbedding, memory.embedding ?? []),
     }))
     .sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0))
     .slice(0, limit);
@@ -1113,20 +1114,22 @@ export function formatMemoryForCrewDisplay(memory: ObservationMemoryRecord): str
 
   // Add transcript content
   const transcript = memory.transcript;
-  if (transcript.consensusSummary) {
-    lines.push(`CONSENSUS: ${transcript.consensusSummary}`);
-    lines.push('');
-  }
+  if (transcript) {
+    if (transcript.consensusSummary) {
+      lines.push(`CONSENSUS: ${transcript.consensusSummary}`);
+      lines.push('');
+    }
 
-  if (transcript.unresolvedRisks?.length) {
-    lines.push('RISKS:');
-    transcript.unresolvedRisks.forEach(risk => lines.push(`  • ${risk}`));
-    lines.push('');
-  }
+    if (transcript.unresolvedRisks?.length) {
+      lines.push('RISKS:');
+      transcript.unresolvedRisks.forEach((risk: any) => lines.push(`  • ${risk}`));
+      lines.push('');
+    }
 
-  if (transcript.actionItems?.length) {
-    lines.push('ACTIONS:');
-    transcript.actionItems.forEach(item => lines.push(`  • ${item}`));
+    if (transcript.actionItems?.length) {
+      lines.push('ACTIONS:');
+      transcript.actionItems.forEach((item: any) => lines.push(`  • ${item}`));
+    }
   }
 
   return lines.join('\n');

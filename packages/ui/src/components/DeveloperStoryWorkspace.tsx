@@ -16,15 +16,42 @@ import React, { useEffect, useState } from 'react';
 import { DeveloperAdvisor } from './DeveloperAdvisor';
 import { HierarchyTree } from './HierarchyTree';
 import { WorkflowStatus } from './WorkflowStatus';
-import type { CrewExecutionState, HierarchyNode, ActionIntent } from '@story-agent/shared';
 import { buildClientScopeHeaders, readClientScopeState } from '@/lib/client-scope-store';
+
+// Type definitions for crew execution and hierarchy
+interface CrewExecutionState extends Record<string, any> {
+  crewId: string;
+  status: 'pending' | 'executing' | 'complete' | 'error';
+  findings?: string;
+  confidence?: number;
+  cost?: number;
+  totalCostUsd?: number;
+  blockers?: any[];
+  crewExecutions?: Array<{
+    crewId: string;
+    status: 'pending' | 'executing' | 'complete' | 'error';
+    findings?: string;
+    confidence?: number;
+    cost?: number;
+  }>;
+}
+
+interface HierarchyNode {
+  id: string;
+  label: string;
+  url?: string;
+  ref?: string;
+  children?: HierarchyNode[];
+}
+
+type ActionIntent = 'open' | 'plan' | 'execute' | 'review' | 'approve';
 
 /**
  * Route a selection-tree action from the DEVELOPER persona — the full code lifecycle. Reads open in
  * place; lifecycle actions (plan / agent / branch / link-pr / prepare) hand off to the crew chat for
  * the named story (the autonomous loop, WorfGate-gated). Same shared <HierarchyTree>, dev routing.
  */
-function handleDeveloperAction(node: HierarchyNode, intent: ActionIntent) {
+function handleDeveloperAction(node: any, intent: any) {
   if (intent === 'open' && node.url) { window.open(node.url, '_blank'); return; }
   if (node.ref) window.location.href = `/story/${encodeURIComponent(node.ref)}?action=${intent}`;
   else if (node.url) window.open(node.url, '_blank');
@@ -241,7 +268,7 @@ export function DeveloperStoryWorkspace({
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)' }}>
                 <span>Progress</span>
                 <span style={{ fontWeight: 600 }}>
-                  {crewState.crewExecutions.filter(e => e.status === 'complete').length} / {crewState.crewExecutions.length}
+                  {(crewState.crewExecutions ?? []).filter(e => e.status === 'complete').length} / {(crewState.crewExecutions ?? []).length}
                 </span>
               </div>
               <div style={{ width: '100%', background: 'var(--surface-2)', borderRadius: '9999px', height: 'var(--space-2)' }}>
@@ -250,7 +277,7 @@ export function DeveloperStoryWorkspace({
                     background: 'var(--ok)',
                     height: 'var(--space-2)',
                     borderRadius: '9999px',
-                    width: `${(crewState.crewExecutions.filter(e => e.status === 'complete').length / crewState.crewExecutions.length) * 100}%`,
+                    width: `${((crewState.crewExecutions ?? []).filter(e => e.status === 'complete').length / (crewState.crewExecutions ?? []).length) * 100}%`,
                   }}
                 />
               </div>
@@ -261,7 +288,7 @@ export function DeveloperStoryWorkspace({
                   label="Run"
                   status={{
                     costUSD: crewState.totalCostUsd,
-                    toolCount: crewState.crewExecutions.length,
+                    toolCount: (crewState.crewExecutions ?? []).length,
                     stalled: (crewState.blockers?.length ?? 0) > 0,
                   }}
                 />
@@ -272,7 +299,7 @@ export function DeveloperStoryWorkspace({
               className="stack"
               style={{ marginTop: 'var(--space-4)', gap: 'var(--space-2)', maxHeight: '10rem', overflowY: 'auto' }}
             >
-              {crewState.crewExecutions.slice(0, 6).map(member => (
+              {(crewState.crewExecutions ?? []).slice(0, 6).map(member => (
                 <div key={member.crewId} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
                   <div
                     style={{
@@ -287,7 +314,7 @@ export function DeveloperStoryWorkspace({
                             : 'var(--border)',
                     }}
                   />
-                  <span style={{ flex: 1 }}>{member.crewName}</span>
+                  <span style={{ flex: 1 }}>{(member as any).crewName || member.crewId}</span>
                   <span style={{ color: 'var(--text-dim)' }}>
                     {member.status === 'complete' ? '✓' : member.status === 'executing' ? '…' : '◯'}
                   </span>
@@ -456,15 +483,15 @@ function CrewExecutionTab({
   return (
     <div className="stack">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 'var(--space-4)' }}>
-        <StatCard label="Phase" value={state.phase} />
-        <StatCard label="Status" value={state.status} />
-        <StatCard label="Cost" value={`$${state.totalCostUsd.toFixed(2)}`} />
+        <StatCard label="Phase" value={(state as any).phase} />
+        <StatCard label="Status" value={(state as any).status} />
+        <StatCard label="Cost" value={`$${(((state as any).totalCostUsd ?? 0).toFixed(2))}`} />
       </div>
 
       <div>
         <h3 style={{ marginBottom: 'var(--space-3)' }}>Crew Members</h3>
         <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          {state.crewExecutions.map(member => (
+          {((state as any).crewExecutions ?? []).map((member: any) => (
             <CrewMemberExecutionCard key={member.crewId} member={member} />
           ))}
         </div>

@@ -1,0 +1,349 @@
+/**
+ * components/missions/MissionLiveExecutionFeed.module.css
+ *
+ * Styling for MissionLiveExecutionFeed component
+ * Design tokens:
+ *   - Primary blue: #0066CC
+ *   - Success green: #10B981
+ *   - Error red: #EF4444
+ *   - Background: #FAFBFC
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #fafbfc;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: white;
+}
+
+.titleSection h1 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.missionId {
+  font-size: 12px;
+  color: #9ca3af;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.statusSection {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.statusIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.statusIndicator.connected {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.statusIndicator.disconnected {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.elapsed {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Error Display */
+.error {
+  padding: 12px 24px;
+  background-color: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+/* Log Container */
+.logContainer {
+  flex: 1;
+  overflow: hidden;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.logScroll {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 24px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.logScroll > div.log-entry {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-left: 3px solid;
+  border-radius: 4px;
+  background-color: white;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.logScroll .log-entry.level-info {
+  background-color: #f0f9ff;
+}
+
+.logScroll .log-entry.level-action {
+  background-color: #f0fdf4;
+}
+
+.logScroll .log-entry.level-escalation {
+  background-color: #fef2f2;
+}
+
+.logScroll .timestamp {
+  color: #9ca3af;
+  font-weight: 500;
+  min-width: fit-content;
+}
+
+.logScroll .emoji {
+  font-size: 14px;
+}
+
+.logScroll .crew-id {
+  color: #0066cc;
+  font-weight: 600;
+  min-width: fit-content;
+}
+
+.logScroll .text {
+  color: #1f2937;
+  flex: 1;
+  word-break: break-word;
+}
+
+.logScroll .file-references {
+  width: 100%;
+  margin-top: 4px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.logScroll .file-ref {
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: #f3f4f6;
+  border-radius: 3px;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9ca3af;
+  gap: 12px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e0e7ff;
+  border-top-color: #0066cc;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Interactions Section */
+.interactions {
+  background-color: white;
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.askSection {
+  display: flex;
+  gap: 8px;
+}
+
+.askSection input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: border-color 0.2s;
+}
+
+.askSection input:focus {
+  outline: none;
+  border-color: #0066cc;
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+}
+
+.askSection input:disabled {
+  background-color: #f9fafb;
+  color: #d1d5db;
+}
+
+.sendBtn {
+  padding: 10px 12px;
+  background-color: #0066cc;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  min-width: 40px;
+}
+
+.sendBtn:hover:not(:disabled) {
+  background-color: #0052a3;
+}
+
+.sendBtn:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.controlBtn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.controlBtn.pause {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.controlBtn.pause:hover {
+  background-color: #fde68a;
+}
+
+.controlBtn.resume {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.controlBtn.resume:hover {
+  background-color: #bbf7d0;
+}
+
+.controlBtn.cancel {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.controlBtn.cancel:hover {
+  background-color: #fecaca;
+}
+
+.controlBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Cost Display */
+.costDisplay {
+  padding: 8px 24px;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .container {
+    height: auto;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .statusSection {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .logScroll {
+    padding: 12px 16px;
+  }
+
+  .interactions {
+    padding: 12px 16px;
+  }
+
+  .askSection {
+    flex-direction: column;
+  }
+
+  .controls {
+    flex-direction: column;
+  }
+
+  .controlBtn {
+    flex: none;
+    width: 100%;
+  }
+}

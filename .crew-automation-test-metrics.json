@@ -1,0 +1,26 @@
+{
+  "testName": "Crew Automation Full Test",
+  "timestamp": "2026-08-27T06:44:37.833Z",
+  "duration": 2493,
+  "crewMembers": [
+    "picard",
+    "data",
+    "riker",
+    "worf",
+    "geordi",
+    "obrien",
+    "yar",
+    "troi",
+    "crusher",
+    "uhura",
+    "quark"
+  ],
+  "totalTokens": 0,
+  "estimatedCost": 0.15,
+  "costPerMember": {},
+  "status": "failed",
+  "findings": [
+    "Delegation rate (last 200): 3.0% to crew",
+    "❌ CREW-FIRST NOT ACTIVE: Crew delegation <40%"
+  ]
+}

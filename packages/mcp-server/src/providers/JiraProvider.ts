@@ -21,7 +21,7 @@ import type {
 export class JiraProvider implements AgileProvider {
   readonly name: AgileProviderName = 'jira';
 
-  private domain: string;
+  domain: string;
   private email: string;
   private apiToken: string;
 

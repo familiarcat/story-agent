@@ -98,7 +98,8 @@ export async function recallUnifiedRuns(queryText: string, clientId: string | nu
     return mems
       .filter(m => (m.tags ?? []).includes('unified-run'))
       .slice(0, limit)
-      .map(m => m.transcript?.consensusSummary ?? m.storyId);
+      .map(m => (m.transcript?.consensusSummary ?? m.storyId ?? ''))
+      .filter(s => s.length > 0);
   } catch {
     return [];
   }

@@ -93,10 +93,10 @@ export function StoryExecutionCard({ story }: StoryExecutionCardProps) {
   };
 
   const progressPercent =
-    state.crewExecutions.length > 0
+    ((state as any).crewExecutions?.length ?? 0) > 0
       ? Math.round(
-          (state.crewExecutions.filter(c => c.status === 'complete').length /
-            state.crewExecutions.length) * 100
+          ((((state as any).crewExecutions ?? []).filter((c: any) => c.status === 'complete').length /
+            ((state as any).crewExecutions?.length ?? 1)) * 100)
         )
       : 0;
 
@@ -173,7 +173,7 @@ export function StoryExecutionCard({ story }: StoryExecutionCardProps) {
           gap: 'var(--space-2)',
         }}
       >
-        {state.crewExecutions.map(execution => (
+        {((state as any).crewExecutions ?? []).map((execution: any) => (
           <CrewMemberBadge key={execution.crewId} execution={execution} />
         ))}
       </div>
@@ -192,7 +192,7 @@ export function StoryExecutionCard({ story }: StoryExecutionCardProps) {
         >
           <strong>Blockers:</strong>
           <ul style={{ marginTop: 'var(--space-1)', listStyle: 'disc inside' }}>
-            {state.blockers.map((blocker, idx) => (
+            {(((state as any).blockers ?? []) as any[]).map((blocker: any, idx: number) => (
               <li key={idx}>{blocker}</li>
             ))}
           </ul>
@@ -204,9 +204,9 @@ export function StoryExecutionCard({ story }: StoryExecutionCardProps) {
         className="meta"
         style={{ marginTop: 'var(--space-3)', display: 'flex', justifyContent: 'space-between' }}
       >
-        <span>💰 ${state.totalCostUsd.toFixed(4)}</span>
-        <span>⏱️ {Math.round(state.totalExecutionTimeMs / 1000)}s</span>
-        <span>🔄 {state.broadcastCount} updates</span>
+        <span>💰 ${((state as any).totalCostUsd ?? 0).toFixed(4)}</span>
+        <span>⏱️ {Math.round(((state as any).totalExecutionTimeMs ?? 0) / 1000)}s</span>
+        <span>🔄 {((state as any).broadcastCount ?? 0)} updates</span>
       </div>
 
       {/* Connection Status */}

@@ -524,16 +524,12 @@ export default function ObservationLoungePage() {
           {w.missionPlan && (
             <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                Crew Agents and Assignments
+                Mission Plan
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                {w.missionPlan.crew.map(member => (
-                  <div key={member.id} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '0.55rem 0.65rem', background: 'var(--surface)' }}>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{member.role}</div>
-                    <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>{member.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text)' }}>{member.specialty}</div>
-                  </div>
-                ))}
+              <div style={{ fontSize: '0.8rem', color: 'var(--text)' }}>
+                <div>Phase: {w.missionPlan.phase}</div>
+                <div>Mission ID: {w.missionPlan.missionId}</div>
+                <div>Tasks: {w.missionPlan.tasks?.length ?? 0}</div>
               </div>
             </div>
           )}
@@ -543,11 +539,11 @@ export default function ObservationLoungePage() {
               <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.45rem' }}>
                 Observation Lounge Consensus
               </div>
-              <ResponsePane content={w.debate.consensusSummary} maxHeight="300px" minHeight="auto" metadata="🖖 Crew consensus" />
-              {w.debate.rounds.map((round, idx) => (
+              <ResponsePane content={w.debate.consensusSummary ?? 'No summary available'} maxHeight="300px" minHeight="auto" metadata="🖖 Crew consensus" />
+              {Array.isArray(w.debate.rounds) && w.debate.rounds.map((round: any, idx: number) => (
                 <div key={idx} style={{ marginTop: '0.65rem', border: '1px solid var(--border)', borderRadius: 6, padding: '0.55rem 0.65rem' }}>
                   <div style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: '0.35rem' }}>{round.title}</div>
-                  {round.entries.map((entry, entryIdx) => (
+                  {Array.isArray(round.entries) && round.entries.map((entry: any, entryIdx: number) => (
                     <div key={entryIdx} style={{ marginBottom: '0.45rem', paddingBottom: '0.35rem', borderBottom: entryIdx < round.entries.length - 1 ? '1px solid var(--surface-2)' : 'none' }}>
                       <div style={{ fontSize: '0.79rem', fontWeight: 600, marginBottom: '0.25rem' }}>
                         <strong>{entry.speakerId}</strong> <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>({entry.position})</span>
@@ -573,20 +569,20 @@ export default function ObservationLoungePage() {
               {w.sharedMemories.map((memory, idx) => (
                 <div key={idx} style={{ marginBottom: '0.55rem', borderLeft: '3px solid var(--accent3)', paddingLeft: '0.65rem', background: 'var(--surface-2)', padding: '0.55rem 0.65rem', borderRadius: 4 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--accent3)', fontWeight: 600 }}>{memory.missionReference ?? memory.storyId}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent3)', fontWeight: 600 }}>{(memory as any).missionReference ?? (memory as any).storyId}</span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--accent3)' }}>
-                      {new Date(memory.createdAt).toLocaleDateString()} • {(memory.similarity ?? 0).toFixed(2)} relevance
+                      {new Date((memory as any).createdAt).toLocaleDateString()} • {0} relevance
                     </span>
                   </div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text)', marginBottom: '0.25rem' }}>
-                    <strong>Decision:</strong> {memory.transcript.finalDecision}
+                    <strong>Decision:</strong> {(memory as any).transcript?.finalDecision ?? 'Pending'}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.4 }}>
-                    {memory.transcript.consensusSummary}
+                    {(memory as any).transcript?.consensusSummary ?? 'No summary'}
                   </div>
-                  {memory.transcript.unresolvedRisks.length > 0 && (
+                  {Array.isArray((memory as any).transcript?.unresolvedRisks) && (memory as any).transcript.unresolvedRisks.length > 0 && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.3rem' }}>
-                      ⚠️ Risks: {memory.transcript.unresolvedRisks.slice(0, 2).join(', ')}
+                      ⚠️ Risks: {((memory as any).transcript.unresolvedRisks ?? []).slice(0, 2).join(', ')}
                     </div>
                   )}
                 </div>

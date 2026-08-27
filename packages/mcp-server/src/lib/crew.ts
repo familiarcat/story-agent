@@ -209,7 +209,7 @@ export function buildCrewMissionPlan(input: {
   const { story, repoFullName, targetBranch, executionMode, sharedMemories, techStack, testPolicy, reviewers } = input;
   const risks = detectRisks(story);
   const memoryInsights = (sharedMemories ?? []).map(
-    m => `Prior memory (${m.createdAt}): ${m.transcript.consensusSummary}`
+    m => `Prior memory (${m.createdAt}): ${(m.transcript as any)?.consensusSummary ?? 'unknown memory'}`
   );
 
   const assignments: CrewAssignment[] = [
@@ -341,7 +341,10 @@ function debateEntry(
  * For ACTUAL deliberation use runMissionPipeline, which calls one OpenRouter model per officer.
  */
 export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDebateResult {
-  const risks = Array.from(new Set(plan.findings.flatMap(f => f.risks)));
+  const findings = (plan.findings ?? []);
+  const risks = Array.from(new Set(findings.flatMap(f => f.risks)));
+  
+  const storyRef = (plan.story as any) ?? { referenceNum: 'UNKNOWN', name: 'Unknown' };
 
   const rounds: ObservationDebateResult['rounds'] = [
     {
@@ -350,8 +353,8 @@ export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDe
         debateEntry(
           'captain',
           'support',
-          `Mission ${plan.story.referenceNum} is accepted for ${plan.executionMode} execution pending risk controls.`,
-          [plan.story.name, `Repo: ${plan.repoFullName}`]
+          `Mission ${storyRef.referenceNum} is accepted for ${plan.executionMode ?? 'standard'} execution pending risk controls.`,
+          [storyRef.name, `Repo: ${plan.repoFullName ?? 'unknown'}`]
         ),
         debateEntry(
           'science',
@@ -368,7 +371,7 @@ export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDe
           'engineering',
           'support',
           'Implementation can proceed in phased commits with branch isolation.',
-          [`Branch: ${plan.story.referenceNum.toUpperCase()}`, `Target: ${plan.targetBranch}`]
+          [`Branch: ${((plan.story as any)?.referenceNum ?? 'MAIN').toUpperCase()}`, `Target: ${plan.targetBranch}`]
         ),
         debateEntry(
           'security',

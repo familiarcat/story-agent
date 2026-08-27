@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     if (tags.length > 0) {
       filtered = filtered.filter((m: ObservationMemoryRecord) =>
-        tags.some(tag => m.tags.includes(tag))
+        (m.tags ?? []).length > 0 && tags.some(tag => (m.tags ?? []).includes(tag))
       );
     }
 
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter((m: ObservationMemoryRecord) => {
         const textToSearch = (m.transcriptText || m.storyId || '').toLowerCase();
         return textToSearch.includes(searchLower) ||
-               m.storyId.toLowerCase().includes(searchLower);
+               (m.storyId?.toLowerCase().includes(searchLower) ?? false);
       });
     }
 

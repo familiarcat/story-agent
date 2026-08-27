@@ -166,14 +166,15 @@ export async function buildAutonomousMissionPlan(context: CrewOperationContext):
  * Generate Observation Lounge debate from crew findings
  */
 export async function generateObservationLoungeDebate(plan: CrewMissionPlan): Promise<ObservationDebateResult> {
-  const allRisks = Array.from(new Set(plan.findings.flatMap(f => f.risks)));
-  const allRecommendations = Array.from(new Set(plan.findings.flatMap(f => f.recommendations)));
+  const findings = (plan.findings ?? []);
+  const allRisks = Array.from(new Set(findings.flatMap(f => f.risks)));
+  const allRecommendations = Array.from(new Set(findings.flatMap(f => f.recommendations)));
 
   // Extract key insights from findings
-  const picardCommand = plan.findings.find(f => f.crewId === 'picard');
-  const dataArch = plan.findings.find(f => f.crewId === 'data');
-  const rikerTactical = plan.findings.find(f => f.crewId === 'riker');
-  const worfSecurity = plan.findings.find(f => f.crewId === 'worf');
+  const picardCommand = findings.find(f => f.crewId === 'picard');
+  const dataArch = findings.find(f => f.crewId === 'data');
+  const rikerTactical = findings.find(f => f.crewId === 'riker');
+  const worfSecurity = findings.find(f => f.crewId === 'worf');
 
   const consensusSummary = [
     picardCommand?.summary || '',
@@ -184,6 +185,7 @@ export async function generateObservationLoungeDebate(plan: CrewMissionPlan): Pr
     .filter(Boolean)
     .join(' | ');
 
+  const story = (plan.story as any) ?? { referenceNum: 'UNKNOWN', name: 'Unknown' };
   const debate: ObservationDebateResult = {
     rounds: [
       {
@@ -192,8 +194,8 @@ export async function generateObservationLoungeDebate(plan: CrewMissionPlan): Pr
           {
             speakerId: 'picard',
             position: 'support',
-            statement: `Mission ${plan.story.referenceNum} is accepted for ${plan.executionMode} execution with crew consensus.`,
-            evidence: [plan.story.name, `Repository: ${plan.repoFullName}`],
+            statement: `Mission ${story.referenceNum} is accepted for ${plan.executionMode ?? 'standard'} execution with crew consensus.`,
+            evidence: [story.name, `Repository: ${plan.repoFullName ?? 'unknown'}`],
           },
           {
             speakerId: 'data',
@@ -221,8 +223,8 @@ export async function generateObservationLoungeDebate(plan: CrewMissionPlan): Pr
           {
             speakerId: 'geordi',
             position: 'amendment',
-            statement: plan.findings.find(f => f.crewId === 'geordi')?.summary || 'Infrastructure ready',
-            evidence: plan.findings.find(f => f.crewId === 'geordi')?.recommendations || [],
+            statement: findings.find(f => f.crewId === 'geordi')?.summary || 'Infrastructure ready',
+            evidence: findings.find(f => f.crewId === 'geordi')?.recommendations || [],
           },
         ],
       },
@@ -238,8 +240,8 @@ export async function generateObservationLoungeDebate(plan: CrewMissionPlan): Pr
           {
             speakerId: 'picard',
             position: 'support',
-            statement: `FINAL DECISION: PROCEED with ${plan.executionMode} execution. Sovereign Factory crew is authorized to execute.`,
-            evidence: plan.recommendedExecutionOrder,
+            statement: `FINAL DECISION: PROCEED with ${plan.executionMode ?? 'standard'} execution. Sovereign Factory crew is authorized to execute.`,
+            evidence: plan.recommendedExecutionOrder ?? [],
           },
         ],
       },
@@ -321,7 +323,7 @@ export async function executeFullMissionLifecycle(
       repoFullName: context.repoFullName,
       techStack: context.techStack || 'TypeScript',
       consensus: debate.consensusSummary,
-      actionItems: debate.actionItems.join('\n'),
+      actionItems: (debate.actionItems ?? []).join('\n'),
     },
     context.story.referenceNum,
     ['implementation-generation']
@@ -343,11 +345,11 @@ export async function executeFullMissionLifecycle(
   );
 
   // Extract commit summary from Uhura's structured output
-  const commitSummaryMatch = commsResult.reasoning.match(/COMMIT_SUMMARY:\s*(.+)/i);
-  const commitMessage = commitSummaryMatch ? commitSummaryMatch[1].trim() : `feat: implement ${context.story.referenceNum}`;
+  const commitSummaryMatch = (commsResult.reasoning ?? '').match(/COMMIT_SUMMARY:\s*(.+)/i);
+  const commitMessage: string = commitSummaryMatch ? commitSummaryMatch[1].trim() : `feat: implement ${context.story.referenceNum}`;
 
   // Extract security sensitivity score
-  const securityScoreMatch = commsResult.reasoning.match(/SECURITY_SENSITIVITY_SCORE:\s*(\d+)/i);
+  const securityScoreMatch = (commsResult.reasoning ?? '').match(/SECURITY_SENSITIVITY_SCORE:\s*(\d+)/i);
   const securitySensitivityScore = securityScoreMatch ? parseInt(securityScoreMatch[1], 10) : 0;
 
   const generatedFiles = parseFilesFromImplementation(implementationResult.reasoning || '');
@@ -380,7 +382,7 @@ export async function executeFullMissionLifecycle(
     },
     summary: {
       commitMessage,
-      prBody: commsResult.reasoning || debate.consensusSummary,
+      prBody: (commsResult.reasoning ?? debate.consensusSummary ?? 'Mission executed'),
     },
     securitySensitivityScore,
     status: 'implemented'

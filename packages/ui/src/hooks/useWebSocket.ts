@@ -11,7 +11,25 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import type { CrewExecutionState, WebSocketMessage } from '@story-agent/shared';
+
+// Local type definitions
+interface CrewExecutionState extends Record<string, any> {
+  crewId: string;
+  status: 'pending' | 'executing' | 'complete' | 'error';
+  findings?: string;
+  confidence?: number;
+  cost?: number;
+  totalCostUsd?: number;
+  blockers?: any[];
+  crewExecutions?: Array<{crewId: string; status: string; findings?: string; confidence?: number}>;
+}
+
+interface WebSocketMessage<T = any> {
+  type: string;
+  payload: T;
+  timestamp?: number;
+  storyRef?: string;
+}
 
 interface UseWebSocketOptions {
   url?: string;
@@ -80,7 +98,7 @@ export function useWebSocket(
             setState(message.payload || null);
             setIsLoading(false);
           } else if (message.type === 'error') {
-            setError(message.error || 'Unknown error');
+            setError(((message as any).error as string) || 'Unknown error');
             setIsLoading(false);
           } else if (message.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong' }));

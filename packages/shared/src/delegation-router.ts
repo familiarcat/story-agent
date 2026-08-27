@@ -24,7 +24,7 @@ export interface TokenRate {
 }
 
 export interface DelegationOptions {
-  /** Complexity at/above which we delegate (0..1). Default 0.45. */
+  /** Complexity at/above which we delegate (0..1). Default 0.25 (lowered to enforce crew-first). */
   threshold?: number;
   /** Premium orchestrator rate (what a native answer costs). Default frontier-class $3/$15. */
   nativeRate?: TokenRate;
@@ -83,7 +83,7 @@ const estimateTokens = (s: string) => Math.ceil(s.length / 4);
  * Score a prompt and decide native vs delegate. Deterministic: same input ⇒ same output.
  */
 export function scoreDelegation(prompt: string, opts: DelegationOptions = {}): DelegationDecision {
-  const threshold = opts.threshold ?? 0.45;
+  const threshold = opts.threshold ?? 0.25; // LOWERED: Was 0.45, now 0.25 to enforce crew-first (cost control)
   const nativeRate = opts.nativeRate ?? DEFAULT_NATIVE_RATE;
   const delegateRate = opts.delegateRate ?? DEFAULT_DELEGATE_RATE;
   const nativeOnly = [...NATIVE_ONLY, ...(opts.nativeOnlyKeywords ?? [])];

@@ -19,10 +19,13 @@ export interface TaskDomainContext {
 
 export interface CrewAssignment {
   crewId: string;
-  role: string;
-  primaryDomains: string[];
-  secondaryDomains: string[];
-  expertise: string;
+  role?: string;
+  primaryDomains?: string[];
+  secondaryDomains?: string[];
+  expertise?: string;
+  objective?: string;
+  deliverable?: string;
+  completionCriteria?: string[];
 }
 
 /**

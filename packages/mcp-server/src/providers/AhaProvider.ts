@@ -10,7 +10,7 @@ import type {
 export class AhaProvider implements AgileProvider {
   readonly name: AgileProviderName = 'aha';
 
-  private domain: string;
+  domain: string;
   private apiKey: string;
 
   constructor(domain: string, apiKey: string) {

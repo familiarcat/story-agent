@@ -61,8 +61,8 @@ export function mapEpic(e: Raw): AhaEpic {
     referenceNum: e.reference_num as string,
     name: e.name as string,
     workflowStatus: (e.workflow_status as Raw)?.name as string ?? 'unknown',
-    description: ((e.description as Raw | null)?.body as string | undefined),
-    url: e.url as string | undefined,
+    description: ((e.description as Raw | null)?.body as string | undefined) || undefined,
+    url: (e.url as string | undefined) || undefined,
   };
 }
 

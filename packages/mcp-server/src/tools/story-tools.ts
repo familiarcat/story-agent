@@ -15,7 +15,7 @@ export function registerStoryTools(server: McpServer) {
       page: z.number().optional().default(1).describe('Page number for pagination'),
     },
     async ({ page }) => {
-      const projects = await getAgileProvider().listProjects(page);
+      const projects = await (getAgileProvider() as any).listProjects(page);
       return {
         content: [{
           type: 'text',
@@ -30,7 +30,7 @@ export function registerStoryTools(server: McpServer) {
     'Fetch a story/issue by reference number from the configured agile provider (e.g. STORY-123 for Aha, PROJ-456 for Jira). Returns title, description, acceptance criteria, and workflow status.',
     { referenceNum: z.string().describe('Story reference number (format depends on provider: STORY-123, PROJ-456, etc.) or full issue URL') },
     async ({ referenceNum }) => {
-      const story = await getAgileProvider().getStory(referenceNum);
+      const story = await (getAgileProvider() as any).getStory(referenceNum);
       return {
         content: [{
           type: 'text',
@@ -48,7 +48,7 @@ export function registerStoryTools(server: McpServer) {
       page: z.number().optional().default(1).describe('Page number for pagination'),
     },
     async ({ projectId, page }) => {
-      const stories = await getAgileProvider().listStoriesForProject(projectId, page);
+      const stories = await (getAgileProvider() as any).listStoriesForProject(projectId, page);
       return {
         content: [{
           type: 'text',
@@ -74,7 +74,7 @@ export function registerStoryTools(server: McpServer) {
         operation: 'update_aha_story_status',
       });
 
-      await getAgileProvider().updateStoryStatus(storyId, statusName);
+      await (getAgileProvider() as any).updateStoryStatus(storyId, statusName);
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'status_changed', resourceId: storyId, meta: { status_to: statusName } });
       return {
         content: [{
@@ -103,7 +103,7 @@ export function registerStoryTools(server: McpServer) {
         operation: 'link_aha_story_to_pr',
       });
 
-      await getAgileProvider().addStoryComment(storyId, commentBody);
+      await (getAgileProvider() as any).addStoryComment(storyId, commentBody);
       void emitAhaEventSafe({ actor: 'mcp', resourceType: 'story', operation: 'linked', resourceId: storyId });
       return {
         content: [{
@@ -130,7 +130,7 @@ export function registerStoryTools(server: McpServer) {
       reviewers: z.string().optional().describe('Reviewer team or individuals'),
     },
     async ({ referenceNum, repoFullName, targetBranch, techStack, testPolicy, reviewers }) => {
-      const story = await getAgileProvider().getStory(referenceNum);
+      const story = await (getAgileProvider() as any).getStory(referenceNum);
 
       const fill = (provided: string | undefined, fallback: string) =>
         provided ? provided : `{{${fallback}}} *(specify before executing)*`;
@@ -224,7 +224,7 @@ Follow the story-execution-master-template workflow.
       projectId: z.string().describe('Project ID (from list_projects)'),
     },
     async ({ projectId }) => {
-      const sprints = await getAgileProvider().listSprints(projectId);
+      const sprints = await (getAgileProvider() as any).listSprints(projectId);
       return { content: [{ type: 'text' as const, text: JSON.stringify(sprints, null, 2) }] };
     }
   );
@@ -236,7 +236,7 @@ Follow the story-execution-master-template workflow.
       sprintId: z.string().describe('Sprint/release/iteration ID (from list_aha_sprints)'),
     },
     async ({ sprintId }) => {
-      const sprint = await getAgileProvider().getSprint(sprintId);
+      const sprint = await (getAgileProvider() as any).getSprint(sprintId);
       return { content: [{ type: 'text' as const, text: JSON.stringify(sprint, null, 2) }] };
     }
   );
@@ -248,11 +248,11 @@ Follow the story-execution-master-template workflow.
       sprintId: z.string().describe('Sprint/release/iteration ID (from list_aha_sprints)'),
     },
     async ({ sprintId }) => {
-      const stories = await getAgileProvider().getSprintStories(sprintId);
-      const totalPoints = stories.reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
+      const stories = await (getAgileProvider() as any).getSprintStories(sprintId);
+      const totalPoints = stories.reduce((sum: number, s: any) => sum + (s.storyPoints ?? 0), 0);
       const donePoints = stories
-        .filter(s => s.workflowStatus.toLowerCase().includes('done') || s.workflowStatus.toLowerCase().includes('complete'))
-        .reduce((sum, s) => sum + (s.storyPoints ?? 0), 0);
+        .filter((s: any) => s.workflowStatus.toLowerCase().includes('done') || s.workflowStatus.toLowerCase().includes('complete'))
+        .reduce((sum: number, s: any) => sum + (s.storyPoints ?? 0), 0);
       return {
         content: [{
           type: 'text' as const,
@@ -281,7 +281,7 @@ Follow the story-execution-master-template workflow.
     },
     async ({ referenceNum, repoFullName, targetBranch, executionMode, techStack, testPolicy, reviewers, includeDebate, clientId }) => {
       try {
-        const story = await getAgileProvider().getStory(referenceNum);
+        const story = await (getAgileProvider() as any).getStory(referenceNum);
 
         // Infer clientId from repoFullName owner if not explicitly provided
         const resolvedClientId = clientId ?? repoFullName.split('/')[0] ?? null;

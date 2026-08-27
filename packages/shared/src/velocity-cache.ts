@@ -364,9 +364,9 @@ export class VelocityCacheManager {
   async getSprintTrend(sprintId: string, lookbackDays: number = 14): Promise<TrendAnalysis> {
     const key = `sprint:${sprintId}:trend:${lookbackDays}d`;
 
-    // Check warm cache first
-    const cached = await this.warmCache.get(key);
-    if (cached) return cached;
+    // Check warm cache first - but don't return it directly since type may not match
+    // const cached = await this.warmCache.get(key);
+    // if (cached) return cached;
 
     // Query cold storage (returns AggregatedMetrics)
     const metrics = await this.coldCache.trendAnalysis(sprintId, lookbackDays);

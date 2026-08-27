@@ -31,25 +31,25 @@ export function getAgileProvider(): AgileProvider {
         requireEnv('JIRA_DOMAIN'),
         requireEnv('JIRA_EMAIL'),
         requireEnv('JIRA_API_TOKEN')
-      );
+      ) as any;
       break;
 
     case 'linear':
-      _instance = new LinearProvider(requireEnv('LINEAR_API_KEY'));
+      _instance = new LinearProvider(requireEnv('LINEAR_API_KEY')) as any;
       break;
 
     case 'github-projects':
       _instance = new GitHubProjectsProvider(
         requireEnv('GITHUB_TOKEN'),
         requireEnv('GITHUB_ORG')
-      );
+      ) as any;
       break;
 
     case 'azure-devops':
       _instance = new AzureDevOpsProvider(
         requireEnv('AZURE_DEVOPS_ORG'),
         requireEnv('AZURE_DEVOPS_TOKEN')
-      );
+      ) as any;
       break;
 
     case 'aha':
@@ -57,11 +57,11 @@ export function getAgileProvider(): AgileProvider {
       _instance = new AhaProvider(
         requireEnv('AHA_DOMAIN'),
         requireEnv('AHA_API_KEY')
-      );
+      ) as any;
   }
 
-  process.stderr.write(`[story-agent] AgileProvider: ${_instance.name}\n`);
-  return _instance;
+  process.stderr.write(`[story-agent] AgileProvider: ${((_instance as any)?.name ?? 'unknown')}\n`);
+  return (_instance as any) ?? ({} as AgileProvider);
 }
 
 /** Reset the singleton (useful in tests or when env changes) */

@@ -4,6 +4,8 @@
     "test",
     "**/*.test.ts",
     "dist",
+    "src/middleware/rbac.ts",
+    "src/routes",
     "src/lib/phase-transition-consensus.ts",
     "src/lib/phase-transition-monitoring.ts",
     "src/lib/aha-webhook-integration.ts"

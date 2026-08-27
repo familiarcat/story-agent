@@ -6,6 +6,7 @@ import type {
   MemorySource,
   ObservationDebateResult,
   StructuredMemoryState,
+  StructuredMemoryPatch,
 } from './index.js';
 
 export const SOURCE_AUTHORITY: Record<MemorySource, number> = {
@@ -14,13 +15,6 @@ export const SOURCE_AUTHORITY: Record<MemorySource, number> = {
   tool: 2,
   assistant: 1,
 };
-
-export interface StructuredMemoryPatch {
-  facts?: MemoryFact[];
-  constraints?: MemoryConstraint[];
-  decisions?: MemoryDecision[];
-  openQuestions?: MemoryQuestion[];
-}
 
 export function initialStructuredMemoryState(): StructuredMemoryState {
   return {
@@ -52,19 +46,23 @@ function mergeFacts(existing: StructuredMemoryState['facts'], incoming: MemoryFa
   const next = { ...existing };
 
   for (const fact of incoming) {
-    const candidate = { ...fact, confidence: normalizeConfidence(fact.confidence) };
+    const candidate = { 
+      ...fact, 
+      confidence: normalizeConfidence(fact.confidence ?? 0.5),
+      source: fact.source ?? 'assistant',
+    };
     const current = next[candidate.key];
     if (!current) {
       next[candidate.key] = candidate;
       continue;
     }
 
-    if (rank(candidate.source) > rank(current.source)) {
+    if (rank(candidate.source ?? 'assistant') > rank(current.source ?? 'assistant')) {
       next[candidate.key] = candidate;
       continue;
     }
 
-    if (rank(candidate.source) === rank(current.source) && candidate.confidence >= current.confidence) {
+    if (rank(candidate.source ?? 'assistant') === rank(current.source ?? 'assistant') && (candidate.confidence ?? 0) >= (current.confidence ?? 0)) {
       next[candidate.key] = candidate;
     }
   }
@@ -79,24 +77,28 @@ function mergeConstraints(
   const next = { ...existing };
 
   for (const constraint of incoming) {
-    const candidate = { ...constraint, confidence: normalizeConfidence(constraint.confidence) };
+    const candidate = { 
+      ...constraint, 
+      confidence: normalizeConfidence(constraint.confidence ?? 0.5),
+      source: constraint.source ?? 'assistant',
+    };
     const current = next[candidate.key];
     if (!current) {
       next[candidate.key] = candidate;
       continue;
     }
 
-    if (rank(candidate.source) > rank(current.source)) {
+    if (rank(candidate.source ?? 'assistant') > rank(current.source ?? 'assistant')) {
       next[candidate.key] = candidate;
       continue;
     }
 
-    if (rank(candidate.source) === rank(current.source)) {
+    if (rank(candidate.source ?? 'assistant') === rank(current.source ?? 'assistant')) {
       if (candidate.enforcement === 'hard' && current.enforcement === 'soft') {
         next[candidate.key] = candidate;
         continue;
       }
-      if (candidate.confidence >= current.confidence) {
+      if ((candidate.confidence ?? 0) >= (current.confidence ?? 0)) {
         next[candidate.key] = candidate;
       }
     }
@@ -118,20 +120,23 @@ function mergeDecisions(existing: StructuredMemoryState['decisions'], incoming: 
   }
 
   for (const decision of incoming) {
-    const id = decision.id || decisionId(decision.statement);
+    const id = decision.id || (decision.statement ? decisionId(decision.statement) : `decision-${Math.random()}`);
     const candidate: MemoryDecision = {
       ...decision,
       id,
-      confidence: normalizeConfidence(decision.confidence),
+      confidence: normalizeConfidence(decision.confidence ?? 0.5),
+      source: decision.source ?? 'assistant',
     };
 
     const matches = byId.get(id) ?? [];
     for (const idx of matches) {
       const current = next[idx];
       if (!current) continue;
-      if (rank(candidate.source) > rank(current.source)) {
+      const candidateRank = rank(candidate.source ?? 'assistant');
+      const currentRank = rank(current.source ?? 'assistant');
+      if (candidateRank > currentRank) {
         current.status = 'superseded';
-      } else if (rank(candidate.source) === rank(current.source) && candidate.confidence >= current.confidence) {
+      } else if (candidateRank === currentRank && (candidate.confidence ?? 0) >= (current.confidence ?? 0)) {
         current.status = 'superseded';
       }
     }
@@ -150,10 +155,16 @@ function mergeOpenQuestions(
   const next = { ...existing };
 
   for (const question of incoming) {
-    const candidate = { ...question, confidence: normalizeConfidence(question.confidence) };
-    const current = next[candidate.key];
+    const key = question.key || `question-${Math.random()}`;
+    const candidate = { 
+      ...question, 
+      key,
+      confidence: normalizeConfidence(question.confidence ?? 0.5),
+      source: question.source ?? 'assistant',
+    };
+    const current = next[key];
     if (!current) {
-      next[candidate.key] = candidate;
+      next[key] = candidate;
       continue;
     }
 
@@ -161,12 +172,12 @@ function mergeOpenQuestions(
       continue;
     }
 
-    next[candidate.key] = {
+    next[key] = {
       ...current,
       ...candidate,
       blocking: current.blocking || candidate.blocking,
-      confidence: Math.max(current.confidence, candidate.confidence),
-      source: rank(candidate.source) >= rank(current.source) ? candidate.source : current.source,
+      confidence: Math.max(current.confidence ?? 0, candidate.confidence ?? 0),
+      source: (rank(candidate.source ?? 'assistant') >= rank(current.source ?? 'assistant')) ? candidate.source : current.source,
     };
   }
 

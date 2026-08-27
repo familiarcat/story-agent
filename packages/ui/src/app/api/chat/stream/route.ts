@@ -165,19 +165,18 @@ function extractReference(prompt: string, queryReference?: string | null): strin
 }
 
 function formatDebateSummary(payload: Awaited<ReturnType<typeof prepareObservationLoungePayload>>): string {
-  const topRisks = payload.debate.unresolvedRisks.slice(0, 3);
-  const topActions = payload.debate.actionItems.slice(0, 5);
+  const topRisks = (payload.debate.unresolvedRisks ?? []).slice(0, 3);
+  const topActions = (payload.debate.actionItems ?? []).slice(0, 5);
 
   return [
     `### Observation Lounge: ${payload.story.referenceNum}`,
     '',
     `**Story:** ${payload.story.name}`,
-    `**Execution mode:** ${payload.missionPlan.executionMode}`,
-    `**Crew participants:** ${payload.missionPlan.crew.length}`,
-    `**Decision:** ${payload.debate.finalDecision.toUpperCase()}`,
+    `**Phase:** ${payload.missionPlan.phase}`,
+    `**Decision:** ${(payload.debate.finalDecision ?? 'PENDING').toUpperCase()}`,
     '',
     '**Consensus summary**',
-    payload.debate.consensusSummary,
+    payload.debate.consensusSummary ?? 'No summary available',
     '',
     '**Top risks**',
     ...(topRisks.length > 0 ? topRisks.map(risk => `- ${risk}`) : ['- No unresolved risks reported.']),
@@ -295,7 +294,7 @@ export async function POST(request: Request) {
         });
 
         push(frame('plan_summary', {
-          content: `Prepared crew mission plan with ${fastMode ? '3 (fast mode)' : payload.missionPlan.crew.length} personas and ${payload.sharedMemories.length} shared memories.`,
+          content: `Prepared crew mission plan for phase ${payload.missionPlan.phase} with ${payload.sharedMemories?.length ?? 0} shared memories.`,
         }));
 
         push(frame('final_result', {

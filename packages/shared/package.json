@@ -92,6 +92,34 @@
     "./system-status": {
       "import": "./dist/src/system-status.js",
       "types": "./dist/src/system-status.d.ts"
+    },
+    "./pm-contracts": {
+      "import": "./dist/src/pm-contracts/index.js",
+      "types": "./dist/src/pm-contracts/index.d.ts"
+    },
+    "./pm-contracts/rbac": {
+      "import": "./dist/src/pm-contracts/rbac.js",
+      "types": "./dist/src/pm-contracts/rbac.d.ts"
+    },
+    "./pm-contracts/state-machine": {
+      "import": "./dist/src/pm-contracts/state-machine.js",
+      "types": "./dist/src/pm-contracts/state-machine.d.ts"
+    },
+    "./pm-contracts/schemas": {
+      "import": "./dist/src/pm-contracts/schemas.js",
+      "types": "./dist/src/pm-contracts/schemas.d.ts"
+    },
+    "./pm-contracts/conflict-resolution": {
+      "import": "./dist/src/pm-contracts/conflict-resolution.js",
+      "types": "./dist/src/pm-contracts/conflict-resolution.d.ts"
+    },
+    "./mission-types": {
+      "import": "./dist/src/mission-types.js",
+      "types": "./dist/src/mission-types.d.ts"
+    },
+    "./mission-execution-stream": {
+      "import": "./dist/src/mission-execution-stream.js",
+      "types": "./dist/src/mission-execution-stream.d.ts"
     }
   },
   "scripts": {
@@ -107,12 +135,13 @@
     "@aws-sdk/client-identitystore": "^3.1073.0",
     "@aws-sdk/client-secrets-manager": "^3.1073.0",
     "@supabase/supabase-js": "^2.47.10",
+    "next": "^16.3.3",
     "redis": "^4.7.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "typescript": "^5.7.2",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.8"
   }
 }

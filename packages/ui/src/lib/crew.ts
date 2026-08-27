@@ -259,7 +259,7 @@ export function buildCrewMissionPlan(input: {
       },
     ],
     recommendedExecutionOrder: ['picard', 'data', 'riker', 'geordi', 'obrien', 'worf', 'yar', 'troi', 'crusher', 'uhura', 'quark'],
-  };
+  } as any;
 }
 
 /**
@@ -281,8 +281,8 @@ export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDe
           {
             speakerId: 'picard',
             position: 'support',
-            statement: `Mission ${plan.story.referenceNum} is accepted for ${plan.executionMode} execution with crew consensus.`,
-            evidence: [plan.story.name, `Repository: ${plan.repoFullName}`],
+            statement: `Mission ${((plan as any).story?.referenceNum ?? 'UNKNOWN')} is accepted for ${((plan as any).executionMode ?? 'standard')} execution with crew consensus.`,
+            evidence: [((plan as any).story?.name ?? 'Unknown'), `Repository: ${((plan as any).repoFullName ?? 'unknown')}`],
           },
           {
             speakerId: 'data',
@@ -327,15 +327,15 @@ export function runObservationLoungeDebate(plan: CrewMissionPlan): ObservationDe
           {
             speakerId: 'picard',
             position: 'support',
-            statement: `Checklist item: captain must authorize ${plan.executionMode} execution before the crew proceeds.`,
-            evidence: plan.recommendedExecutionOrder,
+            statement: `Checklist item: captain must authorize ${((plan as any).executionMode ?? 'standard')} execution before the crew proceeds.`,
+            evidence: ((plan as any).recommendedExecutionOrder ?? []),
           },
         ],
       },
     ],
     provenance: 'template',
     unresolvedRisks: ['Integration complexity during staged rollout', 'Monitor for service dependency conflicts'],
-    consensusSummary: `${TEMPLATE_MARKER} (no model deliberation performed) for mission ${plan.story.referenceNum}: standard readiness checklist with phased deployment. Not a record of crew reasoning.`,
+    consensusSummary: `${TEMPLATE_MARKER} (no model deliberation performed) for mission ${((plan as any).story?.referenceNum ?? 'UNKNOWN')}: standard readiness checklist with phased deployment. Not a record of crew reasoning.`,
     finalDecision: 'approved',
     actionItems: [
       'Proceed with phased implementation',

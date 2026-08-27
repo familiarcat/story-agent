@@ -4,7 +4,19 @@
 
 'use client';
 
-import type { CrewMemberExecution } from '@story-agent/shared';
+type CrewMemberStatus = 'pending' | 'executing' | 'complete' | 'vetoed' | 'error';
+
+interface CrewMemberExecution {
+  crewId: string;
+  crewName: string;
+  specialty: string;
+  status: CrewMemberStatus;
+  findings?: string;
+  recommendations?: string[];
+  confidence?: number;
+  isVeto?: boolean;
+  costUsd?: number;
+}
 
 interface CrewMemberBadgeProps {
   execution: CrewMemberExecution;

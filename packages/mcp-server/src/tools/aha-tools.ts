@@ -528,8 +528,8 @@ export function registerAhaTools(server: McpServer): void {
       const mems = await getRecentObservationMemories(1, storyId, clientId ?? null);
       if (!mems.length) return ok({ error: `no RAG mission memory found for storyId '${storyId}'` });
       const m = mems[0];
-      const contributions = (m.transcript?.rounds?.[0]?.entries ?? []).map((e) => ({ crewId: e.speakerId }));
-      const result = { goals: m.transcript?.rounds?.[0]?.title ?? storyId, missionPlan: m.transcript?.consensusSummary ?? '', contributions, storyId };
+      const contributions = ((m.transcript as any)?.rounds?.[0]?.entries ?? []).map((e: any) => ({ crewId: e.speakerId }));
+      const result = { goals: (m.transcript as any)?.rounds?.[0]?.title ?? storyId, missionPlan: (m.transcript as any)?.consensusSummary ?? '', contributions, storyId };
       return ok(await syncCrewResultToAha(result, { releaseId, executor, clientId: clientId ?? null, confirm }));
     },
   );

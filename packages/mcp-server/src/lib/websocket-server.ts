@@ -146,7 +146,7 @@ export class CrewWebSocketServer {
           storyRef,
           payload: currentState,
           timestamp: new Date().toISOString(),
-        } as WebSocketMessage<CrewExecutionState>)
+        } as WebSocketMessage)
       );
     } else {
       ws.send(
@@ -170,7 +170,7 @@ export class CrewWebSocketServer {
               storyRef,
               payload: state,
               timestamp: new Date().toISOString(),
-            } as WebSocketMessage<CrewExecutionState>)
+            } as WebSocketMessage)
           );
         }
       }

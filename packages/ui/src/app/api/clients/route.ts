@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
  * DI: Uses listClientsFromDb() + resolveClientPolicy() from shared
  * Fallback: Returns static clients if DB unavailable
  */
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   try {
     const rows = await listClientsFromDb();
 

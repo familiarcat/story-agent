@@ -81,8 +81,8 @@ export async function registerCrewMemoryTools(server: McpServer) {
               .filter(memory => memory.crewId === member.id)
               .slice(0, perCrewMemoryLimit);
             const importedInsights = crewMemories.flatMap(memory => [
-              memory.transcript.consensusSummary,
-              ...memory.transcript.actionItems,
+              (memory.transcript as any)?.consensusSummary,
+              ...((memory.transcript as any)?.actionItems ?? []),
             ]).filter(Boolean).slice(0, 3);
 
             const status = llm.reachable && supabase.reachable
@@ -98,7 +98,7 @@ export async function registerCrewMemoryTools(server: McpServer) {
               position: 'support' as const,
               statement: `${member.name} reporting as ${member.specialty}. Role authority: ${member.authority ?? 'standard'}. Current status: ${status}. Knowledge loaded from ${crewMemories.length} imported ai-enterprise-os memories and ${currentProjectMemories.length} current-project memories.` ,
               evidence: [
-                `Responsibilities: ${member.responsibilities.slice(0, 2).join('; ')}`,
+                `Responsibilities: ${(member.responsibilities ?? []).slice(0, 2).join('; ')}`,
                 ...(importedInsights.length > 0 ? importedInsights : ['No imported legacy observations found for this crew member.']),
               ].slice(0, 4),
             };
@@ -559,7 +559,7 @@ To verify the integrity of this manifest, validate the signature below against t
         const scenarioTerms = scenario.toLowerCase().split(/\W+/).filter(Boolean);
         relevantMemories = imported
           .map(memory => {
-            const haystack = `${memory.transcriptText} ${memory.tags.join(' ')}`.toLowerCase();
+            const haystack = `${memory.transcriptText} ${(memory.tags ?? []).join(' ')}`.toLowerCase();
             const score = scenarioTerms.reduce((count, term) => count + (haystack.includes(term) ? 1 : 0), 0);
             return { ...memory, similarity: score / Math.max(1, scenarioTerms.length) };
           })
@@ -634,19 +634,26 @@ To verify the integrity of this manifest, validate the signature below against t
         ? await loadExternalCrewObservationMemories(roster)
         : [];
 
-      const state = initialStructuredMemoryState();
+      const state = initialStructuredMemoryState() as any;
       const merged = [...memoryRows, ...externalRows]
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
         .reduce((acc, memory) => {
           const patch = buildStructuredMemoryPatchFromDebate({
-            debate: memory.transcript,
+            debate: memory.transcript as any,
             source: memory.source === 'ui' ? 'user' : 'assistant',
             owner: memory.source === 'ui' ? 'user' : 'assistant',
           });
           return mergeStructuredMemoryPatch(acc, patch);
-        }, state);
+        }, state) as any;
 
-      const summary = summarizeStructuredMemory(merged);
+      const summaryResult = summarizeStructuredMemory(merged ?? state);
+      const summary: any = summaryResult ?? {
+        factCount: 0,
+        constraintCount: 0,
+        decisionCount: 0,
+        openQuestionCount: 0,
+        blockingQuestions: 0,
+      };
 
       return {
         content: [

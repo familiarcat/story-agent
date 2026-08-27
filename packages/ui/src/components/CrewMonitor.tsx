@@ -5,7 +5,17 @@
 'use client';
 
 import { useEffect, useState, type CSSProperties } from 'react';
-import type { CrewAgentProfile } from '@story-agent/shared';
+
+interface CrewAgentProfile {
+  id: string;
+  name: string;
+  role: string;
+  specialty: string;
+  responsibilities: string[];
+  decisionWeight: number;
+  model: string;
+  authority: string; // 'executive' | 'advisory' | 'architectural' | 'tactical' | 'infrastructure' | etc.
+}
 
 interface CrewMemberWithStats extends CrewAgentProfile {
   currentAssignments?: string[]; // story refs currently assigned

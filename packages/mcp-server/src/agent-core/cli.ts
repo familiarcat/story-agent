@@ -56,7 +56,13 @@ function printEvent(e: AgentEvent) {
 
 async function runOnce(task: string, clientId: string | null) {
   const bridges = buildBridges(clientId);
-  const res = await runAgentLoop(task, { workspace: process.cwd(), clientId, onEvent: printEvent, ...bridges });
+  const res = await runAgentLoop(task, { 
+    workspace: process.cwd(), 
+    clientId, 
+    onEvent: printEvent, 
+    autonomyMode: true,  // CLI runs are always autonomous (no interactive prompts)
+    ...bridges 
+  });
   if (JSON_EVENTS) {
     emitJsonLine({
       type: 'summary', model: res.model, iterations: res.iterations, tools: res.toolCalls.length,
