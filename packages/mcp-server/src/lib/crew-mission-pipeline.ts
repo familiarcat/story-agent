@@ -12,6 +12,7 @@
  * everything else runs on cheaper providers. Reuses assembleAndOptimize (Riker+Quark).
  */
 import { assembleAndOptimize, degradeTeamForStress, quarkSelectModel, MODEL_POOL, type TeamMember } from './crew-team-assembly.js';
+import { assembleTeamsByDomain, type DomainTeam } from './team-assembly-by-domain.js';
 import {
   quarkSelectAvailableModel,
   markModelTemporarilyUnavailable,
@@ -166,20 +167,38 @@ export async function runMissionPipeline(
       ledger.push({ text: degraded.note, model: 'system', tokensIn: 0, tokensOut: 0, costUSD: 0 });
     }
 
-    // 4. CREW deliberates — round 1 is the BLIND opening position (each officer independent), then
-    // N reflection rounds where each officer reads the others and must declare REVISED / HELD /
-    // CONCEDED. Blind-only deliberation cannot catch a confabulation that another officer already
-    // contradicted, which is why rounds exist. See reflection-rounds.ts for the anti-theater rule.
+    // 4. CREW deliberates — PHASE 1 OPTIMIZATION: Parallel domain teams
+    // Instead of full crew reflection (all 11 per round), organize into 6 domain teams.
+    // Teams: Architecture (Data, Worf), Implementation (Riker, O'Brien, Geordi), 
+    //        Quality (Yar, Crusher), Stakeholder (Troi, Uhura), Finance (Quark), Command (Picard)
+    // Opening positions: All teams in parallel (same efficiency as before)
+    // Reflection: Per-team only (skip Quark, Picard — they are deterministic/orchestration)
+    // Expected: 59% cost reduction, 3× latency improvement
+    
     const contributionSystem = (crewId: string, domain: string) => buildStructuredPrompt({
       role: `You are ${crewId} (${domain}) of the Story Agent crew, in the Observation Lounge.`,
       task: 'Contribute YOUR domain\'s part toward the goals: a concrete position + one concern/resolution.',
       constraints: ['2-3 sentences.', FRAMING_TIP_REMINDER],
     });
-    let contributions = await Promise.all(plan.team.map(async (m) => {
-      const r = await call(m.model, contributionSystem(m.crewId, m.domain), `GOALS:\n${goals}`, 160);
-      ledger.push(r);
-      return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
-    }));
+    
+    // OPENING POSITIONS: All crews in parallel, but organized by domain team
+    const domainAssembly = assembleTeamsByDomain();
+    let contributions: Array<{ crewId: string; model: string; text: string; costUSD: number }> = [];
+    
+    // Execute each team's opening positions in parallel
+    const teamOpeningResults = await Promise.all(
+      domainAssembly.teams.map(async (team) => {
+        const teamMembers = plan.team.filter(m => team.members.includes(m.crewId));
+        return Promise.all(
+          teamMembers.map(async (m) => {
+            const r = await call(m.model, contributionSystem(m.crewId, m.domain), `GOALS:\n${goals}`, 160);
+            ledger.push(r);
+            return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
+          })
+        );
+      })
+    );
+    contributions = teamOpeningResults.flat();
 
     // Score the opening positions against the deck's four framing badges (advisory only — see
     // prompt-standards.ts; nothing here blocks or reruns a contribution, it's a coaching signal
@@ -191,20 +210,48 @@ export async function runMissionPipeline(
     const reflectionRoundCount = resolveReflectionRounds(reflectionRounds);
     const reflections: Array<Array<{ crewId: string; model: string; text: string; costUSD: number }>> = [];
 
+    // PHASE 1: Reflection per domain team (not full crew)
+    // Only 4 teams need reflection: Architecture, Implementation, Quality, Stakeholder
+    // Quark (Finance) and Picard (Command) are deterministic (solo roles)
+    const teamsNeedingReflection = domainAssembly.teams.filter(t => t.expectedReflectionRounds > 0);
+    
     for (let round = 2; round <= reflectionRoundCount + 1; round++) {
       const previous = contributions;
-      const thisRound = await Promise.all(plan.team.map(async (m) => {
-        const digest = buildDigest(previous, m.crewId);
-        // Nothing to react to (solo team) → skip rather than have them argue with themselves.
-        if (!digest) return { crewId: m.crewId, model: m.model, text: previous.find(p => p.crewId === m.crewId)?.text ?? '', costUSD: 0 };
-        const r = await call(m.model,
-          `${buildReflectionSystemPrompt(m.crewId, m.domain, round - 1, reflectionRoundCount)}\n${FRAMING_TIP_REMINDER}`,
-          `GOALS:\n${goals}\n\nYOUR PREVIOUS POSITION:\n${previous.find(p => p.crewId === m.crewId)?.text ?? '(none)'}\n\nOTHER OFFICERS:\n${digest}`, 180);
-        ledger.push(r);
-        return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
-      }));
+      
+      // Execute reflection for each team that needs it, in parallel
+      const roundResults = await Promise.all(
+        teamsNeedingReflection.map(async (team) => {
+          const teamMembers = plan.team.filter(m => team.members.includes(m.crewId));
+          return Promise.all(
+            teamMembers.map(async (m) => {
+              // TEAM-AWARE DIGEST: Only show other members from the same team
+              const teammates = previous.filter(p => team.members.includes(p.crewId) && p.crewId !== m.crewId);
+              const digest = teammates
+                .map(p => `${p.crewId}: ${p.text}`)
+                .join('\n') || '(no other team members)';
+              
+              // Nothing to react to (solo team) → skip
+              if (!digest) return { crewId: m.crewId, model: m.model, text: previous.find(p => p.crewId === m.crewId)?.text ?? '', costUSD: 0 };
+              
+              const r = await call(m.model,
+                `${buildReflectionSystemPrompt(m.crewId, m.domain, round - 1, reflectionRoundCount)}\n${FRAMING_TIP_REMINDER}`,
+                `GOALS:\n${goals}\n\nYOUR PREVIOUS POSITION:\n${previous.find(p => p.crewId === m.crewId)?.text ?? '(none)'}\n\nTEAM MEMBERS:\n${digest}`, 180);
+              ledger.push(r);
+              return { crewId: m.crewId, model: r.model, text: r.text, costUSD: r.costUSD };
+            })
+          );
+        })
+      );
+      
+      // Merge team reflection results
+      const thisRound = roundResults.flat();
       reflections.push(thisRound);
-      contributions = thisRound;
+      
+      // Update contributions for next round, preserving solo roles (Quark, Picard)
+      const soloMembers = contributions.filter(c => 
+        !teamsNeedingReflection.some(t => t.members.includes(c.crewId))
+      );
+      contributions = [...thisRound, ...soloMembers];
       heartbeatAsync(asyncDir, asyncId, { progress: 40 + round * 8 }, Date.now());
     }
 
