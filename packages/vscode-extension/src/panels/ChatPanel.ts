@@ -15,6 +15,7 @@ import { LCARS_MARKDOWN_CSS, LCARS_MARKDOWN_CLIENT_JS } from '@story-agent/share
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
 import { getChatClient } from '../chat/chat-engine';
 import { updateControlLane, type ControlLane } from '../controlLaneStatusBar';
+import { processFileForChat, formatFileSize, generateFilePreview, toChatFileInputFormat, type ChatFileInput } from '../chat/file-paste-handler';
 
 function getNonce(): string {
   const bytes = new Uint8Array(16);
@@ -34,6 +35,7 @@ interface ChatMessage {
   timestamp?: number;
   inProgress?: boolean; // Track if still receiving chunks
   metadata?: Record<string, unknown>; // Store execution/crew metadata
+  files?: ChatFileInput[]; // File attachments (images or PDFs)
 }
 
 export class ChatPanel {
@@ -42,6 +44,7 @@ export class ChatPanel {
   private context: vscode.ExtensionContext;
   private history: ChatMessage[] = [];
   private sessionId = `session-${Date.now()}`;
+  private pendingFiles: ChatFileInput[] = []; // Files queued for next message
 
   private constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -78,14 +81,19 @@ export class ChatPanel {
       switch (msg.command) {
         case 'sendMessage': {
           const userMessage = String(msg.message ?? '').trim();
-          if (!userMessage) break;
+          if (!userMessage && this.pendingFiles.length === 0) break;
 
-          // Add user message to history
+          // Add user message to history (with any pending file attachments)
           this.history.push({
             role: 'user',
             content: userMessage,
             timestamp: Date.now(),
+            files: this.pendingFiles.length > 0 ? [...this.pendingFiles] : undefined,
           });
+
+          // Clear pending files after sending
+          const filesToSend = this.pendingFiles;
+          this.pendingFiles = [];
 
           // Show thinking indicator
           this.panel.webview.postMessage({
@@ -148,29 +156,69 @@ export class ChatPanel {
             canSelectFiles: true,
             canSelectFolders: false,
             canSelectMany: false,
+            filters: {
+              'All Supported': ['png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf'],
+              'Images': ['png', 'jpg', 'jpeg', 'gif', 'webp'],
+              'PDFs': ['pdf'],
+            },
             openLabel: 'Attach',
           });
 
           if (uri && uri[0]) {
-            const filePath = uri[0].fsPath;
             try {
-              const content = await vscode.workspace.fs.readFile(uri[0]);
-              const text = new TextDecoder().decode(content);
+              const fileData = await vscode.workspace.fs.readFile(uri[0]);
+              const fileName = uri[0].path.split('/').pop() || 'file';
+              
+              // Process file using file-paste-handler
+              const chatFile = await processFileForChat('attach', fileData, fileName);
+              if (chatFile) {
+                this.pendingFiles.push(chatFile);
+                
+                // Notify webview to display file preview
+                const preview = generateFilePreview(chatFile);
+                this.panel.webview.postMessage({
+                  command: 'fileAttached',
+                  file: {
+                    ...preview,
+                    size: chatFile.size,
+                  },
+                });
+              }
+            } catch (err) {
+              const errorMsg = err instanceof Error ? err.message : String(err);
+              vscode.window.showErrorMessage(`Failed to attach file: ${errorMsg}`);
+              this.panel.webview.postMessage({
+                command: 'error',
+                message: `File attachment failed: ${errorMsg}`,
+              });
+            }
+          }
+          break;
+        }
 
+        case 'pasteFile': {
+          // Handle paste event from webview (Ctrl+V / Cmd+V detection)
+          try {
+            const chatFile = await processFileForChat('paste');
+            if (chatFile) {
+              this.pendingFiles.push(chatFile);
+              
+              // Notify webview to display file preview
+              const preview = generateFilePreview(chatFile);
               this.panel.webview.postMessage({
                 command: 'fileAttached',
-                path: filePath,
-                size: text.length,
+                file: {
+                  ...preview,
+                  size: chatFile.size,
+                },
               });
-
-              // Include file in next message
-              this.history[this.history.length - 1] = {
-                ...this.history[this.history.length - 1],
-                content: `[File: ${filePath}]\n\`\`\`\n${text.slice(0, 2000)}${text.length > 2000 ? '\n...' : ''}\n\`\`\`\n\n${this.history[this.history.length - 1].content}`,
-              };
-            } catch (err) {
-              vscode.window.showErrorMessage(`Failed to read file: ${err}`);
             }
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            this.panel.webview.postMessage({
+              command: 'error',
+              message: `File paste failed: ${errorMsg}`,
+            });
           }
           break;
         }
@@ -515,6 +563,56 @@ ${LCARS_MARKDOWN_CSS}
       height: 1px;
       align-self: flex-end;
     }
+
+    /* File attachment preview badges */
+    .file-preview {
+      padding: 8px 12px;
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--sa-border);
+      border-top: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+
+    .file-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: var(--sa-card);
+      border: 1px solid var(--sa-primary);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--sa-text);
+      white-space: nowrap;
+    }
+
+    .file-badge .file-icon {
+      font-size: 12px;
+    }
+
+    .file-badge .file-name {
+      font-weight: 500;
+    }
+
+    .file-badge .file-size {
+      color: var(--sa-muted);
+      font-size: 10px;
+    }
+
+    .file-badge .file-remove {
+      cursor: pointer;
+      color: var(--sa-muted);
+      margin-left: 4px;
+      font-weight: bold;
+    }
+
+    .file-badge .file-remove:hover {
+      color: var(--sa-danger);
+    }
   </style>
 </head>
 <body>
@@ -536,12 +634,14 @@ ${LCARS_MARKDOWN_CSS}
       <input
         type="text"
         id="messageInput"
-        placeholder="Ask the crew… (Ctrl+Enter to send)"
+        placeholder="Ask the crew… (Ctrl+Enter to send, Ctrl+V to paste files)"
         onkeydown="handleKeyDown(event)"
+        onpaste="handlePaste(event)"
         autocomplete="off"
       />
       <button onclick="sendMessage()" id="sendBtn">Send</button>
     </div>
+    <div class="file-preview" id="filePreview" style="display: none;"></div>
   </div>
 
   <script nonce="${nonce}">
@@ -646,6 +746,65 @@ ${LCARS_MARKDOWN_CSS}
       vscode.postMessage({ command: 'attachFile' });
     }
 
+    function handlePaste(evt) {
+      const items = evt.clipboardData?.items || [];
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          // Don't paste the image into the input; instead queue it for sending
+          evt.preventDefault();
+          vscode.postMessage({ command: 'pasteFile' });
+          break;
+        } else if (item.type === 'application/pdf') {
+          // PDF in clipboard
+          evt.preventDefault();
+          vscode.postMessage({ command: 'pasteFile' });
+          break;
+        }
+      }
+      // If no file in clipboard, allow normal paste (text)
+    }
+
+    function removeFile(index) {
+      vscode.postMessage({ command: 'removeFile', index });
+    }
+
+    function displayFilePreview(file) {
+      const filePreviewEl = document.getElementById('filePreview');
+      const badge = document.createElement('div');
+      badge.className = 'file-badge';
+      
+      const icon = document.createElement('span');
+      icon.className = 'file-icon';
+      icon.textContent = file.icon || '📄';
+      
+      const name = document.createElement('span');
+      name.className = 'file-name';
+      name.textContent = file.label;
+      
+      const size = document.createElement('span');
+      size.className = 'file-size';
+      size.textContent = file.description || '';
+      
+      const remove = document.createElement('span');
+      remove.className = 'file-remove';
+      remove.textContent = '✕';
+      remove.onclick = () => removeFile(Array.from(filePreviewEl.children).indexOf(badge));
+      
+      badge.appendChild(icon);
+      badge.appendChild(name);
+      badge.appendChild(size);
+      badge.appendChild(remove);
+      
+      filePreviewEl.appendChild(badge);
+      filePreviewEl.style.display = 'flex';
+    }
+
+    function clearFilePreviews() {
+      const filePreviewEl = document.getElementById('filePreview');
+      filePreviewEl.innerHTML = '';
+      filePreviewEl.style.display = 'none';
+    }
+
     function clearChat() {
       if (confirm('Clear chat history?')) {
         messagesEl.innerHTML = '';
@@ -660,6 +819,10 @@ ${LCARS_MARKDOWN_CSS}
     window.addEventListener('message', (evt) => {
       const msg = evt.data;
       switch (msg.command) {
+        case 'fileAttached':
+          displayFilePreview(msg.file);
+          break;
+
         case 'chunkUpdate':
           // Live token streaming: create the in-progress bubble on first chunk, update thereafter.
           if (!streamingEl) {
@@ -697,6 +860,7 @@ ${LCARS_MARKDOWN_CSS}
           isSending = false;
           sendBtn.disabled = false;
           inputEl.disabled = false;
+          clearFilePreviews(); // Clear file previews after sending
           inputEl.focus();
           break;
 
@@ -711,11 +875,8 @@ ${LCARS_MARKDOWN_CSS}
           inputEl.disabled = false;
           break;
 
-        case 'fileAttached':
-          renderMessage('assistant', \`📎 Attached: \${msg.path} (\${(msg.size / 1024).toFixed(1)}KB)\`);
-          break;
-
         case 'historyCleared':
+          clearFilePreviews();
           inputEl.focus();
           break;
       }
