@@ -1,22 +1,18 @@
 /**
- * PDF Extraction Cache — Supabase-backed deduplication
- *
- * Avoids re-processing identical PDFs by storing extracted text + metadata
- * keyed by SHA-256 hash of PDF content.
- *
- * Usage:
- * ```typescript
- * const hash = hashPdfInput(pdf);
- * const cached = await getPdfExtractionCache(hash, clientId);
- * if (cached) return cached;
- * const result = await extractPdfText(pdf, options);
- * await storePdfExtractionCache(hash, result, clientId, originalFilename);
- * return result;
- * ```
+ * PDF Extraction Cache Client
+ * 
+ * Supabase-backed cache for PDF extraction results.
+ * Per-client isolation via RLS policies.
+ * Non-blocking operations: cache errors never fail extraction.
  */
 
 import { createClient } from '@supabase/supabase-js';
 import type { PdfExtractionResult } from './pdf-processor';
+
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export interface PdfExtractionCacheEntry {
   pdf_hash: string;
@@ -25,7 +21,7 @@ export interface PdfExtractionCacheEntry {
   has_embedded_text: boolean;
   ocr_pages: number[];
   processing_time_ms: number;
-  confidence?: number;
+  confidence: number;
   original_filename?: string;
   file_size?: number;
   client_id: string;
@@ -35,26 +31,30 @@ export interface PdfExtractionCacheEntry {
   access_count: number;
 }
 
+export interface CacheStats {
+  totalEntries: number;
+  totalStorageBytes: number;
+  oldestEntryDate: string | null;
+  newestEntryDate: string | null;
+  averageAccessCount: number;
+  hitRate?: number;
+}
+
 /**
- * Get PDF extraction from cache (if exists and not expired)
- * Updates accessed_at and access_count timestamps
+ * Get cached extraction result
+ * Returns null if not found, expired, or cache error
+ * Updates accessed_at timestamp on hit (non-blocking)
  */
 export async function getPdfExtractionCache(
   pdfHash: string,
-  clientId: string
+  clientId: string,
 ): Promise<PdfExtractionResult | null> {
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_KEY || ''
-  );
-
   try {
     const { data, error } = await supabase
       .from('sa_pdf_extraction_cache')
       .select('*')
       .eq('pdf_hash', pdfHash)
       .eq('client_id', clientId)
-      .gt('expires_at', new Date().toISOString()) // Not expired
       .single();
 
     if (error || !data) return null;
@@ -72,7 +72,7 @@ export async function getPdfExtractionCache(
       .eq('client_id', clientId)
       .then(() => {}, () => {}); // Non-blocking update, ignore errors
 
-    // Convert database record back to PdfExtractionResult
+    // Return cached extraction result
     return {
       text: entry.extracted_text,
       pageCount: entry.page_count,
@@ -82,76 +82,59 @@ export async function getPdfExtractionCache(
       confidence: entry.confidence,
     };
   } catch (err) {
-    console.error('[pdf-cache] Error retrieving from cache:', err);
+    console.warn(`PDF cache lookup error: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
 
 /**
- * Store PDF extraction result in cache
- * Overwrites existing entry if pdf_hash matches
+ * Store extraction result to cache
+ * Non-blocking: errors logged but never rethrown
+ * Sets expiry to 30 days from now
  */
 export async function storePdfExtractionCache(
   pdfHash: string,
   result: PdfExtractionResult,
   clientId: string,
-  originalFilename?: string,
+  fileName?: string,
   fileSize?: number,
-  createdBy?: string
 ): Promise<boolean> {
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_KEY || ''
-  );
-
   try {
     const { error } = await supabase
       .from('sa_pdf_extraction_cache')
-      .upsert(
-        {
-          pdf_hash: pdfHash,
-          extracted_text: result.text,
-          page_count: result.pageCount,
-          has_embedded_text: result.hasEmbeddedText,
-          ocr_pages: result.ocrPages || [],
-          processing_time_ms: result.processingTimeMs,
-          confidence: result.confidence,
-          original_filename: originalFilename,
-          file_size: fileSize,
-          client_id: clientId,
-          created_by: createdBy,
-          access_count: 0,
-          accessed_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-        },
-        { onConflict: 'pdf_hash' }
-      );
+      .insert({
+        pdf_hash: pdfHash,
+        extracted_text: result.text,
+        page_count: result.pageCount,
+        has_embedded_text: result.hasEmbeddedText,
+        ocr_pages: result.ocrPages,
+        processing_time_ms: result.processingTimeMs ?? 0,
+        confidence: result.confidence ?? 0,
+        original_filename: fileName,
+        file_size: fileSize,
+        client_id: clientId,
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .select()
+      .single();
 
     if (error) {
-      console.error('[pdf-cache] Error storing to cache:', error);
+      console.warn(`PDF cache store error: ${error.message}`);
       return false;
     }
 
     return true;
   } catch (err) {
-    console.error('[pdf-cache] Exception storing to cache:', err);
+    console.warn(`PDF cache store exception: ${err instanceof Error ? err.message : String(err)}`);
     return false;
   }
 }
 
 /**
- * Clean up expired cache entries (manual trigger)
- * Called by cleanup job or MCP tool
+ * Manual cleanup of expired cache entries
+ * Admin function: can clear specific client or all clients
  */
-export async function cleanupExpiredPdfCache(
-  clientId?: string
-): Promise<{ deletedCount: number; error?: string }> {
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_KEY || ''
-  );
-
+export async function cleanupExpiredPdfCache(clientId?: string): Promise<boolean> {
   try {
     let query = supabase
       .from('sa_pdf_extraction_cache')
@@ -162,83 +145,56 @@ export async function cleanupExpiredPdfCache(
       query = query.eq('client_id', clientId);
     }
 
-    const { count, error } = await query;
+    const { error } = await query;
 
     if (error) {
-      return { deletedCount: 0, error: error.message };
+      console.warn(`PDF cache cleanup error: ${error.message}`);
+      return false;
     }
 
-    return { deletedCount: count || 0 };
+    return true;
   } catch (err) {
-    return {
-      deletedCount: 0,
-      error: err instanceof Error ? err.message : String(err),
-    };
+    console.warn(`PDF cache cleanup exception: ${err instanceof Error ? err.message : String(err)}`);
+    return false;
   }
 }
 
 /**
- * Get cache statistics for a client
+ * Get cache statistics for monitoring/analytics
  */
-export async function getPdfCacheStats(clientId: string): Promise<{
-  totalEntries: number;
-  totalTextBytes: number;
-  oldestEntry?: string;
-  newestEntry?: string;
-  avgAccessCount: number;
-  error?: string;
-}> {
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_KEY || ''
-  );
-
+export async function getPdfCacheStats(clientId?: string): Promise<CacheStats | null> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('sa_pdf_extraction_cache')
-      .select('extracted_text, created_at, access_count')
-      .eq('client_id', clientId)
-      .gt('expires_at', new Date().toISOString());
+      .select('file_size, access_count, created_at, accessed_at', { count: 'exact' });
 
-    if (error || !data) {
-      return {
-        totalEntries: 0,
-        totalTextBytes: 0,
-        avgAccessCount: 0,
-        error: error?.message,
-      };
+    if (clientId) {
+      query = query.eq('client_id', clientId);
     }
 
-    const totalTextBytes = data.reduce(
-      (sum, entry) => sum + (entry.extracted_text?.length || 0),
-      0
-    );
-    const avgAccessCount =
-      data.length > 0
-        ? data.reduce((sum, entry) => sum + (entry.access_count || 0), 0) /
-          data.length
-        : 0;
+    const { data, count, error } = await query;
 
-    const timestamps = data
-      .map((entry) => new Date(entry.created_at).getTime())
-      .sort((a, b) => a - b);
+    if (error || !data || count === null) return null;
+
+    const totalStorage = (data as any[]).reduce((sum, row) => sum + (row.file_size || 0), 0);
+    const avgAccess = (data as any[]).reduce((sum, row) => sum + (row.access_count || 0), 0) / count;
+
+    const createdDates = (data as any[])
+      .map((row) => new Date(row.created_at).getTime())
+      .filter((d) => !isNaN(d));
+    const accessedDates = (data as any[])
+      .map((row) => new Date(row.accessed_at).getTime())
+      .filter((d) => !isNaN(d));
 
     return {
-      totalEntries: data.length,
-      totalTextBytes,
-      oldestEntry: timestamps.length > 0 ? data[0].created_at : undefined,
-      newestEntry:
-        timestamps.length > 0
-          ? data[data.length - 1].created_at
-          : undefined,
-      avgAccessCount,
+      totalEntries: count,
+      totalStorageBytes: totalStorage,
+      oldestEntryDate: createdDates.length > 0 ? new Date(Math.min(...createdDates)).toISOString() : null,
+      newestEntryDate: accessedDates.length > 0 ? new Date(Math.max(...accessedDates)).toISOString() : null,
+      averageAccessCount: avgAccess,
     };
   } catch (err) {
-    return {
-      totalEntries: 0,
-      totalTextBytes: 0,
-      avgAccessCount: 0,
-      error: err instanceof Error ? err.message : String(err),
-    };
+    console.warn(`PDF cache stats error: ${err instanceof Error ? err.message : String(err)}`);
+    return null;
   }
 }
