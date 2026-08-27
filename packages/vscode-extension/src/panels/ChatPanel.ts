@@ -101,7 +101,7 @@ export class ChatPanel {
           });
 
           try {
-            const response = await this.callCrewChatViaWebSocket(userMessage);
+            const response = await this.callCrewChatViaWebSocket(userMessage, filesToSend.length > 0 ? filesToSend : undefined);
 
             // Add assistant response to history
             this.history.push({
@@ -122,6 +122,11 @@ export class ChatPanel {
               executionActivation: response.executionActivation,
               crewSelfOrganization: response.crewSelfOrganization,
               costAnalysis: response.costAnalysis,
+              filesProcessed: filesToSend.length > 0 ? filesToSend.map(f => ({
+                fileName: f.fileName,
+                type: f.type,
+                size: f.size,
+              })) : undefined,
             });
 
             // Update the persistent control-lane status bar (lane derived like the chat badges).
@@ -246,7 +251,7 @@ export class ChatPanel {
     });
   }
 
-  private async callCrewChatViaWebSocket(message: string): Promise<{
+  private async callCrewChatViaWebSocket(message: string, files?: ChatFileInput[]): Promise<{
     answer: string;
     model: string;
     costUSD: number;
@@ -265,6 +270,14 @@ export class ChatPanel {
     const chatHistory = this.history
       .slice(-8)
       .map(m => ({ role: m.role, content: m.content }));
+
+    // Convert ChatFileInput to ChatAttachment format for the chat request
+    const attachments = files?.map(f => ({
+      name: f.fileName || 'file',
+      mimeType: f.mimeType || 'application/octet-stream',
+      size: f.size,
+      dataUrl: `data:${f.mimeType || 'application/octet-stream'};base64,${f.data}`,
+    }));
 
     return new Promise((resolve, reject) => {
       // Generate unique message ID
@@ -299,16 +312,17 @@ export class ChatPanel {
         sessionId: this.sessionId,
         userId: vscode.env.sessionId || 'vscode-user',
         context: chatHistory as any,
+        ...(attachments && { attachments }), // Include files as attachments if present
       }).catch((err) => {
         unsubscribe();
         reject(err);
       });
 
-      // Timeout: 30s max (matches HTTP timeout)
+      // Timeout: 30s max (matches HTTP timeout) — increased to 60s for file processing
       setTimeout(() => {
         unsubscribe();
         reject(new Error('Chat response timeout'));
-      }, 30000);
+      }, files && files.length > 0 ? 60000 : 30000); // Longer timeout for file processing
     });
   }
 
@@ -559,6 +573,46 @@ ${LCARS_MARKDOWN_CSS}
       font-family: var(--vscode-editor-font-family);
     }
 
+    /* File processing status indicator */
+    .file-processing {
+      margin-top: 6px;
+      padding: 6px 8px;
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--sa-primary);
+      border-radius: 3px;
+      font-size: 11px;
+      color: var(--sa-primary);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .file-processing.processing::after {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--sa-primary);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .file-processing.complete {
+      color: var(--sa-success, #4ec9b0);
+      border-color: var(--sa-success, #4ec9b0);
+    }
+
+    .file-processing.error {
+      color: var(--sa-danger);
+      border-color: var(--sa-danger);
+    }
+
     .scroller-spacer {
       height: 1px;
       align-self: flex-end;
@@ -708,6 +762,18 @@ ${LCARS_MARKDOWN_CSS}
         msgEl.appendChild(sourcesEl);
       }
 
+      // File processing metadata: show which files were extracted
+      if (metadata.filesProcessed && metadata.filesProcessed.length > 0) {
+        const filesEl = document.createElement('div');
+        filesEl.className = 'sources'; // Reuse sources styling
+        const fileLabels = metadata.filesProcessed.map(function (f) {
+          const sizeKb = (f.size / 1024).toFixed(1);
+          return '<code>' + escapeHtml(f.fileName || 'file') + ' (' + f.type + ', ' + sizeKb + 'KB)</code>';
+        });
+        filesEl.innerHTML = '<strong>Files processed:</strong> ' + fileLabels.join(', ');
+        msgEl.appendChild(filesEl);
+      }
+
       messagesEl.appendChild(msgEl);
 
       // Auto-scroll to bottom
@@ -720,7 +786,7 @@ ${LCARS_MARKDOWN_CSS}
 
     function sendMessage() {
       const message = inputEl.value.trim();
-      if (!message || isSending) return;
+      if (!message && document.querySelectorAll('.file-badge').length === 0) return;
 
       isSending = true;
       sendBtn.disabled = true;
@@ -729,9 +795,13 @@ ${LCARS_MARKDOWN_CSS}
       renderMessage('user', message);
       inputEl.value = '';
 
+      // Count attached files for status display
+      const fileCount = document.querySelectorAll('.file-badge').length;
+
       vscode.postMessage({
         command: 'sendMessage',
         message,
+        fileCount, // Pass file count for server-side logging
       });
     }
 
@@ -848,10 +918,17 @@ ${LCARS_MARKDOWN_CSS}
             executionActivation: msg.executionActivation,
             crewSelfOrganization: msg.crewSelfOrganization,
             costAnalysis: msg.costAnalysis,
+            filesProcessed: msg.filesProcessed,
           });
           break;
 
         case 'thinkingStart':
+          const fileCount = document.querySelectorAll('.file-badge').length;
+          if (fileCount > 0) {
+            thinkingEl.textContent = '📄 Processing ' + fileCount + ' file(s)…';
+          } else {
+            thinkingEl.textContent = 'Thinking…';
+          }
           thinkingEl.style.display = 'block';
           break;
 
