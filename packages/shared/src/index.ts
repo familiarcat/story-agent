@@ -72,6 +72,7 @@ export * from './image-input';
 export * from './pdf-input';
 export * from './file-input';
 export * from './pdf-processor';
+export * from './pdf-cache';
 export * from './vision';
 export * from './checksum-storage';
 export * from './embedding';

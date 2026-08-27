@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { PdfInputSchema, checkPdfSize, extractPdfText, hashPdfInput, type PdfInput } from '@story-agent/shared';
+import { PdfInputSchema, checkPdfSize, extractPdfText, hashPdfInput, type PdfInput, getPdfExtractionCache, storePdfExtractionCache } from '@story-agent/shared';
 import { storeObservationMemory } from '@story-agent/shared/db';
 
 /**
@@ -27,9 +27,11 @@ export function registerProcessPdfTool(server: McpServer): void {
       ocrLanguages: z.array(z.string()).optional().default(['eng']).describe('OCR languages (tesseract codes: eng, fra, deu, etc)'),
       storeToRag: z.boolean().optional().default(false).describe('Store extraction result to crew RAG'),
       ragTags: z.array(z.string()).optional(),
-      onProgress: z.function().optional().describe('Callback for progress updates during extraction'),
+      'useCache': z.boolean().optional().default(true).describe('Use Supabase PDF extraction cache'),
+      'clientId': z.string().optional().default('familiarcat').describe('Client ID for cache isolation'),
+      'onProgress': z.function().optional().describe('Callback for progress updates during extraction'),
     },
-    async ({ pdf, enableOcr, ocrLanguages, storeToRag, ragTags }) => {
+    async ({ pdf, enableOcr, ocrLanguages, storeToRag, ragTags, useCache, clientId }) => {
       const pdfInput = pdf as PdfInput;
 
       // Validation
@@ -41,17 +43,58 @@ export function registerProcessPdfTool(server: McpServer): void {
         };
       }
 
+      // Check Supabase cache first (if enabled)
       let result;
-      try {
-        result = await extractPdfText(pdfInput, {
-          enableOcr,
-          ocrLanguages,
-          ocrTimeoutMs: 30000,
-        });
-      } catch (e) {
+      let cacheHit = false;
+      const pdfHash = await hashPdfInput(pdfInput);
+
+      if (useCache) {
+        try {
+          const cached = await getPdfExtractionCache(pdfHash, clientId);
+          if (cached) {
+            result = cached;
+            cacheHit = true;
+            // Fall through to response handling with cacheHit flag
+          }
+        } catch (cacheErr) {
+          console.warn(`Cache lookup failed: ${cacheErr instanceof Error ? cacheErr.message : String(cacheErr)}`);
+          // Continue with extraction if cache lookup fails
+        }
+      }
+
+      // Extract if not cached
+      if (!cacheHit) {
+        try {
+          result = await extractPdfText(pdfInput, {
+            enableOcr,
+            ocrLanguages,
+            ocrTimeoutMs: 30000,
+          });
+        } catch (e) {
+          return {
+            isError: true,
+            content: [{ type: 'text' as const, text: JSON.stringify({ error: `PDF extraction failed: ${e instanceof Error ? e.message : String(e)}` }) }],
+          };
+        }
+
+        // Store to cache if extraction succeeded (best-effort)
+        if (useCache && result) {
+          try {
+            const fileName = 'fileName' in pdfInput ? pdfInput.fileName : undefined;
+            const fileSize = 'data' in pdfInput ? Buffer.byteLength(pdfInput.data, 'base64') : undefined;
+            await storePdfExtractionCache(pdfHash, result, clientId, fileName, fileSize);
+          } catch (cacheStoreErr) {
+            console.warn(`Failed to store PDF to cache: ${cacheStoreErr instanceof Error ? cacheStoreErr.message : String(cacheStoreErr)}`);
+            // Cache store is best-effort — never fail the extraction
+          }
+        }
+      }
+
+      // Ensure result was obtained (either from cache or extraction)
+      if (!result) {
         return {
           isError: true,
-          content: [{ type: 'text' as const, text: JSON.stringify({ error: `PDF extraction failed: ${e instanceof Error ? e.message : String(e)}` }) }],
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: 'PDF extraction failed: no result obtained' }) }],
         };
       }
 
@@ -101,6 +144,8 @@ export function registerProcessPdfTool(server: McpServer): void {
                 ocrPages: result.ocrPages,
                 ocrConfidence: result.confidence ? (result.confidence * 100).toFixed(1) + '%' : undefined,
                 processingTimeMs: result.processingTimeMs,
+                cacheHit, // Indicates if result came from Supabase cache
+                cacheKey: cacheHit ? pdfHash : undefined,
                 ragStored,
               },
               null,
