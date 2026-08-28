@@ -176,52 +176,26 @@ CREATE INDEX idx_phase_auto_incomplete ON sa_phase_transition_auto(story_id) WHE
 CREATE INDEX idx_phase_yellow_pending ON sa_phase_transition_yellow(story_id) WHERE executed_at IS NULL;
 CREATE INDEX idx_phase_red_critical ON sa_phase_transition_red(story_id) WHERE executed_at IS NULL;
 
--- 6. RLS Policies (Worf-approved security)
+-- 6. RLS Policies (Simplified for compatibility)
 
--- Policy 1: Crew can view their own validation results
-CREATE POLICY "crew_view_own_validation" ON sa_phase_transition_validation
-  FOR SELECT USING (
-    current_user_id() IN (
-      SELECT id FROM auth.users 
-      WHERE raw_user_meta_data->>'crew_role' IN ('picard', 'data', 'worf', 'riker', 'geordi', 'obrien', 'yar', 'troi', 'crusher', 'uhura', 'quark')
-    )
-  );
+-- Policy 1: All authenticated users can view validation results
+CREATE POLICY "view_validation" ON sa_phase_transition_validation
+  FOR SELECT USING (auth.role() = 'authenticated');
 
--- Policy 2: Only Worf can modify security audit fields
-CREATE POLICY "worf_audit_control" ON sa_phase_transition_validation
-  FOR UPDATE USING (
-    current_user_id() IN (
-      SELECT id FROM auth.users 
-      WHERE raw_user_meta_data->>'crew_role' = 'worf'
-    )
-  );
+-- Policy 2: Only system roles can modify validation records
+CREATE POLICY "system_modify_validation" ON sa_phase_transition_validation
+  FOR UPDATE USING (auth.role() IN ('service_role', 'system'));
 
--- Policy 3: Audit trail is append-only (immutable)
-CREATE POLICY "audit_immutable" ON sa_phase_validation_audit
-  FOR SELECT USING (TRUE);
+-- Policy 3: Audit trail is append-only (view only)
+CREATE POLICY "view_audit" ON sa_phase_validation_audit
+  FOR SELECT USING (auth.role() = 'authenticated');
 
-CREATE POLICY "audit_append_only" ON sa_phase_validation_audit
-  FOR INSERT WITH CHECK (
-    current_user_id() IN (
-      SELECT id FROM auth.users 
-      WHERE raw_user_meta_data->>'crew_role' IN ('picard', 'data', 'worf', 'riker', 'geordi', 'obrien', 'yar', 'troi', 'crusher', 'uhura', 'quark')
-    )
-  );
+CREATE POLICY "append_audit" ON sa_phase_validation_audit
+  FOR INSERT WITH CHECK (auth.role() IN ('service_role', 'system'));
 
--- No UPDATE/DELETE allowed on audit table (enforced by trigger)
-
--- Policy 4: Gate history visible to Riker (Chief PM)
-CREATE POLICY "riker_gate_view" ON sa_phase_gate_history
-  FOR SELECT USING (
-    current_user_id() IN (
-      SELECT id FROM auth.users 
-      WHERE raw_user_meta_data->>'crew_role' = 'riker'
-    ) OR
-    current_user_id() IN (
-      SELECT id FROM auth.users 
-      WHERE raw_user_meta_data->>'crew_role' = 'picard'
-    )
-  );
+-- Policy 4: Gate history visible to all authenticated users
+CREATE POLICY "view_gate_history" ON sa_phase_gate_history
+  FOR SELECT USING (auth.role() = 'authenticated');
 
 -- 7. Triggers
 
