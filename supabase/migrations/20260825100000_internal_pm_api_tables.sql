@@ -56,10 +56,24 @@ CREATE TABLE IF NOT EXISTS sa_pm_tasks (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Ensure tenant_id columns exist (for backwards compatibility)
+-- Ensure all columns exist (for backwards compatibility)
 ALTER TABLE IF EXISTS sa_pm_sprints ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE IF EXISTS sa_pm_sprints ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE IF EXISTS sa_pm_sprints ADD COLUMN IF NOT EXISTS updated_by TEXT;
+ALTER TABLE IF EXISTS sa_pm_sprints ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 0;
+ALTER TABLE IF EXISTS sa_pm_sprints ADD COLUMN IF NOT EXISTS etag VARCHAR(32);
+
 ALTER TABLE IF EXISTS sa_pm_stories ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE IF EXISTS sa_pm_stories ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE IF EXISTS sa_pm_stories ADD COLUMN IF NOT EXISTS updated_by TEXT;
+ALTER TABLE IF EXISTS sa_pm_stories ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 0;
+ALTER TABLE IF EXISTS sa_pm_stories ADD COLUMN IF NOT EXISTS etag VARCHAR(32);
+
 ALTER TABLE IF EXISTS sa_pm_tasks ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE IF EXISTS sa_pm_tasks ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE IF EXISTS sa_pm_tasks ADD COLUMN IF NOT EXISTS updated_by TEXT;
+ALTER TABLE IF EXISTS sa_pm_tasks ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 0;
+ALTER TABLE IF EXISTS sa_pm_tasks ADD COLUMN IF NOT EXISTS etag VARCHAR(32);
 
 -- Create indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_sa_pm_sprints_tenant ON sa_pm_sprints(tenant_id);
