@@ -4,7 +4,7 @@
 -- sa_pm_sprints: Sprint tracking with state machine
 CREATE TABLE IF NOT EXISTS sa_pm_sprints (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  tenant_id TEXT NOT NULL,
+  tenant_id TEXT,
   name TEXT NOT NULL,
   capacity INT,
   state TEXT NOT NULL DEFAULT 'planning' CHECK (state IN ('planning', 'in_progress', 'closed', 'archived')),
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS sa_pm_sprints (
 -- sa_pm_stories: Story tracking with state machine
 CREATE TABLE IF NOT EXISTS sa_pm_stories (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  tenant_id TEXT NOT NULL,
+  tenant_id TEXT,
   sprint_id TEXT REFERENCES sa_pm_sprints(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS sa_pm_stories (
 -- sa_pm_tasks: Task tracking with state machine and dependency support
 CREATE TABLE IF NOT EXISTS sa_pm_tasks (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  tenant_id TEXT NOT NULL,
+  tenant_id TEXT,
   story_id TEXT REFERENCES sa_pm_stories(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
@@ -55,6 +55,11 @@ CREATE TABLE IF NOT EXISTS sa_pm_tasks (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Ensure tenant_id columns exist (for backwards compatibility)
+ALTER TABLE IF EXISTS sa_pm_sprints ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE IF EXISTS sa_pm_stories ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE IF EXISTS sa_pm_tasks ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 
 -- Create indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_sa_pm_sprints_tenant ON sa_pm_sprints(tenant_id);
