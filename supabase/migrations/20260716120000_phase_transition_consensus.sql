@@ -258,6 +258,3 @@ BEGIN
   WHERE validated_at >= NOW() - INTERVAL '7 days';
 END;
 $$ LANGUAGE plpgsql;
-
--- Confirm success message
-RAISE NOTICE 'Schema deployment complete: 5 tables, 8 indexes, RLS policies armed, immutable audit trail active.';
