@@ -4,9 +4,10 @@
 -- Purpose: Parallel crew validation with AUTO/YELLOW/RED gates
 
 -- 1. Phase Transition Validation Results (Main Table)
--- Partitioned by story_id for horizontal scaling
+-- Partitioned by decision_gate for horizontal scaling
+-- NOTE: PRIMARY KEY must include partitioning column (decision_gate)
 CREATE TABLE sa_phase_transition_validation (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   story_id TEXT NOT NULL,
   from_phase TEXT NOT NULL,
   to_phase TEXT NOT NULL,
@@ -46,7 +47,10 @@ CREATE TABLE sa_phase_transition_validation (
   
   -- Audit & Security
   worfgate_audit_id UUID,
-  is_immutable BOOLEAN DEFAULT TRUE
+  is_immutable BOOLEAN DEFAULT TRUE,
+  
+  -- Composite PK must include partitioning column
+  PRIMARY KEY (id, decision_gate)
 ) PARTITION BY LIST (decision_gate);
 
 -- Partitions for each gate type (for query optimization)
@@ -60,7 +64,14 @@ ALTER TABLE sa_phase_transition_validation ENABLE ROW LEVEL SECURITY;
 -- 2. Immutable Audit Trail (Blockchain-style append-only log)
 CREATE TABLE sa_phase_validation_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  validation_result_id UUID NOT NULL REFERENCES sa_phase_transition_validation(id) ON DELETE RESTRICT,
+  validation_result_id UUID NOT NULL,
+  validation_decision_gate TEXT NOT NULL,
+  
+  -- Foreign key to composite primary key (id, decision_gate)
+  CONSTRAINT fk_validation_result 
+    FOREIGN KEY (validation_result_id, validation_decision_gate) 
+    REFERENCES sa_phase_transition_validation(id, decision_gate) 
+    ON DELETE RESTRICT,
   
   -- Crew Validation Entry
   crew_member TEXT NOT NULL,
@@ -96,10 +107,15 @@ ALTER TABLE sa_phase_validation_audit ENABLE ROW LEVEL SECURITY;
 CREATE TABLE sa_phase_gate_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   story_id TEXT NOT NULL,
-  validation_id UUID NOT NULL REFERENCES sa_phase_transition_validation(id),
+  validation_id UUID NOT NULL,
+  validation_decision_gate TEXT NOT NULL,
+  
+  -- Foreign key to composite primary key
+  CONSTRAINT fk_validation_history
+    FOREIGN KEY (validation_id, validation_decision_gate)
+    REFERENCES sa_phase_transition_validation(id, decision_gate),
   
   -- Gate Decision
-  decision_gate TEXT NOT NULL,
   consensus_percentage NUMERIC(5, 2),
   veto_count INT DEFAULT 0,
   
