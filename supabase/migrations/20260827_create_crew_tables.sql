@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS sa_crew_personas (
   updated_at TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (tenant_id) REFERENCES auth.tenants(id)
 );
-CREATE INDEX idx_crew_personas_tenant ON sa_crew_personas(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_crew_personas_tenant ON sa_crew_personas(tenant_id);
 
 CREATE TABLE IF NOT EXISTS sa_crew_skills (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS sa_crew_skills (
   FOREIGN KEY (tenant_id) REFERENCES auth.tenants(id),
   UNIQUE(crew_id, skill_name, manifest_id)
 );
-CREATE INDEX idx_crew_skills_tenant ON sa_crew_skills(tenant_id);
-CREATE INDEX idx_crew_skills_crew_id ON sa_crew_skills(crew_id);
+CREATE INDEX IF NOT EXISTS idx_crew_skills_tenant ON sa_crew_skills(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_crew_skills_crew_id ON sa_crew_skills(crew_id);
 
 CREATE TABLE IF NOT EXISTS sa_tool_registry (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS sa_tool_registry (
   FOREIGN KEY (tenant_id) REFERENCES auth.tenants(id),
   UNIQUE(tenant_id, tool_name)
 );
-CREATE INDEX idx_tool_registry_tenant ON sa_tool_registry(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tool_registry_tenant ON sa_tool_registry(tenant_id);
 
 CREATE TABLE IF NOT EXISTS sa_mission_debriefs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -73,8 +73,8 @@ CREATE TABLE IF NOT EXISTS sa_mission_debriefs (
   updated_at TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (tenant_id) REFERENCES auth.tenants(id)
 );
-CREATE INDEX idx_mission_debriefs_tenant ON sa_mission_debriefs(tenant_id);
-CREATE INDEX idx_mission_debriefs_mission_id ON sa_mission_debriefs(mission_id);
+CREATE INDEX IF NOT EXISTS idx_mission_debriefs_tenant ON sa_mission_debriefs(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_mission_debriefs_mission_id ON sa_mission_debriefs(mission_id);
 
 ALTER TABLE sa_crew_personas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sa_crew_skills ENABLE ROW LEVEL SECURITY;
