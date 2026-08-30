@@ -130,6 +130,9 @@ CREATE TABLE sa_phase_gate_history (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Enable RLS on gate history table
+ALTER TABLE sa_phase_gate_history ENABLE ROW LEVEL SECURITY;
+
 -- 4. Real-Time Monitoring Snapshots (5-minute samples per Quark's cost control)
 CREATE TABLE sa_phase_validation_metrics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

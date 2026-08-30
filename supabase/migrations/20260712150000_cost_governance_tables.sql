@@ -66,6 +66,29 @@ ON cost_escalation(severity, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cost_projection_request_id
 ON cost_projection(request_id);
 
+-- Enable Row Level Security on all cost governance tables
+ALTER TABLE IF EXISTS cost_governance_budget ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS cost_projection ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS cost_escalation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS cost_ledger ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for cost tables (read access for authenticated users)
+DROP POLICY IF EXISTS cost_governance_budget_read ON cost_governance_budget;
+CREATE POLICY cost_governance_budget_read ON cost_governance_budget
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS cost_projection_read ON cost_projection;
+CREATE POLICY cost_projection_read ON cost_projection
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS cost_escalation_read ON cost_escalation;
+CREATE POLICY cost_escalation_read ON cost_escalation
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS cost_ledger_read ON cost_ledger;
+CREATE POLICY cost_ledger_read ON cost_ledger
+  FOR SELECT USING (auth.role() = 'authenticated');
+
 -- Initialize alpha budget for Section 31 (if not already present)
 INSERT INTO cost_governance_budget (phase, budget_usd, warn_pct, halt_pct, start_date, status)
 VALUES ('alpha-section-31', 97.26, 50, 100, NOW(), 'active')
