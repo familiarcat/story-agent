@@ -83,16 +83,23 @@ ALTER TABLE sa_mission_debriefs ENABLE ROW LEVEL SECURITY;
 
 -- WorfGate policies: Simplified for compatibility
 -- Allow all authenticated users to read crew tables
-CREATE POLICY IF NOT EXISTS sa_crew_personas_tenant_isolation ON sa_crew_personas
+-- Drop existing policies first (idempotent)
+DROP POLICY IF EXISTS sa_crew_personas_tenant_isolation ON sa_crew_personas;
+DROP POLICY IF EXISTS sa_crew_skills_tenant_isolation ON sa_crew_skills;
+DROP POLICY IF EXISTS sa_tool_registry_tenant_isolation ON sa_tool_registry;
+DROP POLICY IF EXISTS sa_mission_debriefs_tenant_isolation ON sa_mission_debriefs;
+
+-- Create new policies
+CREATE POLICY sa_crew_personas_tenant_isolation ON sa_crew_personas
   FOR SELECT USING (auth.role() = 'authenticated');
   
-CREATE POLICY IF NOT EXISTS sa_crew_skills_tenant_isolation ON sa_crew_skills
+CREATE POLICY sa_crew_skills_tenant_isolation ON sa_crew_skills
   FOR SELECT USING (auth.role() = 'authenticated');
   
-CREATE POLICY IF NOT EXISTS sa_tool_registry_tenant_isolation ON sa_tool_registry
+CREATE POLICY sa_tool_registry_tenant_isolation ON sa_tool_registry
   FOR SELECT USING (auth.role() = 'authenticated');
   
-CREATE POLICY IF NOT EXISTS sa_mission_debriefs_tenant_isolation ON sa_mission_debriefs
+CREATE POLICY sa_mission_debriefs_tenant_isolation ON sa_mission_debriefs
   FOR SELECT USING (auth.role() = 'authenticated');
 
 INSERT INTO sa_clients (tenant_id, client_name, client_code, tier, active, created_at)
