@@ -102,13 +102,22 @@ CREATE POLICY sa_tool_registry_tenant_isolation ON sa_tool_registry
 CREATE POLICY sa_mission_debriefs_tenant_isolation ON sa_mission_debriefs
   FOR SELECT USING (auth.role() = 'authenticated');
 
-INSERT INTO sa_clients (tenant_id, client_name, client_code, tier, active, created_at)
-VALUES (
-  gen_random_uuid(),
-  'Story Agent',
-  'story-agent',
-  'enterprise',
-  true,
-  NOW()
-)
-ON CONFLICT DO NOTHING;
+-- Conditionally insert default client (only if sa_clients table exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'sa_clients'
+  ) THEN
+    INSERT INTO sa_clients (tenant_id, client_name, client_code, tier, active, created_at)
+    VALUES (
+      gen_random_uuid(),
+      'Story Agent',
+      'story-agent',
+      'enterprise',
+      true,
+      NOW()
+    )
+    ON CONFLICT DO NOTHING;
+  END IF;
+END $$;
