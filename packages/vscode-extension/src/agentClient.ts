@@ -39,13 +39,82 @@ function agentBase(): string {
 }
 
 /**
+ * TASK 1 (Data): 5-second timeout mechanism to prevent MCP hangs.
+ * Wraps fetch with AbortController to ensure the extension never waits indefinitely.
+ */
+async function fetchWithTimeout(
+  url: string,
+  timeoutMs: number = 5000,
+  options?: RequestInit
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`MCP request timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * TASK 3 (Geordi): Metrics wrapper for observability.
+ * Tracks request latency, identifies server (local vs cloud), logs for diagnostics.
+ */
+async function fetchWithMetrics(
+  url: string,
+  endpoint: string = 'unknown',
+  options?: RequestInit
+): Promise<{ response: Response; server: string; latencyMs: number }> {
+  const start = performance.now();
+  const response = await fetchWithTimeout(url, 5000, options);
+  const latencyMs = Math.round(performance.now() - start);
+  const server = url.includes('localhost') || url.includes('127.0.0.1') ? 'local' : 'cloud';
+  
+  // Log for diagnostics (Crusher will consume this)
+  console.log(`[MCP Phase 7] Server: ${server}, Latency: ${latencyMs}ms, Endpoint: ${endpoint}`);
+  
+  return { response, server, latencyMs };
+}
+
+/**
+ * TASK 4 (O'Brien): Pre-flight health check.
+ * Verifies server readiness before accepting user input.
+ */
+async function isServerReady(endpoint: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${endpoint}/ready`, {
+      signal: AbortSignal.timeout(1000),
+      method: 'GET'
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Ordered agent endpoints to try: the configured/cloud URL first, then always the local loop.
  * This is the local↔cloud "stagger" — you keep vibing against localhost while the Fargate crew
  * deploys/syncs; once the cloud endpoint is reachable it's preferred (single source of truth).
+ * 
+ * TASK 2 (Riker): STORY_AGENT_PREFER_LOCAL flag for explicit preference control.
  */
 function agentCandidates(): string[] {
+  const preferLocal = process.env.STORY_AGENT_PREFER_LOCAL === 'true';
   const primary = agentBase();
-  return primary === LOCAL_AGENT ? [LOCAL_AGENT] : [primary, LOCAL_AGENT];
+  
+  if (preferLocal) {
+    // Local-first mode (dev/testing)
+    return [LOCAL_AGENT, primary].filter(Boolean);
+  } else {
+    // Cloud-first mode (default, production)
+    return primary === LOCAL_AGENT ? [LOCAL_AGENT] : [primary, LOCAL_AGENT];
+  }
 }
 
 interface AhaProduct {
@@ -75,7 +144,10 @@ export async function fetchAhaHierarchy(token: vscode.CancellationToken): Promis
   
   for (const base of agentCandidates()) {
     try {
-      const resp = await fetch(`${base}/aha/products`);
+      const { response: resp, server, latencyMs } = await fetchWithMetrics(
+        `${base}/aha/products`,
+        'fetchAhaHierarchy'
+      );
       if (!resp.ok) continue;
       
       const data = await resp.json() as unknown;
