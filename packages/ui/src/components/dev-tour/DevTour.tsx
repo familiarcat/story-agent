@@ -46,10 +46,11 @@ export default function DevTour() {
 
   // Build the step list for the current page: the screen itself, then each opted-in component.
   const buildSteps = useCallback((): Step[] => {
-    if (typeof document === 'undefined') return [];
+    if (typeof document === 'undefined' || !pathname) return [];
     const out: Step[] = [];
     const main = document.querySelector('main') as HTMLElement | null;
-    const screenCopy = SCREEN_TOUR[pathname] ?? { title: pathname, description: 'This screen has no registered description yet.' };
+    const path = pathname || '/';
+    const screenCopy = SCREEN_TOUR[path] ?? { title: path, description: 'This screen has no registered description yet.' };
     if (main) out.push({ el: main, copy: screenCopy, kind: 'screen' });
     document.querySelectorAll<HTMLElement>('[data-dev-tour]').forEach((el) => {
       const id = el.dataset.devTour;

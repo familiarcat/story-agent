@@ -78,7 +78,20 @@ async function main() {
     );
   }
   // NATIVE ⇒ silent.
-  process.exit(0);
+  // Don't exit in test environments (vitest catches process.exit as unhandled error)
+  if (process.env.VITEST !== 'true' && process.env.NODE_ENV !== 'test') {
+    process.exit(0);
+  }
 }
 
-main().then(() => process.exit(0)).catch(() => process.exit(0)); // never block the prompt on a hook error
+main().then(() => {
+  // Don't exit in test environments (vitest catches process.exit as unhandled error)
+  if (process.env.VITEST !== 'true' && process.env.NODE_ENV !== 'test') {
+    process.exit(0);
+  }
+}).catch(() => {
+  // Don't exit in test environments (vitest catches process.exit as unhandled error)
+  if (process.env.VITEST !== 'true' && process.env.NODE_ENV !== 'test') {
+    process.exit(0);
+  }
+});

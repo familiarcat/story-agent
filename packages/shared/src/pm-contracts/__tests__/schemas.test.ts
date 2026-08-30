@@ -17,7 +17,7 @@ import {
   VALID_FIXTURES,
   ADVERSARIAL_FIXTURES,
   EDGE_CASE_FIXTURES,
-} from '../fixtures/pm-contracts/test-fixtures';
+} from './fixtures/pm-contracts/test-fixtures';
 
 describe('PM Contract Schemas', () => {
   describe('Sprint Schema Validation', () => {

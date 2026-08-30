@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import NavBar from '../components/NavBar';
-import SideNav from '../components/SideNav';
-import { ThemeProvider, THEME_INIT_SCRIPT } from '../components/ThemeProvider';
-import { SidebarProvider, SIDEBAR_INIT_SCRIPT } from '../components/SidebarProvider';
-import { LoadingStateProvider } from '../components/LoadingStateProvider';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import DevTour from '../components/dev-tour/DevTour';
-import ChromeController, { CHROME_INIT_SCRIPT } from '../components/ChromeController';
+import NavBar from '@/components/NavBar';
+import SideNav from '@/components/SideNav';
+import { ThemeProvider, THEME_INIT_SCRIPT } from '@/components/ThemeProvider';
+import { SidebarProvider, SIDEBAR_INIT_SCRIPT } from '@/components/SidebarProvider';
+import { LoadingStateProvider } from '@/components/LoadingStateProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import DevTour from '@/components/dev-tour/DevTour';
+import ChromeController, { CHROME_INIT_SCRIPT } from '@/components/ChromeController';
 
 export const metadata: Metadata = {
   title: 'Story Agent',

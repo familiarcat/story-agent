@@ -16,14 +16,15 @@
     "validate:openapi-local-servers": "sh -c 'spec_url=${OPENAPI_URL:-http://localhost:3001/api/openapi}; body=$(curl -fsS \"$spec_url\"); echo \"$body\" | grep -q -- \"url: /api\" && ! echo \"$body\" | grep -q -- \"story-agent-alb\"'"
   },
   "dependencies": {
-    "@story-agent/shared": "workspace:*",
     "@story-agent/markdown-renderer": "workspace:*",
+    "@story-agent/shared": "workspace:*",
     "@story-agent/text-renderer-core": "workspace:*",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
     "next": "^15.1.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "socket.io-client": "^4.8.3",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

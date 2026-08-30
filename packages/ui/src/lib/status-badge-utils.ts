@@ -4,7 +4,7 @@
  * Pure functions for mapping status values to colors, icons, and formatted strings.
  */
 
-import type { StatusBadgeVariant } from '../components/StatusBadge';
+import type { StatusBadgeVariant } from '@/components/StatusBadge';
 
 /**
  * Get color code for a status string

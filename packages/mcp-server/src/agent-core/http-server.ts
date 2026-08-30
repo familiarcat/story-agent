@@ -82,7 +82,7 @@ export async function handleAgentRequest(req: IncomingMessage, res: ServerRespon
   if (await handleChatRequest(req, res)) return true; // canonical Quark-optimized /chat
   if (await handleAhaRequest(req, res)) return true;  // Aha products (single source, cached)
   const url = (req.url || '').split('?')[0];
-  if (!(url === '/agent' || url === '/agent/' || url === '/agent/approve' || url === '/agent/health' || url === '/symphony' || url === '/cost' || url === '/learnings')) return false;
+  if (!(url === '/agent' || url === '/agent/' || url === '/agent/approve' || url === '/agent/health' || url === '/ready' || url === '/symphony' || url === '/cost' || url === '/learnings')) return false;
   await serveAgent(req, res, url);
   return true;
 }
@@ -107,6 +107,18 @@ async function serveAgent(req: IncomingMessage, res: ServerResponse, url: string
     if (req.method === 'GET' && url === '/agent/health') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' });
       res.end(JSON.stringify({ ok: true, service: 'story-agent-agent', port, gitSha: GIT_SHA, startedAt: SERVER_STARTED_AT }));
+      return;
+    }
+    // TASK 4 (O'Brien): /ready endpoint for pre-flight health checks (Phase 7 autonomy).
+    if (req.method === 'GET' && url === '/ready') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff' });
+      res.end(JSON.stringify({
+        ready: true,
+        server: process.env.MCP_SERVER_TYPE || 'local',
+        uptime_ms: Math.round(process.uptime() * 1000),
+        timestamp: new Date().toISOString(),
+        version: '7.0.0'
+      }));
       return;
     }
     // Cost Observatory — aggregate spend by provider/model + savings vs an Anthropic-frontier baseline.

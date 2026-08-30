@@ -6,7 +6,7 @@ import {
   cosineSimilarity,
   embed,
   EMBEDDING_DIMENSION,
-} from './embedding.js';
+} from '.';
 
 describe('toEmbedding', () => {
   it('produces a vector of the default dimension (64)', () => {

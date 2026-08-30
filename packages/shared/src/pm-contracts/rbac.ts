@@ -96,10 +96,18 @@ export function canUserPerformAction(
     return false;
   }
 
-  // Check matrix
-  const permission = DEFAULT_RBAC_MATRIX.find(
-    (p) => p.role === role && p.entityType === entityType && (p.field === '*' || p.field === field)
+  // Check matrix - prioritize specific field over wildcard
+  const permissions = DEFAULT_RBAC_MATRIX.filter(
+    (p) => p.role === role && p.entityType === entityType
   );
+
+  // First try to find a specific field permission
+  let permission = permissions.find((p) => p.field === field);
+  
+  // If no specific field permission, try wildcard
+  if (!permission) {
+    permission = permissions.find((p) => p.field === '*');
+  }
 
   if (!permission) {
     return false;

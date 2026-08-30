@@ -62,32 +62,30 @@ describe('PDF Processor', () => {
   });
 
   describe('isImageOnlyPage', () => {
-    it('should detect image-only pages (low text/area ratio)', () => {
-      // Mock page with minimal text
+    it('should detect image-only pages (low text/area ratio)', async () => {
+      // Empty text = image-only (Heuristic 1)
       const imagePage = {
-        pageIndex: 0,
-        width: 612,
-        height: 792,
-        text: 'Page 1', // Very little text
-        textArea: 50, // Small text area
+        pageText: '', // No text
+        textContent: { items: [] },
+        page: undefined,
       };
 
-      const result = isImageOnlyPage(imagePage);
-      expect(result).toBe(true); // Text/area ratio < 0.1
+      const result = await isImageOnlyPage(imagePage);
+      expect(result).toBe(true);
     });
 
-    it('should detect pages with embedded text (high text/area ratio)', () => {
-      // Mock page with significant text
+    it('should detect pages with embedded text (high text/area ratio)', async () => {
+      // Many text items with meaningful text = not image-only
       const textPage = {
-        pageIndex: 0,
-        width: 612,
-        height: 792,
-        text: 'This is a full page of text content. Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-        textArea: 70000, // Large text area
+        pageText: 'This is a full page of text content with lots and lots of words in it',
+        textContent: {
+          items: Array(100).fill({ str: 'word' }), // Many items
+        },
+        page: undefined,
       };
 
-      const result = isImageOnlyPage(textPage);
-      expect(result).toBe(false); // Text/area ratio > 0.1
+      const result = await isImageOnlyPage(textPage);
+      expect(result).toBe(false);
     });
   });
 

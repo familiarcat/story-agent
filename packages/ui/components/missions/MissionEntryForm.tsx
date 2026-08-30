@@ -63,7 +63,7 @@ export const MissionEntryForm: React.FC = () => {
           throw new Error(`Classification failed: ${res.statusText}`);
         }
 
-        const data: MissionClassification = await res.json();
+        const data: MissionClassificationResponse = await res.json();
         setClassification(data);
       } catch (err) {
         console.error('Classification failed:', err);

@@ -5,7 +5,7 @@
  * No side effects; suitable for unit testing.
  */
 
-import type { HierarchyContext, HierarchyLevel } from '../components/HierarchyBreadcrumb';
+import type { HierarchyContext, HierarchyLevel } from '@/components/HierarchyBreadcrumb';
 
 /**
  * Generate a breadcrumb path from a hierarchy context

@@ -16,10 +16,10 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
-import { MissionExecutionLog } from '@story-agent/shared/mission-execution-stream';
+import { MissionExecutionLogEntry } from '@story-agent/shared/mission-execution-stream';
 
 interface MissionStreamHookReturn {
-  logs: MissionExecutionLog[];
+  logs: MissionExecutionLogEntry[];
   isConnected: boolean;
   isPaused: boolean;
   pause: () => void;
@@ -28,7 +28,7 @@ interface MissionStreamHookReturn {
 }
 
 export function useMissionStream(missionId: string | undefined): MissionStreamHookReturn {
-  const [logs, setLogs] = useState<MissionExecutionLog[]>([]);
+  const [logs, setLogs] = useState<MissionExecutionLogEntry[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export function useMissionStream(missionId: string | undefined): MissionStreamHo
       });
 
       // Handle log entries
-      socket.on('log', (logEntry: MissionExecutionLog) => {
+      socket.on('log', (logEntry: MissionExecutionLogEntry) => {
         setLogs((prev) => [...prev, logEntry]);
       });
 

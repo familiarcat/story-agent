@@ -31,8 +31,10 @@ export function NavDropdowns() {
     };
   }, [open]);
 
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string) => {
+    const path = pathname || '/';
+    return href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
+  };
 
   return (
     <div ref={rootRef} style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>

@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import type { WorfGateAction } from '@/app/observation-lounge/components/types';
+import type { WorfGateAction } from '../../app/observation-lounge/components/types';
 
 export interface WorfGateModalProps {
   action: WorfGateAction | null;

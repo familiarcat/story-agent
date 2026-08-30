@@ -1,4 +1,4 @@
-import { DOMAIN_GROUPS, HUB } from '../components/domains';
+import { DOMAIN_GROUPS, HUB } from '@/components/domains';
 import { lcars, CREW_ROSTER, RAIL_COLORS } from '../lib/lcars';
 
 /**

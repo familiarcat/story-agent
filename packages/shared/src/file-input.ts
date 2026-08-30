@@ -48,7 +48,11 @@ export function getFileName(file: FileInput): string {
   if (isImageInput(file)) {
     return file.image.type === 'url' ? new URL(file.image.url).pathname.split('/').pop() ?? 'image' : 'image';
   }
-  return file.pdf.fileName ?? 'document.pdf';
+  if (isPdfInput(file)) {
+    return file.pdf.fileName ?? 'document.pdf';
+  }
+  // Fallback for defensive programming
+  return 'file';
 }
 
 /**

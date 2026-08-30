@@ -21,7 +21,7 @@ export interface UseFileAttachmentReturn {
   handleAttach: (file: File) => Promise<void>;
   removeFile: (id: string) => void;
   clearFiles: () => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   triggerFileInput: () => void;
 }
 

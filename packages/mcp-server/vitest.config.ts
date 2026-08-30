@@ -26,5 +26,9 @@ export default defineConfig({
     include: getIncludePattern(),
     mockReset: true,
     restoreMocks: true,
+    env: {
+      VITEST: 'true',
+      NODE_ENV: 'test',
+    },
   },
 });

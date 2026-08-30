@@ -130,8 +130,8 @@ function renderStructuredMemoryContent(content: string, tone: string) {
 
 function CrewMemoriesContent() {
   const searchParams = useSearchParams();
-  const [selectedCrew, setSelectedCrew] = useState(searchParams.get('crew') || 'worf');
-  const [selectedProject, setSelectedProject] = useState<string | null>(searchParams.get('project') || null);
+  const [selectedCrew, setSelectedCrew] = useState(searchParams?.get('crew') || 'worf');
+  const [selectedProject, setSelectedProject] = useState<string | null>(searchParams?.get('project') || null);
   const [memories, setMemories] = useState<CrewMemory[]>([]);
   const [stats, setStats] = useState<MemoryStats[]>([]);
   const [loading, setLoading] = useState(false);

@@ -20,7 +20,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useMissionStream } from './useMissionStream.hook';
-import { MissionExecutionLog } from '@story-agent/shared/mission-execution-stream';
+import { MissionExecutionLogEntry } from '@story-agent/shared/mission-execution-stream';
 import styles from './MissionLiveExecutionFeed.module.css';
 
 interface MissionLiveExecutionFeedProps {
@@ -197,7 +197,7 @@ export const MissionLiveExecutionFeed: React.FC<MissionLiveExecutionFeedProps> =
 /**
  * Individual log entry component
  */
-const LogEntry: React.FC<{ log: MissionExecutionLog }> = ({ log }) => {
+const LogEntry: React.FC<{ log: MissionExecutionLogEntry }> = ({ log }) => {
   const getLevelColor = (level: string): string => {
     switch (level) {
       case 'action':

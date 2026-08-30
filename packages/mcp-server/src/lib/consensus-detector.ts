@@ -232,18 +232,17 @@ const testOpeningPositions: CrewContribution[] = [
   },
 ];
 
-// Run test
-const consensus = assessConsensus(testOpeningPositions);
-console.log('Consensus Assessment:');
-console.log(JSON.stringify(consensus, null, 2));
-console.log(`\n→ Recommendation: ${consensus.recommendation.toUpperCase()}`);
-console.log(`→ Agreement: ${(consensus.agreementRatio * 100).toFixed(0)}%`);
-console.log(`→ Reasoning: ${consensus.reasoning}`);
-
-if (consensus.recommendation === 'skip_reflection') {
-  const cost = testOpeningPositions.reduce((sum, p) => sum + p.cost, 0);
-  console.log(`\n✓ Early exit! Cost: $${cost.toFixed(5)}`);
-  console.log(`  Saved: 2-3 reflection rounds × 11 crew = $${(0.00015 * 11 * 2).toFixed(5)} (avg)`);
-} else {
-  console.log(`\n→ Continue with reflection rounds...`);
-}
+// Test code commented out to avoid running at module load time
+// const consensus = assessConsensus(testOpeningPositions);
+// console.log('Consensus Assessment:');
+// console.log(JSON.stringify(consensus, null, 2));
+// console.log(`\n→ Recommendation: ${consensus.recommendation.toUpperCase()}`);
+// console.log(`→ Agreement: ${(consensus.agreementRatio * 100).toFixed(0)}%`);
+// console.log(`→ Reasoning: ${consensus.reasoning}`);
+// if (consensus.recommendation === 'skip_reflection') {
+//   const cost = testOpeningPositions.reduce((sum, p) => sum + p.cost, 0);
+//   console.log(`\n✓ Early exit! Cost: $${cost.toFixed(5)}`);
+//   console.log(`  Saved: 2-3 reflection rounds × 11 crew = $${(0.00015 * 11 * 2).toFixed(5)} (avg)`);
+// } else {
+//   console.log(`\n→ Continue with reflection rounds...`);
+// }

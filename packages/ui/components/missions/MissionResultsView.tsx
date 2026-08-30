@@ -34,7 +34,7 @@ export const MissionResultsView: React.FC<MissionResultsViewProps> = ({
   const router = useRouter();
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
 
-  const config = MISSION_CATEGORY_CONFIG[mission.category];
+  const config = MISSION_CATEGORY_CONFIG[mission.autoClassification.category as keyof typeof MISSION_CATEGORY_CONFIG];
   const totalFindings = mission.findings?.length || 0;
 
   // Group findings by severity
@@ -66,7 +66,7 @@ export const MissionResultsView: React.FC<MissionResultsViewProps> = ({
 
         <div className={styles.summaryCard}>
           <div className={styles.cardLabel}>Total Cost</div>
-          <div className={styles.cardValue}>${mission.actualCostUsd?.toFixed(4) || '0.0008'}</div>
+          <div className={styles.cardValue}>${mission.cost.actualUSD?.toFixed(4) || '0.0008'}</div>
         </div>
 
         <div className={styles.summaryCard}>
@@ -154,8 +154,8 @@ export const MissionResultsView: React.FC<MissionResultsViewProps> = ({
       )}
 
       {/* Escalation (if needed) */}
-      {mission.escalationNeeded && mission.escalationOptions && (
-        <EscalationPrompt options={mission.escalationOptions} missionId={mission.id} />
+      {mission.escalation?.isNeeded && mission.escalation?.options && (
+        <EscalationPrompt options={mission.escalation.options} missionId={mission.id} />
       )}
 
       {/* Suggested Follow-Ups */}
@@ -165,7 +165,7 @@ export const MissionResultsView: React.FC<MissionResultsViewProps> = ({
           <div className={styles.followUpGrid}>
             {mission.suggestedNextMissions.map((nextMission, i) => (
               <div key={i} className={styles.followUpCard}>
-                <div className={styles.followUpTitle}>{nextMission.title}</div>
+                <div className={styles.followUpTitle}>{nextMission.category}</div>
                 <div className={styles.followUpDesc}>{nextMission.description}</div>
                 <button
                   onClick={() => onLaunchFollowUp?.(nextMission.category)}

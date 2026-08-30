@@ -604,8 +604,8 @@ ${LCARS_MARKDOWN_CSS}
     }
 
     .file-processing.complete {
-      color: var(--sa-success, #4ec9b0);
-      border-color: var(--sa-success, #4ec9b0);
+      color: var(--sa-ok, #4ec9b0);
+      border-color: var(--sa-ok, #4ec9b0);
     }
 
     .file-processing.error {

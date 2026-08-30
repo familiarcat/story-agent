@@ -12,7 +12,7 @@ import {
   getConflictResolutionStrategy,
   createConflictAuditEntry,
 } from '@story-agent/shared/pm-contracts';
-import { VALID_FIXTURES } from '../fixtures/pm-contracts/test-fixtures';
+import { VALID_FIXTURES } from './fixtures/pm-contracts/test-fixtures';
 
 describe('Conflict Resolution', () => {
   describe('Conflict Detection', () => {

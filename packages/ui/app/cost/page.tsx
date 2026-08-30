@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { lcars } from '../../lib/lcars';
-import { headlineSystem, normalizeModelLabel } from '../../lib/headline-system';
-import { LcarsScreen, LcarsPanel, LcarsStat, LcarsBar } from '../../components/Lcars';
+import { lcars } from '@/lib/lcars';
+import { headlineSystem, normalizeModelLabel } from '@/lib/headline-system';
+import { LcarsScreen, LcarsPanel, LcarsStat, LcarsBar } from '@/components/Lcars';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 import type { LaneStatusMarker } from '@story-agent/shared';
