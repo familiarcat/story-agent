@@ -99,6 +99,12 @@ export function startAgentHttpServer(port: number) {
   server.listen(port, '0.0.0.0', () => {
     process.stderr.write(`story-agent Agent HTTP server listening on http://0.0.0.0:${port}/agent\n`);
   });
+  
+  // Debug: log when the server actually starts listening
+  server.on('listening', () => {
+    process.stderr.write(`[DEBUG] Server emitted 'listening' event on port ${port}\n`);
+  });
+  
   return server;
 }
 
