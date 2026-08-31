@@ -32,7 +32,6 @@ export * from './policy-checksum';
 export * from './control-lane';
 export * from './entitlements';
 export * from './entitlement-sync';
-export * from './delegation-hook';
 export * from './delegation-router';
 export * from './iam-identity-center';
 

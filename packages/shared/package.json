@@ -6,120 +6,149 @@
   "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
+      "require": "./dist/src/index.js"
     },
     "./db": {
+      "types": "./dist/src/db.d.ts",
       "import": "./dist/src/db.js",
-      "types": "./dist/src/db.d.ts"
+      "require": "./dist/src/db.js"
     },
     "./aha-client": {
+      "types": "./dist/src/aha-client.d.ts",
       "import": "./dist/src/aha-client.js",
-      "types": "./dist/src/aha-client.d.ts"
+      "require": "./dist/src/aha-client.js"
     },
     "./client-security-policy": {
+      "types": "./dist/src/client-security-policy.d.ts",
       "import": "./dist/src/client-security-policy.js",
-      "types": "./dist/src/client-security-policy.d.ts"
+      "require": "./dist/src/client-security-policy.js"
     },
     "./client-registry": {
+      "types": "./dist/src/client-registry.d.ts",
       "import": "./dist/src/client-registry.js",
-      "types": "./dist/src/client-registry.d.ts"
+      "require": "./dist/src/client-registry.js"
     },
     "./worfgate-credentials": {
+      "types": "./dist/src/worfgate-credentials.d.ts",
       "import": "./dist/src/worfgate-credentials.js",
-      "types": "./dist/src/worfgate-credentials.d.ts"
+      "require": "./dist/src/worfgate-credentials.js"
     },
     "./worfgate-redact": {
+      "types": "./dist/src/worfgate-redact.d.ts",
       "import": "./dist/src/worfgate-redact.js",
-      "types": "./dist/src/worfgate-redact.d.ts"
+      "require": "./dist/src/worfgate-redact.js"
     },
     "./lounge-provenance": {
+      "types": "./dist/src/lounge-provenance.d.ts",
       "import": "./dist/src/lounge-provenance.js",
-      "types": "./dist/src/lounge-provenance.d.ts"
+      "require": "./dist/src/lounge-provenance.js"
     },
     "./lcars-markdown": {
+      "types": "./dist/src/lcars-markdown.d.ts",
       "import": "./dist/src/lcars-markdown.js",
-      "types": "./dist/src/lcars-markdown.d.ts"
+      "require": "./dist/src/lcars-markdown.js"
     },
     "./worfgate-credential-providers": {
+      "types": "./dist/src/worfgate-credential-providers.d.ts",
       "import": "./dist/src/worfgate-credential-providers.js",
-      "types": "./dist/src/worfgate-credential-providers.d.ts"
+      "require": "./dist/src/worfgate-credential-providers.js"
     },
     "./iam-identity-center": {
+      "types": "./dist/src/iam-identity-center.d.ts",
       "import": "./dist/src/iam-identity-center.js",
-      "types": "./dist/src/iam-identity-center.d.ts"
+      "require": "./dist/src/iam-identity-center.js"
     },
     "./skill-theory": {
+      "types": "./dist/src/skill-theory.d.ts",
       "import": "./dist/src/skill-theory.js",
-      "types": "./dist/src/skill-theory.d.ts"
+      "require": "./dist/src/skill-theory.js"
     },
     "./agent-modes": {
+      "types": "./dist/src/agent-modes.d.ts",
       "import": "./dist/src/agent-modes.js",
-      "types": "./dist/src/agent-modes.d.ts"
+      "require": "./dist/src/agent-modes.js"
     },
     "./selection-contract": {
+      "types": "./dist/src/selection-contract.d.ts",
       "import": "./dist/src/selection-contract.js",
-      "types": "./dist/src/selection-contract.d.ts"
+      "require": "./dist/src/selection-contract.js"
     },
     "./aha-credentials": {
+      "types": "./dist/src/aha-credentials.d.ts",
       "import": "./dist/src/aha-credentials.js",
-      "types": "./dist/src/aha-credentials.d.ts"
+      "require": "./dist/src/aha-credentials.js"
     },
     "./aha-events": {
+      "types": "./dist/src/aha-events.d.ts",
       "import": "./dist/src/aha-events.js",
-      "types": "./dist/src/aha-events.d.ts"
+      "require": "./dist/src/aha-events.js"
     },
     "./ui-tokens": {
+      "types": "./dist/src/ui-tokens.d.ts",
       "import": "./dist/src/ui-tokens.js",
-      "types": "./dist/src/ui-tokens.d.ts"
+      "require": "./dist/src/ui-tokens.js"
     },
     "./design-doctrine": {
+      "types": "./dist/src/design-doctrine.d.ts",
       "import": "./dist/src/design-doctrine.js",
-      "types": "./dist/src/design-doctrine.d.ts"
+      "require": "./dist/src/design-doctrine.js"
     },
     "./design-theme-layers": {
+      "types": "./dist/src/design-theme-layers.d.ts",
       "import": "./dist/src/design-theme-layers.js",
-      "types": "./dist/src/design-theme-layers.d.ts"
+      "require": "./dist/src/design-theme-layers.js"
     },
     "./client-brand-themes": {
+      "types": "./dist/src/client-brand-themes.d.ts",
       "import": "./dist/src/client-brand-themes.js",
-      "types": "./dist/src/client-brand-themes.d.ts"
+      "require": "./dist/src/client-brand-themes.js"
     },
     "./workflow-status": {
+      "types": "./dist/src/workflow-status.d.ts",
       "import": "./dist/src/workflow-status.js",
-      "types": "./dist/src/workflow-status.d.ts"
+      "require": "./dist/src/workflow-status.js"
     },
     "./system-status": {
+      "types": "./dist/src/system-status.d.ts",
       "import": "./dist/src/system-status.js",
-      "types": "./dist/src/system-status.d.ts"
+      "require": "./dist/src/system-status.js"
     },
     "./pm-contracts": {
+      "types": "./dist/src/pm-contracts/index.d.ts",
       "import": "./dist/src/pm-contracts/index.js",
-      "types": "./dist/src/pm-contracts/index.d.ts"
+      "require": "./dist/src/pm-contracts/index.js"
     },
     "./pm-contracts/rbac": {
+      "types": "./dist/src/pm-contracts/rbac.d.ts",
       "import": "./dist/src/pm-contracts/rbac.js",
-      "types": "./dist/src/pm-contracts/rbac.d.ts"
+      "require": "./dist/src/pm-contracts/rbac.js"
     },
     "./pm-contracts/state-machine": {
+      "types": "./dist/src/pm-contracts/state-machine.d.ts",
       "import": "./dist/src/pm-contracts/state-machine.js",
-      "types": "./dist/src/pm-contracts/state-machine.d.ts"
+      "require": "./dist/src/pm-contracts/state-machine.js"
     },
     "./pm-contracts/schemas": {
+      "types": "./dist/src/pm-contracts/schemas.d.ts",
       "import": "./dist/src/pm-contracts/schemas.js",
-      "types": "./dist/src/pm-contracts/schemas.d.ts"
+      "require": "./dist/src/pm-contracts/schemas.js"
     },
     "./pm-contracts/conflict-resolution": {
+      "types": "./dist/src/pm-contracts/conflict-resolution.d.ts",
       "import": "./dist/src/pm-contracts/conflict-resolution.js",
-      "types": "./dist/src/pm-contracts/conflict-resolution.d.ts"
+      "require": "./dist/src/pm-contracts/conflict-resolution.js"
     },
     "./mission-types": {
+      "types": "./dist/src/mission-types.d.ts",
       "import": "./dist/src/mission-types.js",
-      "types": "./dist/src/mission-types.d.ts"
+      "require": "./dist/src/mission-types.js"
     },
     "./mission-execution-stream": {
+      "types": "./dist/src/mission-execution-stream.d.ts",
       "import": "./dist/src/mission-execution-stream.js",
-      "types": "./dist/src/mission-execution-stream.d.ts"
+      "require": "./dist/src/mission-execution-stream.js"
     }
   },
   "scripts": {
