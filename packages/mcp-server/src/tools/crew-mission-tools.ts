@@ -72,14 +72,18 @@ export function registerCrewMissionTools(server: McpServer): void {
             })),
           });
 
+          const finalDecision: 'approved' | 'revise' = result.grounding.verified ? 'approved' : 'revise';
           const transcript = {
             rounds,
             consensusSummary: result.missionPlan,
-            unresolvedRisks: [],
-            finalDecision: 'approved' as const,
+            unresolvedRisks: result.grounding.unknownPaths.map((path) => `Unverified model-referenced path: ${path}`),
+            finalDecision,
             actionItems: [
               `Quark efficiency: ~$${result.efficiency.totalCostUSD} across ${result.efficiency.totalTokens} tokens`,
               `Provider mix: ${JSON.stringify(result.efficiency.perProvider)}`,
+              ...(result.grounding.verified
+                ? []
+                : ['Verify or remove ungrounded references before executing this mission plan.']),
             ],
           };
 
@@ -96,7 +100,11 @@ export function registerCrewMissionTools(server: McpServer): void {
         return {
           content: [{
             type: 'text' as const,
-            text: JSON.stringify({ status: 'success', stored: !!store, ...result }, null, 2),
+            text: JSON.stringify({
+              status: result.grounding.verified ? 'success' : 'needs_revision',
+              stored: !!store,
+              ...result,
+            }, null, 2),
           }],
         };
       } catch (error) {

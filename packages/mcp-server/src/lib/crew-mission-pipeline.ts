@@ -29,6 +29,7 @@ import {
   type ReflectionSummary,
 } from './reflection-rounds.js';
 import { buildStructuredPrompt, scoreFramingTips, FRAMING_TIP_REMINDER, type FramingScore } from './prompt-standards.js';
+import { validateMissionGrounding, type MissionGroundingReport } from './mission-grounding.js';
 
 const OR_URL = (process.env.CREW_LLM_APPROVED_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 const OR_KEY = process.env.CREW_LLM_APPROVED_KEY || '';
@@ -115,6 +116,8 @@ export interface MissionPipelineResult {
   reflections?: Array<Array<{ crewId: string; model: string; text: string; costUSD: number }>>;
   /** Did anyone actually move? Carries the anti-theater warning. */
   reflection?: ReflectionSummary;
+  /** Explicit source references that could not be verified in the current workspace. */
+  grounding: MissionGroundingReport;
   /** Interview-deck framing tips (scenario/tradeoff/eval/security≠prompt), scored per opening
    *  position — advisory coaching signal, keyed by crewId. See prompt-standards.ts. */
   framingScores?: Record<string, FramingScore>;
@@ -397,6 +400,10 @@ Flag any disagreement between the three approaches (e.g., "teams diverged on whe
 
     // For backward compatibility, use the balanced plan as the default.
     const balancedPlan = alternatives.find(a => a.label === 'balanced')?.missionPlan || alternativesResp.text;
+    const grounding = validateMissionGrounding(
+      [goals, ...contributions.map((contribution) => contribution.text), alternativesResp.text].join('\n'),
+      asyncDir,
+    );
 
     const finalTotalUSD = Number(ledger.reduce((s, r) => s + r.costUSD, 0).toFixed(5));
 
@@ -415,6 +422,7 @@ Flag any disagreement between the three approaches (e.g., "teams diverged on whe
       missionPlan: balancedPlan, topModel: TOP_MODEL,
       alternatives, variance,
       openingPositions, reflections, reflection, framingScores,
+      grounding,
     };
   } catch (err) {
     endAsync(asyncDir, asyncId, 'failed', Date.now());
