@@ -5,14 +5,20 @@
  * with tenant isolation, RBAC enforcement, and caching
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getCacheManagerInstance } from './pm-redis-cache';
 import type { Sprint, Story, Task } from '@story-agent/shared/pm-contracts';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL ?? '',
-  process.env.SUPABASE_KEY ?? ''
-);
+let supabase: SupabaseClient | null = null;
+
+function getPmDbClient(): SupabaseClient {
+  if (supabase) return supabase;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_KEY;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_KEY are required for PM database operations.');
+  supabase = createClient(url, key);
+  return supabase;
+}
 
 /**
  * Create a new sprint
@@ -23,7 +29,7 @@ export async function createSprint(
   sprintData: any
 ): Promise<Sprint> {
   // Insert into database
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_sprints')
     .insert({
       tenant_id: tenantId,
@@ -63,7 +69,7 @@ export async function getSprint(tenantId: string, sprintId: string): Promise<Spr
   }
 
   // Query database
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_sprints')
     .select('*')
     .eq('id', sprintId)
@@ -106,7 +112,7 @@ export async function updateSprint(
   };
 
   // Update
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_sprints')
     .update(updateData)
     .eq('id', sprintId)
@@ -132,7 +138,7 @@ export async function listSprints(
   tenantId: string,
   options?: any
 ): Promise<{ data: Sprint[]; total: number }> {
-  let query = supabase
+  let query = getPmDbClient()
     .from('sa_pm_sprints')
     .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId);
@@ -158,7 +164,7 @@ export async function createStory(
   userId: string,
   storyData: any
 ): Promise<Story> {
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_stories')
     .insert({
       tenant_id: tenantId,
@@ -194,7 +200,7 @@ export async function getStory(tenantId: string, storyId: string): Promise<Story
     return cached as Story;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_stories')
     .select('*')
     .eq('id', storyId)
@@ -232,7 +238,7 @@ export async function updateStory(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_stories')
     .update(updateData)
     .eq('id', storyId)
@@ -257,7 +263,7 @@ export async function listStoriesForTenant(
   tenantId: string,
   options?: any
 ): Promise<{ data: Story[]; total: number }> {
-  let query = supabase
+  let query = getPmDbClient()
     .from('sa_pm_stories')
     .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId);
@@ -283,7 +289,7 @@ export async function createTask(
   userId: string,
   taskData: any
 ): Promise<Task> {
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_tasks')
     .insert({
       tenant_id: tenantId,
@@ -318,7 +324,7 @@ export async function getTask(tenantId: string, taskId: string): Promise<Task | 
     return cached as Task;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_tasks')
     .select('*')
     .eq('id', taskId)
@@ -355,7 +361,7 @@ export async function updateTask(
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await getPmDbClient()
     .from('sa_pm_tasks')
     .update(updateData)
     .eq('id', taskId)
@@ -380,7 +386,7 @@ export async function listTasksForTenant(
   tenantId: string,
   options?: any
 ): Promise<{ data: Task[]; total: number }> {
-  let query = supabase
+  let query = getPmDbClient()
     .from('sa_pm_tasks')
     .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId);
@@ -411,7 +417,7 @@ export async function deleteStory(
     throw new Error('NOT_FOUND: Story not found');
   }
 
-  const { error } = await supabase
+  const { error } = await getPmDbClient()
     .from('sa_pm_stories')
     .delete()
     .eq('id', storyId)
@@ -438,7 +444,7 @@ export async function deleteTask(
     throw new Error('NOT_FOUND: Task not found');
   }
 
-  const { error } = await supabase
+  const { error } = await getPmDbClient()
     .from('sa_pm_tasks')
     .delete()
     .eq('id', taskId)

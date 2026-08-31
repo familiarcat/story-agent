@@ -9,10 +9,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { PdfExtractionResult } from './pdf-processor';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+function getPdfCacheClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_KEY;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_KEY are required for PDF cache operations.');
+  return createClient(url, key);
+}
 
 export interface PdfExtractionCacheEntry {
   pdf_hash: string;
@@ -50,6 +52,7 @@ export async function getPdfExtractionCache(
   clientId: string,
 ): Promise<PdfExtractionResult | null> {
   try {
+    const supabase = getPdfCacheClient();
     const { data, error } = await supabase
       .from('sa_pdf_extraction_cache')
       .select('*')
@@ -100,6 +103,7 @@ export async function storePdfExtractionCache(
   fileSize?: number,
 ): Promise<boolean> {
   try {
+    const supabase = getPdfCacheClient();
     const { error } = await supabase
       .from('sa_pdf_extraction_cache')
       .insert({
@@ -136,6 +140,7 @@ export async function storePdfExtractionCache(
  */
 export async function cleanupExpiredPdfCache(clientId?: string): Promise<boolean> {
   try {
+    const supabase = getPdfCacheClient();
     let query = supabase
       .from('sa_pdf_extraction_cache')
       .delete()
@@ -164,6 +169,7 @@ export async function cleanupExpiredPdfCache(clientId?: string): Promise<boolean
  */
 export async function getPdfCacheStats(clientId?: string): Promise<CacheStats | null> {
   try {
+    const supabase = getPdfCacheClient();
     let query = supabase
       .from('sa_pdf_extraction_cache')
       .select('file_size, access_count, created_at, accessed_at', { count: 'exact' });
