@@ -652,14 +652,16 @@ export async function addAttachment(
  */
 export async function addComment(
   storyId: UUID,
-  input: CreateCommentInput,
-  userId: UUID
+  content: string,
+  userId: UUID,
+  parentCommentId?: UUID | null
 ): Promise<PMStoryComment> {
   const { data, error } = await supabase
     .from('sa_story_comments')
     .insert({
       story_id: storyId,
-      content: input.content,
+      content: content,
+      parent_comment_id: parentCommentId || null,
       created_by: userId,
     })
     .select()
@@ -667,6 +669,66 @@ export async function addComment(
 
   if (error) throw new Error(`Failed to add comment: ${error.message}`);
   return data;
+}
+
+/**
+ * List attachments for a story
+ */
+export async function listAttachments(
+  storyId: UUID,
+  options: { offset?: number; limit?: number } = {}
+): Promise<ListResponse<PMStoryAttachment>> {
+  const offset = options.offset ?? 0;
+  const limit = options.limit ?? 50;
+
+  const { data, error, count } = await supabase
+    .from('sa_story_attachments')
+    .select('*', { count: 'exact' })
+    .eq('story_id', storyId)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw new Error(`Failed to list attachments: ${error.message}`);
+  return {
+    items: data || [],
+    total: count ?? 0,
+    offset,
+    limit,
+  };
+}
+
+/**
+ * List comments for a story (supports threaded queries)
+ */
+export async function listComments(
+  storyId: UUID,
+  options: { offset?: number; limit?: number; threadOnly?: boolean } = {}
+): Promise<ListResponse<PMStoryComment>> {
+  const offset = options.offset ?? 0;
+  const limit = options.limit ?? 50;
+  const threadOnly = options.threadOnly ?? false;
+
+  let query = supabase
+    .from('sa_story_comments')
+    .select('*', { count: 'exact' })
+    .eq('story_id', storyId);
+
+  // Filter to top-level comments only if threadOnly=true
+  if (threadOnly) {
+    query = query.is('parent_comment_id', true);
+  }
+
+  const { data, error, count } = await query
+    .order('created_at', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw new Error(`Failed to list comments: ${error.message}`);
+  return {
+    items: data || [],
+    total: count ?? 0,
+    offset,
+    limit,
+  };
 }
 
 // ============================================================================
@@ -745,7 +807,9 @@ export const PMClient = {
 
   // Attachments & Comments
   addAttachment,
+  listAttachments,
   addComment,
+  listComments,
 
   // Metrics
   getProjectMetrics,
