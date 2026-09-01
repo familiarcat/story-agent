@@ -149,6 +149,21 @@
       "types": "./dist/src/mission-execution-stream.d.ts",
       "import": "./dist/src/mission-execution-stream.js",
       "require": "./dist/src/mission-execution-stream.js"
+    },
+    "./pm-types": {
+      "types": "./dist/src/pm-types.d.ts",
+      "import": "./dist/src/pm-types.js",
+      "require": "./dist/src/pm-types.js"
+    },
+    "./pm-validation": {
+      "types": "./dist/src/pm-validation.d.ts",
+      "import": "./dist/src/pm-validation.js",
+      "require": "./dist/src/pm-validation.js"
+    },
+    "./pm-client": {
+      "types": "./dist/src/pm-client.d.ts",
+      "import": "./dist/src/pm-client.js",
+      "require": "./dist/src/pm-client.js"
     }
   },
   "scripts": {

@@ -48,7 +48,7 @@ export async function writeWorkspaceFile(relativePath: string, content: string) 
 
   const targetUri = resolveSafeWorkspaceUri(relativePath);
 
-  await vscode.workspace.fs.writeFile(targetUri, Buffer.from(content, 'utf8'));
+  await vscode.workspace.fs.writeFile(targetUri, new TextEncoder().encode(content));
   return { success: true, path: targetUri.fsPath };
 }
 
@@ -58,5 +58,5 @@ export async function writeWorkspaceFile(relativePath: string, content: string) 
 export async function readWorkspaceFile(relativePath: string): Promise<string> {
   const targetUri = resolveSafeWorkspaceUri(relativePath);
   const fileData = await vscode.workspace.fs.readFile(targetUri);
-  return Buffer.from(fileData).toString('utf8');
+  return new TextDecoder('utf8').decode(fileData);
 }
