@@ -6,7 +6,7 @@ import {
   evaluateControlledDataAccess,
   inferClientIdFromStory,
   redactControlledStoryFields,
-  PmSchemaValidator,
+  PMValidation,
 } from '@story-agent/shared';
 import { createStory } from '@/lib/pm-db';
 
@@ -20,14 +20,16 @@ export async function POST(request: NextRequest) {
     const userId = request.headers.get('x-user-id') ?? 'anonymous-user';
 
     const body = await request.json();
-    const validationResult = PmSchemaValidator.validateStory(body);
-
-    if (!validationResult.valid) {
+    
+    // Validate input using Zod schema
+    try {
+      PMValidation.CreateStorySchema.parse(body);
+    } catch (parseError: any) {
       return NextResponse.json(
         {
           success: false,
           error: 'Invalid input',
-          details: validationResult.errors,
+          details: parseError.errors || parseError.message,
         },
         { status: 400 }
       );

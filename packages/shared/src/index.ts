@@ -16,7 +16,8 @@ export * from './pm-adapters/jira-adapter';
 export * from './pm-adapters/monday-adapter';
 export * from './pm-adapters/azure-devops-adapter';
 export * from './pm-adapters/types';
-export * from './pm-contracts';
+export * from './pm-types';
+export * from './pm-validation';
 
 // Aha integration
 export * from './aha-client';
