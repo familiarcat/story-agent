@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { PMStory } from '@story-agent/shared';
-
-/** UUID type alias */
-type UUID = string;
+import { useState, useCallback, useEffect } from 'react';
+import { PMStory, PMStoryAttachment, PMStoryComment, PMAuditLog } from '@story-agent/shared';
+import { useStoryWithTasks, useAttachments, useComments, useAuditLog } from '../../hooks/pm';
 import { TaskKanban } from './TaskKanban';
 import { CommentThread } from './CommentThread';
 
@@ -23,17 +21,31 @@ export interface StoryDetailProps {
 export function StoryDetail({ storyId, onClose }: StoryDetailProps) {
   const [editMode, setEditMode] = useState(false);
   const [showAuditTrail, setShowAuditTrail] = useState(false);
+  const { story, loading: storyLoading } = useStoryWithTasks(storyId);
+  const { attachments, loading: attachmentsLoading } = useAttachments(storyId);
+  const { comments, loading: commentsLoading } = useComments(storyId);
+  const { auditLogs, loading: auditLoading } = useAuditLog(storyId);
 
-  return (
+  const handleUpdateStory = async (updates: Partial<PMStory>) => {
+    try {
+      const response = await fetch(`/api/pm/stories/${storyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (!response.ok) throw new Error('Failed to update story');
+      setEditMode(false);
+    } catch (err) {
+      console.error('Error updating story:', err);
+    }
+  };
     <div className="story-detail">
       <div className="story-detail-header">
         <div className="story-header-content">
-          {/* TODO: Integrate useStoryWithTasks hook */}
-          <h1>Story Title</h1>
+          <h1>{story.title}</h1>
           <div className="story-badges">
-            {/* Priority badge */}
-            {/* State badge */}
-            {/* Blocked indicator */}
+            <span className="badge priority">{story.priority}</span>
+            <span className="badge state">{story.state}</span>
           </div>
         </div>
         {onClose && (
@@ -45,7 +57,7 @@ export function StoryDetail({ storyId, onClose }: StoryDetailProps) {
 
       <div className="story-detail-content">
         <div className="story-main">
-          <StoryMetadata storyId={storyId} editMode={editMode} />
+          <StoryMetadata story={story} editMode={editMode} onUpdate={handleUpdateStory} />
 
           <section className="story-section">
             <h3>Tasks</h3>
@@ -54,7 +66,7 @@ export function StoryDetail({ storyId, onClose }: StoryDetailProps) {
 
           <section className="story-section">
             <h3>Attachments</h3>
-            <AttachmentsSection storyId={storyId} />
+            <AttachmentsSection storyId={storyId} attachments={attachments} loading={attachmentsLoading} />
           </section>
 
           <section className="story-section">
@@ -73,7 +85,7 @@ export function StoryDetail({ storyId, onClose }: StoryDetailProps) {
             </button>
           </div>
 
-          {showAuditTrail && <AuditTrail storyId={storyId} />}
+          {showAuditTrail && <AuditTrail auditLogs={auditLogs} loading={auditLoading} />}
         </div>
       </div>
     </div>
@@ -86,18 +98,22 @@ export function StoryDetail({ storyId, onClose }: StoryDetailProps) {
  */
 
 interface StoryMetadataProps {
-  storyId: UUID;
+  story: PMStory;
   editMode: boolean;
+  onUpdate: (updates: Partial<PMStory>) => Promise<void>;
 }
 
-function StoryMetadata({ storyId, editMode }: StoryMetadataProps) {
-  const [description, setDescription] = useState('');
-  const [storyPoints, setStoryPoints] = useState(0);
-  const [sizeCategory, setSizeCategory] = useState('medium');
+function StoryMetadata({ story, editMode, onUpdate }: StoryMetadataProps) {
+  const [editData, setEditData] = useState<Partial<PMStory>>(story);
+  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    // TODO: Integrate useMutation(updateStory)
-    console.log('Save story metadata:', { description, storyPoints, sizeCategory });
+    setSaving(true);
+    try {
+      await onUpdate(editData);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -106,46 +122,46 @@ function StoryMetadata({ storyId, editMode }: StoryMetadataProps) {
         <label>Description</label>
         {editMode ? (
           <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={editData.description || ''}
+            onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             placeholder="Story description..."
           />
         ) : (
-          <p>{description || 'No description'}</p>
+          <p>{story.description || 'No description'}</p>
         )}
       </div>
 
       <div className="metadata-field">
-        <label>Story Points</label>
+        <label>Priority</label>
         {editMode ? (
-          <input
-            type="number"
-            value={storyPoints}
-            onChange={(e) => setStoryPoints(parseInt(e.target.value) || 0)}
-          />
-        ) : (
-          <p>{storyPoints}</p>
-        )}
-      </div>
-
-      <div className="metadata-field">
-        <label>Size Category</label>
-        {editMode ? (
-          <select value={sizeCategory} onChange={(e) => setSizeCategory(e.target.value)}>
-            <option value="xs">Extra Small</option>
-            <option value="small">Small</option>
+          <select value={editData.priority || ''} onChange={(e) => setEditData({ ...editData, priority: e.target.value })}>
+            <option value="low">Low</option>
             <option value="medium">Medium</option>
-            <option value="large">Large</option>
-            <option value="xl">Extra Large</option>
+            <option value="high">High</option>
           </select>
         ) : (
-          <p>{sizeCategory}</p>
+          <p>{story.priority}</p>
+        )}
+      </div>
+
+      <div className="metadata-field">
+        <label>State</label>
+        {editMode ? (
+          <select value={editData.state || ''} onChange={(e) => setEditData({ ...editData, state: e.target.value })}>
+            <option value="draft">Draft</option>
+            <option value="ready">Ready</option>
+            <option value="in_progress">In Progress</option>
+            <option value="review">Review</option>
+            <option value="complete">Complete</option>
+          </select>
+        ) : (
+          <p>{story.state}</p>
         )}
       </div>
 
       {editMode && (
-        <button onClick={handleSave} className="btn-primary">
-          Save Changes
+        <button onClick={handleSave} disabled={saving} className="btn-primary">
+          {saving ? 'Saving...' : 'Save Changes'}
         </button>
       )}
     </div>
@@ -159,46 +175,63 @@ function StoryMetadata({ storyId, editMode }: StoryMetadataProps) {
 
 interface AttachmentsSectionProps {
   storyId: UUID;
+  attachments: PMStoryAttachment[];
+  loading: boolean;
 }
 
-function AttachmentsSection({ storyId }: AttachmentsSectionProps) {
-  const [dragActive, setDragActive] = useState(false);
+function AttachmentsSection({ storyId, attachments, loading }: AttachmentsSectionProps) {
+  const [uploading, setUploading] = useState(false);
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files) return;
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await fetch(`/api/pm/attachments?story_id=${storyId}`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!response.ok) throw new Error('Failed to upload');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+    } finally {
+      setUploading(false);
     }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    // TODO: Integrate file upload logic
-    console.log('Files dropped:', e.dataTransfer.files);
   };
 
   return (
     <div className="attachments-section">
-      <div
-        className={`upload-zone ${dragActive ? 'active' : ''}`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <p>Drag and drop files here or click to upload</p>
-        <input type="file" multiple style={{ display: 'none' }} />
+      <div className="upload-zone">
+        <label>
+          <input
+            type="file"
+            multiple
+            onChange={(e) => handleFileUpload(e.target.files)}
+            disabled={uploading}
+          />
+          {uploading ? 'Uploading...' : 'Click to upload files'}
+        </label>
       </div>
 
       <div className="attachments-list">
-        {/* TODO: Integrate useAttachments hook */}
-        <p className="empty-state">No attachments</p>
-      </div>
+        {loading ? (
+          <p>Loading attachments...</p>
+        ) : attachments.length === 0 ? (
+          <p className="empty-state">No attachments</p>
+        ) : (
+          <ul>
+            {attachments.map((att) => (
+              <li key={att.id}>
+                <a href={att.url} target="_blank" rel="noreferrer">
+                  {att.filename}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
     </div>
   );
 }
@@ -209,16 +242,30 @@ function AttachmentsSection({ storyId }: AttachmentsSectionProps) {
  */
 
 interface AuditTrailProps {
-  storyId: UUID;
+  auditLogs: PMAuditLog[];
+  loading: boolean;
 }
 
-function AuditTrail({ storyId }: AuditTrailProps) {
+function AuditTrail({ auditLogs, loading }: AuditTrailProps) {
   return (
     <div className="audit-trail">
       <h4>Change History</h4>
-      {/* TODO: Integrate useAuditLog hook */}
       <div className="audit-entries">
-        <p className="empty-state">No changes recorded</p>
+        {loading ? (
+          <p>Loading history...</p>
+        ) : auditLogs.length === 0 ? (
+          <p className="empty-state">No changes recorded</p>
+        ) : (
+          <ul>
+            {auditLogs.map((log) => (
+              <li key={log.id} className="audit-entry">
+                <span className="action">{log.action}</span>
+                <span className="user">by {log.changed_by}</span>
+                <span className="timestamp">{new Date(log.created_at).toLocaleDateString()}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

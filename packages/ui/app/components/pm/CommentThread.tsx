@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { PMStoryComment } from '@story-agent/shared';
+import { useComments } from '../../hooks/pm';
 
 /** UUID type alias */
 type UUID = string;
@@ -18,22 +19,21 @@ export interface CommentThreadProps {
 }
 
 export function CommentThread({ storyId }: CommentThreadProps) {
-  const [comments, setComments] = useState<PMStoryComment[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { comments, loading } = useComments(storyId);
 
   const handleAddComment = useCallback(
     async (content: string) => {
-      setLoading(true);
       setError(null);
-
       try {
-        // TODO: Integrate useMutation(addComment)
-        console.log('Add comment:', { content, storyId });
+        const response = await fetch('/api/pm/comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ story_id: storyId, content }),
+        });
+        if (!response.ok) throw new Error('Failed to post comment');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to post comment');
-      } finally {
-        setLoading(false);
       }
     },
     [storyId]

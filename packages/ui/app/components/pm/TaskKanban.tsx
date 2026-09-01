@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTaskList } from '../../hooks/pm';
 
 /** UUID type alias */
 type UUID = string;
@@ -17,13 +18,20 @@ export interface TaskKanbanProps {
 }
 
 export function TaskKanban({ storyId }: TaskKanbanProps) {
+  const { tasks, loading } = useTaskList(storyId);
   const states = ['todo', 'in_progress', 'done'];
+
+  if (loading) return <p>Loading tasks...</p>;
 
   return (
     <div className="task-kanban">
       <div className="task-kanban-board">
         {states.map((state) => (
-          <TaskColumn key={state} state={state} storyId={storyId} />
+          <TaskColumn
+            key={state}
+            state={state}
+            tasks={tasks.filter((t) => t.state === state)}
+          />
         ))}
       </div>
     </div>
@@ -37,10 +45,10 @@ export function TaskKanban({ storyId }: TaskKanbanProps) {
 
 interface TaskColumnProps {
   state: string;
-  storyId: UUID;
+  tasks: any[];
 }
 
-function TaskColumn({ state, storyId }: TaskColumnProps) {
+function TaskColumn({ state, tasks }: TaskColumnProps) {
   const [dragOverId, setDragOverId] = useState<UUID | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -52,9 +60,13 @@ function TaskColumn({ state, storyId }: TaskColumnProps) {
     e.preventDefault();
     e.stopPropagation();
     setDragOverId(null);
-    // TODO: Integrate drag-drop state change logic
     const taskId = e.dataTransfer.getData('taskId');
-    console.log(`Move task ${taskId} to ${state}`);
+    if (!taskId) return;
+    fetch(`/api/pm/tasks/${taskId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state }),
+    }).catch(err => console.error('Error updating task:', err));
   };
 
   return (
@@ -67,9 +79,11 @@ function TaskColumn({ state, storyId }: TaskColumnProps) {
         onDragEnter={() => setDragOverId(state as UUID)}
         onDragLeave={() => setDragOverId(null)}
       >
-        {/* TODO: Integrate useTaskList hook with state filter */}
-        {/* Render task cards here with drag support */}
-        <p className="empty-column">No tasks</p>
+        {tasks.length === 0 ? (
+          <p className="empty-column">No tasks</p>
+        ) : (
+          tasks.map((task) => <TaskCard key={task.id} {...task} />)
+        )}
       </div>
 
       {state === 'todo' && (

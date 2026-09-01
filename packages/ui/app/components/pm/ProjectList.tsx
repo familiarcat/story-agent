@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { PMProject } from '@story-agent/shared';
+import { useProjectList } from '../../hooks/pm';
 
 /** UUID type alias */
 type UUID = string;
@@ -21,6 +22,9 @@ export interface ProjectListProps {
 export function ProjectList({ clientId, onSelectProject }: ProjectListProps) {
   const [offset, setOffset] = useState(0);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const { projects, loading, error, refetch } = useProjectList(clientId, { offset, limit: 20 });
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const handlePrevPage = useCallback(() => {
     setOffset(Math.max(0, offset - 20));
@@ -29,6 +33,28 @@ export function ProjectList({ clientId, onSelectProject }: ProjectListProps) {
   const handleNextPage = useCallback(() => {
     setOffset(offset + 20);
   }, [offset]);
+
+  const handleCreateProject = useCallback(
+    async (name: string, description: string) => {
+      setIsCreating(true);
+      setCreateError(null);
+      try {
+        const response = await fetch('/api/pm/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, client_id: clientId }),
+        });
+        if (!response.ok) throw new Error('Failed to create project');
+        await refetch(0);
+        setShowCreateForm(false);
+      } catch (err) {
+        setCreateError(err instanceof Error ? err.message : 'Error creating project');
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    [clientId, refetch]
+  );
 
   const handleSelectProject = useCallback(
     (project: PMProject) => {
@@ -50,13 +76,40 @@ export function ProjectList({ clientId, onSelectProject }: ProjectListProps) {
         <CreateProjectForm
           clientId={clientId}
           onSuccess={() => setShowCreateForm(false)}
+          onCreateProject={handleCreateProject}
+          isCreating={isCreating}
+          error={createError}
         />
       )}
 
       <div className="project-list-table">
-        {/* TODO: Integrate useProjectList hook */}
-        {/* Table will render projects here */}
-        <p className="empty-state">Loading projects...</p>
+        {error && <div className="error-message">{error}</div>}
+        {loading && <p className="loading">Loading projects...</p>}
+        {!loading && projects.length === 0 && <p className="empty-state">No projects found</p>}
+        {!loading && projects.length > 0 && (
+          <table className="projects-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map((project) => (
+                <tr key={project.id} onClick={() => onSelectProject?.(project)} className="project-row">
+                  <td className="project-name">{project.name}</td>
+                  <td className="project-description">{project.description}</td>
+                  <td className="project-status">{project.status}</td>
+                  <td className="project-action">
+                    <button className="btn-link">Open →</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="project-list-pagination">
@@ -80,32 +133,27 @@ export function ProjectList({ clientId, onSelectProject }: ProjectListProps) {
 interface CreateProjectFormProps {
   clientId: UUID;
   onSuccess?: () => void;
+  onCreateProject: (name: string, description: string) => Promise<void>;
+  isCreating?: boolean;
+  error?: string | null;
 }
 
-function CreateProjectForm({ clientId, onSuccess }: CreateProjectFormProps) {
+function CreateProjectForm({ clientId, onSuccess, onCreateProject, isCreating = false, error }: CreateProjectFormProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      // TODO: Integrate useMutation(createProject)
-      console.log('Create project:', { name, description, clientId });
-      onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create project');
-    } finally {
-      setLoading(false);
-    }
+    if (!name.trim()) return;
+    await onCreateProject(name, description);
+    setName('');
+    setDescription('');
+    onSuccess?.();
   };
 
   return (
     <form onSubmit={handleSubmit} className="create-project-form">
+      {error && <div className="error-message">{error}</div>}
       <div className="form-group">
         <label htmlFor="name">Project Name</label>
         <input

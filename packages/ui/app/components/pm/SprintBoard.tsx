@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { PMSprint } from '@story-agent/shared';
+import { useState, useCallback, useEffect } from 'react';
+import { PMSprint, PMStory } from '@story-agent/shared';
+import { useSprintList, useStoryList } from '../../hooks/pm';
 
 /** UUID type alias */
 type UUID = string;
@@ -21,6 +22,10 @@ export interface SprintBoardProps {
 
 export function SprintBoard({ projectId, activeSprint, onSelectSprint }: SprintBoardProps) {
   const [showStoryForm, setShowStoryForm] = useState(false);
+  const { sprints, loading: sprintsLoading } = useSprintList(projectId);
+  const { stories, loading: storiesLoading } = useStoryList(projectId, {
+    sprintId: activeSprint,
+  });
 
   const handleSelectSprint = useCallback(
     (sprintId: UUID) => {
@@ -58,74 +63,73 @@ export function SprintBoard({ projectId, activeSprint, onSelectSprint }: SprintB
 }
 
 /**
- * SprintSelector Component
- * Dropdown or tabs to select active sprint.
- */
-
-interface SprintSelectorProps {
-  projectId: UUID;
-  activeSprint?: UUID;
-  onSelectSprint: (sprintId: UUID) => void;
-}
-
-function SprintSelector({ projectId, activeSprint, onSelectSprint }: SprintSelectorProps) {
-  return (
-    <div className="sprint-selector">
-      <label htmlFor="sprint-select">Sprint:</label>
-      <select
-        id="sprint-select"
-        value={activeSprint || ''}
-        onChange={(e) => onSelectSprint(e.target.value as UUID)}
-        className="select-input"
-      >
-        <option value="">Loading sprints...</option>
-        {/* TODO: Integrate useSprints hook to render sprint options */}
-      </select>
-    </div>
-  );
-}
-
-/**
- * KanbanBoard Component
- * Story kanban with columns for each state.
- */
-
-interface KanbanBoardProps {
-  projectId: UUID;
-  sprintId?: UUID;
-}
-
-function KanbanBoard({ projectId, sprintId }: KanbanBoardProps) {
-  const states = ['draft', 'ready', 'in_progress', 'review', 'complete'];
-
-  return (
-    <div className="kanban-board">
-      {states.map((state) => (
-        <KanbanColumn key={state} state={state} sprintId={sprintId} />
-      ))}
-    </div>
-  );
-}
-
-/**
  * KanbanColumn Component
- * Single column in kanban (one story state).
+ * Individual kanban column for a story state.
  */
 
 interface KanbanColumnProps {
+  title: string;
   state: string;
-  sprintId?: UUID;
+  stories: PMStory[];
 }
 
-function KanbanColumn({ state, sprintId }: KanbanColumnProps) {
+function KanbanColumn({ title, state, stories }: KanbanColumnProps) {
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const storyId = e.dataTransfer.getData('storyId');
+    if (!storyId) return;
+    try {
+      const response = await fetch(`/api/pm/stories/${storyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state }),
+      });
+      if (!response.ok) throw new Error('Failed to update story state');
+    } catch (err) {
+      console.error('Error updating story state:', err);
+    }
+  };
+
   return (
-    <div className={`kanban-column kanban-column-${state}`}>
-      <h3 className="column-title">{state.replace(/_/g, ' ').toUpperCase()}</h3>
-      <div className="column-content">
-        {/* TODO: Integrate useStoryList hook with state filter */}
-        {/* Render story cards here with drag-drop support */}
-        <p className="empty-column">No stories</p>
+    <div
+      className="kanban-column"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      <h3 className="column-title">{title}</h3>
+      <div className="story-cards">
+        {stories.length === 0 && <p className="empty">No stories</p>}
+        {stories.map((story) => (
+          <KanbanStoryCard key={story.id} story={story} />
+        ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * KanbanStoryCard Component
+ * Draggable story card in kanban.
+ */
+
+interface KanbanStoryCardProps {
+  story: PMStory;
+}
+
+function KanbanStoryCard({ story }: KanbanStoryCardProps) {
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('storyId', story.id);
+  };
+
+  return (
+    <div className="story-card" draggable onDragStart={handleDragStart}>
+      <h4>{story.title}</h4>
+      <p>{story.description}</p>
+      <span className="priority">{story.priority}</span>
     </div>
   );
 }
@@ -153,8 +157,14 @@ function CreateStoryForm({ projectId, sprintId, onSuccess }: CreateStoryFormProp
     setError(null);
 
     try {
-      // TODO: Integrate useMutation(createStory)
-      console.log('Create story:', { title, priority, sprintId, projectId });
+      const response = await fetch('/api/pm/stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, priority, sprint_id: sprintId, state: 'draft' }),
+      });
+      if (!response.ok) throw new Error('Failed to create story');
+      setTitle('');
+      setPriority('medium');
       onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create story');
