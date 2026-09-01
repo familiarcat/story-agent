@@ -10,7 +10,6 @@
  */
 
 import * as vscode from 'vscode';
-import { TextDecoder } from 'util';
 import { LCARS_MARKDOWN_CSS, LCARS_MARKDOWN_CLIENT_JS } from '@story-agent/shared/lcars-markdown';
 import { webviewTokenStyle, type WebviewThemeId } from '@story-agent/shared/ui-tokens';
 import { getChatClient } from '../chat/chat-engine';

@@ -150,7 +150,8 @@ export function generateFilePreview(file: ChatFileInput): {
  * Returns null if not an image or in Node.js context.
  */
 export function createImagePreviewDataUrl(file: ChatFileInput): string | null {
-  if (file.type !== 'image' || typeof window === 'undefined') {
+  const hasBrowserWindow = typeof globalThis !== 'undefined' && 'window' in globalThis;
+  if (file.type !== 'image' || !hasBrowserWindow) {
     return null;
   }
   return `data:${file.mimeType || 'image/png'};base64,${file.data}`;

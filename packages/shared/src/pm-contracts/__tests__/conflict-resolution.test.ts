@@ -368,7 +368,7 @@ describe('Conflict Resolution', () => {
         {
           tool: 'monday',
           version: { ...VALID_FIXTURES.story.valid_basic, state: 'in_progress' as const },
-          updated_at: new Date(base - 10000).toISOString(), // Older
+          updated_at: new Date(base - 6 * 60 * 1000).toISOString(), // Older than the conflict window
         }
       );
 

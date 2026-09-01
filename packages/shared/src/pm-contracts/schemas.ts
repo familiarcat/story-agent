@@ -19,7 +19,7 @@ import { z } from 'zod';
  * Ensures all timestamps are ISO 8601 compliant for cross-tool sync
  * Examples: 2026-08-25T09:30:00Z, 2026-08-25T09:30:00-07:00
  */
-export const RFC3339TimestampSchema = z.string().datetime({
+export const RFC3339TimestampSchema = z.string().datetime({ offset: true,
   message: 'Must be valid RFC3339 timestamp (ISO 8601)',
 });
 
@@ -95,7 +95,7 @@ export const SprintSchema = z.object({
   state: StateEnum.describe('Sprint lifecycle: planning → active → review → done'),
   start_date: RFC3339TimestampSchema.describe('Sprint start (RFC3339)'),
   end_date: RFC3339TimestampSchema.describe('Sprint end (RFC3339)'),
-  capacity: z.number().positive().optional().describe('Team capacity (story points or hours)'),
+  capacity: z.number().nonnegative().optional().describe('Team capacity (story points or hours)'),
   goal: z.string().optional().describe('Sprint goal/theme'),
   created_at: RFC3339TimestampSchema,
   updated_at: RFC3339TimestampSchema,

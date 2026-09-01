@@ -356,7 +356,26 @@ export default async function Dashboard({
 
   return (
     <div>
-      <Breadcrumbs crumbs={[{ label: 'Home', href: '/' }, { label: 'Dashboard' }]} />
+      <Breadcrumbs 
+        segments={[
+          { label: 'Command Root', href: '/', icon: '🛸' },
+          { 
+            label: 'Delivery Command', 
+            icon: '📊',
+            quickJumps: [
+              { label: 'Sprint Board', href: '/sprint', icon: '🗂️', desc: 'Active sprint execution' },
+              { label: 'Agent Workspace', href: '/agent', icon: '🛠️', desc: 'Autonomous coding loop' },
+              { label: 'Observation Lounge', href: '/observation-lounge', icon: '🖖', desc: 'Story review wizard' },
+              { label: 'Cost Observatory', href: '/cost', icon: '💰', desc: 'Token ROI & savings' },
+            ]
+          }
+        ]} 
+        action={{
+          label: '➕ Create Story',
+          href: '/story/new',
+          variant: 'gold',
+        }}
+      />
       {isDemo && (
         <div style={{
           backgroundColor: 'var(--surface-2)',

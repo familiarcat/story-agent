@@ -229,7 +229,7 @@ export async function isImageOnlyPage(pageData: {
   const textLength = pageText.length;
   const itemCount = textContent.items?.length ?? 0;
 
-  if (itemCount > 50 && textLength < itemCount * 2) {
+  if (itemCount > 50 && textLength < itemCount * 0.1) {
     return true; // Sparse text relative to items = likely scanned/image
   }
 

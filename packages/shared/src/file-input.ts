@@ -46,7 +46,8 @@ export function isPdfInput(file: FileInput): file is { type: 'pdf'; pdf: PdfInpu
  */
 export function getFileName(file: FileInput): string {
   if (isImageInput(file)) {
-    return file.image.type === 'url' ? new URL(file.image.url).pathname.split('/').pop() ?? 'image' : 'image';
+    if (file.image.fileName) return file.image.fileName;
+    return file.image.type === 'url' ? new URL(file.image.url).pathname.split('/').pop() ?? 'image.png' : 'image.png';
   }
   if (isPdfInput(file)) {
     return file.pdf.fileName ?? 'document.pdf';

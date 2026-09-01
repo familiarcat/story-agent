@@ -21,34 +21,6 @@
 		"figma": {
 			"type": "http",
 			"url": "http://127.0.0.1:3845/mcp"
-		},
-		"figma-context": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"-y",
-				"figma-developer-mcp",
-				"--stdio"
-			],
-			"env": {
-				"FIGMA_API_KEY": "${env:FIGMA_API_KEY}"
-			}
-		},
-		"shadcn-ui": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"-y",
-				"@jpisnice/shadcn-ui-mcp-server"
-			]
-		},
-		"dashboards": {
-			"type": "stdio",
-			"command": "npx",
-			"args": [
-				"-y",
-				"mcp-dashboards"
-			]
 		}
 	},
 	"inputs": []

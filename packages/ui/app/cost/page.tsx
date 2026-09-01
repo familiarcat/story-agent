@@ -57,7 +57,27 @@ export default function CostPage() {
 
   return (
     <LcarsScreen title="💰 Cost Observatory" status="OpenRouter pool · auto-refresh 10s">
-      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Cost' }]} />
+      <Breadcrumbs 
+        segments={[
+          { label: 'Command Root', href: '/', icon: '🛸' },
+          { label: 'Observe Domain', href: '/learnings', icon: '👁️' },
+          { 
+            label: 'Cost Observatory', 
+            icon: '💰',
+            quickJumps: [
+              { label: 'Agent Workspace', href: '/agent', icon: '🛠️', desc: 'Active execution loop' },
+              { label: 'Skill Learnings', href: '/learnings', icon: '🧠', desc: 'Outcome diffs' },
+              { label: 'Observation Lounge', href: '/observation-lounge', icon: '🖖', desc: 'Debate missions' },
+              { label: 'Delivery Dashboard', href: '/dashboard', icon: '📊', desc: 'Story tracking' },
+            ]
+          }
+        ]}
+        action={{
+          label: '🧠 Skill Learnings',
+          href: '/learnings',
+          variant: 'purple',
+        }}
+      />
       {err && !data && (
         <LcarsPanel title={headlineSystem.panels.signalLost} color={lcars.danger}>
           <div style={{ color: lcars.danger, fontSize: '0.85rem', letterSpacing: 'normal' }}>⚠️ {err}</div>

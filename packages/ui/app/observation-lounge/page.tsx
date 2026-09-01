@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import type { AhaSprint, AhaStory, CrewMissionPlan, ObservationDebateResult, ObservationMemoryRecord } from '@story-agent/shared';
 import { buildResumePayload, streamFrames } from '@/lib/stream-transport';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
@@ -253,7 +254,22 @@ export default function ObservationLoungePage() {
   return (
     <div style={{ maxWidth: 820 }}>
       <ViewPresentationProvider tone="observe">
-        <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Observation Lounge' }]} />
+        <Breadcrumbs 
+          segments={[
+            { label: 'Command Root', href: '/', icon: '🛸' },
+            { label: 'Observation Lounge', icon: '🖖', quickJumps: [
+              { label: 'Agent Workspace', href: '/agent', icon: '🛠️', desc: 'Direct code execution' },
+              { label: 'Delivery Dashboard', href: '/dashboard', icon: '📊', desc: 'Mission and story status' },
+              { label: 'Crew Memories', href: '/crew/memories', icon: '👥', desc: 'RAG knowledge base' },
+              { label: 'Cost Observatory', href: '/cost', icon: '💰', desc: 'Efficiency tracking' },
+            ]}
+          ]} 
+          action={{
+            label: '🛠️ Agent Loop',
+            href: '/agent',
+            variant: 'gold',
+          }}
+        />
 
         <ViewHeader
           title="Observation Lounge"
@@ -508,13 +524,22 @@ export default function ObservationLoungePage() {
           )}
 
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '8px' }}>
               <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                 {mode === 'guided' ? 'Phase 1 — Discovery Kickoff Prompt' : 'Kickoff Prompt'}
               </span>
-              <button className="btn btn-secondary" onClick={copyKickoff} style={{ padding: '0.3rem 0.7rem', fontSize: '0.78rem' }}>
-                {copied ? '✓ Copied' : '$(clippy) Copy'}
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <Link
+                  href={`/agent?prompt=${encodeURIComponent(kickoff)}`}
+                  className="btn btn-primary"
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                >
+                  🚀 Run in Agent Workspace
+                </Link>
+                <button className="btn btn-secondary" onClick={copyKickoff} style={{ padding: '0.3rem 0.7rem', fontSize: '0.78rem' }}>
+                  {copied ? '✓ Copied' : '📋 Copy Prompt'}
+                </button>
+              </div>
             </div>
             <pre style={{ margin: 0, padding: '0.85rem', background: 'var(--bg)', borderRadius: 5, fontSize: '0.8rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: 'var(--text)', maxHeight: '40vh', overflow: 'auto', border: '1px solid var(--border)' }}>
               {kickoff}

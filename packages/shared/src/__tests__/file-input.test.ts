@@ -21,6 +21,7 @@ describe('File Input Types', () => {
   describe('FileInputSchema Validation', () => {
     it('should accept valid image input', () => {
       const imageInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/png',
@@ -35,6 +36,7 @@ describe('File Input Types', () => {
 
     it('should accept valid PDF input', () => {
       const pdfInput: FileInput = {
+        type: 'pdf',
         pdf: {
           type: 'base64',
           data: Buffer.from('PDF content').toString('base64'),
@@ -61,6 +63,7 @@ describe('File Input Types', () => {
 
     it('should reject empty base64 data', () => {
       const emptyInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/png',
@@ -77,6 +80,7 @@ describe('File Input Types', () => {
   describe('Type Guards', () => {
     it('should correctly identify image input', () => {
       const imageInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/png',
@@ -90,6 +94,7 @@ describe('File Input Types', () => {
 
     it('should correctly identify PDF input', () => {
       const pdfInput: FileInput = {
+        type: 'pdf',
         pdf: {
           type: 'base64',
           data: Buffer.from('PDF').toString('base64'),
@@ -105,6 +110,7 @@ describe('File Input Types', () => {
     describe('getFileName', () => {
       it('should extract filename from image input', () => {
         const imageInput: FileInput = {
+          type: 'image',
           image: {
             type: 'base64',
             mimeType: 'image/png',
@@ -119,6 +125,7 @@ describe('File Input Types', () => {
 
       it('should extract filename from PDF input', () => {
         const pdfInput: FileInput = {
+          type: 'pdf',
           pdf: {
             type: 'base64',
             data: Buffer.from('PDF').toString('base64'),
@@ -132,6 +139,7 @@ describe('File Input Types', () => {
 
       it('should return fallback filename if not provided', () => {
         const imageInput: FileInput = {
+          type: 'image',
           image: {
             type: 'base64',
             mimeType: 'image/png',
@@ -147,6 +155,7 @@ describe('File Input Types', () => {
     describe('getMimeType', () => {
       it('should return correct MIME type for base64 image', () => {
         const imageInput: FileInput = {
+          type: 'image',
           image: {
             type: 'base64',
             mimeType: 'image/jpeg',
@@ -160,6 +169,7 @@ describe('File Input Types', () => {
 
       it('should return image/* for URL type images', () => {
         const urlImageInput: FileInput = {
+          type: 'image',
           image: {
             type: 'url',
             url: 'https://example.com/image.png',
@@ -172,6 +182,7 @@ describe('File Input Types', () => {
 
       it('should return application/pdf for PDF input', () => {
         const pdfInput: FileInput = {
+          type: 'pdf',
           pdf: {
             type: 'base64',
             data: Buffer.from('PDF').toString('base64'),
@@ -187,6 +198,7 @@ describe('File Input Types', () => {
       it('should calculate size from base64 data', () => {
         const testData = Buffer.from('test content here').toString('base64');
         const imageInput: FileInput = {
+          type: 'image',
           image: {
             type: 'base64',
             mimeType: 'image/png',
@@ -201,6 +213,7 @@ describe('File Input Types', () => {
 
       it('should return 0 for URL type images', () => {
         const urlImageInput: FileInput = {
+          type: 'image',
           image: {
             type: 'url',
             url: 'https://example.com/image.png',
@@ -214,6 +227,7 @@ describe('File Input Types', () => {
       it('should calculate size for PDF input', () => {
         const testData = Buffer.from('test pdf content').toString('base64');
         const pdfInput: FileInput = {
+          type: 'pdf',
           pdf: {
             type: 'base64',
             data: testData,
@@ -251,6 +265,7 @@ describe('File Input Types', () => {
   describe('Supported File Types', () => {
     it('should accept PNG images', () => {
       const imageInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/png',
@@ -263,6 +278,7 @@ describe('File Input Types', () => {
 
     it('should accept JPEG images', () => {
       const imageInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/jpeg',
@@ -275,6 +291,7 @@ describe('File Input Types', () => {
 
     it('should accept GIF images', () => {
       const imageInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/gif',
@@ -287,6 +304,7 @@ describe('File Input Types', () => {
 
     it('should accept WebP images', () => {
       const imageInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/webp',
@@ -299,6 +317,7 @@ describe('File Input Types', () => {
 
     it('should accept PDF documents', () => {
       const pdfInput: FileInput = {
+        type: 'pdf',
         pdf: {
           type: 'base64',
           data: Buffer.from('PDF').toString('base64'),
@@ -310,6 +329,7 @@ describe('File Input Types', () => {
 
     it('should reject unsupported formats', () => {
       const invalidInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'application/vnd.ms-excel', // .xls
@@ -326,6 +346,7 @@ describe('File Input Types', () => {
   describe('Edge Cases', () => {
     it('should handle filenames with special characters', () => {
       const imageInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/png',
@@ -341,6 +362,7 @@ describe('File Input Types', () => {
     it('should handle very long filenames', () => {
       const longName = 'a'.repeat(255) + '.pdf';
       const pdfInput: FileInput = {
+        type: 'pdf',
         pdf: {
           type: 'base64',
           data: Buffer.from('PDF').toString('base64'),
@@ -354,6 +376,7 @@ describe('File Input Types', () => {
 
     it('should handle filenames without extensions', () => {
       const imageInput: FileInput = {
+        type: 'image',
         image: {
           type: 'base64',
           mimeType: 'image/png',

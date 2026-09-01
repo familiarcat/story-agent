@@ -73,13 +73,32 @@ export default function Home() {
 
         {/* Crew roster */}
         <section style={panel(lcars.anakiwa)}>
-          <h2 style={panelTitle(lcars.anakiwa)}>Bridge Crew · 11 Officers</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 6, marginTop: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <h2 style={panelTitle(lcars.anakiwa)}>Bridge Crew · 11 Officers</h2>
+            <a href="/crew/memories" style={{ color: lcars.anakiwa, fontSize: '0.72rem', textDecoration: 'none', fontWeight: 700, textTransform: 'uppercase' }}>
+              View All Memories →
+            </a>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: 8, marginTop: 8 }}>
             {CREW_ROSTER.map((m) => (
-              <div key={m.id} style={{ background: lcars.space, borderLeft: `4px solid ${m.color}`, borderRadius: 6, padding: '6px 10px' }}>
-                <div style={{ color: m.color, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.8rem' }}>{m.name}</div>
+              <a 
+                key={m.id} 
+                href={`/crew/memories?crew=${m.id}`}
+                style={{ 
+                  background: lcars.space, 
+                  borderLeft: `4px solid ${m.color}`, 
+                  borderRadius: 6, 
+                  padding: '8px 10px',
+                  textDecoration: 'none',
+                  display: 'block',
+                  transition: 'background 0.15s ease',
+                }}
+                title={`Open ${m.name}'s RAG memories`}
+              >
+                <div style={{ color: m.color, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.82rem' }}>{m.name}</div>
                 <div style={{ color: lcars.textDim, fontSize: '0.66rem', textTransform: 'uppercase' }}>{m.role}</div>
-              </div>
+                <div style={{ color: 'var(--accent4)', fontSize: '0.62rem', marginTop: 4 }}>Memories ↗</div>
+              </a>
             ))}
           </div>
         </section>

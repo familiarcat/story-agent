@@ -213,7 +213,27 @@ function CrewMemoriesContent() {
       <ViewPresentationProvider tone="observe">
       {/* Header */}
       <div className="section">
-        <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Crew Memories' }]} />
+        <Breadcrumbs 
+          segments={[
+            { label: 'Command Root', href: '/', icon: '🛸' },
+            { label: 'Observe Domain', href: '/observation-lounge', icon: '👁️' },
+            { 
+              label: 'Crew Memories', 
+              icon: '👥',
+              quickJumps: [
+                { label: 'Observation Lounge', href: '/observation-lounge', icon: '🖖', desc: 'Debate missions' },
+                { label: 'Agent Workspace', href: '/agent', icon: '🛠️', desc: 'Live execution' },
+                { label: 'Skill Learnings', href: '/learnings', icon: '🧠', desc: 'Outcome diffs' },
+                { label: 'Delivery Dashboard', href: '/dashboard', icon: '📊', desc: 'Story tracking' },
+              ]
+            }
+          ]}
+          action={{
+            label: '🖖 Launch Deliberation',
+            href: '/observation-lounge',
+            variant: 'purple',
+          }}
+        />
         <ViewHeader
           title="👥 Crew Personal Memories"
           subtitle="Track individual crew member learning across projects"
@@ -405,13 +425,25 @@ function CrewMemoriesContent() {
                     ))}
                   </div>
 
-                  <div className="cluster">
-                    {memory.project_id && (
-                      <div className="meta" style={{ fontSize: '0.74rem' }}>📦 Project: {memory.project_id}</div>
-                    )}
-                    {memory.task_id && (
-                      <div className="meta" style={{ fontSize: '0.74rem' }}>🎯 Task: {memory.task_id}</div>
-                    )}
+                  <div className="cluster" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-2)' }}>
+                    <div className="cluster">
+                      {memory.project_id && (
+                        <div className="meta" style={{ fontSize: '0.74rem' }}>📦 Project: {memory.project_id}</div>
+                      )}
+                      {memory.task_id && (
+                        <div className="meta" style={{ fontSize: '0.74rem' }}>🎯 Task: {memory.task_id}</div>
+                      )}
+                    </div>
+                    <div className="cluster" style={{ gap: '6px' }}>
+                      <a
+                        href={`/agent?prompt=${encodeURIComponent(`Review and apply ${selectedCrew}'s memory: "${memory.title}"\nContent: ${memory.content.slice(0, 300)}`)}`}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.72rem', padding: '2px 8px', textDecoration: 'none' }}
+                        title="Send this memory context to Agent Workspace"
+                      >
+                        🚀 Apply in Agent
+                      </a>
+                    </div>
                   </div>
                 </div>
               ))

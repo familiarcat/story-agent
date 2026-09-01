@@ -23,7 +23,7 @@ describe('File Paste Handler', () => {
       };
 
       expect(imageInput.type).toBe('image');
-      expect(imageInput.fileName).toEndWith('.png');
+      expect((imageInput.fileName ?? '').endsWith('.png')).toBe(true);
       expect(imageInput.data).toBeTruthy();
     });
 
@@ -37,7 +37,7 @@ describe('File Paste Handler', () => {
       };
 
       expect(pdfInput.type).toBe('pdf');
-      expect(pdfInput.fileName).toEndWith('.pdf');
+      expect((pdfInput.fileName ?? '').endsWith('.pdf')).toBe(true);
       expect(pdfInput.mimeType).toBe('application/pdf');
     });
 

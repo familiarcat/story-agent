@@ -2,8 +2,18 @@
  * Tests for Autonomous Executor (WORKSTREAM 1)
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { executeAutonomousTask, type AutonomousTaskInput } from '../autonomous-executor.js';
+
+// Mock database functions to prevent test hangs
+vi.mock('@story-agent/shared', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    storeAutonomousTaskAudit: vi.fn().mockResolvedValue(undefined),
+    storeCrewExecutionOutcome: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 describe('Autonomous Executor', () => {
   describe('executeAutonomousTask', () => {

@@ -11,12 +11,14 @@ import { z } from 'zod';
 export const ImageInputSchema = z.union([
   z.object({
     type: z.literal('base64'),
-    data: z.string(),
+    data: z.string().min(1),
     mimeType: z.enum(['image/png', 'image/jpeg', 'image/gif', 'image/webp']),
+    fileName: z.string().optional(),
   }),
   z.object({
     type: z.literal('url'),
     url: z.string().url(),
+    fileName: z.string().optional(),
   }),
 ]);
 

@@ -12,6 +12,8 @@ const mockDb = {
   consumeAuthorizationCode: vi.fn(),
   revokeTokenJti: vi.fn(),
   isTokenRevoked: vi.fn(),
+  cacheClientPolicy: vi.fn(),
+  DEFAULT_STANDARD_POLICY: {},
 };
 vi.mock('@story-agent/shared', () => mockDb);
 

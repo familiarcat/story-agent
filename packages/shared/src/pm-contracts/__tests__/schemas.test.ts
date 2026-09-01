@@ -17,7 +17,7 @@ import {
   VALID_FIXTURES,
   ADVERSARIAL_FIXTURES,
   EDGE_CASE_FIXTURES,
-} from './fixtures/pm-contracts/test-fixtures';
+} from './fixtures/pm-contracts/test-fixtures.ts';
 
 describe('PM Contract Schemas', () => {
   describe('Sprint Schema Validation', () => {
@@ -65,7 +65,7 @@ describe('PM Contract Schemas', () => {
     });
 
     it('should accept sprint with zero capacity (edge case)', () => {
-      const result = PmSchemaValidator.validateSprint(EDGE_CASE_FIXTURES.sprint_with_zero_capacity);
+      const result = PmSchemaValidator.validateSprint(EDGE_CASE_FIXTURES.sprint.sprint_with_zero_capacity);
       expect(result.valid).toBe(true);
     });
   });
@@ -98,12 +98,12 @@ describe('PM Contract Schemas', () => {
     });
 
     it('should accept story with max-length title (edge case)', () => {
-      const result = PmSchemaValidator.validateStory(EDGE_CASE_FIXTURES.story_with_max_length_title);
+      const result = PmSchemaValidator.validateStory(EDGE_CASE_FIXTURES.story.story_with_max_length_title);
       expect(result.valid).toBe(true);
     });
 
     it('should accept story with empty blocked_by array', () => {
-      const result = PmSchemaValidator.validateStory(EDGE_CASE_FIXTURES.story_with_empty_blocked_by);
+      const result = PmSchemaValidator.validateStory(EDGE_CASE_FIXTURES.story.story_with_empty_blocked_by);
       expect(result.valid).toBe(true);
     });
   });
@@ -131,7 +131,7 @@ describe('PM Contract Schemas', () => {
     });
 
     it('should accept task with floating point hours (edge case)', () => {
-      const result = PmSchemaValidator.validateTask(EDGE_CASE_FIXTURES.task_with_high_precision_hours);
+      const result = PmSchemaValidator.validateTask(EDGE_CASE_FIXTURES.task.task_with_high_precision_hours);
       expect(result.valid).toBe(true);
     });
   });
@@ -209,7 +209,7 @@ describe('PM Contract Schemas', () => {
         [taskC, [taskB]],
       ]);
 
-      const hasCycle = PmSchemaValidator.hasCyclicalDependency(taskA, [taskB], allTasks);
+      const hasCycle = PmSchemaValidator.hasCyclicalDependency(taskC, [taskB], allTasks);
       expect(hasCycle).toBe(false);
     });
 

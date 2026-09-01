@@ -279,7 +279,26 @@ export default function SprintPage() {
 
   return (
     <div style={{ maxWidth: 1000 }}>
-      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Sprint' }]} />
+      <Breadcrumbs 
+        segments={[
+          { label: 'Command Root', href: '/', icon: '🛸' },
+          { label: 'Delivery Command', href: '/dashboard', icon: '📊' },
+          { 
+            label: 'Sprint Planning', 
+            icon: '🗂️',
+            quickJumps: [
+              { label: 'Create New Story', href: '/story/new', icon: '➕', desc: 'Capture requirement' },
+              { label: 'Observation Lounge', href: '/observation-lounge', icon: '🖖', desc: 'Deliberate on sprint' },
+              { label: 'Agent Workspace', href: '/agent', icon: '🛠️', desc: 'Execute sprint tasks' },
+            ]
+          }
+        ]}
+        action={{
+          label: '➕ New Mission',
+          href: '/observation-lounge',
+          variant: 'gold',
+        }}
+      />
 
       <ClientScopeSelector title="Client Scope For Sprint Planning" />
 

@@ -41,7 +41,7 @@ export default function AgentPage() {
   const [lastTask, setLastTask] = useState<string>('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // TEAM B: Listen for VSCode chat messages
+  // TEAM B: Listen for VSCode chat messages & check URL prompt param
   useEffect(() => {
     function handleVScodeMessage(e: Event) {
       const customEvent = e as CustomEvent;
@@ -51,6 +51,16 @@ export default function AgentPage() {
       }
     }
     window.addEventListener('vscode-message', handleVScodeMessage);
+
+    // Support 2-click deep link / pre-filled prompt: /agent?prompt=...
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlPrompt = params.get('prompt') || params.get('task');
+      if (urlPrompt) {
+        setInput(urlPrompt);
+      }
+    }
+
     return () => window.removeEventListener('vscode-message', handleVScodeMessage);
   }, []);
 
@@ -154,7 +164,27 @@ export default function AgentPage() {
           with headings/lists/tables/code doesn't arrive here as literal `##`/`**` characters the way
           it previously did with plain pre-wrap text. XSS-safe by construction — see chat/page.tsx. */}
       <style>{LCARS_MARKDOWN_CSS}</style>
-      <Breadcrumbs crumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Agent' }]} />
+      <Breadcrumbs 
+        segments={[
+          { label: 'Command Root', href: '/', icon: '🛸' },
+          { label: 'Build Domain', href: '/docs', icon: '🛠️' },
+          { 
+            label: 'Agent Workspace', 
+            icon: '⚡',
+            quickJumps: [
+              { label: 'Observation Lounge', href: '/observation-lounge', icon: '🖖', desc: 'Story wizard & deliberation' },
+              { label: 'Sprint Board', href: '/sprint', icon: '🗂️', desc: 'Active sprint tasks' },
+              { label: 'Crew Memories', href: '/crew/memories', icon: '👥', desc: 'RAG context' },
+              { label: 'Cost Observatory', href: '/cost', icon: '💰', desc: 'Token ROI' },
+            ]
+          }
+        ]}
+        action={{
+          label: '🖖 Observation Lounge',
+          href: '/observation-lounge',
+          variant: 'purple',
+        }}
+      />
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.4rem' }}>
         <h1 style={{ fontSize: '1.25rem', margin: 0 }}>🛠️ Story Agent — Agent Workspace</h1>
         <span style={{ fontSize: '0.8rem', color: color.muted, fontFamily: font.mono }}>
