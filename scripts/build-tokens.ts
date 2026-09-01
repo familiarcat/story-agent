@@ -18,7 +18,7 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const TOKENS = resolve(ROOT, 'design/tokens/lcars.tokens.json');
-const CSS = resolve(ROOT, 'packages/ui/src/app/globals.css');
+const CSS = resolve(ROOT, 'packages/ui/app/globals.css');
 
 /** Global themes (set on <html> by the ThemeProvider) get a root-only selector; everything else is a
  * scoped brand theme (also matches a nested [data-theme] wrapper for per-page/per-client use). */

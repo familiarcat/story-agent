@@ -11,7 +11,7 @@ export * from './db';
 export * from './crew-db';
 export * from './oauth-db';
 
-// PM System
+// PM System (types and validation only - not pm-client functions)
 export * from './pm-adapters/jira-adapter';
 export * from './pm-adapters/monday-adapter';
 export * from './pm-adapters/azure-devops-adapter';

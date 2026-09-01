@@ -6,6 +6,9 @@ import { useStoryWithTasks, useAttachments, useComments, useAuditLog } from '../
 import { TaskKanban } from './TaskKanban';
 import { CommentThread } from './CommentThread';
 
+/** UUID type alias */
+type UUID = string;
+
 /**
  * StoryDetail Component
  * 
@@ -39,6 +42,12 @@ export function StoryDetail({ storyId, onClose }: StoryDetailProps) {
       console.error('Error updating story:', err);
     }
   };
+
+  if (storyLoading || !story) {
+    return <div className="story-detail loading">Loading story...</div>;
+  }
+
+  return (
     <div className="story-detail">
       <div className="story-detail-header">
         <div className="story-header-content">
@@ -134,10 +143,11 @@ function StoryMetadata({ story, editMode, onUpdate }: StoryMetadataProps) {
       <div className="metadata-field">
         <label>Priority</label>
         {editMode ? (
-          <select value={editData.priority || ''} onChange={(e) => setEditData({ ...editData, priority: e.target.value })}>
+          <select value={editData.priority || ''} onChange={(e) => setEditData({ ...editData, priority: e.target.value as any })}>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
+            <option value="critical">Critical</option>
           </select>
         ) : (
           <p>{story.priority}</p>
@@ -147,12 +157,13 @@ function StoryMetadata({ story, editMode, onUpdate }: StoryMetadataProps) {
       <div className="metadata-field">
         <label>State</label>
         {editMode ? (
-          <select value={editData.state || ''} onChange={(e) => setEditData({ ...editData, state: e.target.value })}>
-            <option value="draft">Draft</option>
-            <option value="ready">Ready</option>
+          <select value={editData.state || ''} onChange={(e) => setEditData({ ...editData, state: e.target.value as any })}>
+            <option value="open">Open</option>
             <option value="in_progress">In Progress</option>
             <option value="review">Review</option>
-            <option value="complete">Complete</option>
+            <option value="done">Done</option>
+            <option value="blocked">Blocked</option>
+            <option value="archived">Archived</option>
           </select>
         ) : (
           <p>{story.state}</p>
@@ -226,12 +237,13 @@ function AttachmentsSection({ storyId, attachments, loading }: AttachmentsSectio
             {attachments.map((att) => (
               <li key={att.id}>
                 <a href={att.url} target="_blank" rel="noreferrer">
-                  {att.filename}
+                  {att.name}
                 </a>
               </li>
             ))}
           </ul>
         )}
+      </div>
     </div>
   );
 }
@@ -260,8 +272,8 @@ function AuditTrail({ auditLogs, loading }: AuditTrailProps) {
             {auditLogs.map((log) => (
               <li key={log.id} className="audit-entry">
                 <span className="action">{log.action}</span>
-                <span className="user">by {log.changed_by}</span>
-                <span className="timestamp">{new Date(log.created_at).toLocaleDateString()}</span>
+                <span className="user">by {log.actor_id}</span>
+                <span className="timestamp">{new Date(log.timestamp).toLocaleDateString()}</span>
               </li>
             ))}
           </ul>

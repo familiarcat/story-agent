@@ -8,6 +8,75 @@ import { useSprintList, useStoryList } from '../../hooks/pm';
 type UUID = string;
 
 /**
+ * SprintSelector Component
+ * Dropdown selector for choosing active sprint.
+ */
+
+interface SprintSelectorProps {
+  projectId: UUID;
+  activeSprint?: UUID;
+  onSelectSprint?: (sprintId: UUID) => void;
+}
+
+function SprintSelector({ projectId, activeSprint, onSelectSprint }: SprintSelectorProps) {
+  const { sprints } = useSprintList(projectId);
+
+  return (
+    <div className="sprint-selector">
+      <label htmlFor="sprint-select">Select Sprint:</label>
+      <select
+        id="sprint-select"
+        value={activeSprint || ''}
+        onChange={(e) => onSelectSprint?.(e.target.value as UUID)}
+      >
+        <option value="">-- No Sprint --</option>
+        {sprints.map((sprint) => (
+          <option key={sprint.id} value={sprint.id}>
+            {sprint.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/**
+ * KanbanBoard Component
+ * Main kanban board with columns for different story states.
+ */
+
+interface KanbanBoardProps {
+  projectId: UUID;
+  sprintId?: UUID;
+}
+
+function KanbanBoard({ projectId, sprintId }: KanbanBoardProps) {
+  const { stories } = useStoryList({ sprintId });
+
+  const states = ['draft', 'ready', 'in_progress', 'review', 'complete'];
+  const stateLabels: Record<string, string> = {
+    draft: 'Draft',
+    ready: 'Ready',
+    in_progress: 'In Progress',
+    review: 'Review',
+    complete: 'Complete',
+  };
+
+  return (
+    <div className="kanban-board">
+      {states.map((state) => (
+        <KanbanColumn
+          key={state}
+          title={stateLabels[state]}
+          state={state}
+          stories={stories.filter((s) => s.state === state)}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
  * SprintBoard Component
  * 
  * Displays sprint selector and story kanban board with drag-drop support.
@@ -23,7 +92,7 @@ export interface SprintBoardProps {
 export function SprintBoard({ projectId, activeSprint, onSelectSprint }: SprintBoardProps) {
   const [showStoryForm, setShowStoryForm] = useState(false);
   const { sprints, loading: sprintsLoading } = useSprintList(projectId);
-  const { stories, loading: storiesLoading } = useStoryList(projectId, {
+  const { stories, loading: storiesLoading } = useStoryList({
     sprintId: activeSprint,
   });
 
@@ -96,13 +165,13 @@ function KanbanColumn({ title, state, stories }: KanbanColumnProps) {
 
   return (
     <div
-      className="kanban-column"
+      className="kanbanColumn"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <h3 className="column-title">{title}</h3>
-      <div className="story-cards">
-        {stories.length === 0 && <p className="empty">No stories</p>}
+      <h3 className="columnTitle">{title}</h3>
+      <div>
+        {stories.length === 0 && <p className="emptyState text-center text-sm py-4">No stories</p>}
         {stories.map((story) => (
           <KanbanStoryCard key={story.id} story={story} />
         ))}
@@ -126,10 +195,12 @@ function KanbanStoryCard({ story }: KanbanStoryCardProps) {
   };
 
   return (
-    <div className="story-card" draggable onDragStart={handleDragStart}>
+    <div className="storyCard" draggable onDragStart={handleDragStart}>
       <h4>{story.title}</h4>
       <p>{story.description}</p>
-      <span className="priority">{story.priority}</span>
+      <span className={`priority badge badge${story.priority?.charAt(0).toUpperCase()}${story.priority?.slice(1)}`}>
+        {story.priority}
+      </span>
     </div>
   );
 }

@@ -64,10 +64,10 @@ export function ProjectList({ clientId, onSelectProject }: ProjectListProps) {
   );
 
   return (
-    <div className="project-list">
-      <div className="project-list-header">
+    <div className="projectList">
+      <div className="projectListHeader">
         <h2>Projects</h2>
-        <button onClick={() => setShowCreateForm(!showCreateForm)} className="btn-primary">
+        <button onClick={() => setShowCreateForm(!showCreateForm)} className="btnPrimary">
           New Project
         </button>
       </div>
@@ -112,12 +112,12 @@ export function ProjectList({ clientId, onSelectProject }: ProjectListProps) {
         )}
       </div>
 
-      <div className="project-list-pagination">
-        <button onClick={handlePrevPage} disabled={offset === 0} className="btn-secondary">
+      <div className="pagination">
+        <button onClick={handlePrevPage} disabled={offset === 0} className="btnSecondary">
           ← Previous
         </button>
-        <span className="page-indicator">Page {offset / 20 + 1}</span>
-        <button onClick={handleNextPage} className="btn-secondary">
+        <span className="pageIndicator">Page {offset / 20 + 1}</span>
+        <button onClick={handleNextPage} className="btnSecondary">
           Next →
         </button>
       </div>
@@ -179,8 +179,8 @@ function CreateProjectForm({ clientId, onSuccess, onCreateProject, isCreating = 
       {error && <div className="error-message">{error}</div>}
 
       <div className="form-actions">
-        <button type="submit" disabled={loading} className="btn-primary">
-          {loading ? 'Creating...' : 'Create Project'}
+        <button type="submit" disabled={isCreating} className="btn-primary">
+          {isCreating ? 'Creating...' : 'Create Project'}
         </button>
       </div>
     </form>

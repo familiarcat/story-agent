@@ -21,7 +21,7 @@ interface ProjectDetailPageProps {
 export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const [projectId, setProjectId] = useState<UUID | undefined>(undefined);
   const [activeSprint, setActiveSprint] = useState<UUID | undefined>(undefined);
-  const [project, setProject] = useState<PMProject | null>(null);
+  const [project, setProject] = useState<PMProject | undefined>(undefined);
   const [projectLoading, setProjectLoading] = useState(false);
   const { metrics, loading: metricsLoading } = useProjectMetrics(projectId || ('default' as UUID));
 
@@ -60,9 +60,10 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     <main className="page project-detail-page">
       <div className="page-container">
         <div className="project-detail-header">
-        <div className="header-content">
-          <h1>{project?.name || 'Project'}</h1>
-          <p className="project-description">{project?.description}</p>
+          <div className="header-content">
+            <h1>{project?.name || 'Project'}</h1>
+            <p className="project-description">{project?.description}</p>
+          </div>
         </div>
 
         <div className="project-detail-tabs">
@@ -83,19 +84,19 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                 <div className="metrics-grid">
                   <div className="metric-card">
                     <h4>Completion Rate</h4>
-                    <p className="metric-value">{metrics.completion_rate?.toFixed(1)}%</p>
+                    <p className="metric-value">{(metrics.completion.completion_rate * 100).toFixed(1)}%</p>
                   </div>
                   <div className="metric-card">
                     <h4>Total Stories</h4>
-                    <p className="metric-value">{metrics.total_stories}</p>
+                    <p className="metric-value">{metrics.completion.total_stories}</p>
                   </div>
                   <div className="metric-card">
                     <h4>Completed</h4>
-                    <p className="metric-value">{metrics.completed_stories}</p>
+                    <p className="metric-value">{metrics.completion.completed_stories}</p>
                   </div>
                   <div className="metric-card">
-                    <h4>In Progress</h4>
-                    <p className="metric-value">{metrics.in_progress_stories}</p>
+                    <h4>Completed Tasks</h4>
+                    <p className="metric-value">{metrics.completion.completed_tasks}</p>
                   </div>
                 </div>
               ) : (

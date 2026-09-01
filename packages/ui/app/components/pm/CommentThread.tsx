@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { PMStoryComment } from '@story-agent/shared';
+import type { PMStoryComment } from '@story-agent/shared';
 import { useComments } from '../../hooks/pm';
 
 /** UUID type alias */
