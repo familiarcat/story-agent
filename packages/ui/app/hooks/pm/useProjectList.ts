@@ -43,7 +43,7 @@ export function useProjectList(
       setError(null);
 
       try {
-        const response = await fetch(`/api/pm/projects?offset=${off}&limit=${limit}`);
+        const response = await fetch(`/api/pm/projects?client_id=${clientId}&offset=${off}&limit=${limit}`);
         if (!response.ok) throw new Error('Failed to fetch projects');
 
         const data = await response.json() as { success: boolean; data: ListResponse<PMProject> };

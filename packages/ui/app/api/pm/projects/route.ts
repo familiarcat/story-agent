@@ -63,14 +63,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Parse pagination from query params
+    // Parse pagination and client from query params
     const { searchParams } = new URL(request.url);
+    const clientId = searchParams.get('client_id') || DEFAULT_CLIENT_ID;
     const offset = parseInt(searchParams.get('offset') ?? '0');
     const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 100);
 
     // List projects
     const projects = await PMClient.listProjects(
-      DEFAULT_CLIENT_ID as any,
+      clientId as any,
       { offset, limit }
     );
 
