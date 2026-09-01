@@ -20,6 +20,11 @@ import type {
 // ============================================================================
 
 export const UUIDSchema = z.string().uuid('Invalid UUID format');
+// Accept either a UUID or an integer ID (as string)
+export const IDSchema = z.union([
+  z.string().uuid(),
+  z.string().regex(/^\d+$/, 'Must be a valid ID'),
+]);
 
 export const WorkflowTypeSchema = z.enum(['scrum', 'kanban', 'hybrid']);
 export const ProjectVisibilitySchema = z.enum(['private', 'team', 'public']);
@@ -168,7 +173,7 @@ export const ListPaginationSchema = z.object({
 });
 
 export const ListStoriesFilterSchema = ListPaginationSchema.extend({
-  sprint_id: UUIDSchema.optional().describe('Filter by sprint'),
+  sprint_id: IDSchema.optional().describe('Filter by sprint'),
   state: StoryStateSchema.optional().describe('Filter by state'),
   assignee_id: UUIDSchema.optional().describe('Filter by assignee'),
   priority: PrioritySchema.optional().describe('Filter by priority'),

@@ -451,16 +451,11 @@ async function seedDatabase() {
       if (error) {
         // Fallback: try direct insert if RPC doesn't exist
         const { error: insertError } = await db.from('sa_pm_projects').insert([{
-          id: project.id,
           client_id: project.client_id,
+          external_id: project.id,
           name: project.name,
+          key: project.name.substring(0, 4).toUpperCase(),
           description: project.description,
-          workflow_type: project.workflow_type,
-          visibility: 'team',
-          status: project.status,
-          created_by: SYSTEM_USER_ID,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         }] as any);
 
         if (insertError) {
@@ -485,10 +480,9 @@ async function seedDatabase() {
   for (const sprint of sprints) {
     try {
       const { error } = await db.from('sa_pm_sprints').insert([{
-        id: sprint.id,
         project_id: sprint.project_id,
+        external_id: sprint.id,
         name: sprint.name,
-        description: sprint.description,
         state: sprint.state,
         start_date: sprint.start_date,
         end_date: sprint.end_date,
@@ -498,9 +492,13 @@ async function seedDatabase() {
         updated_at: new Date().toISOString(),
       }] as any);
 
-      if (!error) sprintCount++;
+      if (error) {
+        console.log(`  ⚠️  Sprint "${sprint.name}": ${error.message.substring(0, 100)}`);
+      } else {
+        sprintCount++;
+      }
     } catch (err) {
-      // Silently continue
+      console.log(`  ⚠️  Sprint "${sprint.name}": ${err instanceof Error ? err.message.substring(0, 100) : String(err).substring(0, 100)}`);
     }
   }
   console.log(`  ✅ ${sprintCount} sprints created`);
@@ -512,22 +510,24 @@ async function seedDatabase() {
   for (const story of stories) {
     try {
       const { error } = await db.from('sa_pm_stories').insert([{
-        id: story.id,
-        project_id: story.project_id,
         sprint_id: story.sprint_id,
+        external_id: story.id,
         title: story.title,
         description: story.description,
-        state: story.state,
-        priority: story.priority,
-        assignee_id: story.assignee_id,
+        status: story.state,
         story_points: story.story_points,
-        is_blocked: false,
+        acceptance_criteria: story.acceptance_criteria,
+        assigned_to: story.assignee_id,
         created_by: SYSTEM_USER_ID,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }] as any);
 
-      if (!error) storyCount++;
+      if (error) {
+        console.log(`  ⚠️  Story "${story.title}": ${error.message.substring(0, 100)}`);
+      } else {
+        storyCount++;
+      }
     } catch (err) {
       // Silently continue
     }
@@ -541,15 +541,14 @@ async function seedDatabase() {
   for (const task of tasks) {
     try {
       const { error } = await db.from('sa_pm_tasks').insert([{
-        id: task.id,
         story_id: task.story_id,
+        external_id: task.id,
         title: task.title,
         description: task.description,
-        state: task.state,
+        status: task.state,
         priority: task.priority,
-        assignee_id: task.assignee_id,
-        effort_hours: task.effort_hours,
-        is_blocked: false,
+        assignee: task.assignee_id,
+        assigned_to: task.assignee_id,
         created_by: SYSTEM_USER_ID,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

@@ -88,11 +88,11 @@ export async function GET(request: NextRequest) {
     const filterOptions: any = {
       offset: parseInt(searchParams.get('offset') ?? '0'),
       limit: Math.min(parseInt(searchParams.get('limit') ?? '20'), 100),
-      sprintId: searchParams.get('sprint_id') || undefined,
+      sprint_id: searchParams.get('sprint_id') || undefined,
       state: searchParams.get('state') || undefined,
-      assigneeId: searchParams.get('assignee_id') || undefined,
+      assignee_id: searchParams.get('assignee_id') || undefined,
       priority: searchParams.get('priority') || undefined,
-      isBlocked: searchParams.get('is_blocked') === 'true' ? true : undefined,
+      is_blocked: searchParams.get('is_blocked') === 'true' ? true : undefined,
       search: searchParams.get('search') || undefined,
     };
 

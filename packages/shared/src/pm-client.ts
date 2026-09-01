@@ -32,12 +32,12 @@ import type {
   ProjectMetrics,
 } from './pm-types';
 import { isValidStoryTransition, isValidTaskTransition, isValidSprintTransition, detectCyclicalDependency } from './pm-validation';
+import { db } from './db.js';
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_KEY || ''
-);
+// Lazy-initialized Supabase client (uses db() to probe endpoints at runtime)
+async function getSupabase() {
+  return db();
+}
 
 // ============================================================================
 // PROJECTS
@@ -51,8 +51,8 @@ export async function createProject(
   input: CreateProjectInput,
   userId: UUID
 ): Promise<PMProject> {
-  const { data, error } = await supabase
-    .from('sa_projects')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_projects')
     .insert({
       client_id: clientId,
       name: input.name,
@@ -72,10 +72,10 @@ export async function createProject(
  * Get a project by ID
  */
 export async function getProject(projectId: UUID): Promise<PMProject | null> {
-  const { data, error } = await supabase
-    .from('sa_projects')
-    .select()
-    .eq('id', projectId)
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_projects')
+    .select('*')
+    .eq('external_id', projectId)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
@@ -92,11 +92,11 @@ export async function listProjects(
   const offset = options.offset ?? 0;
   const limit = options.limit ?? 20;
 
-  const { data, count, error } = await supabase
-    .from('sa_projects')
+  const { data, count, error } = await (await getSupabase())
+    .from('sa_pm_projects')
     .select('*', { count: 'exact' })
     .eq('client_id', clientId)
-    .order('updated_at', { ascending: false })
+    .order('id', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) throw new Error(`Failed to list projects: ${error.message}`);
@@ -116,10 +116,10 @@ export async function updateProject(
   projectId: UUID,
   input: UpdateProjectInput
 ): Promise<PMProject> {
-  const { data, error } = await supabase
-    .from('sa_projects')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_projects')
     .update(input)
-    .eq('id', projectId)
+    .eq('external_id', projectId)
     .select()
     .single();
 
@@ -131,8 +131,8 @@ export async function updateProject(
  * Archive a project
  */
 export async function archiveProject(projectId: UUID): Promise<void> {
-  const { error } = await supabase
-    .from('sa_projects')
+  const { error } = await (await getSupabase())
+    .from('sa_pm_projects')
     .update({ status: 'archived' })
     .eq('id', projectId);
 
@@ -151,8 +151,8 @@ export async function createSprint(
   input: CreateSprintInput,
   userId: UUID
 ): Promise<PMSprint> {
-  const { data, error } = await supabase
-    .from('sa_sprints')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_sprints')
     .insert({
       project_id: projectId,
       name: input.name,
@@ -173,8 +173,8 @@ export async function createSprint(
  * Get a sprint by ID with stories
  */
 export async function getSprintWithStories(sprintId: UUID): Promise<SprintWithStories | null> {
-  const { data: sprint, error: sprintError } = await supabase
-    .from('sa_sprints')
+  const { data: sprint, error: sprintError } = await (await getSupabase())
+    .from('sa_pm_sprints')
     .select()
     .eq('id', sprintId)
     .single();
@@ -182,8 +182,8 @@ export async function getSprintWithStories(sprintId: UUID): Promise<SprintWithSt
   if (sprintError && sprintError.code !== 'PGRST116') throw sprintError;
   if (!sprint) return null;
 
-  const { data: stories, error: storiesError } = await supabase
-    .from('sa_stories')
+  const { data: stories, error: storiesError } = await (await getSupabase())
+    .from('sa_pm_stories')
     .select()
     .eq('sprint_id', sprintId)
     .order('created_at', { ascending: false });
@@ -209,8 +209,8 @@ export async function listSprints(
   const offset = options.offset ?? 0;
   const limit = options.limit ?? 20;
 
-  const { data, count, error } = await supabase
-    .from('sa_sprints')
+  const { data, count, error } = await (await getSupabase())
+    .from('sa_pm_sprints')
     .select('*', { count: 'exact' })
     .eq('project_id', projectId)
     .order('start_date', { ascending: false })
@@ -244,8 +244,8 @@ export async function updateSprint(
     }
   }
 
-  const { data, error } = await supabase
-    .from('sa_sprints')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_sprints')
     .update(input)
     .eq('id', sprintId)
     .select()
@@ -267,8 +267,8 @@ export async function createStory(
   input: CreateStoryInput,
   userId: UUID
 ): Promise<PMStory> {
-  const { data, error } = await supabase
-    .from('sa_stories')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_stories')
     .insert({
       project_id: projectId,
       title: input.title,
@@ -290,8 +290,8 @@ export async function createStory(
  * Get a story by ID with all related data
  */
 export async function getStoryWithTasks(storyId: UUID): Promise<StoryWithTasks | null> {
-  const { data: story, error: storyError } = await supabase
-    .from('sa_stories')
+  const { data: story, error: storyError } = await (await getSupabase())
+    .from('sa_pm_stories')
     .select()
     .eq('id', storyId)
     .single();
@@ -300,8 +300,8 @@ export async function getStoryWithTasks(storyId: UUID): Promise<StoryWithTasks |
   if (!story) return null;
 
   // Fetch tasks
-  const { data: tasks, error: tasksError } = await supabase
-    .from('sa_tasks')
+  const { data: tasks, error: tasksError } = await (await getSupabase())
+    .from('sa_pm_tasks')
     .select()
     .eq('story_id', storyId)
     .order('created_at', { ascending: false });
@@ -309,7 +309,7 @@ export async function getStoryWithTasks(storyId: UUID): Promise<StoryWithTasks |
   if (tasksError) throw tasksError;
 
   // Fetch attachments
-  const { data: attachments, error: attachmentsError } = await supabase
+  const { data: attachments, error: attachmentsError } = await (await getSupabase())
     .from('sa_story_attachments')
     .select()
     .eq('story_id', storyId)
@@ -318,7 +318,7 @@ export async function getStoryWithTasks(storyId: UUID): Promise<StoryWithTasks |
   if (attachmentsError) throw attachmentsError;
 
   // Fetch comments
-  const { data: comments, error: commentsError } = await supabase
+  const { data: comments, error: commentsError } = await (await getSupabase())
     .from('sa_story_comments')
     .select()
     .eq('story_id', storyId)
@@ -343,11 +343,11 @@ export async function getStoryWithTasks(storyId: UUID): Promise<StoryWithTasks |
 export async function listStories(
   projectId: UUID,
   options: {
-    sprintId?: UUID;
+    sprint_id?: string;
     state?: string;
-    assigneeId?: UUID;
+    assignee_id?: string;
     priority?: string;
-    isBlocked?: boolean;
+    is_blocked?: boolean;
     search?: string;
     offset?: number;
     limit?: number;
@@ -356,20 +356,66 @@ export async function listStories(
   const offset = options.offset ?? 0;
   const limit = options.limit ?? 20;
 
-  let query = supabase
-    .from('sa_stories')
-    .select('*', { count: 'exact' })
+  const supabase = await getSupabase();
+
+  // If sprint_id is provided, filter by it directly
+  if (options.sprint_id) {
+    let query = supabase
+      .from('sa_pm_stories')
+      .select('*', { count: 'exact' })
+      .eq('sprint_id', options.sprint_id);
+
+    if (options.state) query = query.eq('state', options.state);
+    if (options.assignee_id) query = query.eq('assigned_to', options.assignee_id);
+    if (options.is_blocked !== undefined) query = query.eq('is_blocked', options.is_blocked);
+    if (options.search) query = query.or(`title.ilike.%${options.search}%,description.ilike.%${options.search}%`);
+
+    const { data, count, error } = await query
+      .order('id', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw new Error(`Failed to list stories: ${error.message}`);
+
+    return {
+      items: data || [],
+      total: count || 0,
+      offset,
+      limit,
+    };
+  }
+
+  // Otherwise, get sprints for the project first, then get their stories
+  const { data: sprints, error: sprintsError } = await supabase
+    .from('sa_pm_sprints')
+    .select('id')
     .eq('project_id', projectId);
 
-  if (options.sprintId) query = query.eq('sprint_id', options.sprintId);
+  if (sprintsError) throw new Error(`Failed to list sprints: ${sprintsError.message}`);
+
+  const sprintIds = (sprints || []).map(s => s.id);
+  if (sprintIds.length === 0) {
+    // No sprints for this project, return empty result
+    return {
+      items: [],
+      total: 0,
+      offset,
+      limit,
+    };
+  }
+
+  // Query stories for all sprints in this project
+  let query = supabase
+    .from('sa_pm_stories')
+    .select('*', { count: 'exact' })
+    .in('sprint_id', sprintIds);
+
   if (options.state) query = query.eq('state', options.state);
-  if (options.assigneeId) query = query.eq('assignee_id', options.assigneeId);
-  if (options.priority) query = query.eq('priority', options.priority);
-  if (options.isBlocked !== undefined) query = query.eq('is_blocked', options.isBlocked);
+  if (options.assignee_id) query = query.eq('assigned_to', options.assignee_id);
+  if (options.is_blocked !== undefined) query = query.eq('is_blocked', options.is_blocked);
   if (options.search) query = query.or(`title.ilike.%${options.search}%,description.ilike.%${options.search}%`);
 
   const { data, count, error } = await query
-    .order('updated_at', { ascending: false })
+    .order('id', { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) throw new Error(`Failed to list stories: ${error.message}`);
@@ -389,8 +435,8 @@ export async function updateStory(
   storyId: UUID,
   input: UpdateStoryInput
 ): Promise<PMStory> {
-  const { data, error } = await supabase
-    .from('sa_stories')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_stories')
     .update(input)
     .eq('id', storyId)
     .select()
@@ -409,8 +455,8 @@ export async function changeStoryState(
   reason?: string
 ): Promise<PMStory> {
   // Get current story
-  const current = await supabase
-    .from('sa_stories')
+  const current = await (await getSupabase())
+    .from('sa_pm_stories')
     .select()
     .eq('id', storyId)
     .single();
@@ -423,8 +469,8 @@ export async function changeStoryState(
   }
 
   // Update state
-  const { data, error } = await supabase
-    .from('sa_stories')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_stories')
     .update({ state: newState })
     .eq('id', storyId)
     .select()
@@ -454,8 +500,8 @@ export async function createTask(
   input: CreateTaskInput,
   userId: UUID
 ): Promise<PMTask> {
-  const { data, error } = await supabase
-    .from('sa_tasks')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_tasks')
     .insert({
       story_id: storyId,
       title: input.title,
@@ -475,10 +521,10 @@ export async function createTask(
  * Get a task by ID
  */
 export async function getTask(taskId: UUID): Promise<PMTask | null> {
-  const { data, error } = await supabase
-    .from('sa_tasks')
-    .select()
-    .eq('id', taskId)
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_tasks')
+    .select('*')
+    .eq('external_id', taskId)
     .single();
 
   if (error && error.code !== 'PGRST116') throw error;
@@ -501,8 +547,9 @@ export async function listTasks(
   const offset = options.offset ?? 0;
   const limit = options.limit ?? 20;
 
+  const supabase = await getSupabase();
   let query = supabase
-    .from('sa_tasks')
+    .from('sa_pm_tasks')
     .select('*', { count: 'exact' })
     .eq('story_id', storyId);
 
@@ -531,8 +578,8 @@ export async function updateTask(
   taskId: UUID,
   input: UpdateTaskInput
 ): Promise<PMTask> {
-  const { data, error } = await supabase
-    .from('sa_tasks')
+  const { data, error } = await (await getSupabase())
+    .from('sa_pm_tasks')
     .update(input)
     .eq('id', taskId)
     .select()
@@ -575,7 +622,7 @@ export async function logAudit(
   afterState?: Record<string, any>,
   reason?: string
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await (await getSupabase())
     .from('sa_audit_log')
     .insert({
       entity_type: entityType,
@@ -601,7 +648,7 @@ export async function listAuditLogs(
   const offset = options.offset ?? 0;
   const limit = options.limit ?? 20;
 
-  const { data, count, error } = await supabase
+  const { data, count, error } = await (await getSupabase())
     .from('sa_audit_log')
     .select('*', { count: 'exact' })
     .eq('entity_type', entityType)
@@ -631,7 +678,7 @@ export async function addAttachment(
   input: CreateAttachmentInput,
   userId: UUID
 ): Promise<PMStoryAttachment> {
-  const { data, error } = await supabase
+  const { data, error } = await (await getSupabase())
     .from('sa_story_attachments')
     .insert({
       story_id: storyId,
@@ -656,7 +703,7 @@ export async function addComment(
   userId: UUID,
   parentCommentId?: UUID | null
 ): Promise<PMStoryComment> {
-  const { data, error } = await supabase
+  const { data, error } = await (await getSupabase())
     .from('sa_story_comments')
     .insert({
       story_id: storyId,
@@ -681,7 +728,7 @@ export async function listAttachments(
   const offset = options.offset ?? 0;
   const limit = options.limit ?? 50;
 
-  const { data, error, count } = await supabase
+  const { data, error, count } = await (await getSupabase())
     .from('sa_story_attachments')
     .select('*', { count: 'exact' })
     .eq('story_id', storyId)
@@ -708,6 +755,7 @@ export async function listComments(
   const limit = options.limit ?? 50;
   const threadOnly = options.threadOnly ?? false;
 
+  const supabase = await getSupabase();
   let query = supabase
     .from('sa_story_comments')
     .select('*', { count: 'exact' })
@@ -739,13 +787,13 @@ export async function listComments(
  * Calculate project metrics
  */
 export async function getProjectMetrics(projectId: UUID): Promise<ProjectMetrics> {
-  const { data: stories, error: storiesError } = await supabase
-    .from('sa_stories')
+  const { data: stories, error: storiesError } = await (await getSupabase())
+    .from('sa_pm_stories')
     .select('state')
     .eq('project_id', projectId);
 
-  const { data: tasks, error: tasksError } = await supabase
-    .from('sa_tasks')
+  const { data: tasks, error: tasksError } = await (await getSupabase())
+    .from('sa_pm_tasks')
     .select('state')
     .eq('story_id', projectId); // Note: This is wrong, should join through stories
 
