@@ -66,6 +66,9 @@ export * from './story-gravity';
 export * from './velocity-metrics';
 export * from './velocity-cache';
 
+// Human Team & AI Integration
+export * from './human-team-member';
+
 // Data & Processing
 export * from './selection-contract';
 export * from './image-input';
